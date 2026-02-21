@@ -184,6 +184,19 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
 
 /* 確認ダイアログ風 */
 .confirm-box{background:rgba(201,168,76,.06);border:1px solid rgba(201,168,76,.25);border-radius:10px;padding:16px;margin-bottom:12px}
+
+/* ── Client Autocomplete ── */
+.cl-search-wrap{position:relative}
+.cl-input{width:100%;padding:9px 12px;background:var(--input-bg,#1a1e2a);border:1px solid var(--border);border-radius:8px;color:var(--text,#e8eaf0);font-size:12px;font-family:inherit;outline:none;transition:border-color .15s}
+.cl-input:focus{border-color:var(--gold,#c9a840)}
+.cl-dropdown{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--card,#151822);border:1px solid var(--border2,#2e3447);border-radius:8px;z-index:999;max-height:200px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.5);display:none}
+.cl-option{padding:9px 13px;cursor:pointer;border-bottom:1px solid var(--border,#2a2f42);display:flex;align-items:center;gap:10px;transition:background .1s}
+.cl-option:last-child{border-bottom:none}
+.cl-option:hover,.cl-option.focused{background:rgba(201,168,64,.1)}
+.cl-opt-id{font-family:'DM Mono',monospace;font-size:10px;color:var(--gold,#c9a840);min-width:80px;flex-shrink:0}
+.cl-opt-name{font-size:12px;font-weight:600}
+.cl-opt-kana{font-size:10px;color:var(--muted,#4a4f68)}
+.cl-hint{padding:7px 13px;font-size:10px;color:var(--muted,#4a4f68);border-top:1px solid var(--border,#2a2f42)}
 </style>
 </head>
 <body>
@@ -344,14 +357,19 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
     </div>
 
     <!-- 顧客情報（スタッフ入力・非公開） -->
-    <div class="s-label">顧客情報 <span style="color:var(--red);font-size:9px">🔒 マッチング確定後に担当AGへ開示</span></div>
-    <div class="row2">
-      <div class="fg"><label>顧客氏名</label><input type="text" placeholder="山田 太郎"></div>
-      <div class="fg"><label>電話番号</label><input type="tel" class="mono" placeholder="080-XXXX-XXXX"></div>
+    <div class="s-label">クライアント情報 <span style="color:var(--red);font-size:9px">🔒 マッチング確定後に担当AGへ開示</span></div>
+    <div class="fg" style="margin-bottom:10px">
+      <label>クライアントID / 氏名 <span style="color:var(--muted);font-size:9px">（ID・名前・カナで検索）</span></label>
+      <div class="cl-search-wrap">
+        <input class="cl-input" id="mc-client-search" type="text" placeholder="CL-00001 または 山田 で検索…" autocomplete="off">
+        <div class="cl-dropdown" id="mc-client-dropdown"></div>
+      </div>
+      <input type="hidden" id="mc-client-id">
+      <input type="hidden" id="mc-client-name">
     </div>
     <div class="row2">
-      <div class="fg"><label>メールアドレス</label><input type="email" placeholder="taro@example.com"></div>
-      <div class="fg"><label>顧客ID（既存の場合）</label><input type="text" class="mono" placeholder="CL-XXXXX（任意）"></div>
+      <div class="fg"><label>電話番号</label><input type="tel" id="mc-client-tel" class="mono" placeholder="080-XXXX-XXXX"></div>
+      <div class="fg"><label>メールアドレス</label><input type="email" id="mc-client-email" placeholder="taro@example.com"></div>
     </div>
 
     <div class="s-label">公開情報・備考</div>
@@ -565,6 +583,82 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
 </div>
 
 <script>
+
+// ── クライアントDB（共通） ──
+const CUSTOMERS_DB = [
+  {id:'CL-00001',name:'山田 太郎', kana:'ヤマダ タロウ',   tel:'080-1111-1111', email:'yamada@example.com'},
+  {id:'CL-00012',name:'佐藤 花子', kana:'サトウ ハナコ',   tel:'080-2222-2222', email:'sato@example.com'},
+  {id:'CL-00023',name:'鈴木 健一', kana:'スズキ ケンイチ', tel:'090-3333-3333', email:'suzuki@example.com'},
+  {id:'CL-00047',name:'田中 美咲', kana:'タナカ ミサキ',   tel:'080-4444-4444', email:'tanaka@example.com'},
+  {id:'CL-00058',name:'小林 浩二', kana:'コバヤシ コウジ', tel:'090-5555-5555', email:'kobayashi@example.com'},
+  {id:'CL-00071',name:'渡辺 恵子', kana:'ワタナベ ケイコ', tel:'080-6666-6666', email:'watanabe@example.com'},
+];
+
+function initClientSearch(inputId, idHiddenId, nameHiddenId, dropdownId, onSelectFn) {
+  const input = document.getElementById(inputId);
+  const dropdown = document.getElementById(dropdownId);
+  if (!input || !dropdown) return;
+  let focusedIdx = -1;
+
+  input.addEventListener('input', () => {
+    const q = input.value.trim().toLowerCase();
+    focusedIdx = -1;
+    if (!q) { dropdown.style.display='none'; return; }
+    const matches = CUSTOMERS_DB.filter(c =>
+      c.id.toLowerCase().includes(q) ||
+      c.name.includes(q) ||
+      (c.kana||'').toLowerCase().includes(q)
+    ).slice(0, 8);
+    if (!matches.length) { dropdown.style.display='none'; return; }
+    dropdown.innerHTML = matches.map((c,i) =>
+      `<div class="cl-option" data-i="${i}" data-id="${c.id}" data-name="${c.name}"
+            data-tel="${c.tel||''}" data-email="${c.email||''}"
+            onmousedown="event.preventDefault()"
+            onclick="pickClient(event,'${inputId}','${idHiddenId}','${nameHiddenId}','${dropdownId}')">
+        <span class="cl-opt-id">${c.id}</span>
+        <span class="cl-opt-name">${c.name}</span>
+        <span class="cl-opt-kana">${c.kana||''}</span>
+      </div>`
+    ).join('') + '<div class="cl-hint">見つからない場合はそのまま入力してください</div>';
+    dropdown.style.display = 'block';
+    if (onSelectFn) dropdown.dataset.callback = onSelectFn;
+  });
+  input.addEventListener('keydown', e => {
+    const opts = dropdown.querySelectorAll('.cl-option');
+    if (!opts.length || dropdown.style.display==='none') return;
+    if (e.key==='ArrowDown') { focusedIdx=Math.min(focusedIdx+1,opts.length-1); hlOpt(opts); e.preventDefault(); }
+    else if (e.key==='ArrowUp') { focusedIdx=Math.max(focusedIdx-1,0); hlOpt(opts); e.preventDefault(); }
+    else if (e.key==='Enter' && focusedIdx>=0) { opts[focusedIdx].click(); e.preventDefault(); }
+    else if (e.key==='Escape') dropdown.style.display='none';
+  });
+  input.addEventListener('blur', () => setTimeout(()=>{ dropdown.style.display='none'; }, 150));
+  input.addEventListener('focus', () => { if(input.value.trim()) input.dispatchEvent(new Event('input')); });
+  function hlOpt(opts) {
+    opts.forEach((o,i)=>o.classList.toggle('focused',i===focusedIdx));
+    if(focusedIdx>=0) opts[focusedIdx].scrollIntoView({block:'nearest'});
+  }
+}
+
+function pickClient(event, inputId, idHiddenId, nameHiddenId, dropdownId) {
+  const opt = event.currentTarget;
+  const id = opt.dataset.id, name = opt.dataset.name;
+  const tel = opt.dataset.tel, email = opt.dataset.email;
+  const input = document.getElementById(inputId);
+  const dropdown = document.getElementById(dropdownId);
+  if(input) input.value = id + ' / ' + name;
+  if(idHiddenId) { const el=document.getElementById(idHiddenId); if(el) el.value=id; }
+  if(nameHiddenId) { const el=document.getElementById(nameHiddenId); if(el) el.value=name; }
+  if(dropdown) dropdown.style.display='none';
+  // Fill extra fields if available
+  const telEl = document.getElementById('mc-client-tel');
+  const emailEl = document.getElementById('mc-client-email');
+  if(telEl && tel) telEl.value = tel;
+  if(emailEl && email) emailEl.value = email;
+  const cb = dropdown && dropdown.dataset.callback;
+  if(cb && typeof window[cb]==='function') window[cb](id, name);
+}
+
+
 // ── セッション読み込み（マイページから自動入力） ──
 (function() {
   const _S = JSON.parse(sessionStorage.getItem('coreto_session') || 'null');
@@ -576,7 +670,7 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
       const back = document.createElement('div');
       back.style.cssText = 'margin-left:auto;padding:0 16px;display:flex;align-items:center;gap:10px';
       back.innerHTML = '<span style="font-size:10px;color:var(--muted)">👤 '+_S.name+'</span>' +
-        '<button onclick="window.location.href='coreto-hub.html'" style="font-size:10px;padding:4px 10px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;font-family:sans-serif">← マイページ</button>';
+        '<button onclick="location.href=\'coreto-hub.html\'" style="font-size:10px;padding:4px 10px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;font-family:sans-serif">← マイページ</button>';
       tabs.appendChild(back);
     }
   });
@@ -1019,6 +1113,11 @@ function submitCase() {
 // ── 初期描画 ──
 renderCases();
 updateTabsForRole();
+
+// ── クライアント検索初期化 ──
+document.addEventListener('DOMContentLoaded', function(){
+  initClientSearch('mc-client-search','mc-client-id','mc-client-name','mc-client-dropdown', null);
+});
 </script>
 </body>
 </html>

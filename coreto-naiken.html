@@ -151,6 +151,19 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
   .fax-doc{box-shadow:none;padding:15mm 15mm}
   .preview-container{background:none;padding:0}
 }
+
+/* ── Client Autocomplete ── */
+.cl-search-wrap{position:relative}
+.cl-input{width:100%;padding:9px 12px;background:var(--bg2,#1a1e2a);border:1px solid var(--border,#2a2f42);border-radius:8px;color:var(--text,#e8eaf0);font-size:12px;font-family:inherit;outline:none;transition:border-color .15s}
+.cl-input:focus{border-color:var(--gold,#c9a840)}
+.cl-dropdown{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--card,#151822);border:1px solid var(--border2,#2e3447);border-radius:8px;z-index:999;max-height:200px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.4);display:none}
+.cl-option{padding:9px 13px;cursor:pointer;border-bottom:1px solid var(--border,#2a2f42);display:flex;align-items:center;gap:10px;transition:background .1s}
+.cl-option:last-child{border-bottom:none}
+.cl-option:hover,.cl-option.focused{background:rgba(201,168,64,.1)}
+.cl-opt-id{font-family:'DM Mono',monospace;font-size:10px;color:var(--gold,#c9a840);min-width:80px}
+.cl-opt-name{font-size:12px;font-weight:600}
+.cl-opt-kana{font-size:10px;color:var(--muted,#4a4f68)}
+.cl-new-hint{padding:8px 13px;font-size:10px;color:var(--muted,#4a4f68);border-top:1px solid var(--border,#2a2f42)}
 </style>
 </head>
 <body>
@@ -183,20 +196,14 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
 
     <div class="s-label">顧客情報</div>
     <div class="row2">
-      <div class="fg">
-        <label>顧客ID <span style="color:var(--muted);font-size:9px">（Slackリマインドに使用）</span></label>
-        <select id="customer-id" onchange="fillCustomerInfo()">
-          <option value="">-- 顧客を選択 --</option>
-          <option value="CL-00001">CL-00001 / 山田 太郎</option>
-          <option value="CL-00012">CL-00012 / 佐藤 花子</option>
-          <option value="CL-00023">CL-00023 / 鈴木 健一</option>
-          <option value="CL-00047">CL-00047 / 田中 美咲</option>
-          <option value="new">顧客ID未登録（新規）</option>
-        </select>
-      </div>
-      <div class="fg">
-        <label>顧客氏名（確認）</label>
-        <input type="text" id="customer-name" placeholder="自動入力 or 手入力" oninput="updatePreview()">
+      <div class="fg" style="grid-column:1/-1">
+        <label>クライアントID / 氏名 <span style="color:var(--muted);font-size:9px">（ID・名前・カナで検索）</span></label>
+        <div class="cl-search-wrap">
+          <input class="cl-input" id="client-search" type="text" placeholder="CL-00001 または 山田 で検索..." autocomplete="off">
+          <div class="cl-dropdown" id="client-dropdown"></div>
+        </div>
+        <input type="hidden" id="customer-id">
+        <input type="hidden" id="customer-name">
       </div>
     </div>
 
@@ -419,7 +426,7 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
       const back = document.createElement('div');
       back.style.cssText = 'margin-left:auto;padding:0 16px;display:flex;align-items:center;gap:10px';
       back.innerHTML = '<span style="font-size:10px;color:var(--muted)">👤 '+_S.name+'</span>' +
-        '<button onclick="window.location.href='coreto-hub.html'" style="font-size:10px;padding:4px 10px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;font-family:sans-serif">← マイページ</button>';
+        '<button onclick="location.href=\'coreto-hub.html\'" style="font-size:10px;padding:4px 10px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;font-family:sans-serif">← マイページ</button>';
       tabs.appendChild(back);
     }
   });
@@ -499,7 +506,11 @@ function selectAgent(i, el){
 }
 
 // ── 顧客選択時の自動入力 ──
-function fillCustomerInfo(){
+function fillCustomerInfo(clientId, clientName){
+  // autocomplete callback
+  updatePreview();
+}
+function _fillCustomerInfo_legacy(){
   const id = document.getElementById('customer-id').value;
   const nameEl = document.getElementById('customer-name');
   if(CUSTOMER_MAP[id]){
@@ -839,6 +850,70 @@ renderAgentCards();
 updatePreview();
 document.getElementById('naiken-date').value = new Date().toISOString().split('T')[0];
 updatePreview();
+
+// ─── クライアントオートコンプリート ──────────────────────────────
+function initClientSearch(inputId, idHiddenId, nameHiddenId, dropdownId, onSelect) {
+  const input = document.getElementById(inputId);
+  const dropdown = document.getElementById(dropdownId);
+  if (!input || !dropdown) return;
+
+  let focusedIdx = -1;
+
+  input.addEventListener('input', () => {
+    const q = input.value.trim().toLowerCase();
+    focusedIdx = -1;
+    if (!q) { dropdown.style.display='none'; return; }
+    const matches = CUSTOMERS_DB.filter(c =>
+      c.id.toLowerCase().includes(q) ||
+      c.name.toLowerCase().includes(q) ||
+      (c.kana||'').toLowerCase().includes(q)
+    ).slice(0, 8);
+    if (!matches.length) { dropdown.style.display='none'; return; }
+    dropdown.innerHTML = matches.map((c,i) =>
+      `<div class="cl-option" data-idx="${i}" data-id="${c.id}" data-name="${c.name}"
+            onmousedown="event.preventDefault()" onclick="pickClient('${inputId}','${idHiddenId}','${nameHiddenId}','${dropdownId}','${c.id}','${c.name}',${JSON.stringify(onSelect).replace(/"/g,'&quot;')})">
+        <span class="cl-opt-id">${c.id}</span>
+        <span class="cl-opt-name">${c.name}</span>
+        <span class="cl-opt-kana">${c.kana||''}</span>
+      </div>`
+    ).join('') + `<div class="cl-new-hint">一致しない場合はそのまま入力してください</div>`;
+    dropdown.style.display = 'block';
+  });
+
+  input.addEventListener('keydown', e => {
+    const opts = dropdown.querySelectorAll('.cl-option');
+    if (!opts.length || dropdown.style.display==='none') return;
+    if (e.key==='ArrowDown') { focusedIdx=Math.min(focusedIdx+1,opts.length-1); highlight(opts); e.preventDefault(); }
+    else if (e.key==='ArrowUp') { focusedIdx=Math.max(focusedIdx-1,0); highlight(opts); e.preventDefault(); }
+    else if (e.key==='Enter' && focusedIdx>=0) { opts[focusedIdx].click(); e.preventDefault(); }
+    else if (e.key==='Escape') { dropdown.style.display='none'; }
+  });
+
+  input.addEventListener('blur', () => { setTimeout(()=>{ dropdown.style.display='none'; }, 150); });
+  input.addEventListener('focus', () => { if(input.value.trim()) input.dispatchEvent(new Event('input')); });
+
+  function highlight(opts) {
+    opts.forEach((o,i) => o.classList.toggle('focused', i===focusedIdx));
+    if(focusedIdx>=0) opts[focusedIdx].scrollIntoView({block:'nearest'});
+  }
+}
+
+function pickClient(inputId, idHiddenId, nameHiddenId, dropdownId, clientId, clientName, callbackName) {
+  const input = document.getElementById(inputId);
+  const dropdown = document.getElementById(dropdownId);
+  if(input) input.value = clientId + ' / ' + clientName;
+  if(idHiddenId && document.getElementById(idHiddenId)) document.getElementById(idHiddenId).value = clientId;
+  if(nameHiddenId && document.getElementById(nameHiddenId)) document.getElementById(nameHiddenId).value = clientName;
+  if(dropdown) dropdown.style.display = 'none';
+  // callback
+  if(callbackName && typeof window[callbackName]==='function') window[callbackName](clientId, clientName);
+}
+
+
+// ── クライアント検索初期化 ──
+document.addEventListener('DOMContentLoaded', function() {
+  initClientSearch('client-search', 'customer-id', 'customer-name', 'client-dropdown', 'fillCustomerInfo');
+});
 </script>
 </body>
 </html>
