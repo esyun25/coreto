@@ -2,1014 +2,891 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CORETO — 統合管理システム</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CORETO — Business Management System</title>
+<link href="https://fonts.googleapis.com/css2?family=Kaisei+Tokumin:wght@400;700&family=DM+Mono:wght@400;500&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap');
-*{box-sizing:border-box;margin:0;padding:0}
+/* ═══════════════════════════════════════════
+   RESET & VARS
+═══════════════════════════════════════════ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#07090f;--card:#0f1119;--card2:#141720;--border:#1e2235;--border2:#252a3d;
-  --gold:#c9a84c;--gold-l:#e8c96a;--gold-dim:#7a5f22;--gold-bg:rgba(201,168,76,.07);
-  --blue:#4f9cf9;--green:#34d399;--red:#f87171;--orange:#fb923c;--purple:#a78bfa;--teal:#2dd4bf;
-  --muted:#4a5270;--sub:#7a849e;--text:#e2e6f3;
+  --bg:       #0b0d12;
+  --bg2:      #0f1219;
+  --bg3:      #141820;
+  --card:     #141820;
+  --card2:    #191e28;
+  --border:   #1e2435;
+  --border2:  #252c3d;
+  --text:     #e4e7f0;
+  --sub:      #7a82a0;
+  --muted:    #3e4565;
+  --gold:     #c9a840;
+  --gold2:    #e0bc5a;
+  --gold-dim: rgba(201,168,64,.35);
+  --gold-bg:  rgba(201,168,64,.07);
+  --blue:     #4f9cf9;
+  --green:    #34d399;
+  --red:      #f87171;
+  --orange:   #fb923c;
+  --purple:   #a78bfa;
+  --teal:     #2dd4bf;
+  --sidebar-w:220px;
 }
-html,body{height:100%;font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);overflow:hidden}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans-serif;font-size:13px;line-height:1.5}
 
-/* ══════════════════════════════════════════════
+/* ═══════════════════════════════════════════
    LOGIN SCREEN
-   ══════════════════════════════════════════════ */
+═══════════════════════════════════════════ */
 #login-screen{
-  position:fixed;inset:0;background:var(--bg);z-index:1000;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  background-image:radial-gradient(ellipse at 20% 50%,rgba(201,168,76,.04) 0%,transparent 50%),
-                   radial-gradient(ellipse at 80% 20%,rgba(79,156,249,.04) 0%,transparent 50%);
+  position:fixed;inset:0;z-index:9999;
+  background:var(--bg);
+  display:flex;align-items:center;justify-content:center;
+  background-image:radial-gradient(ellipse at 50% 0%, rgba(201,168,64,.06) 0%, transparent 70%);
 }
-.login-logo{font-family:'Syne',sans-serif;font-size:52px;font-weight:800;color:var(--gold);
-  letter-spacing:8px;margin-bottom:8px}
-.login-tagline{font-size:11px;color:var(--muted);letter-spacing:3px;text-transform:uppercase;margin-bottom:48px}
-.login-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;width:620px;margin-bottom:20px}
-.login-card{background:var(--card);border:1px solid var(--border);border-radius:14px;
-  padding:18px 20px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
-.login-card::before{content:'';position:absolute;inset:0;opacity:0;transition:opacity .2s}
-.login-card:hover{border-color:var(--border2);transform:translateY(-2px)}
-.login-card.hq::before{background:radial-gradient(ellipse at top left,rgba(201,168,76,.08),transparent 60%)}
-.login-card.re::before{background:radial-gradient(ellipse at top left,rgba(79,156,249,.08),transparent 60%)}
-.login-card.hr::before{background:radial-gradient(ellipse at top left,rgba(52,211,153,.08),transparent 60%)}
-.login-card.pt::before{background:radial-gradient(ellipse at top left,rgba(167,139,250,.08),transparent 60%)}
-.login-card:hover::before{opacity:1}
-.lc-header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
-.lc-icon{width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:20px}
-.lc-type{font-family:'Syne',sans-serif;font-size:14px;font-weight:800}
-.lc-desc{font-size:10px;color:var(--sub);margin-bottom:10px;line-height:1.7}
-.lc-accounts{display:flex;flex-direction:column;gap:4px}
-.lc-acc{display:flex;align-items:center;justify-content:space-between;padding:6px 10px;
-  background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:8px;
-  font-size:10px;cursor:pointer;transition:all .12s}
-.lc-acc:hover{background:rgba(255,255,255,.06)}
-.acc-name{font-weight:700}
-.acc-id{font-family:'DM Mono',monospace;color:var(--muted)}
-.acc-rank{font-size:8px;font-weight:700;padding:2px 6px;border-radius:4px}
-.login-hint{font-size:10px;color:var(--muted);margin-top:4px}
-
-/* ══════════════════════════════════════════════
-   APP SHELL
-   ══════════════════════════════════════════════ */
-#app-shell{display:none;height:100vh;flex-direction:column}
-.topbar{height:54px;background:rgba(7,9,15,.95);border-bottom:1px solid var(--border);
-  backdrop-filter:blur(14px);display:flex;align-items:center;padding:0 20px;gap:16px;
-  position:relative;z-index:100;flex-shrink:0}
-.logo{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--gold);letter-spacing:3px}
-.topbar-sep{width:1px;height:18px;background:var(--border2)}
-.topbar-context{font-size:10px;color:var(--muted);letter-spacing:1px}
-.topbar-user{display:flex;align-items:center;gap:10px;margin-left:auto}
-.notif-btn{width:32px;height:32px;border-radius:8px;background:var(--card2);border:1px solid var(--border);
-  display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;position:relative}
-.notif-dot{position:absolute;top:4px;right:4px;width:7px;height:7px;border-radius:50%;
-  background:var(--red);border:1.5px solid var(--bg)}
-.user-pill{display:flex;align-items:center;gap:8px;padding:4px 12px 4px 4px;
-  background:var(--card2);border:1px solid var(--border);border-radius:20px;cursor:pointer}
-.user-avatar{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;
-  justify-content:center;font-size:11px;font-weight:700}
-.user-name{font-size:11px;font-weight:700}
-.user-role{font-size:9px;color:var(--sub)}
-.logout-btn{font-size:10px;padding:5px 12px;border-radius:6px;border:1px solid var(--border2);
-  background:transparent;color:var(--muted);cursor:pointer;font-family:'Noto Sans JP',sans-serif;transition:all .12s}
-.logout-btn:hover{color:var(--text);border-color:var(--sub)}
-
-/* ── Body layout ── */
-.body-layout{display:flex;flex:1;overflow:hidden}
-
-/* ── Sidebar ── */
-.sidebar{width:216px;flex-shrink:0;background:var(--card2);border-right:1px solid var(--border);
-  overflow-y:auto;padding:16px 0;display:flex;flex-direction:column}
-.nav-section-label{padding:0 16px 5px 16px;font-size:8px;color:var(--muted);letter-spacing:2px;
-  text-transform:uppercase;margin-top:16px}
-.nav-section-label:first-child{margin-top:0}
-.nav-item{display:flex;align-items:center;gap:9px;padding:8px 10px 8px 12px;
-  margin:1px 8px;border-radius:9px;cursor:pointer;transition:all .15s;font-size:12px;color:var(--sub);
-  border:1px solid transparent}
-.nav-item:hover{background:rgba(255,255,255,.04);color:var(--text)}
-.nav-item.on{background:var(--gold-bg);color:var(--gold);border-color:var(--gold-dim)}
-.nav-item.locked{color:var(--muted);opacity:.5;cursor:not-allowed}
-.ni-icon{width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;
-  font-size:13px;background:rgba(255,255,255,.04);flex-shrink:0}
-.nav-item.on .ni-icon{background:rgba(201,168,76,.12)}
-.ni-badge{margin-left:auto;background:var(--red);color:#fff;font-size:7px;font-weight:700;
-  padding:1px 5px;border-radius:8px;min-width:16px;text-align:center}
-.ni-ext{margin-left:auto;font-size:8px;color:var(--muted)}
-.sidebar-footer{margin-top:auto;padding:14px 16px;border-top:1px solid var(--border)}
-.sf-id{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)}
-
-/* ── Content area ── */
-.content{flex:1;overflow-y:auto;padding:24px 28px 60px;background:var(--bg)}
-.page{display:none}.page.on{display:block}
-.page-hdr{margin-bottom:22px}
-.page-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;margin-bottom:4px}
-.page-sub{font-size:11px;color:var(--sub)}
-
-/* ── Cards ── */
-.card{background:var(--card);border:1px solid var(--border);border-radius:14px}
-.card-hdr{padding:13px 18px;border-bottom:1px solid var(--border);
-  display:flex;align-items:center;justify-content:space-between}
-.ch-title{font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;
-  display:flex;align-items:center;gap:8px}
-.ch-title::before{content:'';width:3px;height:11px;border-radius:2px;background:var(--gold)}
-.card-body{padding:18px}
-
-/* ── Stats ── */
-.stats-grid{display:grid;gap:12px;margin-bottom:20px}
-.sg-5{grid-template-columns:repeat(5,1fr)}
-.sg-4{grid-template-columns:repeat(4,1fr)}
-.sg-3{grid-template-columns:repeat(3,1fr)}
-.stat{background:var(--card);border:1px solid var(--border);border-radius:13px;
-  padding:15px 17px;position:relative;overflow:hidden;transition:border-color .15s}
-.stat:hover{border-color:var(--border2)}
-.stat-ico{font-size:18px;margin-bottom:7px}
-.stat-val{font-family:'DM Mono',monospace;font-size:26px;font-weight:500;line-height:1;margin-bottom:3px}
-.stat-label{font-size:10px;color:var(--muted)}
-.stat-sub{font-size:10px;margin-top:5px}
-
-/* ── Tool cards ── */
-.tool-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
-.tool-card{background:var(--card);border:1px solid var(--border);border-radius:13px;
-  padding:18px;cursor:pointer;transition:all .18s;position:relative;overflow:hidden}
-.tool-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
-  background:linear-gradient(90deg,transparent,transparent);transition:background .18s}
-.tool-card:hover{border-color:var(--border2);transform:translateY(-2px)}
-.tool-card:hover::before{background:linear-gradient(90deg,transparent,var(--tc-color,var(--gold)),transparent)}
-.tc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-.tc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;
-  justify-content:center;font-size:20px;flex-shrink:0}
-.tc-badge{font-size:9px;font-weight:700;padding:3px 8px;border-radius:6px}
-.tc-name{font-size:13px;font-weight:700;margin-bottom:5px}
-.tc-desc{font-size:10px;color:var(--sub);line-height:1.7}
-.tc-footer{display:flex;align-items:center;justify-content:space-between;margin-top:12px;
-  padding-top:10px;border-top:1px solid var(--border)}
-.tc-role{font-size:9px;color:var(--muted)}
-.tc-open{font-size:10px;font-weight:700}
-
-/* ── Pills ── */
-.pill{display:inline-flex;align-items:center;padding:3px 9px;border-radius:6px;font-size:9px;font-weight:700;white-space:nowrap}
-.pill-gold{background:rgba(201,168,76,.13);color:var(--gold);border:1px solid var(--gold-dim)}
-.pill-blue{background:rgba(79,156,249,.12);color:var(--blue);border:1px solid rgba(79,156,249,.25)}
-.pill-green{background:rgba(52,211,153,.12);color:var(--green);border:1px solid rgba(52,211,153,.25)}
-.pill-red{background:rgba(248,113,113,.12);color:var(--red);border:1px solid rgba(248,113,113,.3)}
-.pill-purple{background:rgba(167,139,250,.12);color:var(--purple);border:1px solid rgba(167,139,250,.25)}
-.pill-muted{background:rgba(74,82,112,.15);color:var(--sub);border:1px solid var(--border2)}
-.pill-orange{background:rgba(251,146,60,.12);color:var(--orange);border:1px solid rgba(251,146,60,.3)}
-
-/* ── Buttons ── */
-.btn{padding:8px 16px;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;
-  font-family:'Noto Sans JP',sans-serif;transition:all .15s;border:none;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
-.btn-primary{background:linear-gradient(135deg,var(--gold),#a8742a);color:#0a0c10}
-.btn-primary:hover{filter:brightness(1.1)}
-.btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--sub)}
-.btn-ghost:hover{color:var(--text);border-color:var(--sub)}
-.btn-sm{padding:5px 12px;font-size:10px;border-radius:7px}
-
-/* ── Table ── */
-.tbl{width:100%;border-collapse:collapse}
-.tbl th{padding:8px 14px;font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.5px;
-  text-transform:uppercase;border-bottom:1px solid var(--border);background:var(--card2);text-align:left;white-space:nowrap}
-.tbl td{padding:11px 14px;border-bottom:1px solid rgba(30,34,53,.5);font-size:12px;vertical-align:middle}
-.tbl tr:last-child td{border:none}
-.tbl tr:hover td{background:rgba(255,255,255,.012)}
-.mono{font-family:'DM Mono',monospace}
-
-/* ── Activity feed ── */
-.feed{display:flex;flex-direction:column;gap:0}
-.feed-item{display:flex;align-items:flex-start;gap:12px;padding:11px 0;border-bottom:1px solid rgba(30,34,53,.5)}
-.feed-item:last-child{border:none}
-.fi-dot{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;margin-top:1px}
-.fi-content{flex:1}
-.fi-msg{font-size:12px;line-height:1.5}
-.fi-time{font-size:10px;color:var(--muted);margin-top:2px}
-
-/* ── Alert banner ── */
-.alert-bar{display:flex;align-items:center;gap:10px;padding:10px 16px;border-radius:10px;
-  margin-bottom:16px;font-size:12px}
-.alert-bar-red{background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.25);color:var(--text)}
-.alert-bar-orange{background:rgba(251,146,60,.07);border:1px solid rgba(251,146,60,.22);color:var(--text)}
-
-/* ── Rank ring ── */
-.rank-display{display:flex;align-items:center;gap:16px;padding:16px;
-  background:var(--gold-bg);border:1px solid var(--gold-dim);border-radius:12px}
-.rank-ring-wrap{position:relative;width:70px;height:70px;flex-shrink:0}
-.rank-ring-wrap svg{position:absolute;inset:0;transform:rotate(-90deg)}
-.rank-ring-inner{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-  font-size:22px}
-
-/* ── Progress bar ── */
-.prog-wrap{height:6px;background:var(--border2);border-radius:3px;overflow:hidden;margin-top:6px}
-.prog-fill{height:100%;border-radius:3px}
-
-/* ── Grid 2 col ── */
-.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
-.grid-2r{display:grid;grid-template-columns:1fr 320px;gap:16px}
-.grid-3r{display:grid;grid-template-columns:1fr 1fr 280px;gap:14px}
-
-::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
-
-/* ── Login form (new) ── */
-.login-form-card{
-  width:420px;background:var(--card);border:1px solid var(--border2);
-  border-radius:18px;padding:40px 40px 32px;position:relative;overflow:hidden;
+.lf-card{
+  width:380px;
+  background:var(--bg2);
+  border:1px solid var(--border2);
+  border-radius:18px;
+  padding:36px 32px 28px;
+  box-shadow:0 32px 80px rgba(0,0,0,.6);
+  position:relative;
+  overflow:hidden;
 }
-.login-form-card::before{
-  content:'';position:absolute;top:-60px;right:-60px;width:200px;height:200px;
-  border-radius:50%;background:radial-gradient(circle,rgba(201,168,76,.06),transparent 70%);
-  pointer-events:none;
+.lf-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--gold),transparent);
 }
-.lf-logo{font-family:'Syne',sans-serif;font-size:38px;font-weight:800;color:var(--gold);
-  letter-spacing:8px;text-align:center;margin-bottom:6px}
-.lf-sub{font-size:10px;color:var(--muted);letter-spacing:3px;text-transform:uppercase;
-  text-align:center;margin-bottom:36px}
-.lf-label{font-size:10px;color:var(--sub);margin-bottom:6px;display:block;font-weight:600}
+.lf-logo{
+  font-family:'Kaisei Tokumin',serif;
+  font-size:26px;letter-spacing:5px;color:var(--gold);
+  text-align:center;margin-bottom:4px;
+}
+.lf-sub{font-size:10px;color:var(--muted);letter-spacing:2px;text-align:center;margin-bottom:28px;text-transform:uppercase}
+.lf-label{display:block;font-size:10px;color:var(--sub);letter-spacing:1px;text-transform:uppercase;margin-bottom:5px}
 .lf-input{
-  width:100%;background:#090b13;border:1px solid var(--border2);border-radius:10px;
-  padding:12px 16px;color:var(--text);font-size:14px;font-family:'DM Mono',monospace;
-  transition:border-color .15s;margin-bottom:14px;outline:none;letter-spacing:1px;
+  width:100%;padding:10px 13px;background:var(--bg3);
+  border:1px solid var(--border2);border-radius:9px;
+  color:var(--text);font-size:13px;font-family:'Noto Sans JP',sans-serif;
+  outline:none;transition:border-color .15s;margin-bottom:14px;
 }
 .lf-input:focus{border-color:var(--gold)}
-.lf-input.error{border-color:var(--red);animation:shake .3s ease}
-@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
 .lf-btn{
-  width:100%;padding:13px;background:linear-gradient(135deg,var(--gold),#a8742a);
-  border:none;border-radius:10px;color:#0a0c10;font-size:13px;font-weight:800;
-  cursor:pointer;font-family:'Noto Sans JP',sans-serif;letter-spacing:1px;
-  transition:all .15s;margin-top:6px;
+  width:100%;padding:12px;background:var(--gold);color:#000;
+  border:none;border-radius:9px;font-size:13px;font-weight:700;
+  cursor:pointer;font-family:'Noto Sans JP',sans-serif;
+  transition:all .15s;letter-spacing:.5px;margin-top:4px;
 }
-.lf-btn:hover{filter:brightness(1.1);transform:translateY(-1px)}
-.lf-btn:active{transform:translateY(0)}
-.lf-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
-.lf-error{
-  background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.25);
-  border-radius:9px;padding:10px 14px;font-size:11px;color:var(--red);
-  margin-bottom:14px;display:none;line-height:1.6;
-}
-.lf-role-hint{
-  margin-top:20px;padding-top:18px;border-top:1px solid var(--border);
-  display:grid;grid-template-columns:repeat(2,1fr);gap:6px;
-}
-.lrh-item{
-  display:flex;align-items:center;gap:7px;padding:7px 10px;
-  background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:8px;
-  font-size:10px;color:var(--muted);
-}
-.lrh-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.lf-demo{margin-top:16px;text-align:center;font-size:10px;color:var(--muted)}
-.lf-demo-toggle{color:var(--gold-dim);cursor:pointer;text-decoration:underline;font-size:10px}
-.lf-demo-panel{
-  margin-top:12px;background:rgba(201,168,76,.04);border:1px solid var(--gold-dim);
-  border-radius:10px;padding:12px;display:none;
-}
-.demo-acc{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:6px 0;border-bottom:1px solid rgba(30,34,53,.5);cursor:pointer;transition:opacity .12s;
-}
-.demo-acc:last-child{border:none}
-.demo-acc:hover{opacity:.75}
-.da-name{font-size:11px;font-weight:700}
-.da-info{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)}
-.da-type{font-size:9px;font-weight:700;padding:2px 7px;border-radius:5px}
+.lf-btn:hover{background:var(--gold2);transform:translateY(-1px);box-shadow:0 4px 20px rgba(201,168,64,.3)}
+.lf-err{color:var(--red);font-size:11px;text-align:center;min-height:18px;margin-bottom:6px}
 .lf-loading{
-  position:absolute;inset:0;background:rgba(7,9,15,.85);border-radius:18px;
-  display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;
-  backdrop-filter:blur(4px);
+  position:absolute;inset:0;background:var(--bg2);border-radius:18px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
+  display:none;
 }
 .lf-spinner{
-  width:36px;height:36px;border:3px solid var(--border2);border-top-color:var(--gold);
-  border-radius:50%;animation:spin .7s linear infinite;
+  width:32px;height:32px;border:2px solid var(--border2);
+  border-top-color:var(--gold);border-radius:50%;
+  animation:spin .7s linear infinite;
 }
 @keyframes spin{to{transform:rotate(360deg)}}
-.lf-loading-msg{font-size:12px;color:var(--sub)}
+.lf-demo{margin-top:20px;border-top:1px solid var(--border);padding-top:16px}
+.lf-demo-toggle{
+  font-size:10px;color:var(--muted);cursor:pointer;
+  letter-spacing:1px;text-transform:uppercase;display:block;text-align:center;margin-bottom:10px;
+  transition:.15s;
+}
+.lf-demo-toggle:hover{color:var(--sub)}
+.lf-demo-panel{display:none}
+.da-row{
+  display:flex;align-items:center;gap:10px;padding:8px 10px;
+  border-radius:8px;cursor:pointer;transition:background .1s;margin-bottom:4px;
+}
+.da-row:hover{background:var(--bg3)}
+.da-avatar{
+  width:30px;height:30px;border-radius:8px;display:flex;align-items:center;
+  justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;
+}
+.da-name{font-size:12px;font-weight:700;flex:1}
+.da-id{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)}
+.da-badge{font-size:9px;padding:2px 7px;border-radius:4px;font-weight:700;white-space:nowrap}
 
+/* ═══════════════════════════════════════════
+   SHELL
+═══════════════════════════════════════════ */
+#shell{display:none;height:100vh;flex-direction:column}
+#shell.on{display:flex}
+
+/* Topbar */
+.topbar{
+  height:48px;background:var(--bg2);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 16px 0 0;
+  flex-shrink:0;position:relative;z-index:50;
+}
+.tb-logo{
+  width:var(--sidebar-w);flex-shrink:0;
+  font-family:'Kaisei Tokumin',serif;font-size:16px;letter-spacing:3px;color:var(--gold);
+  padding:0 20px;display:flex;align-items:center;gap:8px;border-right:1px solid var(--border);
+  height:100%;
+}
+.tb-logo-dot{width:6px;height:6px;background:var(--gold);border-radius:50%}
+.tb-context{font-size:11px;color:var(--muted);padding:0 16px;flex:1;letter-spacing:.5px}
+.tb-right{display:flex;align-items:center;gap:10px}
+.tb-avatar{
+  width:32px;height:32px;border-radius:9px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:700;cursor:pointer;
+  border:1px solid var(--border2);transition:.15s;
+}
+.tb-avatar:hover{border-color:var(--gold-dim)}
+.tb-name{font-size:12px;font-weight:600}
+.tb-role{font-size:10px;color:var(--muted)}
+.tb-logout{
+  padding:5px 12px;border-radius:6px;border:1px solid var(--border2);
+  background:transparent;color:var(--muted);font-size:10px;cursor:pointer;
+  font-family:'Noto Sans JP',sans-serif;transition:.15s;
+}
+.tb-logout:hover{border-color:var(--red);color:var(--red)}
+
+/* Body */
+.shell-body{display:flex;flex:1;overflow:hidden}
+
+/* Sidebar */
+.sidebar{
+  width:var(--sidebar-w);flex-shrink:0;
+  background:var(--bg2);border-right:1px solid var(--border);
+  overflow-y:auto;display:flex;flex-direction:column;padding:12px 0 0;
+}
+.sb-section{font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;
+  padding:14px 16px 5px;font-family:'DM Mono',monospace}
+.sb-section:first-child{padding-top:6px}
+.nav-item{
+  display:flex;align-items:center;gap:9px;padding:9px 14px 9px 16px;
+  cursor:pointer;transition:all .12s;color:var(--sub);font-size:12px;border-radius:0;
+  position:relative;
+}
+.nav-item:hover{background:var(--bg3);color:var(--text)}
+.nav-item.on{background:var(--gold-bg);color:var(--gold)}
+.nav-item.on::before{content:'';position:absolute;left:0;top:4px;bottom:4px;width:2px;background:var(--gold);border-radius:0 2px 2px 0}
+.ni-icon{font-size:15px;width:22px;text-align:center;flex-shrink:0}
+.ni-badge{margin-left:auto;background:var(--red);color:#fff;font-size:9px;padding:1px 6px;border-radius:10px;font-weight:700}
+.ni-ext{margin-left:auto;font-size:10px;color:var(--muted);opacity:.6}
+.sb-foot{margin-top:auto;padding:12px 16px;border-top:1px solid var(--border);font-family:'DM Mono',monospace;font-size:9px;color:var(--muted)}
+
+/* Content */
+.content{flex:1;overflow-y:auto;background:var(--bg)}
+.page{display:none;padding:24px 28px;max-width:1300px}
+.page.on{display:block;animation:fadeIn .18s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+/* ═══════════════════════════════════════════
+   COMMON COMPONENTS
+═══════════════════════════════════════════ */
+.page-hdr{margin-bottom:20px}
+.page-title{font-size:20px;font-weight:700;letter-spacing:-.3px}
+.page-sub{font-size:11px;color:var(--sub);margin-top:3px}
+
+/* Cards */
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;margin-bottom:16px}
+.card-hdr{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 18px 0;
+}
+.ch-title{font-size:12px;font-weight:700;letter-spacing:.3px}
+.card-body{padding:14px 18px}
+
+/* Stats */
+.stats-grid{display:grid;gap:12px;margin-bottom:20px}
+.sg-4{grid-template-columns:repeat(4,1fr)}
+.sg-5{grid-template-columns:repeat(5,1fr)}
+.sg-3{grid-template-columns:repeat(3,1fr)}
+@media(max-width:1100px){.sg-5{grid-template-columns:repeat(3,1fr)}.sg-4{grid-template-columns:repeat(2,1fr)}}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;cursor:default}
+.stat-ico{font-size:18px;margin-bottom:8px}
+.stat-val{font-size:24px;font-weight:800;line-height:1;margin-bottom:4px}
+.stat-label{font-size:11px;color:var(--sub)}
+.stat-sub{font-size:10px;color:var(--muted);margin-top:3px}
+
+/* Grid layouts */
+.grid-2r{display:grid;grid-template-columns:1fr 340px;gap:16px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media(max-width:1050px){.grid-2r{grid-template-columns:1fr}.grid-2{grid-template-columns:1fr}}
+
+/* Tables */
+.tbl{width:100%;border-collapse:collapse;font-size:12px}
+.tbl th{padding:9px 12px;text-align:left;font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;font-family:'DM Mono',monospace;border-bottom:1px solid var(--border);white-space:nowrap}
+.tbl td{padding:10px 12px;border-bottom:1px solid var(--border)}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tbody tr:hover td{background:var(--bg3)}
+.mono{font-family:'DM Mono',monospace}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:8px 16px;border-radius:8px;border:none;cursor:pointer;font-size:12px;font-weight:700;font-family:'Noto Sans JP',sans-serif;transition:all .15s;text-decoration:none;white-space:nowrap}
+.btn-primary{background:var(--gold);color:#000}
+.btn-primary:hover{background:var(--gold2)}
+.btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--sub)}
+.btn-ghost:hover{border-color:var(--gold-dim);color:var(--gold);background:var(--gold-bg)}
+.btn-sm{padding:5px 11px;font-size:11px}
+.btn-red{background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.3);color:var(--red)}
+.btn-red:hover{background:rgba(248,113,113,.2)}
+.btn-green{background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.25);color:var(--green)}
+.btn-green:hover{background:rgba(52,211,153,.18)}
+.btn-ext::after{content:'↗';font-size:10px;margin-left:2px;opacity:.6}
+
+/* Pills */
+.pill{display:inline-flex;align-items:center;padding:2px 9px;border-radius:20px;font-size:10px;font-weight:700;white-space:nowrap}
+.pill-green{background:rgba(52,211,153,.12);color:var(--green)}
+.pill-blue{background:rgba(79,156,249,.12);color:var(--blue)}
+.pill-orange{background:rgba(251,146,60,.12);color:var(--orange)}
+.pill-red{background:rgba(248,113,113,.12);color:var(--red)}
+.pill-purple{background:rgba(167,139,250,.12);color:var(--purple)}
+.pill-gold{background:rgba(201,168,76,.12);color:var(--gold)}
+.pill-muted{background:rgba(74,82,112,.15);color:var(--muted)}
+
+/* Alert bars */
+.alert-bar{
+  display:flex;align-items:center;gap:10px;padding:10px 14px;
+  border-radius:9px;font-size:12px;margin-bottom:10px;
+}
+.ab-red{background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.25);color:var(--red)}
+.ab-orange{background:rgba(251,146,60,.08);border:1px solid rgba(251,146,60,.25);color:var(--orange)}
+.ab-blue{background:rgba(79,156,249,.08);border:1px solid rgba(79,156,249,.25);color:var(--blue)}
+.ab-gold{background:var(--gold-bg);border:1px solid var(--gold-dim);color:var(--gold)}
+
+/* Progress */
+.prog-wrap{height:4px;background:var(--border2);border-radius:2px;margin-top:6px;width:100%}
+.prog-fill{height:100%;border-radius:2px;transition:width .4s}
+
+/* Feed */
+.feed-item{display:flex;align-items:flex-start;gap:11px;padding:10px 0;border-bottom:1px solid var(--border)}
+.feed-item:last-child{border-bottom:none}
+.fi-dot{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.fi-msg{font-size:12px}
+.fi-time{font-size:10px;color:var(--muted);margin-top:2px}
+
+/* Rank display */
+.rank-display{display:flex;align-items:center;gap:14px}
+.rank-ring-wrap{position:relative;width:60px;height:60px;flex-shrink:0}
+.rank-ring-wrap svg{width:60px;height:60px;transform:rotate(-90deg)}
+.rank-ring-inner{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:20px}
+
+/* Form elements */
+.fg{margin-bottom:14px}
+.fg label{display:block;font-size:10px;color:var(--sub);letter-spacing:.5px;text-transform:uppercase;margin-bottom:5px}
+.fg input,.fg select,.fg textarea{
+  width:100%;padding:9px 12px;background:var(--bg3);
+  border:1px solid var(--border2);border-radius:8px;
+  color:var(--text);font-size:12px;font-family:'Noto Sans JP',sans-serif;
+  outline:none;transition:border-color .15s;
+}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--gold)}
+.fg textarea{resize:vertical;min-height:80px;line-height:1.7}
+.fg input::placeholder,.fg textarea::placeholder{color:var(--muted)}
+.fg select{cursor:pointer}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+::-webkit-scrollbar-thumb:hover{background:var(--muted)}
+
+/* Exec banner */
+.exec-banner{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px;
+}
+.exec-btn{
+  display:flex;align-items:center;gap:10px;padding:13px 16px;
+  background:linear-gradient(135deg,rgba(201,168,64,.1),rgba(201,168,64,.04));
+  border:1px solid rgba(201,168,64,.25);border-radius:10px;
+  cursor:pointer;transition:all .15s;
+}
+.exec-btn:hover{border-color:var(--gold-dim);background:linear-gradient(135deg,rgba(201,168,64,.16),rgba(201,168,64,.07));transform:translateY(-1px)}
+.exec-btn-icon{font-size:18px}
+.exec-btn-label{font-size:11px;font-weight:700;color:var(--gold)}
+
+/* Quick tools grid (agent) */
+.qt-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.qt-card{
+  background:var(--bg3);border:1px solid var(--border);border-radius:10px;
+  padding:13px;text-align:center;cursor:pointer;transition:all .15s;
+}
+.qt-card:hover{border-color:var(--border2);transform:translateY(-1px)}
+.qt-icon{font-size:21px;margin-bottom:6px}
+.qt-label{font-size:11px;font-weight:700}
+
+/* ═══════════════════════════════════════════
+   PARTNER SPECIFIC
+═══════════════════════════════════════════ */
+.pt-stat{
+  background:var(--card);border:1px solid var(--border);border-radius:12px;
+  padding:16px;cursor:pointer;transition:all .15s;text-align:center;
+}
+.pt-stat:hover{border-color:var(--border2);transform:translateY(-2px)}
+
+/* Messages */
+.msg-layout{display:grid;grid-template-columns:260px 1fr;gap:0;border:1px solid var(--border);border-radius:12px;overflow:hidden;height:500px}
+.msg-list{background:var(--bg2);border-right:1px solid var(--border);overflow-y:auto}
+.msg-contact{
+  display:flex;align-items:center;gap:10px;padding:12px 14px;
+  border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;
+}
+.msg-contact:hover{background:var(--bg3)}
+.msg-contact.on{background:var(--gold-bg)}
+.mc-avatar{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.mc-name{font-size:12px;font-weight:700}
+.mc-last{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px}
+.mc-time{font-size:10px;color:var(--muted);white-space:nowrap}
+.mc-unread{background:var(--gold);color:#000;font-size:9px;padding:1px 5px;border-radius:8px;font-weight:700}
+.msg-main{display:flex;flex-direction:column;background:var(--card)}
+.msg-hdr{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border);flex-shrink:0}
+.msg-body{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+.msg-bubble{max-width:72%;padding:9px 13px;border-radius:12px;font-size:12px;line-height:1.6;word-break:break-word}
+.msg-me{background:var(--gold);color:#000;margin-left:auto;border-radius:12px 12px 3px 12px}
+.msg-them{background:var(--bg3);border:1px solid var(--border);border-radius:12px 12px 12px 3px}
+.msg-time{font-size:10px;color:var(--muted);margin-top:2px;text-align:right}
+.msg-them + .msg-time{text-align:left}
+.msg-footer{display:flex;gap:8px;padding:12px 14px;border-top:1px solid var(--border);flex-shrink:0}
+.msg-input{
+  flex:1;padding:8px 12px;background:var(--bg3);border:1px solid var(--border2);
+  border-radius:8px;color:var(--text);font-size:12px;font-family:'Noto Sans JP',sans-serif;
+  outline:none;resize:none;
+}
+.msg-input:focus{border-color:var(--gold)}
+
+/* Stepper */
+.stepper{display:flex;align-items:center;gap:0}
+.step{display:flex;align-items:center}
+.step-dot{
+  width:18px;height:18px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-size:9px;font-weight:700;flex-shrink:0;
+}
+.step-dot.done{background:var(--green);color:#000}
+.step-dot.active{background:var(--blue);color:#fff}
+.step-dot.wait{background:var(--border2);color:var(--muted)}
+.step-line{width:16px;height:2px;background:var(--border2)}
+.step-line.done{background:var(--green)}
+
+/* Code display */
+.code-box{
+  background:var(--bg3);border:1px solid var(--gold-dim);border-radius:12px;
+  padding:18px;margin-bottom:12px;
+}
+.code-big{font-family:'DM Mono',monospace;font-size:26px;font-weight:700;color:var(--gold);letter-spacing:3px;margin:8px 0}
+.code-share-btns{display:flex;gap:8px;flex-wrap:wrap}
+
+/* HQ Role badge */
+.hq-role-badge{
+  display:inline-block;font-size:10px;padding:2px 9px;border-radius:5px;margin-left:10px;vertical-align:middle;font-weight:700;
+}
+.hrb-exec{background:rgba(201,168,64,.15);color:var(--gold)}
+.hrb-manager{background:rgba(79,156,249,.12);color:var(--blue)}
+.hrb-staff{background:rgba(52,211,153,.1);color:var(--green)}
+
+/* Matching page */
+.match-card{
+  background:var(--card);border:1px solid var(--border);border-radius:11px;
+  padding:14px;cursor:pointer;transition:all .15s;margin-bottom:10px;
+}
+.match-card:hover{border-color:var(--border2);transform:translateY(-1px)}
+.match-card.selected{border-color:var(--gold)}
+.mc-status-bar{height:3px;border-radius:2px;margin:-14px -14px 12px;background:var(--border)}
+.mc-status-open{background:var(--blue)}
+.mc-status-done{background:var(--green)}
+.mc-status-pending{background:var(--orange)}
+
+/* ═══════════════════════════════════════════
+   SCROLLBAR & UTILITIES
+═══════════════════════════════════════════ */
+.text-gold{color:var(--gold)}
+.text-blue{color:var(--blue)}
+.text-green{color:var(--green)}
+.text-red{color:var(--red)}
+.text-orange{color:var(--orange)}
+.text-muted{color:var(--muted)}
+.text-sub{color:var(--sub)}
+.fw-700{font-weight:700}
 </style>
 </head>
 <body>
 
-<!-- ══════════════════════════════════════════════
-     LOGIN SCREEN
-     ══════════════════════════════════════════════ -->
+<!-- ══════════════════════════════════════════
+  LOGIN
+══════════════════════════════════════════ -->
 <div id="login-screen">
-  <div class="login-form-card">
-    <!-- Loading overlay -->
+  <div class="lf-card">
     <div class="lf-loading" id="lf-loading">
       <div class="lf-spinner"></div>
-      <div class="lf-loading-msg" id="lf-loading-msg">認証中...</div>
+      <div style="font-size:12px;color:var(--sub)">認証中...</div>
     </div>
 
     <div class="lf-logo">CORETO</div>
     <div class="lf-sub">Business Management System</div>
 
-    <div class="lf-error" id="lf-error"></div>
+    <div class="lf-err" id="lf-err"></div>
 
     <label class="lf-label" for="lf-id">CORETO ID</label>
     <input class="lf-input" type="text" id="lf-id" placeholder="例：10012" maxlength="10"
-           autocomplete="username" oninput="clearLoginError()"
+           autocomplete="username"
            onkeydown="if(event.key==='Enter')document.getElementById('lf-pw').focus()">
 
     <label class="lf-label" for="lf-pw">パスワード</label>
-    <input class="lf-input" type="password" id="lf-pw" placeholder="••••••••••"
-           autocomplete="current-password" oninput="clearLoginError()"
+    <input class="lf-input" type="password" id="lf-pw" placeholder="••••••••"
+           autocomplete="current-password"
            onkeydown="if(event.key==='Enter')doLogin()">
 
-    <button class="lf-btn" id="lf-submit" onclick="doLogin()">ログイン</button>
-    <div style="text-align:center;margin-top:14px">
-      <a href="coreto-login.html" style="font-size:11px;color:var(--sub);text-decoration:none;
-         transition:.15s" onmouseover="this.style.color='var(--blue)'" onmouseout="this.style.color='var(--sub)'">
-        パスワードをお忘れですか？
-      </a>
-    </div>
-
-
+    <button class="lf-btn" onclick="doLogin()">ログイン</button>
 
     <div class="lf-demo">
-      <span class="lf-demo-toggle" onclick="toggleDemo()">▼ デモアカウント一覧</span>
-      <div class="lf-demo-panel" id="demo-panel">
-        <div style="font-size:9px;color:var(--muted);margin-bottom:8px;letter-spacing:1px">クリックで自動入力　パスワード：coreto2026</div>
-        <div class="demo-acc" onclick="fillDemo('00001','coreto2026')">
-          <div><div class="da-name">HQ 統括</div><div class="da-info">exec</div></div>
-          <span class="da-type" style="background:rgba(201,168,76,.15);color:var(--gold)">exec</span>
+      <span class="lf-demo-toggle" onclick="toggleDemo(this)">▼ デモアカウント一覧</span>
+      <div class="lf-demo-panel" id="lf-demo-panel">
+        <div style="font-size:9px;color:var(--muted);text-align:center;margin-bottom:10px;letter-spacing:1px">クリックで自動入力 / PW: coreto2026</div>
+        <div class="da-row" onclick="fillDemo('00001')">
+          <div class="da-avatar" style="background:rgba(201,168,64,.15);color:var(--gold)">統</div>
+          <div><div class="da-name">HQ 統括</div><div class="da-id">00001</div></div>
+          <span class="da-badge" style="background:rgba(201,168,64,.15);color:var(--gold)">exec</span>
         </div>
-        <div class="demo-acc" onclick="fillDemo('00347','coreto2026')">
-          <div><div class="da-name">HQ マネージャー</div><div class="da-info">manager</div></div>
-          <span class="da-type" style="background:rgba(79,156,249,.12);color:var(--blue)">manager</span>
+        <div class="da-row" onclick="fillDemo('00347')">
+          <div class="da-avatar" style="background:rgba(79,156,249,.12);color:var(--blue)">マ</div>
+          <div><div class="da-name">HQ マネージャー</div><div class="da-id">00347</div></div>
+          <span class="da-badge" style="background:rgba(79,156,249,.12);color:var(--blue)">manager</span>
         </div>
-        <div class="demo-acc" onclick="fillDemo('00891','coreto2026')">
-          <div><div class="da-name">HQ スタッフ</div><div class="da-info">staff</div></div>
-          <span class="da-type" style="background:rgba(52,211,153,.1);color:var(--green)">staff</span>
+        <div class="da-row" onclick="fillDemo('00891')">
+          <div class="da-avatar" style="background:rgba(52,211,153,.1);color:var(--green)">ス</div>
+          <div><div class="da-name">HQ スタッフ</div><div class="da-id">00891</div></div>
+          <span class="da-badge" style="background:rgba(52,211,153,.1);color:var(--green)">staff</span>
         </div>
-        <div class="demo-acc" onclick="fillDemo('10012','coreto2026')">
-          <div><div class="da-name">山田 誠（Gold）</div><div class="da-info">ID: 10012</div></div>
-          <span class="da-type" style="background:rgba(79,156,249,.12);color:var(--blue)">RE AG</span>
+        <div style="height:1px;background:var(--border);margin:8px 0"></div>
+        <div class="da-row" onclick="fillDemo('10008')">
+          <div class="da-avatar" style="background:rgba(167,139,250,.15);color:var(--purple)">佐</div>
+          <div><div class="da-name">佐藤 花子</div><div class="da-id">10008</div></div>
+          <span class="da-badge" style="background:rgba(167,139,250,.12);color:var(--purple)">RE Platinum</span>
         </div>
-        <div class="demo-acc" onclick="fillDemo('10008','coreto2026')">
-          <div><div class="da-name">佐藤 花子（Platinum）</div><div class="da-info">ID: 10008</div></div>
-          <span class="da-type" style="background:rgba(79,156,249,.12);color:var(--blue)">RE AG</span>
+        <div class="da-row" onclick="fillDemo('10012')">
+          <div class="da-avatar" style="background:rgba(201,168,64,.15);color:var(--gold)">山</div>
+          <div><div class="da-name">山田 誠</div><div class="da-id">10012</div></div>
+          <span class="da-badge" style="background:rgba(201,168,64,.12);color:var(--gold)">RE Gold</span>
         </div>
-        <div class="demo-acc" onclick="fillDemo('20005','coreto2026')">
-          <div><div class="da-name">田中 美穂（Gold）</div><div class="da-info">ID: 20005</div></div>
-          <span class="da-type" style="background:rgba(52,211,153,.1);color:var(--green)">HR AG</span>
+        <div class="da-row" onclick="fillDemo('20005')">
+          <div class="da-avatar" style="background:rgba(52,211,153,.1);color:var(--green)">田</div>
+          <div><div class="da-name">田中 美穂</div><div class="da-id">20005</div></div>
+          <span class="da-badge" style="background:rgba(52,211,153,.1);color:var(--green)">HR Gold</span>
         </div>
-        <div class="demo-acc" onclick="fillDemo('30007','coreto2026')">
-          <div><div class="da-name">佐藤 美咲</div><div class="da-info">ID: 30007</div></div>
-          <span class="da-type" style="background:rgba(167,139,250,.12);color:var(--purple)">Partner</span>
+        <div class="da-row" onclick="fillDemo('30007')">
+          <div class="da-avatar" style="background:rgba(167,139,250,.12);color:var(--purple)">佐</div>
+          <div><div class="da-name">佐藤 美咲</div><div class="da-id">30007</div></div>
+          <span class="da-badge" style="background:rgba(167,139,250,.12);color:var(--purple)">Partner</span>
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════════
-     APP SHELL
-     ══════════════════════════════════════════════ -->
-<div id="app-shell" style="display:none;height:100vh;display:none;flex-direction:column">
-
+<!-- ══════════════════════════════════════════
+  SHELL
+══════════════════════════════════════════ -->
+<div id="shell">
   <!-- Topbar -->
   <div class="topbar">
-    <div class="logo">CORETO</div>
-    <div class="topbar-sep"></div>
-    <div class="topbar-context" id="topbar-ctx">管理ポータル</div>
-    <div class="topbar-user">
-      <div class="notif-btn" title="通知">🔔<div class="notif-dot" id="notif-dot"></div></div>
-      <div class="user-pill" id="user-pill">
-        <div class="user-avatar" id="u-avatar">H</div>
-        <div>
-          <div class="user-name" id="u-name">管理者</div>
-          <div class="user-role" id="u-role">HQ</div>
-        </div>
+    <div class="tb-logo">
+      <div class="tb-logo-dot"></div>
+      CORETO
+    </div>
+    <div class="tb-context" id="tb-context">—</div>
+    <div class="tb-right">
+      <div>
+        <div class="tb-name" id="tb-name">—</div>
+        <div class="tb-role" id="tb-role">—</div>
       </div>
-      <button class="logout-btn" onclick="logout()">ログアウト</button>
+      <div class="tb-avatar" id="tb-avatar">?</div>
+      <button class="tb-logout" onclick="doLogout()">ログアウト</button>
     </div>
   </div>
 
-  <div class="body-layout">
-    <!-- Sidebar -->
-    <div class="sidebar" id="sidebar">
-      <!-- built by JS -->
-      <div class="sidebar-footer">
-        <div class="sf-id" id="sf-id">ID: —</div>
-        <div style="font-size:9px;color:var(--muted);margin-top:3px">v2.0 Build 2026.02</div>
-      </div>
-    </div>
-
-    <!-- Content -->
-    <div class="content" id="content">
-      <!-- Pages inserted here by JS -->
-    </div>
+  <!-- Body -->
+  <div class="shell-body">
+    <div class="sidebar" id="sidebar"></div>
+    <div class="content" id="content"></div>
   </div>
 </div>
 
 <script>
-// ══════════════════════════════════════════════════════════════════
-//  USER DATA
-// ══════════════════════════════════════════════════════════════════
-// ══════════════════════════════════════════════════════════════════
-//  USER DATABASE (本番ではKintone/APIから取得)
-// ══════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════
+//  USERS & AUTH
+// ════════════════════════════════════════════════════════════
 const USERS = {
-  // ── HQ ──
-  // exec: 00001–00199（手動指定）
-  // manager/staff: 00200以降（ランダム採番）
-  '00001': { name:'HQ 統括',         type:'hq', hqRole:'exec',    pw:'coreto2026', icon:'🏢', color:'var(--gold)',   avatar:'統' },
-  '00347': { name:'HQ マネージャー', type:'hq', hqRole:'manager', pw:'coreto2026', icon:'🏢', color:'var(--blue)',   avatar:'マ' },
-  '00891': { name:'HQ スタッフ',     type:'hq', hqRole:'staff',   pw:'coreto2026', icon:'🏢', color:'var(--green)', avatar:'ス' },
-  // ── RE Agent (10001–19999) ──
-  '10008': { name:'佐藤 花子', type:'re', rank:'Platinum', rankKey:'platinum', pw:'coreto2026', icon:'🏠', color:'var(--purple)', avatar:'佐' },
-  '10012': { name:'山田 誠',   type:'re', rank:'Gold',     rankKey:'gold',     pw:'coreto2026', icon:'🏠', color:'var(--blue)',   avatar:'山' },
-  '10023': { name:'鈴木 健太', type:'re', rank:'Silver',   rankKey:'silver',   pw:'coreto2026', icon:'🏠', color:'var(--green)', avatar:'鈴' },
-  '10041': { name:'渡辺 隆',   type:'re', rank:'Bronze',   rankKey:'bronze',   pw:'coreto2026', icon:'🏠', color:'var(--orange)',avatar:'渡' },
-  // ── HR Agent (20001–29999) ──
-  '20005': { name:'田中 美穂', type:'hr', rank:'Gold',     rankKey:'gold',     pw:'coreto2026', icon:'👥', color:'var(--green)', avatar:'田' },
-  // ── Partner (30001–39999) ──
-  '30007': { name:'佐藤 美咲', type:'pt', rank:'Partner',  rankKey:'pt',       pw:'coreto2026', icon:'🤝', color:'var(--purple)',avatar:'佐' },
+  '00001':{ name:'HQ 統括',        type:'hq', hqRole:'exec',    pw:'coreto2026', color:'var(--gold)',   avatar:'統' },
+  '00347':{ name:'HQ マネージャー',type:'hq', hqRole:'manager', pw:'coreto2026', color:'var(--blue)',   avatar:'マ' },
+  '00891':{ name:'HQ スタッフ',    type:'hq', hqRole:'staff',   pw:'coreto2026', color:'var(--green)',  avatar:'ス' },
+  '10008':{ name:'佐藤 花子', type:'re', rank:'Platinum', rankKey:'platinum', pw:'coreto2026', color:'var(--purple)', avatar:'佐' },
+  '10012':{ name:'山田 誠',   type:'re', rank:'Gold',     rankKey:'gold',     pw:'coreto2026', color:'var(--gold)',   avatar:'山' },
+  '10023':{ name:'鈴木 健太', type:'re', rank:'Silver',   rankKey:'silver',   pw:'coreto2026', color:'var(--green)',  avatar:'鈴' },
+  '10041':{ name:'渡辺 隆',   type:'re', rank:'Bronze',   rankKey:'bronze',   pw:'coreto2026', color:'var(--orange)', avatar:'渡' },
+  '20005':{ name:'田中 美穂', type:'hr', rank:'Gold',     rankKey:'gold',     pw:'coreto2026', color:'var(--green)',  avatar:'田' },
+  '30007':{ name:'佐藤 美咲', type:'pt', rank:'Partner',  rankKey:'pt',       pw:'coreto2026', color:'var(--purple)', avatar:'佐' },
 };
 
-// ID範囲からユーザータイプを自動判別
-function detectTypeFromId(id) {
-  const n = parseInt(id);
-  if (n >= 1    && n <= 9999)  return 'hq';
-  if (n >= 10001 && n <= 19999) return 're';
-  if (n >= 20001 && n <= 29999) return 'hr';
-  if (n >= 30001 && n <= 39999) return 'pt';
-  return null;
-}
+// HQ role hierarchy
+const HQ_LEVEL = { exec:3, manager:2, staff:1 };
 
-// ══════════════════════════════════════════════════════════════════
-//  TOOLS REGISTRY  (url = null means embedded page)
-// ══════════════════════════════════════════════════════════════════
-const TOOLS = [
-  // HQ Tools
-  { id:'screening',  icon:'📋', name:'書類審査',         desc:'入会審査チェックシート。合否判定・Calendly連携',      url:'coreto-screening.html',         color:'#4f9cf9', roles:['hq'],      minHqRole:'staff', section:'審査・管理' },
-  { id:'rbac',       icon:'🛡',  name:'権限管理（RBAC）', desc:'ロール別アクセス制御。スタッフ権限の設定・確認',      url:'coreto-admin-rbac.html',        color:'#c9a84c', roles:['hq'],      minHqRole:'manager', section:'審査・管理' },
-  { id:'matching',   icon:'🎯', name:'マッチング',        desc:'案件と担当エージェントの最適マッチング',             url:'coreto-matching.html',          color:'#34d399', roles:['hq'],      minHqRole:'staff', section:'審査・管理' },
-  { id:'codes',      icon:'🔖', name:'紹介コード管理',    desc:'特別コードの作成・有効期限・使用状況管理',           url:'coreto-codes.html',             color:'#fb923c', roles:['hq'],      minHqRole:'manager', section:'報酬・支払い' },
-  { id:'payment',    icon:'💴', name:'支払明細・バッチ',  desc:'月次振込バッチ・報酬計算・支払明細PDF',             url:'coreto-payment.html',           color:'#c9a84c', roles:['hq'],      minHqRole:'manager', section:'報酬・支払い' },
-  { id:'early-quit', icon:'⚠️', name:'早期退職アラート', desc:'HR案件の在籍確認・返金条件管理・アラート発令',       url:'coreto-early-quit.html',        color:'#f87171', roles:['hq','hr'], minHqRole:'manager', section:'報酬・支払い' },
-  { id:'partner-mgmt',icon:'🤝',name:'パートナー管理',    desc:'パートナーポータル・紹介案件・報酬追跡',             url:'coreto-partner.html',           color:'#a78bfa', roles:['hq'],      minHqRole:'manager', section:'パートナー' },
-  { id:'overview',   icon:'📊', name:'システム概要',      desc:'CORETO全体フロー・自動化マップ・アーキテクチャ',     url:'coreto-system-overview.html',   color:'#2dd4bf', roles:['hq'],      minHqRole:'staff', section:'システム' },
-  { id:'client-id',  icon:'🆔', name:'顧客IDシステム',   desc:'顧客CL-XXXXX番号の発行・バーチャル口座管理',        url:'coreto-client-id.html',         color:'#4f9cf9', roles:['hq'],      minHqRole:'staff', section:'システム' },
-  // Shared HQ+Agent
-  { id:'it-setsu',   icon:'📝', name:'IT重説・書類管理', desc:'IT重説チェックリスト・契約書スキャン・追跡番号',     url:'coreto-it-setsu.html',          color:'#34d399', roles:['hq','re'], minHqRole:'staff', section:'案件業務' },
-  { id:'naiken',     icon:'🏠', name:'物件内見管理',      desc:'内見申込・スケジュール・ステータス追跡',             url:'coreto-naiken.html',            color:'#4f9cf9', roles:['hq','re'], minHqRole:'staff', section:'案件業務' },
-  { id:'batch-close',icon:'✅', name:'成約・月次バッチ', desc:'案件クローズ報告・月次バッチ・成約サマリー',         url:'coreto-batch-close.html',       color:'#34d399', roles:['hq','re'], minHqRole:'staff', section:'案件業務' },
-  { id:'label',      icon:'📮', name:'ラベル・レターパック',desc:'サーマルラベル印刷・レターパック宛名管理',          url:'coreto-thermal-label.html',     color:'#fb923c', roles:['hq','re'], minHqRole:'staff', section:'案件業務' },
-  { id:'barcode',    icon:'📡', name:'バーコードスキャン', desc:'Honeywell連携スキャンデスク・追跡番号管理',        url:'coreto-barcode-scan.html',      color:'#2dd4bf', roles:['hq','re'], minHqRole:'staff', section:'案件業務' },
-  // Agent tools
-  { id:'mypage',     icon:'👤', name:'マイページ',        desc:'プロフィール・案件一覧・LINE連携・設定',             url:'coreto-agent-mypage.html',      color:'#4f9cf9', roles:['re','hr'], minHqRole:'staff', section:'エージェント' },
-  { id:'rank',       icon:'⭐', name:'ランクダッシュボード',desc:'ポイント・ランク・メンター活動・報酬シミュレーター',url:'coreto-rank.html',              color:'#c9a84c', roles:['re','hr'], minHqRole:'staff', section:'エージェント' },
-  { id:'simulator',  icon:'🧮', name:'報酬シミュレーター', desc:'報酬計算・インセンティブ試算・ランク比較',           url:'coreto-commission-simulator.html',color:'#a78bfa',roles:['re','hr'],minHqRole:'staff', section:'エージェント' },
-  // HR specific
-  { id:'early-quit-ag',icon:'⚠️',name:'早期退職アラート（AG）',desc:'HR案件の返金条件登録・退職報告',            url:'coreto-early-quit.html',        color:'#f87171', roles:['hr'],      minHqRole:'staff', section:'HR業務' },
-  // Partner
-  { id:'pt-portal',  icon:'🌐', name:'パートナーポータル', desc:'紹介案件・コード・報酬・メッセージ',                url:'coreto-partner.html',           color:'#a78bfa', roles:['pt'],      minHqRole:'staff', section:'パートナー機能' },
-  { id:'pt-login',   icon:'🔗', name:'紹介リンク共有',    desc:'紹介コード・QR・Slack共有',                        url:'coreto-partner.html',           color:'#4f9cf9', roles:['pt'],      minHqRole:'staff', section:'パートナー機能' },
-  // Security & Compliance
-  { id:'kyc',         icon:'🪪', name:'eKYC・口座管理',    desc:'本人確認・名義照合・口座変更承認フロー',             url:'coreto-kyc.html',               color:'#34d399', roles:['hq','re','hr','pt'], minHqRole:'staff', section:'セキュリティ' },
-  { id:'instant-pay', icon:'⚡', name:'即時払い（2FA）',   desc:'2段階認証付き即時振込申請・認証コードによる確認・ロック管理',    url:'coreto-instant-pay.html',       color:'#c9a84c', roles:['hq','re','hr','pt'], minHqRole:'staff', section:'セキュリティ' },
-  { id:'receipt',      icon:'🧾', name:'領収書・請求書',      desc:'報酬領収書・請求書・源泉徴収票のDL・発行',           url:'coreto-receipt.html',           color:'#34d399', roles:['hq','re','hr','pt'], minHqRole:'staff', section:'経理' },
-  { id:'contract',      icon:'📜', name:'業務委託契約書',       desc:'電子署名・契約書確認・署名履歴',                     url:'coreto-contract.html',          color:'#a78bfa', roles:['hq','re','hr','pt'], minHqRole:'staff', section:'入会' },
-  { id:'onboarding',    icon:'🎓', name:'オンボーディング',      desc:'研修チェック・進捗管理・HQ一覧',                    url:'coreto-onboarding.html',        color:'#4f9cf9', roles:['hq','re','hr'],      minHqRole:'staff', section:'入会' },
-  { id:'faq',           icon:'❓',  name:'FAQナレッジ',          desc:'よくある質問・社内規程検索・Slack転送',              url:'coreto-faq.html',               color:'#fb923c', roles:['hq','re','hr','pt'], minHqRole:'staff', section:'サポート' },
-  { id:'pipeline',      icon:'🔀', name:'案件パイプライン',      desc:'案件ステータスボード・カンバン管理・メモ',           url:'coreto-pipeline.html',          color:'#4f9cf9', roles:['hq','re','hr'],      minHqRole:'staff', section:'案件管理' },
-  { id:'payroll',       icon:'💰', name:'月次報酬確定',          desc:'全エージェント報酬確定・全銀データ出力・一括送信',    url:'coreto-payroll.html',           color:'#c9a84c', roles:['hq'],                 minHqRole:'manager', section:'経理' },
-  { id:'partner-feed',  icon:'🔗', name:'パートナー紹介フィード', desc:'紹介案件の進捗・報酬確認（パートナー向け）',         url:'coreto-partner-feed.html',      color:'#34d399', roles:['pt','hq'],            minHqRole:'staff', section:'パートナー' },
-  { id:'exec-dashboard', icon:'📈', name:'収益ダッシュボード', desc:'月次P&L・KPI・全体収益グラフ（経営陣専用）', url:'coreto-exec-dashboard.html', color:'#c9a840', roles:['hq'], minHqRole:'exec', section:'経営陣専用' },
-  { id:'agent-mgmt',     icon:'👥', name:'全エージェント管理',  desc:'全員のランク・売上・状態管理・アカウント操作（経営陣専用）', url:'coreto-agent-mgmt.html', color:'#c9a840', roles:['hq'], minHqRole:'exec', section:'経営陣専用' },
-  { id:'network-tree',   icon:'🌐', name:'紹介ネットワーク図',         desc:'紹介の連鎖・傘下売上・メンバー構造分析（経営陣専用）',      url:'coreto-network-tree.html', color:'#c9a840', roles:['exec'],               minHqRole:'exec', section:'経営陣専用' },
-  { id:'apply',          icon:'📋', name:'エージェント・パートナー応募', desc:'一般公開の応募フォーム（書類審査前の最初のステップ）', url:'coreto-apply.html',         color:'#8b6914', roles:['hq'],                 minHqRole:'staff', section:'入会' },
-  { id:'screening',      icon:'🔍', name:'書類審査チェックシート',   desc:'応募者の書類審査・面接日程送付（HQ専用）',             url:'coreto-screening.html',     color:'#6b6760', roles:['hq'],                 minHqRole:'staff', section:'入会' },
-  { id:'pt-signup',     icon:'🆕', name:'パートナー入会申込',    desc:'面接通過後の招待制オンボーディング（パートナー）',         url:'coreto-partner-signup.html',    color:'#fb923c', roles:['hq'],                 minHqRole:'staff', section:'入会' },
-  { id:'id-manager',  icon:'🎲', name:'ID採番管理',        desc:'ランダム会員ID・案件ID発行・衝突検知・発行履歴',    url:'coreto-id-manager.html',        color:'#2dd4bf', roles:['hq'],      minHqRole:'manager', section:'セキュリティ' },
-];
-
-// ══════════════════════════════════════════════════════════════════
-//  SESSION
-// ══════════════════════════════════════════════════════════════════
 let session = null;
+let currentPage = 'dashboard';
 
-// ── Login helpers ─────────────────────────────────────────────────
-function clearLoginError() {
-  document.getElementById('lf-error').style.display = 'none';
-  document.getElementById('lf-id').classList.remove('error');
-  document.getElementById('lf-pw').classList.remove('error');
-}
-
-function showLoginError(msg) {
-  const el = document.getElementById('lf-error');
-  el.textContent = msg;
-  el.style.display = 'block';
-  document.getElementById('lf-id').classList.add('error');
-  document.getElementById('lf-pw').classList.add('error');
-  document.getElementById('lf-loading').style.display = 'none';
-  document.getElementById('lf-submit').disabled = false;
-}
-
-function toggleDemo() {
-  const p = document.getElementById('demo-panel');
-  p.style.display = p.style.display === 'block' ? 'none' : 'block';
-}
-
-function fillDemo(id, pw) {
-  document.getElementById('lf-id').value = id;
-  document.getElementById('lf-pw').value = pw;
-  clearLoginError();
-  document.getElementById('lf-pw').focus();
-}
+// ─ Restore session ─
+(function(){
+  const s = JSON.parse(sessionStorage.getItem('coreto_session') || 'null');
+  if(s && USERS[s.userId] && USERS[s.userId].type === s.type) {
+    session = {...USERS[s.userId], userId: s.userId};
+    document.getElementById('login-screen').style.display = 'none';
+    initShell();
+  }
+})();
 
 function doLogin() {
-  const inputId = document.getElementById('lf-id').value.trim();
-  const inputPw = document.getElementById('lf-pw').value;
-
-  // Basic validation
-  if (!inputId) { showLoginError('CORETO IDを入力してください'); return; }
-  if (!inputPw) { showLoginError('パスワードを入力してください'); return; }
-
-  // Show loading
-  document.getElementById('lf-submit').disabled = true;
+  const id = document.getElementById('lf-id').value.trim().padStart(5,'0');
+  const pw = document.getElementById('lf-pw').value;
+  const errEl = document.getElementById('lf-err');
+  errEl.textContent = '';
+  const u = USERS[id] || USERS[document.getElementById('lf-id').value.trim()];
+  if(!u || u.pw !== pw) {
+    errEl.textContent = 'IDまたはパスワードが正しくありません';
+    return;
+  }
   document.getElementById('lf-loading').style.display = 'flex';
-
-  // Simulate async auth (本番ではAPI呼び出し)
+  const actualId = Object.keys(USERS).find(k => USERS[k] === u) || id;
   setTimeout(() => {
-    const user = USERS[inputId];
-
-    // ID not found
-    if (!user) {
-      // Detect type from ID range for better error message
-      const detectedType = detectTypeFromId(inputId);
-      if (!detectedType) {
-        showLoginError('IDが見つかりません。COREBOシステムに登録されているIDを入力してください。');
-      } else {
-        const typeNames = { hq:'HQ', re:'不動産エージェント', hr:'人材紹介エージェント', pt:'パートナー' };
-        showLoginError(`IDが見つかりません（${typeNames[detectedType]}の範囲で検索）。
-IDまたはパスワードをご確認ください。`);
-      }
-      return;
-    }
-
-    // Password check
-    if (user.pw !== inputPw) {
-      document.getElementById('lf-loading-msg').textContent = '認証失敗';
-      setTimeout(() => showLoginError('パスワードが正しくありません。'), 400);
-      return;
-    }
-
-    // Success — detect type
-    const detectedType = user.type;
-    const typeLabels = { hq:'HQ', re:'不動産エージェント', hr:'人材紹介エージェント', pt:'パートナー' };
-    document.getElementById('lf-loading-msg').textContent = `${typeLabels[detectedType]}として認証完了`;
-
-    setTimeout(() => {
-      session = { userId: inputId, ...user };
-      document.getElementById('login-screen').style.display = 'none';
-      const shell = document.getElementById('app-shell');
-      shell.style.display = 'flex';
-      initShell();
-      // Clear inputs for security
-      document.getElementById('lf-id').value = '';
-      document.getElementById('lf-pw').value = '';
-      document.getElementById('lf-submit').disabled = false;
-      document.getElementById('lf-loading').style.display = 'none';
-    }, 700);
+    session = {...u, userId: actualId};
+    sessionStorage.setItem('coreto_session', JSON.stringify({ userId: actualId, type: u.type }));
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('lf-loading').style.display = 'none';
+    initShell();
   }, 800);
 }
 
-function logout() {
+function doLogout() {
+  if(!confirm('ログアウトしますか？')) return;
+  sessionStorage.removeItem('coreto_session');
   session = null;
-  document.getElementById('app-shell').style.display = 'none';
+  document.getElementById('shell').className = '';
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('lf-id').value = '';
   document.getElementById('lf-pw').value = '';
-  clearLoginError();
-  document.getElementById('demo-panel').style.display = 'none';
+  document.getElementById('lf-err').textContent = '';
+  document.getElementById('content').innerHTML = '';
+  document.getElementById('sidebar').innerHTML = '';
 }
 
-
-// ══════════════════════════════════════════════════════════════════
-//  RANDOM ID GENERATION ENGINE
-// ══════════════════════════════════════════════════════════════════
-const IssuedMemberIds = new Set(Object.keys(USERS).map(k=>parseInt(k)).filter(n=>!isNaN(n)));
-const IssuedCaseIds   = new Set(['X7K3M1','P9W4R2','A3R7Z6','K9T2M5']);
-const ID_RANGES = { hq_exec:[1,199], hq_staff:[200,9999], hq:[1,9999], re:[10001,19999], hr:[20001,29999], pt:[30001,39999] };
-// CASE_CHARS: see generateCaseId() above
-
-function generateMemberId(type) {
-  // hq_exec: 00001–00199（手動指定のため採番しない）
-  // hq_staff/manager: 00200以降ランダム
-  const rangeKey = (type === 'hq_exec') ? 'hq_exec' : (type === 'hq' || type === 'hq_staff') ? 'hq_staff' : type;
-  const [min, max] = ID_RANGES[rangeKey] || ID_RANGES[type] || [1,9999];
-  let id, attempts = 0;
-  do {
-    id = Math.floor(Math.random() * (max - min + 1) + min);
-    attempts++;
-    if (attempts > 500) throw new Error('ID空間が枯渇しています');
-  } while (IssuedMemberIds.has(id));
-  IssuedMemberIds.add(id);
-  return id.toString().padStart(5, '0');
+function fillDemo(id) {
+  document.getElementById('lf-id').value = id;
+  document.getElementById('lf-pw').value = 'coreto2026';
+  document.getElementById('lf-err').textContent = '';
+}
+function toggleDemo(el) {
+  const panel = document.getElementById('lf-demo-panel');
+  panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+  el.textContent = panel.style.display === 'block' ? '▲ デモアカウント一覧' : '▼ デモアカウント一覧';
 }
 
-// 案件ID採番（段階的）
-// typePrefix: 'R'=賃貸仲介 / 'S'=売買 / 'H'=人材紹介
-// 段階1: prefix + 数字6桁 (000000-999999, 100万通り)
-// 段階2: prefix + 英数字6桁 (枯渇後, 約10億通り追加)
-const _caseNums  = new Map([['R',new Set()],['S',new Set()],['H',new Set()]]);
-const _caseAlpha = new Map([['R',new Set()],['S',new Set()],['H',new Set()]]);
-const _CASE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-
-function generateCaseId(typePrefix) {
-  const prefix = typePrefix || 'R'; // default 賃貸
-  const year   = new Date().getFullYear();
-  const nums   = _caseNums.get(prefix) || new Set();
-  let suffix, attempts = 0;
-
-  // 段階1: 数字のみ
-  if (nums.size < 1000000) {
-    do {
-      suffix = String(Math.floor(Math.random()*1000000)).padStart(6,'0');
-      attempts++;
-    } while (nums.has(suffix) && attempts < 2000);
-    if (!nums.has(suffix)) {
-      nums.add(suffix);
-      _caseNums.set(prefix, nums);
-      return `${prefix}${suffix}`;
-    }
-  }
-  // 段階2: 英数字
-  const alphas = _caseAlpha.get(prefix) || new Set();
-  do {
-    suffix = Array.from({length:6},()=>_CASE_CHARS[Math.floor(Math.random()*_CASE_CHARS.length)]).join('');
-    attempts++;
-    if (attempts > 5000) throw new Error('案件ID空間が枯渇しています');
-  } while (alphas.has(suffix));
-  alphas.add(suffix);
-  _caseAlpha.set(prefix, alphas);
-  return `${prefix}${suffix}`;
-}
-
-function detectTypeFromId(id) {
-  const n = parseInt(id);
-  if (n >= 1     && n <= 9999)  return 'hq';
-  if (n >= 10001 && n <= 19999) return 're';
-  if (n >= 20001 && n <= 29999) return 'hr';
-  if (n >= 30001 && n <= 39999) return 'pt';
-  return null;
-}
-
-// ══════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════
 //  SHELL INIT
-// ══════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════
 function initShell() {
   const u = session;
-  // Topbar
-  const avatarEl = document.getElementById('u-avatar');
-  avatarEl.textContent = u.avatar || u.name[0];
-  avatarEl.style.background = u.color + '22';
-  avatarEl.style.color = u.color;
-  document.getElementById('u-name').textContent = u.name;
-  document.getElementById('u-role').textContent =
-    u.type==='hq' ? 'HQ ' + (u.hqRole||'') : u.type==='re' ? '不動産エージェント' : u.type==='hr' ? '人材紹介エージェント' : 'パートナー';
-  document.getElementById('sf-id').textContent = 'ID: ' + u.userId;
+  const shell = document.getElementById('shell');
+  shell.classList.add('on');
 
-  const ctxMap = { hq:'管理ポータル', re:'エージェントポータル', hr:'HRエージェントポータル', pt:'パートナーポータル' };
-  document.getElementById('topbar-ctx').textContent = ctxMap[u.type] || 'ポータル';
+  // Topbar
+  document.getElementById('tb-avatar').textContent = u.avatar;
+  document.getElementById('tb-avatar').style.cssText = `background:${u.color}18;color:${u.color};border:1px solid ${u.color}30`;
+  document.getElementById('tb-name').textContent = u.name;
+  document.getElementById('tb-role').textContent =
+    u.type==='hq' ? `HQ ${u.hqRole==='exec'?'統括':u.hqRole==='manager'?'管理職':'スタッフ'}` :
+    u.type==='re' ? `不動産AG — ${u.rank}` :
+    u.type==='hr' ? `人材紹介AG — ${u.rank}` : 'パートナー';
+  const ctxMap = {hq:'管理ダッシュボード', re:'エージェントポータル', hr:'HRエージェントポータル', pt:'パートナーダッシュボード'};
+  document.getElementById('tb-context').textContent = ctxMap[u.type] || '';
 
   buildSidebar();
   buildContent();
-  showPage('dashboard');
 }
 
-// ══════════════════════════════════════════════════════════════════
-//  SIDEBAR
-// ══════════════════════════════════════════════════════════════════
-// Role hierarchy: exec > manager > staff
-const HQ_ROLE_LEVEL = { exec:3, manager:2, staff:1 };
-function hqRoleLevel() { return HQ_ROLE_LEVEL[session.hqRole] || 1; }
-function canSeeHqRole(minRole) { return hqRoleLevel() >= (HQ_ROLE_LEVEL[minRole] || 1); }
-
-const SIDEBAR_NAV_HQ_EXEC = [
-  { section:'経営陣専用', items:[
-    { id:'exec-dashboard', icon:'📈', label:'収益ダッシュボード', url:'coreto-exec-dashboard.html' },
-    { id:'agent-mgmt',     icon:'👥', label:'全エージェント管理',  url:'coreto-agent-mgmt.html' },
-    { id:'network-tree',   icon:'🌐', label:'紹介ネットワーク図',  url:'coreto-network-tree.html' },
-  ]},
-];
-const SIDEBAR_NAV_HQ_COMMON_MANAGER = [
-  { section:'報酬・支払い', items:[
-    { id:'payment',     icon:'💴', label:'支払明細・バッチ', url:'coreto-payment.html' },
-    { id:'payroll',     icon:'💰', label:'月次報酬確定',      url:'coreto-payroll.html' },
-    { id:'codes',       icon:'🔖', label:'紹介コード',        url:'coreto-codes.html' },
-    { id:'early-quit',  icon:'⚠️', label:'早期退職',          url:'coreto-early-quit.html', badge:'3' },
-  ]},
-  { section:'管理', items:[
-    { id:'rbac',        icon:'🛡',  label:'権限管理（RBAC）', url:'coreto-admin-rbac.html' },
-    { id:'partner-mgmt',icon:'🤝', label:'パートナー管理',   url:'coreto-partner.html' },
-    { id:'id-manager',  icon:'🎲', label:'ID採番管理',        url:'coreto-id-manager.html' },
-  ]},
-];
-const SIDEBAR_NAV_HQ_COMMON_STAFF = [
-  { section:'メイン', items:[
-    { id:'dashboard', icon:'📊', label:'ダッシュボード' },
-    { id:'tools',     icon:'🧰', label:'全ツール一覧' },
-  ]},
-  { section:'審査・管理', items:[
-    { id:'screening',  icon:'📋', label:'書類審査',      url:'coreto-screening.html' },
-    { id:'matching',   icon:'🎯', label:'マッチング',    url:'coreto-matching.html' },
-  ]},
-  { section:'案件業務', items:[
-    { id:'naiken',      icon:'🏠', label:'物件内見',         url:'coreto-naiken.html' },
-    { id:'it-setsu',    icon:'📝', label:'IT重説・書類',     url:'coreto-it-setsu.html' },
-    { id:'batch-close', icon:'✅', label:'成約・バッチ',     url:'coreto-batch-close.html' },
-    { id:'label',       icon:'📮', label:'ラベル印刷',       url:'coreto-thermal-label.html' },
-    { id:'barcode',     icon:'📡', label:'スキャン',         url:'coreto-barcode-scan.html' },
-  ]},
-  { section:'システム', items:[
-    { id:'client-id',   icon:'🆔', label:'クライアントID',   url:'coreto-client-id.html' },
-    { id:'simulator',   icon:'🧮', label:'報酬シミュレーター',url:'coreto-commission-simulator.html' },
-    { id:'overview',    icon:'📊', label:'システム概要',      url:'coreto-system-overview.html' },
-  ]},
-  { section:'セキュリティ', items:[
-    { id:'line-link',        icon:'💬', label:'LINE連携',            url:'coreto-line-link.html' },
-    { id:'account-settings', icon:'⚙️',  label:'アカウント設定',    url:'coreto-account-settings.html' },
-    { id:'kyc',         icon:'🪪', label:'eKYC・口座管理',    url:'coreto-kyc.html' },
-    { id:'instant-pay', icon:'⚡', label:'即時払い審査',      url:'coreto-instant-pay.html', badge:'3' },
-    { id:'receipt',     icon:'🧾', label:'領収書・請求書管理', url:'coreto-receipt.html' },
-  ]},
-];
-
-function getHQNav() {
-  const role = session.hqRole || 'staff';
-  let sections = [...SIDEBAR_NAV_HQ_COMMON_STAFF];
-  if (role === 'manager' || role === 'exec') {
-    sections = [...SIDEBAR_NAV_HQ_COMMON_STAFF, ...SIDEBAR_NAV_HQ_COMMON_MANAGER];
-  }
-  if (role === 'exec') {
-    sections = [...SIDEBAR_NAV_HQ_EXEC, ...sections];
-  }
-  return sections;
-}
-
-const SIDEBAR_NAV = {
-  hq: null, // computed via getHQNav()
-  re: [
-    { section:'メイン', items:[
-      { id:'dashboard', icon:'📊', label:'ダッシュボード' },
-      { id:'tools',     icon:'🧰', label:'ツール一覧' },
-    ]},
-    { section:'案件業務', items:[
-      { id:'naiken',      icon:'🏠', label:'物件内見申込',    url:'coreto-naiken.html' },
-      { id:'it-setsu',    icon:'📝', label:'IT重説・書類',   url:'coreto-it-setsu.html' },
-      { id:'batch-close', icon:'✅', label:'成約・クローズ', url:'coreto-batch-close.html' },
-      { id:'label',       icon:'📮', label:'ラベル・郵送',   url:'coreto-thermal-label.html' },
-      { id:'barcode',     icon:'📡', label:'スキャン',       url:'coreto-barcode-scan.html' },
-    ]},
-    { section:'自分の情報', items:[
-      { id:'mypage',    icon:'👤', label:'マイページ',         url:'coreto-agent-mypage.html' },
-      { id:'rank',      icon:'⭐', label:'ランク・ポイント',   url:'coreto-rank.html' },
-      { id:'simulator', icon:'🧮', label:'報酬シミュレーター', url:'coreto-commission-simulator.html' },
-    ]},
-    { section:'サポート', items:[
-      { id:'faq',          icon:'❓',  label:'FAQナレッジ',        url:'coreto-faq.html' },
-      { id:'receipt',      icon:'🧾', label:'領収書・請求書',     url:'coreto-receipt.html' },
-    ]},
-    { section:'セキュリティ', items:[
-      { id:'line-link',        icon:'💬', label:'LINE連携',            url:'coreto-line-link.html' },
-      { id:'account-settings', icon:'⚙️',  label:'アカウント設定',    url:'coreto-account-settings.html' },
-      { id:'kyc',         icon:'🪪', label:'eKYC・本人確認',   url:'coreto-kyc.html' },
-      { id:'instant-pay', icon:'⚡', label:'即時払い申請',     url:'coreto-instant-pay.html' },
-    ]},
-  ],
-  hr: [
-    { section:'メイン', items:[
-      { id:'dashboard', icon:'📊', label:'ダッシュボード' },
-      { id:'tools',     icon:'🧰', label:'ツール一覧' },
-    ]},
-    { section:'HR業務', items:[
-      { id:'early-quit-ag',icon:'⚠️',label:'早期退職アラート',url:'coreto-early-quit.html', badge:'1' },
-    ]},
-    { section:'自分の情報', items:[
-      { id:'mypage',    icon:'👤', label:'マイページ',         url:'coreto-agent-mypage.html' },
-      { id:'rank',      icon:'⭐', label:'ランク・ポイント',   url:'coreto-rank.html' },
-      { id:'simulator', icon:'🧮', label:'報酬シミュレーター', url:'coreto-commission-simulator.html' },
-    ]},
-    { section:'セキュリティ', items:[
-      { id:'line-link',        icon:'💬', label:'LINE連携',            url:'coreto-line-link.html' },
-      { id:'account-settings', icon:'⚙️',  label:'アカウント設定',    url:'coreto-account-settings.html' },
-      { id:'kyc',         icon:'🪪', label:'eKYC・本人確認',   url:'coreto-kyc.html' },
-      { id:'instant-pay', icon:'⚡', label:'即時払い申請',     url:'coreto-instant-pay.html' },
-    ]},
-  ],
-  pt: [
-    { section:'メイン', items:[
-      { id:'dashboard', icon:'📊', label:'ダッシュボード' },
-    ]},
-    { section:'パートナー機能', items:[
-      { id:'pt-portal', icon:'🌐', label:'パートナーポータル（全機能）', url:'coreto-partner.html' },
-    ]},
-    { section:'セキュリティ', items:[
-      { id:'line-link',        icon:'💬', label:'LINE連携',            url:'coreto-line-link.html' },
-      { id:'account-settings', icon:'⚙️',  label:'アカウント設定',    url:'coreto-account-settings.html' },
-      { id:'kyc',         icon:'🪪', label:'eKYC・本人確認',   url:'coreto-kyc.html' },
-      { id:'instant-pay', icon:'⚡', label:'即時払い申請',     url:'coreto-instant-pay.html' },
-    ]},
-  ],
-};
-
-let currentPageId = 'dashboard';
-
+// ════════════════════════════════════════════════════════════
+//  NAVIGATION
+// ════════════════════════════════════════════════════════════
 function buildSidebar() {
-  const sections = session.type === 'hq' ? getHQNav() : (SIDEBAR_NAV[session.type] || []);
   const sb = document.getElementById('sidebar');
-  // Clear except footer
-  while (sb.firstChild && !sb.firstChild.classList?.contains('sidebar-footer')) {
-    sb.removeChild(sb.firstChild);
-  }
-  const footer = sb.querySelector('.sidebar-footer');
   sb.innerHTML = '';
+  const nav = getSidebarNav();
 
-  sections.forEach(sec => {
+  nav.forEach(section => {
     const label = document.createElement('div');
-    label.className = 'nav-section-label';
-    label.textContent = sec.section;
+    label.className = 'sb-section';
+    label.textContent = section.section;
     sb.appendChild(label);
-    sec.items.forEach(item => {
+
+    section.items.forEach(item => {
       const el = document.createElement('div');
-      el.className = 'nav-item' + (item.id===currentPageId?' on':'');
+      el.className = 'nav-item' + (item.id === currentPage ? ' on' : '');
       el.id = 'nav-' + item.id;
-      el.innerHTML = `<div class="ni-icon">${item.icon}</div>${item.label}`
-        + (item.badge ? `<span class="ni-badge">${item.badge}</span>` : '')
-        + (item.url ? '<span class="ni-ext">↗</span>' : '');
-      if (item.url) {
-        el.onclick = () => openTool(item.url, item.id);
+      let inner = `<div class="ni-icon">${item.icon}</div><span>${item.label}</span>`;
+      if(item.badge) inner += `<span class="ni-badge">${item.badge}</span>`;
+      if(item.ext)   inner += `<span class="ni-ext">↗</span>`;
+      el.innerHTML = inner;
+
+      if(item.ext) {
+        // Genuine external tools: open in new tab
+        el.onclick = () => window.open(item.url, '_blank');
       } else {
-        el.onclick = () => showPage(item.id);
+        el.onclick = () => goPage(item.id);
       }
       sb.appendChild(el);
     });
   });
 
   const foot = document.createElement('div');
-  foot.className = 'sidebar-footer';
-  foot.innerHTML = `<div class="sf-id">ID: ${session.userId}</div><div style="font-size:9px;color:var(--muted);margin-top:3px">v2.0 Build 2026.02</div>`;
+  foot.className = 'sb-foot';
+  foot.innerHTML = `ID: ${session.userId}<br><span style="opacity:.5">v3.0 / 2026.02</span>`;
   sb.appendChild(foot);
 }
 
-function openTool(url, id) {
-  // Update nav highlight
-  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('on'));
-  const el = document.getElementById('nav-'+id);
-  if (el) el.classList.add('on');
-  currentPageId = id;
-  window.open(url, '_blank');
+function getSidebarNav() {
+  const t = session.type;
+  const role = session.hqRole || '';
+
+  if(t === 'hq') {
+    const nav = [];
+    nav.push({ section:'メイン', items:[
+      { id:'dashboard', icon:'📊', label:'ダッシュボード' },
+    ]});
+
+    if(HQ_LEVEL[role] >= 3) { // exec only
+      nav.push({ section:'経営陣', items:[
+        { id:'exec-dashboard', icon:'📈', label:'収益ダッシュボード', url:'coreto-exec-dashboard.html', ext:true },
+        { id:'agent-mgmt',     icon:'👥', label:'全エージェント管理', url:'coreto-agent-mgmt.html', ext:true },
+        { id:'network-tree',   icon:'🌐', label:'紹介ネットワーク図', url:'coreto-network-tree.html', ext:true },
+      ]});
+    }
+
+    nav.push({ section:'業務', items:[
+      { id:'matching',  icon:'🎯', label:'マッチング' },
+      { id:'screening', icon:'📋', label:'書類審査・スクリーニング', url:'coreto-screening.html', ext:true },
+      { id:'naiken-hq', icon:'🏠', label:'内見申込管理', url:'coreto-naiken.html', ext:true },
+      { id:'early-quit',icon:'⚠️', label:'早期退職アラート', badge:'2', url:'coreto-early-quit.html', ext:true },
+      { id:'kyc',       icon:'🪪', label:'KYC審査', badge:'4', url:'coreto-kyc.html', ext:true },
+    ]});
+
+    if(HQ_LEVEL[role] >= 2) { // manager+
+      nav.push({ section:'報酬・支払い', items:[
+        { id:'payroll',  icon:'💰', label:'月次報酬確定', url:'coreto-payroll.html', ext:true },
+        { id:'payment',  icon:'💴', label:'支払明細', url:'coreto-payment.html', ext:true },
+        { id:'instant-pay', icon:'⚡', label:'即時払い申請', badge:'3', url:'coreto-instant-pay.html', ext:true },
+      ]});
+      nav.push({ section:'エージェント管理', items:[
+        { id:'codes',      icon:'🔖', label:'紹介コード管理', url:'coreto-codes.html', ext:true },
+        { id:'pt-mgmt',    icon:'🤝', label:'パートナー管理', url:'coreto-partner.html', ext:true },
+        { id:'rbac',       icon:'🛡', label:'権限管理', url:'coreto-admin-rbac.html', ext:true },
+      ]});
+    }
+
+    nav.push({ section:'ツール', items:[
+      { id:'label',  icon:'📮', label:'ラベル印刷', url:'coreto-thermal-label.html', ext:true },
+      { id:'barcode',icon:'📡', label:'スキャン', url:'coreto-barcode-scan.html', ext:true },
+    ]});
+    return nav;
+  }
+
+  if(t === 're') {
+    return [
+      { section:'メイン', items:[
+        { id:'dashboard', icon:'📊', label:'ダッシュボード' },
+        { id:'mypage',    icon:'👤', label:'マイページ・プロフィール' },
+        { id:'rank',      icon:'⭐', label:'ランク・ポイント' },
+      ]},
+      { section:'案件業務', items:[
+        { id:'naiken',     icon:'🏠', label:'内見申込', url:'coreto-naiken.html', ext:true },
+        { id:'it-setsu',   icon:'📝', label:'IT重説・書類', url:'coreto-it-setsu.html', ext:true },
+        { id:'batch-close',icon:'✅', label:'成約クローズ', url:'coreto-batch-close.html', ext:true },
+      ]},
+      { section:'ツール', items:[
+        { id:'simulator',  icon:'🧮', label:'報酬シミュレーター' },
+        { id:'label',      icon:'📮', label:'ラベル印刷', url:'coreto-thermal-label.html', ext:true },
+        { id:'barcode',    icon:'📡', label:'スキャン', url:'coreto-barcode-scan.html', ext:true },
+        { id:'receipt',    icon:'🧾', label:'領収書・請求書', url:'coreto-receipt.html', ext:true },
+      ]},
+      { section:'アカウント', items:[
+        { id:'line-link',  icon:'💬', label:'LINE連携', url:'coreto-line-link.html', ext:true },
+        { id:'kyc',        icon:'🪪', label:'eKYC・本人確認', url:'coreto-kyc.html', ext:true },
+        { id:'settings',   icon:'⚙️',  label:'アカウント設定', url:'coreto-account-settings.html', ext:true },
+      ]},
+    ];
+  }
+
+  if(t === 'hr') {
+    return [
+      { section:'メイン', items:[
+        { id:'dashboard', icon:'📊', label:'ダッシュボード' },
+        { id:'mypage',    icon:'👤', label:'マイページ・プロフィール' },
+        { id:'rank',      icon:'⭐', label:'ランク・ポイント' },
+      ]},
+      { section:'HR業務', items:[
+        { id:'hr-cases',   icon:'👥', label:'担当案件' },
+        { id:'early-quit-ag',icon:'⚠️',label:'早期退職フォロー', badge:'1', url:'coreto-early-quit.html', ext:true },
+      ]},
+      { section:'ツール', items:[
+        { id:'simulator',  icon:'🧮', label:'報酬シミュレーター' },
+        { id:'receipt',    icon:'🧾', label:'領収書・請求書', url:'coreto-receipt.html', ext:true },
+      ]},
+      { section:'アカウント', items:[
+        { id:'line-link',  icon:'💬', label:'LINE連携', url:'coreto-line-link.html', ext:true },
+        { id:'kyc',        icon:'🪪', label:'eKYC・本人確認', url:'coreto-kyc.html', ext:true },
+        { id:'settings',   icon:'⚙️',  label:'アカウント設定', url:'coreto-account-settings.html', ext:true },
+      ]},
+    ];
+  }
+
+  if(t === 'pt') {
+    return [
+      { section:'メイン', items:[
+        { id:'dashboard', icon:'📊', label:'ダッシュボード' },
+        { id:'pt-cases',  icon:'📋', label:'紹介案件' },
+        { id:'pt-code',   icon:'🔗', label:'紹介コード・リンク' },
+        { id:'pt-rewards',icon:'💰', label:'報酬・振込明細' },
+        { id:'pt-msgs',   icon:'💬', label:'メッセージ' },
+        { id:'pt-register',icon:'➕', label:'新規紹介を登録' },
+      ]},
+      { section:'アカウント', items:[
+        { id:'line-link',  icon:'💬', label:'LINE連携', url:'coreto-line-link.html', ext:true },
+        { id:'kyc',        icon:'🪪', label:'eKYC・本人確認', url:'coreto-kyc.html', ext:true },
+      ]},
+    ];
+  }
+
+  return [];
 }
 
-function showPage(pageId) {
-  currentPageId = pageId;
-  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('on'));
-  const el = document.getElementById('nav-'+pageId);
-  if (el) el.classList.add('on');
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
-  const pg = document.getElementById('page-'+pageId);
-  if (pg) {
+function goPage(pageId) {
+  currentPage = pageId;
+  document.querySelectorAll('.nav-item').forEach(n => {
+    n.classList.toggle('on', n.id === 'nav-' + pageId);
+  });
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('on'));
+  const pg = document.getElementById('page-' + pageId);
+  if(pg) {
     pg.classList.add('on');
+  } else {
+    buildPageContent(pageId);
   }
 }
 
-// ══════════════════════════════════════════════════════════════════
-//  CONTENT PAGES (built per role)
-// ══════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════
+//  CONTENT BUILDER
+// ════════════════════════════════════════════════════════════
 function buildContent() {
-  const content = document.getElementById('content');
-  content.innerHTML = '';
-  if (session.type === 'hq') {
-    content.innerHTML = hqDashboardHTML() + hqToolsHTML();
-  } else if (session.type === 're') {
-    content.innerHTML = reAgentDashHTML() + agToolsHTML('re');
-  } else if (session.type === 'hr') {
-    content.innerHTML = hrAgentDashHTML() + agToolsHTML('hr');
-  } else if (session.type === 'pt') {
-    content.innerHTML = ptDashHTML();
+  const cnt = document.getElementById('content');
+  cnt.innerHTML = '';
+  const t = session.type;
+
+  if(t === 'hq') {
+    cnt.innerHTML = hqDashPage() + hqMatchingPage();
+  } else if(t === 're') {
+    cnt.innerHTML = reDashPage() + reMyPage() + rankPage() + simPage();
+  } else if(t === 'hr') {
+    cnt.innerHTML = hrDashPage() + hrCasesPage() + rankPage() + simPage();
+  } else if(t === 'pt') {
+    cnt.innerHTML = ptDashPage() + ptCasesPage() + ptCodePage() + ptRewardsPage() + ptMsgsPage() + ptRegisterPage();
   }
+
+  goPage('dashboard');
 }
 
-// ══════════════════════════════════════════════════════════════════
-//  HQ DASHBOARD
-// ══════════════════════════════════════════════════════════════════
-function hqDashboardHTML() {
-  const role = session.hqRole || 'staff';
-  const roleLabel = { exec:'統括（経営陣）', manager:'管理職', staff:'スタッフ' }[role] || role;
+function buildPageContent(pageId) {
+  // Pages not pre-built — show placeholder
+  const cnt = document.getElementById('content');
+  const div = document.createElement('div');
+  div.className = 'page on';
+  div.id = 'page-' + pageId;
+  div.innerHTML = `<div class="page-hdr"><div class="page-title">${pageId}</div></div><p style="color:var(--muted)">このページは準備中です。</p>`;
+  cnt.appendChild(div);
+}
+
+// ════════════════════════════════════════════════════════════
+//  HQ PAGES
+// ════════════════════════════════════════════════════════════
+function hqDashPage() {
+  const u = session;
+  const role = u.hqRole || 'staff';
+  const roleLabel = {exec:'統括', manager:'管理職', staff:'スタッフ'}[role];
+  const roleCls   = {exec:'hrb-exec', manager:'hrb-manager', staff:'hrb-staff'}[role];
+
   const execBanner = role === 'exec' ? `
-  <div style="display:flex;gap:10px;margin-bottom:16px">
-    <a href="coreto-exec-dashboard.html" style="flex:1;display:flex;align-items:center;gap:10px;padding:12px 16px;background:linear-gradient(135deg,rgba(201,168,64,.15),rgba(201,168,64,.05));border:1px solid rgba(201,168,64,.3);border-radius:10px;text-decoration:none;color:var(--gold);font-size:12px;font-weight:700;transition:all .2s" onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">
-      📈 <span>収益ダッシュボード（P&L）</span><span style="margin-left:auto;font-size:10px">↗</span>
-    </a>
-    <a href="coreto-agent-mgmt.html" style="flex:1;display:flex;align-items:center;gap:10px;padding:12px 16px;background:linear-gradient(135deg,rgba(201,168,64,.15),rgba(201,168,64,.05));border:1px solid rgba(201,168,64,.3);border-radius:10px;text-decoration:none;color:var(--gold);font-size:12px;font-weight:700;transition:all .2s" onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">
-      👥 <span>全エージェント管理</span><span style="margin-left:auto;font-size:10px">↗</span>
-    </a>
-    <a href="coreto-network-tree.html" style="flex:1;display:flex;align-items:center;gap:10px;padding:12px 16px;background:linear-gradient(135deg,rgba(201,168,64,.15),rgba(201,168,64,.05));border:1px solid rgba(201,168,64,.3);border-radius:10px;text-decoration:none;color:var(--gold);font-size:12px;font-weight:700;transition:all .2s" onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">
-      🌐 <span>紹介ネットワーク図</span><span style="margin-left:auto;font-size:10px">↗</span>
-    </a>
+  <div class="exec-banner">
+    <div class="exec-btn" onclick="window.open('coreto-exec-dashboard.html','_blank')">
+      <div class="exec-btn-icon">📈</div>
+      <div class="exec-btn-label">収益ダッシュボード（P&amp;L）</div>
+      <span style="margin-left:auto;font-size:10px;color:var(--muted)">↗</span>
+    </div>
+    <div class="exec-btn" onclick="window.open('coreto-agent-mgmt.html','_blank')">
+      <div class="exec-btn-icon">👥</div>
+      <div class="exec-btn-label">全エージェント管理</div>
+      <span style="margin-left:auto;font-size:10px;color:var(--muted)">↗</span>
+    </div>
+    <div class="exec-btn" onclick="window.open('coreto-network-tree.html','_blank')">
+      <div class="exec-btn-icon">🌐</div>
+      <div class="exec-btn-label">紹介ネットワーク図</div>
+      <span style="margin-left:auto;font-size:10px;color:var(--muted)">↗</span>
+    </div>
   </div>` : '';
-  return `<div class="page on" id="page-dashboard">
+
+  return `<div class="page" id="page-dashboard">
   <div class="page-hdr">
-    <div class="page-title">HQ ダッシュボード <span style="font-size:11px;padding:2px 8px;background:rgba(201,168,64,.15);color:var(--gold);border-radius:5px;margin-left:8px;vertical-align:middle">${roleLabel}</span></div>
-    <div class="page-sub">CORETO 業務状況の概要 — 2026年2月21日（土）現在</div>
+    <div class="page-title">HQ ダッシュボード <span class="hq-role-badge ${roleCls}">${roleLabel}</span></div>
+    <div class="page-sub">CORETO 業務状況 — 2026年2月21日（土）現在</div>
   </div>
   ${execBanner}
-  <!-- Alerts -->
-  <div class="alert-bar alert-bar-red">
-    🚨 <strong>早期退職アラート：</strong> 対応待ち 2件、返金要請合計 ¥693,000　
-    <button class="btn btn-ghost btn-sm" onclick="openTool('coreto-early-quit.html','early-quit')" style="margin-left:auto">対応する ↗</button>
+
+  <div class="ab-red alert-bar">🚨 <strong>早期退職アラート</strong>：対応待ち 2件 / 返金要請 ¥693,000
+    <button class="btn btn-sm" style="margin-left:auto;background:rgba(248,113,113,.15);border:1px solid rgba(248,113,113,.3);color:var(--red);cursor:pointer" onclick="window.open('coreto-early-quit.html','_blank')">対応 ↗</button>
   </div>
-  <div class="alert-bar alert-bar-orange" style="margin-bottom:12px">
-    🪪 <strong>KYC審査待ち：</strong> 4件の本人確認書類が未処理　
-    <span style="color:var(--muted);font-size:10px;margin-left:8px">名義不一致フラグ 1件 ⚠</span>
-    <button class="btn btn-ghost btn-sm" onclick="openTool('coreto-kyc.html','kyc')" style="margin-left:auto">審査する ↗</button>
-  </div>
-  <div class="alert-bar alert-bar-orange" style="margin-bottom:12px">
-    ⚡ <strong>即時払い申請：</strong> 2FA認証済み振込待ち 3件 ／ アカウントロック 1件
-    <button class="btn btn-ghost btn-sm" onclick="openTool('coreto-instant-pay.html','instant-pay')" style="margin-left:auto">処理する ↗</button>
-  </div>
-  <div class="alert-bar alert-bar-orange">
-    ⏰ <strong>在籍確認期限：</strong> 鈴木 健一の第2回支払いが本日期限。在籍確認が未完了です。
-    <button class="btn btn-ghost btn-sm" onclick="openTool('coreto-early-quit.html','early-quit')" style="margin-left:auto">確認する ↗</button>
+  <div class="ab-orange alert-bar">🪪 <strong>KYC審査待ち</strong>：4件 / 名義不一致フラグ 1件
+    <button class="btn btn-sm" style="margin-left:auto;background:rgba(251,146,60,.12);border:1px solid rgba(251,146,60,.3);color:var(--orange);cursor:pointer" onclick="window.open('coreto-kyc.html','_blank')">審査 ↗</button>
   </div>
 
-  <!-- Stats -->
   <div class="stats-grid sg-5">
-    <div class="stat">
-      <div class="stat-ico">📋</div>
-      <div class="stat-val" style="color:var(--blue)">24</div>
-      <div class="stat-label">今月の進行中案件</div>
-      <div class="stat-sub" style="color:var(--green)">▲ +4 先月比</div>
-    </div>
-    <div class="stat">
-      <div class="stat-ico">✅</div>
-      <div class="stat-val" style="color:var(--green)">18</div>
-      <div class="stat-label">今月の成約件数</div>
-      <div class="stat-sub" style="color:var(--sub)">目標：20件</div>
-    </div>
-    <div class="stat">
-      <div class="stat-ico">👥</div>
-      <div class="stat-val" style="color:var(--purple)">31</div>
-      <div class="stat-label">稼働エージェント</div>
-      <div class="stat-sub" style="color:var(--sub)">RE:18 / HR:13</div>
-    </div>
-    <div class="stat">
-      <div class="stat-ico">💰</div>
-      <div class="stat-val" style="color:var(--gold);font-size:18px">¥6,840,000</div>
-      <div class="stat-label">今月の振込予定額</div>
-      <div class="stat-sub" style="color:var(--sub)">3月25日バッチ</div>
-    </div>
-    <div class="stat">
-      <div class="stat-ico">⚠️</div>
-      <div class="stat-val" style="color:var(--red)">2</div>
-      <div class="stat-label">早期退職 対応待ち</div>
-      <div class="stat-sub" style="color:var(--red)">返金 ¥693,000</div>
-    </div>
+    <div class="stat"><div class="stat-ico">📋</div><div class="stat-val text-blue">24</div><div class="stat-label">進行中案件</div><div class="stat-sub text-green">▲ +4件</div></div>
+    <div class="stat"><div class="stat-ico">✅</div><div class="stat-val text-green">18</div><div class="stat-label">今月の成約</div><div class="stat-sub text-sub">目標：20件</div></div>
+    <div class="stat"><div class="stat-ico">👥</div><div class="stat-val text-purple">31</div><div class="stat-label">稼働AG</div><div class="stat-sub text-sub">RE:18 / HR:13</div></div>
+    <div class="stat"><div class="stat-ico">💰</div><div class="stat-val text-gold" style="font-size:18px">¥6.84M</div><div class="stat-label">今月振込予定</div><div class="stat-sub text-sub">3月25日</div></div>
+    <div class="stat"><div class="stat-ico">⚠️</div><div class="stat-val text-red">2</div><div class="stat-label">早期退職 待機</div><div class="stat-sub text-red">返金 ¥693k</div></div>
   </div>
 
   <div class="grid-2r">
     <div>
-      <!-- Recent activity -->
-      <div class="card" style="margin-bottom:16px">
-        <div class="card-hdr">
-          <div class="ch-title">最近のアクティビティ</div>
-          <span class="pill pill-muted">本日</span>
-        </div>
+      <div class="card">
+        <div class="card-hdr"><div class="ch-title">最近のアクティビティ</div><span class="pill pill-muted">本日</span></div>
         <div class="card-body" style="padding:0 18px">
-          <div class="feed">
-            ${[
-              ['🏠','山田 誠 が R0234 を成約報告','10分前','blue'],
-              ['📋','田中 美穂 の HR案件「鈴木 健一」在籍確認期限','30分前','orange'],
-              ['⚠️','渡辺 隆の早期退職アラート — 返金要対応','2時間前','red'],
-              ['🔖','特別コード CAMP_2025 の有効期限切れ','3時間前','muted'],
-              ['✅','佐藤 花子 が R0228 書類スキャン完了','昨日','green'],
-              ['💴','2月分振込バッチ処理完了 — 28名 ¥6.1M','昨日','gold'],
-            ].map(([ic,msg,time,col])=>`
-              <div class="feed-item">
-                <div class="fi-dot" style="background:rgba(${col==='blue'?'79,156,249':col==='orange'?'251,146,60':col==='red'?'248,113,113':col==='green'?'52,211,153':col==='gold'?'201,168,76':'74,82,112'},.12)">${ic}</div>
-                <div class="fi-content">
-                  <div class="fi-msg">${msg}</div>
-                  <div class="fi-time">${time}</div>
-                </div>
-              </div>`).join('')}
-          </div>
+          ${[
+            ['🏠','山田 誠 が R0234 を成約報告','10分前','blue'],
+            ['📋','田中 美穂の HR案件「鈴木 健一」在籍確認期限','30分前','orange'],
+            ['⚠️','渡辺 隆の早期退職アラート — 返金要対応','2時間前','red'],
+            ['✅','佐藤 花子が R0228 書類スキャン完了','昨日','green'],
+            ['💴','2月分振込バッチ処理完了 — 28名 ¥6.1M','昨日','gold'],
+          ].map(([ic,msg,time,col]) => `
+          <div class="feed-item">
+            <div class="fi-dot" style="background:${
+              col==='blue'?'rgba(79,156,249,.12)':col==='orange'?'rgba(251,146,60,.12)':
+              col==='red'?'rgba(248,113,113,.12)':col==='green'?'rgba(52,211,153,.1)':'rgba(201,168,64,.1)'}">${ic}</div>
+            <div class="fi-content"><div class="fi-msg">${msg}</div><div class="fi-time">${time}</div></div>
+          </div>`).join('')}
         </div>
       </div>
 
-      <!-- Agent ranking -->
       <div class="card">
-        <div class="card-hdr">
-          <div class="ch-title">エージェント 今月ランキング</div>
-          <button class="btn btn-ghost btn-sm" onclick="openTool('coreto-admin-rbac.html','rbac')">詳細 ↗</button>
-        </div>
+        <div class="card-hdr"><div class="ch-title">エージェント 今月ランキング</div></div>
         <div style="overflow-x:auto">
           <table class="tbl">
-            <thead><tr>
-              <th>#</th><th>エージェント</th><th>種別</th><th>今月成約</th><th>今月報酬</th><th>ランク</th>
-            </tr></thead>
+            <thead><tr><th>#</th><th>エージェント</th><th>種別</th><th>成約</th><th>今月報酬</th><th>ランク</th></tr></thead>
             <tbody>
               ${[
                 [1,'佐藤 花子','RE',5,'¥1,312,500','Platinum','var(--purple)'],
@@ -1017,60 +894,56 @@ function hqDashboardHTML() {
                 [3,'田中 美穂','HR',3,'¥693,000','Gold','var(--gold)'],
                 [4,'鈴木 健太','RE',3,'¥742,500','Silver','var(--green)'],
                 [5,'渡辺 隆','RE',2,'¥412,500','Bronze','var(--orange)'],
-              ].map(([rank,name,type,count,rew,r,col])=>`
-                <tr>
-                  <td class="mono" style="color:var(--muted)">${rank}</td>
-                  <td style="font-weight:700">${name}</td>
-                  <td><span class="pill ${type==='RE'?'pill-blue':'pill-green'}">${type}</span></td>
-                  <td class="mono">${count}件</td>
-                  <td class="mono" style="color:var(--gold);font-weight:700">${rew}</td>
-                  <td><span class="pill" style="background:${col}1a;color:${col};border:1px solid ${col}44">${r}</span></td>
-                </tr>`).join('')}
+              ].map(([rank,name,type,count,rew,r,col]) => `
+              <tr>
+                <td class="mono text-muted">${rank}</td>
+                <td class="fw-700">${name}</td>
+                <td><span class="pill ${type==='RE'?'pill-blue':'pill-green'}">${type}</span></td>
+                <td class="mono">${count}件</td>
+                <td class="mono text-gold fw-700">${rew}</td>
+                <td><span class="pill" style="background:${col}1a;color:${col}">${r}</span></td>
+              </tr>`).join('')}
             </tbody>
           </table>
         </div>
       </div>
     </div>
 
-    <!-- Right side -->
     <div>
-      <!-- Quick launch -->
-      <div class="card" style="margin-bottom:14px">
+      <div class="card">
         <div class="card-hdr"><div class="ch-title">クイックアクション</div></div>
-        <div class="card-body" style="display:flex;flex-direction:column;gap:8px">
+        <div class="card-body" style="display:flex;flex-direction:column;gap:7px">
           ${[
-            ['📋','書類審査を開始','coreto-screening.html','screening'],
-            ['🎯','マッチング','coreto-matching.html','matching'],
-            ['💴','支払明細を作成','coreto-payment.html','payment'],
-            ['⚠️','早期退職を確認','coreto-early-quit.html','early-quit'],
-            ['🔖','紹介コードを管理','coreto-codes.html','codes'],
-            ['📊','システム概要を確認','coreto-system-overview.html','overview'],
-          ].map(([ic,label,url,id])=>`
-            <button class="btn btn-ghost" style="justify-content:flex-start;width:100%;font-size:11px"
-                    onclick="openTool('${url}','${id}')">
-              ${ic} ${label} <span style="margin-left:auto;color:var(--muted)">↗</span>
-            </button>`).join('')}
+            ['🎯','マッチング管理','matching',false],
+            ['📋','書類審査','coreto-screening.html',true],
+            ['💴','支払明細','coreto-payment.html',true],
+            ['⚠️','早期退職対応','coreto-early-quit.html',true],
+            ['🔖','紹介コード','coreto-codes.html',true],
+            ['🪪','KYC審査','coreto-kyc.html',true],
+          ].map(([ic,label,target,ext]) => `
+          <button class="btn btn-ghost" style="justify-content:flex-start;width:100%;font-size:11px"
+                  onclick="${ext ? `window.open('${target}','_blank')` : `goPage('${target}')`}">
+            ${ic} ${label} <span style="margin-left:auto;color:var(--muted)">${ext?'↗':'→'}</span>
+          </button>`).join('')}
         </div>
       </div>
 
-      <!-- Monthly summary -->
       <div class="card">
         <div class="card-hdr"><div class="ch-title">今月の収益サマリー</div></div>
         <div class="card-body">
           ${[
-            ['RE 成約手数料','¥4,812,500'],
-            ['HR 成約手数料','¥2,310,000'],
-            ['エージェント報酬','- ¥6,024,375'],
-            ['パートナー報酬','- ¥577,500'],
-          ].map(([k,v])=>`
-            <div style="display:flex;justify-content:space-between;font-size:12px;
-                        padding:7px 0;border-bottom:1px solid rgba(30,34,53,.5)">
-              <span style="color:var(--sub)">${k}</span>
-              <span class="mono" style="font-weight:700;color:${v.startsWith('-')?'var(--red)':'var(--text)'}">${v}</span>
-            </div>`).join('')}
+            ['RE 成約手数料','¥4,812,500',false],
+            ['HR 成約手数料','¥2,310,000',false],
+            ['エージェント報酬','- ¥6,024,375',true],
+            ['パートナー報酬','- ¥577,500',true],
+          ].map(([k,v,neg]) => `
+          <div style="display:flex;justify-content:space-between;font-size:12px;padding:7px 0;border-bottom:1px solid var(--border)">
+            <span class="text-sub">${k}</span>
+            <span class="mono fw-700" style="color:${neg?'var(--red)':'var(--text)'}">${v}</span>
+          </div>`).join('')}
           <div style="display:flex;justify-content:space-between;font-size:14px;padding:10px 0 0">
-            <span style="color:var(--sub)">収益合計</span>
-            <span class="mono" style="font-weight:700;color:var(--green)">¥520,625</span>
+            <span class="text-sub">収益合計</span>
+            <span class="mono fw-700 text-green">¥520,625</span>
           </div>
         </div>
       </div>
@@ -1079,195 +952,156 @@ function hqDashboardHTML() {
 </div>`;
 }
 
-function hqToolsHTML() {
-  const role = session.hqRole || 'staff';
-  const userTools = TOOLS.filter(t =>
-    t.roles.includes('hq') && canSeeHqRole(t.minHqRole || 'staff')
-  );
-  const sections = [...new Set(userTools.map(t=>t.section))];
-  let html = `<div class="page" id="page-tools">
-    <div class="page-hdr">
-      <div class="page-title">全ツール一覧</div>
-      <div class="page-sub">CORETOの全機能へのアクセス（${userTools.length}ツール）</div>
-    </div>`;
-  sections.forEach(sec => {
-    const ts = userTools.filter(t=>t.section===sec);
-    html += `<div style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;margin-top:20px">${sec}</div>`;
-    html += `<div class="tool-grid" style="margin-bottom:0">`;
-    ts.forEach(t => {
-      html += `<div class="tool-card" style="--tc-color:${t.color}" onclick="openTool('${t.url}','${t.id}')">
-        <div class="tc-top">
-          <div class="tc-icon" style="background:${t.color}18;border:1px solid ${t.color}30;font-size:22px">${t.icon}</div>
-          <span class="pill pill-muted" style="font-size:8px">${t.roles.includes('hq')&&t.roles.length>1?'共有':'HQ専用'}</span>
-        </div>
-        <div class="tc-name">${t.name}</div>
-        <div class="tc-desc">${t.desc}</div>
-        <div class="tc-footer">
-          <span class="tc-role">${t.section}</span>
-          <span class="tc-open" style="color:${t.color}">開く ↗</span>
-        </div>
-      </div>`;
-    });
-    html += `</div>`;
-  });
-  return html + `</div>`;
+function hqMatchingPage() {
+  return `<div class="page" id="page-matching">
+  <div class="page-hdr"><div class="page-title">マッチング管理</div><div class="page-sub">案件ボード・アサイン管理</div></div>
+  <div class="ab-blue alert-bar">💡 マッチングシステムの全機能は専用ページで操作できます。
+    <button class="btn btn-sm btn-ghost btn-ext" style="margin-left:auto" onclick="window.open('coreto-matching.html','_blank')">マッチングシステムを開く</button>
+  </div>
+
+  <div class="stats-grid sg-4" style="margin-bottom:20px">
+    <div class="stat"><div class="stat-ico">📋</div><div class="stat-val text-blue">8</div><div class="stat-label">募集中案件</div></div>
+    <div class="stat"><div class="stat-ico">⏳</div><div class="stat-val text-orange">2</div><div class="stat-label">承認待ち</div></div>
+    <div class="stat"><div class="stat-ico">✅</div><div class="stat-val text-green">15</div><div class="stat-label">今月成立</div></div>
+    <div class="stat"><div class="stat-ico">🎉</div><div class="stat-val text-gold">3</div><div class="stat-label">今月成約</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-hdr"><div class="ch-title">直近の案件ボード</div>
+      <button class="btn btn-sm btn-ghost btn-ext" onclick="window.open('coreto-matching.html','_blank')">全件・詳細操作</button>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="tbl">
+        <thead><tr><th>ID</th><th>タイトル</th><th>種別</th><th>ソース</th><th>応募</th><th>締切</th><th>ステータス</th></tr></thead>
+        <tbody>
+          ${[
+            ['0234','池袋エリア 1K〜1LDK 賃貸','賃貸','PT紹介',3,'23h','募集中','pill-blue'],
+            ['0235','新宿区 2LDK 売買','売買','HQ起票',1,'5h','募集中','pill-blue'],
+            ['0230','渋谷区 IT転職（30代）','HR','PT紹介',2,'済','承認待','pill-orange'],
+            ['0229','品川区 1LDK 賃貸','賃貸','自己開拓',1,'済','成立','pill-green'],
+          ].map(([id,title,type,src,apply,dead,status,sc]) => `
+          <tr>
+            <td class="mono text-muted">${id}</td>
+            <td class="fw-700">${title}</td>
+            <td><span class="pill ${type==='HR'?'pill-purple':'pill-blue'}">${type}</span></td>
+            <td style="font-size:11px">${src}</td>
+            <td class="mono">${apply}名</td>
+            <td class="mono" style="color:${dead.includes('h')?'var(--orange)':'var(--muted)'}">${dead}</td>
+            <td><span class="pill ${sc}">${status}</span></td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>`;
 }
 
-// ══════════════════════════════════════════════════════════════════
-//  RE AGENT DASHBOARD
-// ══════════════════════════════════════════════════════════════════
-function reAgentDashHTML() {
+// ════════════════════════════════════════════════════════════
+//  RE AGENT PAGES
+// ════════════════════════════════════════════════════════════
+function reDashPage() {
   const u = session;
-  const rankColors = { platinum:'var(--purple)', gold:'var(--gold)', silver:'var(--green)', bronze:'var(--orange)' };
+  const rankColors = {platinum:'var(--purple)',gold:'var(--gold)',silver:'var(--green)',bronze:'var(--orange)'};
   const rankCol = rankColors[u.rankKey] || 'var(--muted)';
-  const rankPts = { platinum:30, gold:20, silver:10, bronze:5 };
-  const pts = rankPts[u.rankKey] || 5;
-  const nextRank = { bronze:'Silver', silver:'Gold', gold:'Platinum', platinum:'—' };
-  const nextPts = { bronze:10, silver:20, gold:30, platinum:30 };
-  const pct = Math.min(100, Math.round(pts / nextPts[u.rankKey] * 100));
+  const pts = {platinum:30,gold:20,silver:10,bronze:5}[u.rankKey] || 5;
+  const nextRank = {bronze:'Silver',silver:'Gold',gold:'Platinum',platinum:'—'}[u.rankKey];
+  const nextPts  = {bronze:10,silver:20,gold:30,platinum:30}[u.rankKey];
+  const pct = Math.min(100, Math.round(pts / nextPts * 100));
 
-  return `<div class="page on" id="page-dashboard">
+  return `<div class="page" id="page-dashboard">
   <div class="page-hdr">
     <div class="page-title">こんにちは、${u.name}さん</div>
-    <div class="page-sub">不動産エージェントダッシュボード — 2026年2月20日</div>
+    <div class="page-sub">不動産エージェントダッシュボード — 2026年2月21日</div>
   </div>
 
-  <!-- Alert if any -->
-  <div class="alert-bar alert-bar-orange" style="margin-bottom:16px">
-    ⏰ R0228 の IT重説が未完了です。今月末までに対応してください。
-    <button class="btn btn-ghost btn-sm" onclick="openTool('coreto-it-setsu.html','it-setsu')" style="margin-left:auto">対応 ↗</button>
+  <div class="ab-orange alert-bar">⏰ R0228 の IT重説が未完了です。今月末までに対応してください。
+    <button class="btn btn-sm" style="margin-left:auto;background:rgba(251,146,60,.12);border:1px solid rgba(251,146,60,.3);color:var(--orange)" onclick="window.open('coreto-it-setsu.html','_blank')">対応 ↗</button>
   </div>
 
-  <!-- Stats -->
   <div class="stats-grid sg-4">
-    <div class="stat">
-      <div class="stat-ico">📋</div>
-      <div class="stat-val" style="color:var(--blue)">6</div>
-      <div class="stat-label">進行中の案件</div>
-      <div class="stat-sub" style="color:var(--sub)">今月 +2件</div>
-    </div>
-    <div class="stat">
-      <div class="stat-ico">✅</div>
-      <div class="stat-val" style="color:var(--green)">4</div>
-      <div class="stat-label">今月の成約</div>
-      <div class="stat-sub" style="color:var(--green)">目標達成中</div>
-    </div>
-    <div class="stat">
-      <div class="stat-ico">⭐</div>
-      <div class="stat-val" style="color:${rankCol}">${pts} pt</div>
-      <div class="stat-label">今月のポイント</div>
-      <div class="stat-sub" style="color:var(--sub)">次のランク：${nextRank[u.rankKey]}</div>
-    </div>
-    <div class="stat">
-      <div class="stat-ico">💰</div>
-      <div class="stat-val" style="color:var(--gold);font-size:20px">¥980,000</div>
-      <div class="stat-label">今月の報酬（税抜）</div>
-      <div class="stat-sub" style="color:var(--sub)">3月25日振込</div>
-    </div>
+    <div class="stat"><div class="stat-ico">📋</div><div class="stat-val text-blue">6</div><div class="stat-label">進行中案件</div><div class="stat-sub text-green">今月 +2件</div></div>
+    <div class="stat"><div class="stat-ico">✅</div><div class="stat-val text-green">4</div><div class="stat-label">今月の成約</div><div class="stat-sub text-green">目標達成中</div></div>
+    <div class="stat"><div class="stat-ico">⭐</div><div class="stat-val" style="color:${rankCol}">${pts} pt</div><div class="stat-label">今月ポイント</div><div class="stat-sub text-sub">次：${nextRank}</div></div>
+    <div class="stat"><div class="stat-ico">💰</div><div class="stat-val text-gold" style="font-size:20px">¥980,000</div><div class="stat-label">今月の報酬</div><div class="stat-sub text-sub">3月25日振込</div></div>
   </div>
 
   <div class="grid-2r">
     <div>
-      <!-- Current cases -->
       <div class="card" style="margin-bottom:16px">
-        <div class="card-hdr">
-          <div class="ch-title">担当案件（進行中）</div>
-          <button class="btn btn-ghost btn-sm" onclick="openTool('coreto-agent-mypage.html','mypage')">全件表示 ↗</button>
-        </div>
+        <div class="card-hdr"><div class="ch-title">担当案件（進行中）</div><button class="btn btn-sm btn-ghost btn-ext" onclick="window.open('coreto-agent-mypage.html','_blank')">全件</button></div>
         <div style="overflow-x:auto">
           <table class="tbl">
-            <thead><tr><th>Case ID</th><th>顧客名</th><th>物件</th><th>ステータス</th><th>次のアクション</th></tr></thead>
+            <thead><tr><th>ID</th><th>クライアント</th><th>物件</th><th>ステータス</th><th>アクション</th></tr></thead>
             <tbody>
               ${[
-                ['R0234','田中 雄介','渋谷区東2丁目 302号室','IT重説待ち','pill-orange','coreto-it-setsu.html','it-setsu'],
-                ['R0228','佐藤 明日香','港区南青山 1LDK','書類スキャン中','pill-blue','coreto-it-setsu.html','it-setsu'],
-                ['R0241','木村 翔太','新宿区西新宿 2LDK','内見調整','pill-blue','coreto-naiken.html','naiken'],
-                ['R0245','林 さくら','目黒区中目黒 1K','申込書類収集','pill-blue','coreto-batch-close.html','batch-close'],
-              ].map(([cid,client,prop,status,pc,url,tid])=>`
-                <tr>
-                  <td class="mono" style="font-size:10px;color:var(--sub)">${cid}</td>
-                  <td style="font-weight:700">${client}</td>
-                  <td style="font-size:11px;color:var(--sub)">${prop}</td>
-                  <td><span class="pill ${pc}">${status}</span></td>
-                  <td><button class="btn btn-ghost btn-sm" onclick="openTool('${url}','${tid}')">対応 ↗</button></td>
-                </tr>`).join('')}
+                ['R0234','田中 雄介','渋谷区東2丁目 302号室','IT重説待ち','pill-orange','coreto-it-setsu.html'],
+                ['R0228','佐藤 明日香','港区南青山 1LDK','書類処理中','pill-blue','coreto-it-setsu.html'],
+                ['R0241','木村 翔太','新宿区西新宿 2LDK','内見調整','pill-blue','coreto-naiken.html'],
+                ['R0245','林 さくら','目黒区中目黒 1K','申込書類収集','pill-blue','coreto-batch-close.html'],
+              ].map(([cid,cl,prop,st,sc,url]) => `
+              <tr>
+                <td class="mono text-muted" style="font-size:10px">${cid}</td>
+                <td class="fw-700">${cl}</td>
+                <td style="font-size:11px;color:var(--sub)">${prop}</td>
+                <td><span class="pill ${sc}">${st}</span></td>
+                <td><button class="btn btn-sm btn-ghost" onclick="window.open('${url}','_blank')">対応 ↗</button></td>
+              </tr>`).join('')}
             </tbody>
           </table>
         </div>
       </div>
 
-      <!-- Quick tools -->
       <div class="card">
-        <div class="card-hdr"><div class="ch-title">業務ツール クイックアクセス</div></div>
+        <div class="card-hdr"><div class="ch-title">業務ツール</div></div>
         <div class="card-body">
-          <div class="grid-3">
+          <div class="qt-grid">
             ${[
-              ['📝','IT重説・書類','coreto-it-setsu.html','it-setsu','var(--green)'],
-              ['🏠','物件内見','coreto-naiken.html','naiken','var(--blue)'],
-              ['✅','成約クローズ','coreto-batch-close.html','batch-close','var(--green)'],
-              ['📮','ラベル印刷','coreto-thermal-label.html','label','var(--orange)'],
-              ['📡','スキャン','coreto-barcode-scan.html','barcode','var(--teal)'],
-              ['⭐','ランク確認','coreto-rank.html','rank','var(--gold)'],
-            ].map(([ic,label,url,id,col])=>`
-              <div onclick="openTool('${url}','${id}')" style="background:${col}0d;border:1px solid ${col}25;
-                   border-radius:11px;padding:14px;text-align:center;cursor:pointer;transition:all .15s"
-                   onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
-                <div style="font-size:22px;margin-bottom:6px">${ic}</div>
-                <div style="font-size:11px;font-weight:700;color:${col}">${label}</div>
-              </div>`).join('')}
+              ['📝','IT重説・書類','coreto-it-setsu.html','var(--green)'],
+              ['🏠','内見申込','coreto-naiken.html','var(--blue)'],
+              ['✅','成約クローズ','coreto-batch-close.html','var(--green)'],
+              ['📮','ラベル印刷','coreto-thermal-label.html','var(--orange)'],
+              ['📡','スキャン','coreto-barcode-scan.html','var(--teal)'],
+              ['🧾','領収書','coreto-receipt.html','var(--purple)'],
+            ].map(([ic,label,url,col]) => `
+            <div class="qt-card" onclick="window.open('${url}','_blank')" style="border-color:${col}20">
+              <div class="qt-icon">${ic}</div>
+              <div class="qt-label" style="color:${col}">${label}</div>
+            </div>`).join('')}
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Right -->
     <div>
-      <!-- Rank card -->
       <div class="card" style="margin-bottom:14px">
-        <div class="card-hdr"><div class="ch-title">ランク状況</div></div>
+        <div class="card-hdr"><div class="ch-title">ランク状況</div><button class="btn btn-sm btn-ghost" onclick="goPage('rank')">詳細</button></div>
         <div class="card-body">
-          <div class="rank-display" style="margin-bottom:14px">
+          <div class="rank-display" style="margin-bottom:12px">
             <div class="rank-ring-wrap">
-              <svg viewBox="0 0 70 70" fill="none">
-                <circle cx="35" cy="35" r="28" stroke="var(--border2)" stroke-width="6"/>
-                <circle cx="35" cy="35" r="28" stroke="${rankCol}" stroke-width="6"
-                  stroke-dasharray="${Math.round(2*3.14159*28*pct/100)} ${Math.round(2*3.14159*28*(100-pct)/100)}"
+              <svg viewBox="0 0 60 60" fill="none">
+                <circle cx="30" cy="30" r="24" stroke="var(--border2)" stroke-width="5"/>
+                <circle cx="30" cy="30" r="24" stroke="${rankCol}" stroke-width="5"
+                  stroke-dasharray="${Math.round(2*3.14159*24*pct/100)} ${Math.round(2*3.14159*24*(100-pct)/100)}"
                   stroke-linecap="round"/>
               </svg>
-              <div class="rank-ring-inner" style="font-size:16px">${u.rank==='Platinum'?'💎':u.rank==='Gold'?'🥇':u.rank==='Silver'?'🥈':'🥉'}</div>
+              <div class="rank-ring-inner">${u.rank==='Platinum'?'💎':u.rank==='Gold'?'🥇':u.rank==='Silver'?'🥈':'🥉'}</div>
             </div>
             <div>
-              <div style="font-size:18px;font-weight:800;color:${rankCol}">${u.rank}</div>
-              <div style="font-size:11px;color:var(--sub);margin-top:2px">${pts} pt 今月</div>
-              <div style="font-size:10px;color:var(--muted);margin-top:6px">次：${nextRank[u.rankKey]}（${nextPts[u.rankKey]}pt）</div>
-              <div class="prog-wrap" style="width:120px"><div class="prog-fill" style="width:${pct}%;background:${rankCol}"></div></div>
+              <div style="font-size:17px;font-weight:800;color:${rankCol}">${u.rank}</div>
+              <div style="font-size:11px;color:var(--sub);margin-top:2px">${pts} pt / 今月</div>
+              <div style="font-size:10px;color:var(--muted);margin-top:6px">次：${nextRank}（${nextPts}pt）</div>
+              <div class="prog-wrap"><div class="prog-fill" style="width:${pct}%;background:${rankCol}"></div></div>
             </div>
           </div>
-          <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center" onclick="openTool('coreto-rank.html','rank')">
-            詳細・報酬シミュレーター ↗
-          </button>
+          <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center" onclick="goPage('simulator')">🧮 報酬シミュレーター</button>
         </div>
       </div>
 
-      <!-- My page link -->
-      <div class="card" style="margin-bottom:14px">
-        <div class="card-hdr"><div class="ch-title">マイページ</div></div>
-        <div class="card-body" style="display:flex;flex-direction:column;gap:8px">
-          <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:flex-start" onclick="openTool('coreto-agent-mypage.html','mypage')">
-            👤 プロフィール・設定 ↗
-          </button>
-          <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:flex-start" onclick="openTool('coreto-commission-simulator.html','simulator')">
-            🧮 報酬シミュレーター ↗
-          </button>
-        </div>
-      </div>
-
-      <!-- Tips -->
-      <div style="background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:14px">
-        <div style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">今月の目標まで</div>
-        <div style="font-size:12px;color:var(--sub);line-height:1.9">
-          成約 <strong style="color:var(--text)">あと2件</strong> で月間目標達成<br>
-          ポイント <strong style="color:var(--gold)">あと${nextPts[u.rankKey]-pts}pt</strong> で ${nextRank[u.rankKey]} 昇格
+      <div class="card">
+        <div class="card-hdr"><div class="ch-title">今月の目標</div></div>
+        <div class="card-body" style="font-size:12px;line-height:2;color:var(--sub)">
+          成約 <strong class="text-gold">あと2件</strong> で月間目標達成<br>
+          ポイント <strong class="text-gold">あと${nextPts-pts}pt</strong> で${nextRank}昇格
         </div>
       </div>
     </div>
@@ -1275,201 +1109,659 @@ function reAgentDashHTML() {
 </div>`;
 }
 
-// ══════════════════════════════════════════════════════════════════
-//  HR AGENT DASHBOARD
-// ══════════════════════════════════════════════════════════════════
-function hrAgentDashHTML() {
+function reMyPage() {
   const u = session;
-  return `<div class="page on" id="page-dashboard">
+  return `<div class="page" id="page-mypage">
+  <div class="page-hdr"><div class="page-title">マイページ</div><div class="page-sub">プロフィール・成績・設定</div></div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-hdr"><div class="ch-title">プロフィール</div><button class="btn btn-sm btn-ghost btn-ext" onclick="window.open('coreto-agent-mypage.html','_blank')">詳細編集</button></div>
+      <div class="card-body">
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
+          <div style="width:52px;height:52px;border-radius:14px;background:${u.color}18;color:${u.color};display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;border:1px solid ${u.color}30">${u.avatar}</div>
+          <div>
+            <div style="font-size:16px;font-weight:700">${u.name}</div>
+            <div style="font-size:11px;color:var(--sub)">不動産エージェント / ID: ${u.userId}</div>
+            <div style="font-size:11px;color:var(--gold)">${u.rank} ランク</div>
+          </div>
+        </div>
+        ${[['月額費用','¥0（Gold以上）'],['登録日','2024年4月1日'],['累計成約','28件'],['累計報酬','¥6,832,500']].map(([k,v])=>`
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px">
+          <span class="text-sub">${k}</span><span class="mono fw-700">${v}</span>
+        </div>`).join('')}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-hdr"><div class="ch-title">今月の成績</div></div>
+      <div class="card-body">
+        ${[['成約件数','4件','text-green'],['進行中','6件','text-blue'],['今月の報酬','¥980,000','text-gold'],['今月のポイント','20 pt','text-gold'],['ランク進捗','67%','text-purple']].map(([k,v,cl])=>`
+        <div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);font-size:12px">
+          <span class="text-sub">${k}</span><span class="mono fw-700 ${cl}">${v}</span>
+        </div>`).join('')}
+      </div>
+    </div>
+  </div>
+</div>`;
+}
+
+function rankPage() {
+  const u = session;
+  const rankColors = {platinum:'var(--purple)',gold:'var(--gold)',silver:'var(--green)',bronze:'var(--orange)',pt:'var(--purple)'};
+  const rankCol = rankColors[u.rankKey] || 'var(--muted)';
+  return `<div class="page" id="page-rank">
+  <div class="page-hdr"><div class="page-title">ランク・ポイント</div><div class="page-sub">ランク昇格条件と今月の進捗</div></div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-hdr"><div class="ch-title">現在のランク</div></div>
+      <div class="card-body">
+        <div style="text-align:center;padding:14px 0">
+          <div style="font-size:42px;margin-bottom:8px">${u.rank==='Platinum'?'💎':u.rank==='Gold'?'🥇':u.rank==='Silver'?'🥈':'🥉'}</div>
+          <div style="font-size:22px;font-weight:800;color:${rankCol}">${u.rank}</div>
+          <div style="font-size:12px;color:var(--sub);margin-top:6px">月額費用: ${u.rankKey==='platinum'||u.rankKey==='gold'?'¥0':u.rankKey==='silver'?'¥490':'¥980'}</div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-hdr"><div class="ch-title">ランク条件一覧</div></div>
+      <div style="overflow-x:auto">
+        <table class="tbl">
+          <thead><tr><th>ランク</th><th>月次成約</th><th>月額費用</th><th>手数料率</th></tr></thead>
+          <tbody>
+            ${[
+              ['💎 Platinum','5件以上','¥0','75%'],
+              ['🥇 Gold','3〜4件','¥0','75%'],
+              ['🥈 Silver','1〜2件','¥490','75%'],
+              ['🥉 Bronze','0件','¥980','75%'],
+            ].map(([r,c,f,p]) => `<tr><td class="fw-700">${r}</td><td>${c}</td><td class="mono">${f}</td><td class="mono">${p}</td></tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>`;
+}
+
+function simPage() {
+  return `<div class="page" id="page-simulator">
+  <div class="page-hdr"><div class="page-title">報酬シミュレーター</div><div class="page-sub">成約額から報酬を計算</div></div>
+  <div style="max-width:500px">
+    <div class="card">
+      <div class="card-hdr"><div class="ch-title">計算</div></div>
+      <div class="card-body">
+        <div class="fg">
+          <label>成約手数料（仲介料）</label>
+          <input type="number" id="sim-fee" placeholder="300000" oninput="calcSim()" step="10000">
+        </div>
+        <div class="fg">
+          <label>エージェント比率</label>
+          <select id="sim-rate" onchange="calcSim()">
+            <option value="0.75">75%（標準）</option>
+            <option value="0.70">70%</option>
+            <option value="0.65">65%</option>
+          </select>
+        </div>
+        <div style="background:var(--bg3);border-radius:10px;padding:16px;margin-top:8px">
+          ${[['報酬（税引前）','sim-gross','var(--text)'],['源泉徴収税','sim-tax','var(--red)'],['手取り','sim-net','var(--gold)']].map(([k,id,col])=>`
+          <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">
+            <span class="text-sub">${k}</span>
+            <span class="mono fw-700" id="${id}" style="color:${col}">—</span>
+          </div>`).join('')}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>`;
+}
+
+function calcSim() {
+  const fee  = parseFloat(document.getElementById('sim-fee')?.value) || 0;
+  const rate = parseFloat(document.getElementById('sim-rate')?.value) || 0.75;
+  const gross = Math.round(fee * rate);
+  const tax   = gross <= 1000000 ? Math.floor(gross * 0.1021) : Math.floor(1000000*0.1021 + (gross-1000000)*0.2042);
+  const net   = gross - tax;
+  const yen = v => '¥' + Math.round(v).toLocaleString();
+  const g = document.getElementById('sim-gross');
+  const t = document.getElementById('sim-tax');
+  const n = document.getElementById('sim-net');
+  if(g) g.textContent = fee ? yen(gross) : '—';
+  if(t) t.textContent = fee ? '-'+yen(tax) : '—';
+  if(n) n.textContent = fee ? yen(net) : '—';
+}
+
+// ════════════════════════════════════════════════════════════
+//  HR AGENT PAGES
+// ════════════════════════════════════════════════════════════
+function hrDashPage() {
+  const u = session;
+  const rankColors = {gold:'var(--gold)',silver:'var(--green)',bronze:'var(--orange)'};
+  const rankCol = rankColors[u.rankKey] || 'var(--muted)';
+  return `<div class="page" id="page-dashboard">
   <div class="page-hdr">
     <div class="page-title">こんにちは、${u.name}さん</div>
-    <div class="page-sub">HRエージェントダッシュボード — 2026年2月20日</div>
+    <div class="page-sub">人材紹介エージェントダッシュボード — 2026年2月21日</div>
   </div>
 
-  <div class="alert-bar alert-bar-red" style="margin-bottom:16px">
-    ⚠️ 鈴木 健一 案件の在籍確認が本日期限です。確認後「在籍OK」ボタンを押してください。
-    <button class="btn btn-ghost btn-sm" onclick="openTool('coreto-early-quit.html','early-quit-ag')" style="margin-left:auto">対応 ↗</button>
+  <div class="ab-orange alert-bar">⚠️ <strong>在籍確認期限</strong>：鈴木 健一（R-HR0089）の在籍確認が本日期限です。
+    <button class="btn btn-sm" style="margin-left:auto;background:rgba(251,146,60,.12);border:1px solid rgba(251,146,60,.3);color:var(--orange)" onclick="window.open('coreto-early-quit.html','_blank')">確認 ↗</button>
   </div>
 
   <div class="stats-grid sg-4">
-    <div class="stat"><div class="stat-ico">📋</div><div class="stat-val" style="color:var(--green)">4</div><div class="stat-label">HR 担当案件</div></div>
-    <div class="stat"><div class="stat-ico">✅</div><div class="stat-val" style="color:var(--green)">2</div><div class="stat-label">在籍確認済み</div></div>
-    <div class="stat"><div class="stat-ico">⚠️</div><div class="stat-val" style="color:var(--red)">1</div><div class="stat-label">退職アラート</div></div>
-    <div class="stat"><div class="stat-ico">💰</div><div class="stat-val" style="color:var(--gold);font-size:20px">¥693,000</div><div class="stat-label">今月の報酬予定</div></div>
+    <div class="stat"><div class="stat-ico">👥</div><div class="stat-val text-blue">4</div><div class="stat-label">担当案件</div><div class="stat-sub text-sub">進行中</div></div>
+    <div class="stat"><div class="stat-ico">✅</div><div class="stat-val text-green">3</div><div class="stat-label">今月の成約</div><div class="stat-sub text-green">目標達成</div></div>
+    <div class="stat"><div class="stat-ico">⭐</div><div class="stat-val" style="color:${rankCol}">20 pt</div><div class="stat-label">今月ポイント</div></div>
+    <div class="stat"><div class="stat-ico">💰</div><div class="stat-val text-gold" style="font-size:20px">¥693,000</div><div class="stat-label">今月の報酬</div><div class="stat-sub text-sub">3月25日</div></div>
   </div>
 
   <div class="grid-2r">
     <div>
-      <div class="card" style="margin-bottom:16px">
-        <div class="card-hdr">
-          <div class="ch-title">担当HR案件</div>
-          <button class="btn btn-ghost btn-sm" onclick="openTool('coreto-early-quit.html','early-quit-ag')">早期退職管理 ↗</button>
-        </div>
-        <div style="overflow-x:auto">
-          <table class="tbl">
-            <thead><tr><th>候補者</th><th>企業名</th><th>入社日</th><th>第2回支払</th><th>在籍</th></tr></thead>
-            <tbody>
-              ${[
-                ['鈴木 健一','㈱ABCテクノ','2025/11/20','2026/02/20','⏰ 本日期限','pill-red'],
-                ['中村 優香','㈱サンライズ','2025/11/28','2026/02/28','確認待ち','pill-blue'],
-                ['高橋 翔太','合同会社フューチャー','2025/12/05','2026/03/05','✓ 確認済','pill-green'],
-                ['林 さくら','㈱ネクストキャリア','2025/12/18','2026/03/18','✓ 確認済','pill-green'],
-              ].map(([name,company,join,pay2,att,pc])=>`
-                <tr>
-                  <td style="font-weight:700">${name}</td>
-                  <td style="font-size:11px">${company}</td>
-                  <td class="mono" style="font-size:11px">${join}</td>
-                  <td class="mono" style="font-size:11px">${pay2}</td>
-                  <td><span class="pill ${pc}">${att}</span></td>
-                </tr>`).join('')}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <div>
-      <div class="card" style="margin-bottom:14px">
-        <div class="card-hdr"><div class="ch-title">HR ツール</div></div>
-        <div class="card-body" style="display:flex;flex-direction:column;gap:8px">
-          <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:flex-start" onclick="openTool('coreto-early-quit.html','early-quit-ag')">
-            ⚠️ 早期退職アラート・返金条件登録 ↗
-          </button>
-          <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:flex-start" onclick="openTool('coreto-rank.html','rank')">
-            ⭐ ランク・ポイント確認 ↗
-          </button>
-          <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:flex-start" onclick="openTool('coreto-agent-mypage.html','mypage')">
-            👤 マイページ ↗
-          </button>
-          <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:flex-start" onclick="openTool('coreto-commission-simulator.html','simulator')">
-            🧮 報酬シミュレーター ↗
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>`;
-}
-
-// ══════════════════════════════════════════════════════════════════
-//  PARTNER DASHBOARD
-// ══════════════════════════════════════════════════════════════════
-function ptDashHTML() {
-  return `<div class="page on" id="page-dashboard">
-  <div class="page-hdr">
-    <div class="page-title">こんにちは、佐藤 美咲さん</div>
-    <div class="page-sub">パートナーダッシュボード — 2026年2月20日</div>
-  </div>
-
-  <div class="stats-grid sg-4">
-    <div class="stat"><div class="stat-ico">📋</div><div class="stat-val" style="color:var(--blue)">8</div><div class="stat-label">紹介案件（累計）</div></div>
-    <div class="stat"><div class="stat-ico">✅</div><div class="stat-val" style="color:var(--green)">5</div><div class="stat-label">成約件数</div></div>
-    <div class="stat"><div class="stat-ico">🔗</div><div class="stat-val" style="color:var(--purple)">8</div><div class="stat-label">コード使用回数</div></div>
-    <div class="stat"><div class="stat-ico">💰</div><div class="stat-val" style="color:var(--gold);font-size:20px">¥523,750</div><div class="stat-label">累計報酬</div></div>
-  </div>
-
-  <div class="grid-2r">
-    <div>
-      <div class="card" style="margin-bottom:16px">
-        <div class="card-hdr">
-          <div class="ch-title">紹介案件（直近）</div>
-          <button class="btn btn-ghost btn-sm" onclick="openTool('coreto-partner.html','pt-portal')">全件・詳細 ↗</button>
-        </div>
-        <div style="overflow-x:auto">
-          <table class="tbl">
-            <thead><tr><th>顧客名</th><th>物件</th><th>担当AG</th><th>ステータス</th><th>報酬</th></tr></thead>
-            <tbody>
-              ${[
-                ['田中 雄介','渋谷区東2丁目','山田 誠','✓ 成約','¥83,750','pill-green'],
-                ['鈴木 明日香','港区南青山','佐藤 花子','✓ 成約','¥55,000','pill-green'],
-                ['中村 えみ','品川区大崎','山田 誠','進行中','—','pill-blue'],
-                ['渡辺 翔','渋谷区代官山','鈴木 健太','進行中','—','pill-blue'],
-              ].map(([c,p,ag,s,r,pc])=>`
-                <tr>
-                  <td style="font-weight:700">${c}</td>
-                  <td style="font-size:11px;color:var(--sub)">${p}</td>
-                  <td style="font-size:11px">${ag}</td>
-                  <td><span class="pill ${pc}">${s}</span></td>
-                  <td class="mono" style="color:var(--gold);font-weight:700">${r}</td>
-                </tr>`).join('')}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <div>
-      <!-- Code card -->
-      <div class="card" style="margin-bottom:14px">
-        <div class="card-hdr"><div class="ch-title">紹介コード</div></div>
-        <div class="card-body">
-          <div style="font-family:'DM Mono',monospace;font-size:24px;font-weight:700;
-                      color:var(--gold);letter-spacing:4px;text-align:center;padding:8px 0 14px">PT-SATO2026</div>
-          <button class="btn btn-primary" style="width:100%;justify-content:center"
-                  onclick="navigator.clipboard.writeText('PT-SATO2026').then(()=>alert('✅ コードをコピーしました'))">
-            📋 コードをコピー
-          </button>
-          <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;margin-top:8px"
-                  onclick="openTool('coreto-partner.html','pt-portal')">
-            紹介コード詳細・QR ↗
-          </button>
-        </div>
-      </div>
-
-      <!-- Next payment -->
       <div class="card">
-        <div class="card-hdr"><div class="ch-title">次回振込</div></div>
+        <div class="card-hdr"><div class="ch-title">担当案件</div><button class="btn btn-sm btn-ghost" onclick="goPage('hr-cases')">全件</button></div>
+        <div style="overflow-x:auto">
+          <table class="tbl">
+            <thead><tr><th>ID</th><th>クライアント</th><th>業界</th><th>ステータス</th><th>在籍確認</th></tr></thead>
+            <tbody>
+              ${[
+                ['R-HR0089','鈴木 健一','IT・営業','在籍確認中','⚠️ 期限本日','pill-orange'],
+                ['R-HR0091','田村 真由','製造','選考中','— ','pill-blue'],
+                ['R-HR0094','木村 奈々','HR・管理','内定承諾済','✅','pill-green'],
+                ['R-HR0097','渡辺 洸','IT・エンジニア','書類審査','—','pill-muted'],
+              ].map(([id,name,ind,st,zaiki,sc]) => `
+              <tr>
+                <td class="mono text-muted" style="font-size:10px">${id}</td>
+                <td class="fw-700">${name}</td>
+                <td style="font-size:11px">${ind}</td>
+                <td><span class="pill ${sc}">${st}</span></td>
+                <td style="font-size:11px">${zaiki}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-hdr"><div class="ch-title">ランク状況</div><button class="btn btn-sm btn-ghost" onclick="goPage('rank')">詳細</button></div>
         <div class="card-body">
-          <div style="font-size:26px;font-weight:700;color:var(--gold);font-family:'DM Mono',monospace">¥83,750</div>
-          <div style="font-size:11px;color:var(--sub);margin:4px 0 14px">2026年3月25日 振込予定</div>
-          <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center"
-                  onclick="openTool('coreto-partner.html','pt-portal')">
-            振込明細を確認 ↗
-          </button>
+          <div style="text-align:center">
+            <div style="font-size:28px;margin-bottom:4px">🥇</div>
+            <div style="font-size:16px;font-weight:800;color:${rankCol}">${u.rank}</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:4px">月額：¥0</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hdr"><div class="ch-title">ツール</div></div>
+        <div class="card-body" style="display:flex;flex-direction:column;gap:7px">
+          ${[['⚠️','早期退職フォロー','coreto-early-quit.html'],['🧮','報酬シミュレーター',null],['🧾','領収書','coreto-receipt.html']].map(([ic,label,url])=>`
+          <button class="btn btn-ghost" style="justify-content:flex-start;width:100%;font-size:11px"
+                  onclick="${url?`window.open('${url}','_blank')`:"goPage('simulator')"}">
+            ${ic} ${label} <span style="margin-left:auto;color:var(--muted)">${url?'↗':'→'}</span>
+          </button>`).join('')}
         </div>
       </div>
     </div>
   </div>
+</div>`;
+}
 
-  <div style="margin-top:16px;text-align:center">
-    <button class="btn btn-primary" style="font-size:13px;padding:12px 32px" onclick="openTool('coreto-partner.html','pt-portal')">
-      🌐 パートナーポータル（全機能）を開く ↗
-    </button>
+function hrCasesPage() {
+  return `<div class="page" id="page-hr-cases">
+  <div class="page-hdr"><div class="page-title">担当案件一覧</div><div class="page-sub">全HR案件の進捗管理</div></div>
+  <div class="card">
+    <div style="overflow-x:auto">
+      <table class="tbl">
+        <thead><tr><th>ID</th><th>クライアント</th><th>業界</th><th>希望職種</th><th>希望年収</th><th>ステータス</th><th>在籍確認</th></tr></thead>
+        <tbody>
+          ${[
+            ['R-HR0089','鈴木 健一','IT・営業','営業マネージャー','¥600万〜','在籍確認中','pill-orange','⚠️ 本日'],
+            ['R-HR0091','田村 真由','製造','品質管理','¥450万〜','選考中','pill-blue','—'],
+            ['R-HR0094','木村 奈々','HR・管理','人事','¥500万〜','内定承諾','pill-green','✅ 完了'],
+            ['R-HR0097','渡辺 洸','IT','エンジニア','¥700万〜','書類審査','pill-muted','—'],
+          ].map(([id,name,ind,job,sal,st,sc,zaiki]) => `
+          <tr>
+            <td class="mono text-muted" style="font-size:10px">${id}</td>
+            <td class="fw-700">${name}</td>
+            <td style="font-size:11px">${ind}</td>
+            <td style="font-size:11px">${job}</td>
+            <td class="mono" style="font-size:11px">${sal}</td>
+            <td><span class="pill ${sc}">${st}</span></td>
+            <td style="font-size:11px">${zaiki}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>`;
 }
 
-// ══════════════════════════════════════════════════════════════════
-//  AGENT TOOLS PAGE
-// ══════════════════════════════════════════════════════════════════
-function agToolsHTML(type) {
-  const userTools = TOOLS.filter(t=>t.roles.includes(type));
-  const sections = [...new Set(userTools.map(t=>t.section))];
-  let html = `<div class="page" id="page-tools">
-    <div class="page-hdr">
-      <div class="page-title">ツール一覧</div>
-      <div class="page-sub">利用可能なCORETOツール（${userTools.length}ツール）</div>
-    </div>`;
-  sections.forEach(sec => {
-    const ts = userTools.filter(t=>t.section===sec);
-    html += `<div style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;margin-top:20px">${sec}</div>`;
-    html += `<div class="tool-grid" style="margin-bottom:0">`;
-    ts.forEach(t => {
-      html += `<div class="tool-card" style="--tc-color:${t.color}" onclick="openTool('${t.url}','${t.id}')">
-        <div class="tc-top">
-          <div class="tc-icon" style="background:${t.color}18;border:1px solid ${t.color}30;font-size:22px">${t.icon}</div>
+// ════════════════════════════════════════════════════════════
+//  PARTNER PAGES (all inline, no redirect)
+// ════════════════════════════════════════════════════════════
+const PT_YEN = v => '¥' + Math.round(v).toLocaleString();
+const PT_CASES = [
+  {id:1,client:'田中 雄介',prop:'渋谷区東2丁目マンション 302号室',ag:'山田 誠',date:'2026-01-15',status:'done',reward:83750,step:4},
+  {id:2,client:'鈴木 明日香',prop:'港区南青山 1LDK',ag:'佐藤 花子',date:'2026-01-28',status:'done',reward:55000,step:4},
+  {id:3,client:'高橋 健太',prop:'新宿区西新宿 2LDK',ag:'山田 誠',date:'2026-02-05',status:'done',reward:71250,step:4},
+  {id:4,client:'木村 奈々',prop:'世田谷区太子堂 1K',ag:'鈴木 健太',date:'2026-02-08',status:'done',reward:32500,step:4},
+  {id:5,client:'伊藤 良太',prop:'目黒区中目黒 マンション',ag:'佐藤 花子',date:'2026-02-10',status:'done',reward:41250,step:4},
+  {id:6,client:'中村 えみ',prop:'品川区大崎 1LDK',ag:'山田 誠',date:'2026-02-12',status:'active',reward:null,step:2},
+  {id:7,client:'渡辺 翔',prop:'渋谷区代官山 2DK',ag:'鈴木 健太',date:'2026-02-16',status:'active',reward:null,step:1},
+  {id:8,client:'松本 遥',prop:'新宿区四谷 1LDK',ag:'—',date:'2026-02-19',status:'active',reward:null,step:0},
+];
+const PT_STEPS = ['登録済','AG対応中','内見・審査','申込済','成約'];
+const PT_REWARDS = [
+  {month:'2026年2月分',count:1,gross:83750,tax:8551,net:75199,date:'2026-03-25',status:'予定'},
+  {month:'2026年1月分',count:2,gross:126250,tax:12890,net:113360,date:'2026-02-25',status:'振込済'},
+  {month:'2025年12月分',count:1,gross:71250,tax:7275,net:63975,date:'2026-01-25',status:'振込済'},
+  {month:'2025年11月分',count:1,gross:41250,tax:4211,net:37039,date:'2025-12-25',status:'振込済'},
+];
+const PT_CONTACTS = [
+  {id:1,name:'山田 誠',role:'担当AG（RE）',icon:'🏠',unread:1,msgs:[
+    {me:false,text:'佐藤さん、こんにちは。品川区大崎の件ですが、明日13時に内見を設定しました。',time:'2月19日 14:32'},
+    {me:true,text:'ありがとうございます。顧客にも連絡しておきます！',time:'2月19日 14:45'},
+    {me:false,text:'よろしくお願いします。内見後の感触を教えていただけますか？',time:'2月20日 09:15'},
+  ]},
+  {id:2,name:'CORETO 本部',role:'HQ サポート',icon:'🏢',unread:1,msgs:[
+    {me:false,text:'佐藤 美咲様、2月分の報酬計算が完了しました。¥83,750を3月25日にお振込みします。',time:'2月20日 10:00'},
+    {me:true,text:'確認しました。ありがとうございます。',time:'2月20日 10:15'},
+  ]},
+  {id:3,name:'鈴木 健太',role:'担当AG（RE）',icon:'🏠',unread:0,msgs:[
+    {me:false,text:'佐藤さん、渡辺様の物件探しを開始しました。代官山で3件候補があります。',time:'2月17日 16:00'},
+    {me:true,text:'よろしくお願いします。',time:'2月17日 16:20'},
+  ]},
+];
+let ptCurrentContact = null;
+let ptCaseFilter = 'all';
+
+function ptDashPage() {
+  const u = session;
+  return `<div class="page" id="page-dashboard">
+  <div class="page-hdr">
+    <div class="page-title">こんにちは、${u.name}さん</div>
+    <div class="page-sub">パートナーダッシュボード — 2026年2月21日</div>
+  </div>
+
+  <div class="stats-grid sg-4">
+    <div class="pt-stat" onclick="goPage('pt-cases')"><div style="font-size:20px;margin-bottom:8px">📋</div><div class="stat-val text-blue">8</div><div class="stat-label">紹介案件（累計）</div><div class="stat-sub text-green">今月 +2件</div></div>
+    <div class="pt-stat" onclick="goPage('pt-cases')"><div style="font-size:20px;margin-bottom:8px">🔄</div><div class="stat-val text-orange">3</div><div class="stat-label">進行中</div></div>
+    <div class="pt-stat" onclick="goPage('pt-rewards')"><div style="font-size:20px;margin-bottom:8px">✅</div><div class="stat-val text-green">5</div><div class="stat-label">成約件数</div></div>
+    <div class="pt-stat" onclick="goPage('pt-rewards')"><div style="font-size:20px;margin-bottom:8px">💰</div><div class="stat-val text-gold" style="font-size:20px">¥523,750</div><div class="stat-label">累計報酬</div></div>
+  </div>
+
+  <div class="grid-2r">
+    <div>
+      <div class="card">
+        <div class="card-hdr"><div class="ch-title">紹介案件（直近5件）</div><button class="btn btn-sm btn-ghost" onclick="goPage('pt-cases')">全件</button></div>
+        <div style="overflow-x:auto">
+          <table class="tbl">
+            <thead><tr><th>クライアント</th><th>物件</th><th>担当AG</th><th>ステータス</th><th>報酬</th></tr></thead>
+            <tbody>
+              ${PT_CASES.slice(0,5).map(c => `
+              <tr>
+                <td class="fw-700">${c.client}</td>
+                <td style="font-size:11px;color:var(--sub)">${c.prop}</td>
+                <td style="font-size:11px">${c.ag}</td>
+                <td><span class="pill ${c.status==='done'?'pill-green':'pill-blue'}">${c.status==='done'?'✓ 成約':'進行中'}</span></td>
+                <td class="mono" style="color:${c.reward?'var(--gold)':'var(--muted)'}">${c.reward?PT_YEN(c.reward):'—'}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
         </div>
-        <div class="tc-name">${t.name}</div>
-        <div class="tc-desc">${t.desc}</div>
-        <div class="tc-footer">
-          <span class="tc-role">${t.section}</span>
-          <span class="tc-open" style="color:${t.color}">開く ↗</span>
+      </div>
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-hdr"><div class="ch-title">紹介コード</div><button class="btn btn-sm btn-ghost" onclick="goPage('pt-code')">詳細</button></div>
+        <div class="card-body">
+          <div class="code-box" style="text-align:center">
+            <div style="font-size:10px;color:var(--muted);margin-bottom:4px">あなたの紹介コード</div>
+            <div class="code-big">PT-SATO2026</div>
+            <div style="font-size:10px;color:var(--muted)">使用回数 8回 / 月</div>
+          </div>
+          <div class="code-share-btns">
+            <button class="btn btn-ghost btn-sm" onclick="ptCopyCode()">📋 コピー</button>
+            <button class="btn btn-ghost btn-sm" onclick="ptCopyLink()">🔗 リンク</button>
+          </div>
         </div>
-      </div>`;
-    });
-    html += `</div>`;
+      </div>
+      <div class="card">
+        <div class="card-hdr"><div class="ch-title">次回振込予定</div><button class="btn btn-sm btn-ghost" onclick="goPage('pt-rewards')">明細</button></div>
+        <div class="card-body">
+          <div style="font-size:22px;font-weight:800;color:var(--gold);margin-bottom:4px">${PT_YEN(75199)}</div>
+          <div style="font-size:11px;color:var(--sub)">2026年3月25日 振込予定</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:4px">2月分 1件 / 源泉後手取り</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>`;
+}
+
+function ptCasesPage() {
+  return `<div class="page" id="page-pt-cases">
+  <div class="page-hdr"><div class="page-title">紹介案件</div><div class="page-sub">あなたが紹介した全案件の進捗</div></div>
+  <div style="display:flex;gap:8px;margin-bottom:14px">
+    ${[['all','全て'],['active','進行中'],['done','成約']].map(([f,l])=>`
+    <button class="btn btn-sm btn-ghost" id="pt-filter-${f}" onclick="ptFilter('${f}')" style="${f==='all'?'border-color:var(--gold-dim);color:var(--gold);background:var(--gold-bg)':''}">${l}</button>`).join('')}
+  </div>
+  <div class="card">
+    <div id="pt-cases-list">
+      ${ptRenderCases('all')}
+    </div>
+  </div>
+</div>`;
+}
+
+function ptRenderCases(filter) {
+  const rows = PT_CASES.filter(c => filter === 'all' ? true : filter === 'active' ? c.status === 'active' : c.status === 'done');
+  return `<div style="overflow-x:auto"><table class="tbl">
+    <thead><tr><th>クライアント</th><th>物件</th><th>担当AG</th><th>日付</th><th>進捗</th><th>報酬</th></tr></thead>
+    <tbody>
+      ${rows.map(c => `
+      <tr>
+        <td class="fw-700">${c.client}</td>
+        <td style="font-size:11px;color:var(--sub)">${c.prop}</td>
+        <td style="font-size:11px">${c.ag}</td>
+        <td style="font-size:11px;color:var(--muted)">${c.date}</td>
+        <td>${ptStepperHtml(c.step)}</td>
+        <td class="mono" style="color:${c.reward?'var(--gold)':'var(--muted)'};font-weight:${c.reward?700:400}">${c.reward?PT_YEN(c.reward):'—'}</td>
+      </tr>`).join('')}
+    </tbody>
+  </table></div>`;
+}
+
+function ptFilter(f) {
+  ['all','active','done'].forEach(x => {
+    const btn = document.getElementById('pt-filter-'+x);
+    if(!btn) return;
+    if(x === f) { btn.style.borderColor='var(--gold-dim)'; btn.style.color='var(--gold)'; btn.style.background='var(--gold-bg)'; }
+    else { btn.style.borderColor=''; btn.style.color=''; btn.style.background=''; }
   });
-  return html + `</div>`;
+  const list = document.getElementById('pt-cases-list');
+  if(list) list.innerHTML = ptRenderCases(f);
+}
+
+function ptStepperHtml(step) {
+  return '<div class="stepper">' +
+    PT_STEPS.map((s,i) => `<div class="step"><div class="step-dot ${i<step?'done':i===step?'active':'wait'}">${i<step?'✓':i+1}</div>${i<PT_STEPS.length-1?`<div class="step-line ${i<step?'done':''}"></div>`:''}</div>`).join('') +
+    `</div><div style="font-size:9px;color:var(--sub);margin-top:3px">${PT_STEPS[Math.min(step,PT_STEPS.length-1)]}</div>`;
+}
+
+function ptCodePage() {
+  return `<div class="page" id="page-pt-code">
+  <div class="page-hdr"><div class="page-title">紹介コード・リンク</div><div class="page-sub">このコードを顧客に共有することで案件を紹介できます</div></div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-hdr"><div class="ch-title">あなたの紹介コード</div></div>
+      <div class="card-body">
+        <div class="code-box" style="text-align:center;margin-bottom:16px">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:6px;letter-spacing:1px">REFERRAL CODE</div>
+          <div class="code-big">PT-SATO2026</div>
+          <div style="font-size:11px;color:var(--sub);margin-top:8px">使用回数 8回 / 先月比 +3</div>
+        </div>
+        <div style="font-size:11px;color:var(--muted);background:var(--bg3);border-radius:8px;padding:10px;margin-bottom:14px;font-family:'DM Mono',monospace;word-break:break-all">
+          https://coreto.jp/register?ref=PT-SATO2026
+        </div>
+        <div class="code-share-btns">
+          <button class="btn btn-primary" onclick="ptCopyCode()">📋 コードをコピー</button>
+          <button class="btn btn-ghost" onclick="ptCopyLink()">🔗 リンクをコピー</button>
+          <button class="btn btn-ghost" onclick="ptShareSlack()">📢 Slackに投稿</button>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-hdr"><div class="ch-title">コード利用履歴</div></div>
+      <div style="overflow-x:auto">
+        <table class="tbl">
+          <thead><tr><th>日付</th><th>クライアント</th><th>ステータス</th></tr></thead>
+          <tbody>
+            ${PT_CASES.slice(0,6).map(c => `
+            <tr>
+              <td style="font-size:11px;color:var(--muted)">${c.date}</td>
+              <td class="fw-700">${c.client}</td>
+              <td><span class="pill ${c.status==='done'?'pill-green':'pill-blue'}">${c.status==='done'?'成約':'進行中'}</span></td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>`;
+}
+
+function ptCopyCode() { navigator.clipboard.writeText('PT-SATO2026').then(()=>alert('✅ コードをコピーしました')); }
+function ptCopyLink() { navigator.clipboard.writeText('https://coreto.jp/register?ref=PT-SATO2026').then(()=>alert('✅ 紹介リンクをコピーしました')); }
+function ptShareSlack() { alert('📢 Slackテキストをコピーしました\n\n【紹介コード】PT-SATO2026\nhttps://coreto.jp/register?ref=PT-SATO2026'); }
+
+function ptRewardsPage() {
+  return `<div class="page" id="page-pt-rewards">
+  <div class="page-hdr"><div class="page-title">報酬・振込明細</div><div class="page-sub">紹介報酬の履歴と振込スケジュール</div></div>
+
+  <div class="stats-grid sg-3" style="margin-bottom:20px">
+    <div class="stat"><div class="stat-ico">💰</div><div class="stat-val text-gold" style="font-size:20px">${PT_YEN(523750)}</div><div class="stat-label">累計報酬（税引前）</div></div>
+    <div class="stat"><div class="stat-ico">📅</div><div class="stat-val text-green" style="font-size:20px">${PT_YEN(75199)}</div><div class="stat-label">次回振込（3月25日）</div></div>
+    <div class="stat"><div class="stat-ico">📊</div><div class="stat-val text-blue">5</div><div class="stat-label">累計成約件数</div></div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-hdr"><div class="ch-title">振込履歴</div></div>
+    <div style="overflow-x:auto">
+      <table class="tbl">
+        <thead><tr><th>対象月</th><th>件数</th><th>報酬（税前）</th><th>源泉徴収</th><th>手取り</th><th>振込日</th><th>状況</th></tr></thead>
+        <tbody>
+          ${PT_REWARDS.map(r => `
+          <tr>
+            <td class="fw-700">${r.month}</td>
+            <td class="mono">${r.count}件</td>
+            <td class="mono">${r.gross?PT_YEN(r.gross):'—'}</td>
+            <td class="mono text-red">${r.tax?'-'+PT_YEN(r.tax):'—'}</td>
+            <td class="mono fw-700 text-gold">${r.net?PT_YEN(r.net):'—'}</td>
+            <td style="font-size:11px;color:var(--sub)">${r.date}</td>
+            <td><span class="pill ${r.status==='振込済'?'pill-green':r.status==='予定'?'pill-orange':'pill-muted'}">${r.status}</span></td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card" style="max-width:400px">
+    <div class="card-hdr"><div class="ch-title">報酬シミュレーター</div></div>
+    <div class="card-body">
+      <div class="fg">
+        <label>成約手数料（仲介料）</label>
+        <input type="number" id="pt-sim-fee" placeholder="300000" oninput="ptCalcSim()" step="10000">
+      </div>
+      <div style="background:var(--bg3);border-radius:9px;padding:14px">
+        ${[['報酬（税前）','pt-sg','var(--text)'],['源泉徴収','pt-st','var(--red)'],['手取り','pt-sn','var(--gold)']].map(([k,id,col])=>`
+        <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px">
+          <span class="text-sub">${k}</span>
+          <span class="mono fw-700" id="${id}" style="color:${col}">—</span>
+        </div>`).join('')}
+      </div>
+    </div>
+  </div>
+</div>`;
+}
+
+function ptCalcSim() {
+  const fee = parseFloat(document.getElementById('pt-sim-fee')?.value) || 0;
+  const gross = Math.round(fee * 0.25);
+  const tax   = gross <= 1000000 ? Math.floor(gross*0.1021) : Math.floor(1000000*0.1021+(gross-1000000)*0.2042);
+  const net   = gross - tax;
+  const g = document.getElementById('pt-sg');
+  const t = document.getElementById('pt-st');
+  const n = document.getElementById('pt-sn');
+  if(g) g.textContent = fee ? PT_YEN(gross) : '—';
+  if(t) t.textContent = fee ? '-'+PT_YEN(tax) : '—';
+  if(n) n.textContent = fee ? PT_YEN(net) : '—';
+}
+
+function ptMsgsPage() {
+  return `<div class="page" id="page-pt-msgs">
+  <div class="page-hdr"><div class="page-title">メッセージ</div><div class="page-sub">担当AGとHQ本部とのやりとり</div></div>
+  <div class="msg-layout">
+    <div class="msg-list" id="pt-contact-list"></div>
+    <div class="msg-main" id="pt-msg-main">
+      <div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:12px">← 左のリストから相手を選択</div>
+    </div>
+  </div>
+</div>`;
+}
+
+function ptRegisterPage() {
+  return `<div class="page" id="page-pt-register">
+  <div class="page-hdr"><div class="page-title">新規紹介を登録</div><div class="page-sub">新しい案件を紹介してください</div></div>
+  <div style="max-width:600px">
+    <div class="card">
+      <div class="card-hdr"><div class="ch-title">紹介情報入力</div></div>
+      <div class="card-body">
+        <div class="row2">
+          <div class="fg">
+            <label>業種</label>
+            <select id="pt-reg-type" onchange="ptUpdateRegType()">
+              <option value="re">不動産（賃貸・売買）</option>
+              <option value="hr">人材紹介（転職）</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label>クライアント氏名</label>
+            <input type="text" id="pt-reg-name" placeholder="山田 太郎">
+          </div>
+        </div>
+        <div class="row2">
+          <div class="fg">
+            <label>電話番号</label>
+            <input type="tel" id="pt-reg-tel" placeholder="080-XXXX-XXXX">
+          </div>
+          <div class="fg">
+            <label>メールアドレス</label>
+            <input type="email" id="pt-reg-email" placeholder="taro@example.com">
+          </div>
+        </div>
+        <div id="pt-re-section">
+          <div class="row2">
+            <div class="fg"><label>希望エリア</label><input type="text" id="pt-reg-area" placeholder="渋谷区・港区"></div>
+            <div class="fg"><label>希望家賃・価格帯</label><input type="text" placeholder="¥10〜12万"></div>
+          </div>
+        </div>
+        <div id="pt-hr-section" style="display:none">
+          <div class="row2">
+            <div class="fg"><label>希望業界</label><input type="text" placeholder="IT・営業"></div>
+            <div class="fg"><label>希望年収</label><input type="text" placeholder="¥500万〜"></div>
+          </div>
+        </div>
+        <div class="fg">
+          <label>備考</label>
+          <textarea placeholder="特記事項・背景など"></textarea>
+        </div>
+        <button class="btn btn-primary" onclick="ptSubmitReferral()" style="width:100%;justify-content:center;margin-top:8px">
+          ✅ 紹介を登録する
+        </button>
+      </div>
+    </div>
+  </div>
+</div>`;
+}
+
+function ptUpdateRegType() {
+  const v = document.getElementById('pt-reg-type')?.value;
+  const re = document.getElementById('pt-re-section');
+  const hr = document.getElementById('pt-hr-section');
+  if(re) re.style.display = v === 'hr' ? 'none' : 'block';
+  if(hr) hr.style.display = v === 'hr' ? 'block' : 'none';
+}
+
+function ptSubmitReferral() {
+  const name = document.getElementById('pt-reg-name')?.value?.trim();
+  if(!name) { alert('クライアント氏名を入力してください'); return; }
+  alert(`✅ 紹介を登録しました\n\nクライアント：${name}\n\nCORETO本部がSlackで通知を受け取り、担当エージェントがご連絡します。\n進捗は「紹介案件」タブで確認できます。`);
+  goPage('pt-cases');
+}
+
+// ── Partner messages ──
+function ptRenderMessages() {
+  const list = document.getElementById('pt-contact-list');
+  if(!list) return;
+  const total = PT_CONTACTS.reduce((s,c)=>s+c.unread,0);
+  list.innerHTML = PT_CONTACTS.map(c => `
+    <div class="msg-contact ${ptCurrentContact===c.id?'on':''}" onclick="ptOpenChat(${c.id})">
+      <div class="mc-avatar" style="background:${c.id===2?'rgba(201,168,64,.15)':'rgba(79,156,249,.12)'}">${c.icon}</div>
+      <div style="flex:1;overflow:hidden">
+        <div style="display:flex;align-items:center;gap:6px">
+          <div class="mc-name">${c.name}</div>
+          ${c.unread?`<span class="mc-unread">${c.unread}</span>`:''}
+        </div>
+        <div class="mc-last">${c.msgs[c.msgs.length-1].text}</div>
+      </div>
+      <div class="mc-time" style="font-size:10px;color:var(--muted);white-space:nowrap;margin-left:6px">${c.msgs[c.msgs.length-1].time.replace('2月','2/')}</div>
+    </div>`).join('');
+}
+
+function ptOpenChat(id) {
+  ptCurrentContact = id;
+  const c = PT_CONTACTS.find(x => x.id === id);
+  c.unread = 0;
+  ptRenderMessages();
+
+  const main = document.getElementById('pt-msg-main');
+  if(!main) return;
+  main.innerHTML = `
+    <div class="msg-hdr">
+      <div class="mc-avatar" style="background:${id===2?'rgba(201,168,64,.15)':'rgba(79,156,249,.12)'}">${c.icon}</div>
+      <div>
+        <div style="font-size:13px;font-weight:700">${c.name}</div>
+        <div style="font-size:10px;color:var(--sub)">${c.role}</div>
+      </div>
+    </div>
+    <div class="msg-body" id="pt-chat-body">
+      ${c.msgs.map(m => `
+      <div>
+        <div class="msg-bubble ${m.me?'msg-me':'msg-them'}">${m.text}</div>
+        <div class="msg-time">${m.time}</div>
+      </div>`).join('')}
+    </div>
+    <div class="msg-footer">
+      <textarea class="msg-input" id="pt-msg-inp" placeholder="メッセージを入力…" rows="1"
+                onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();ptSendMsg(${id})}"></textarea>
+      <button class="btn btn-primary btn-sm" onclick="ptSendMsg(${id})">送信</button>
+    </div>`;
+
+  const body = document.getElementById('pt-chat-body');
+  if(body) body.scrollTop = body.scrollHeight;
+}
+
+function ptSendMsg(id) {
+  const inp = document.getElementById('pt-msg-inp');
+  if(!inp) return;
+  const text = inp.value.trim();
+  if(!text) return;
+  const c = PT_CONTACTS.find(x => x.id === id);
+  const now = new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+  c.msgs.push({me:true, text, time:'今日 '+now});
+  inp.value = '';
+  const body = document.getElementById('pt-chat-body');
+  if(body) {
+    const div = document.createElement('div');
+    div.innerHTML = `<div class="msg-bubble msg-me">${text}</div><div class="msg-time">今日 ${now}</div>`;
+    body.appendChild(div);
+    body.scrollTop = body.scrollHeight;
+  }
+}
+
+// ── Show messages when navigating to that page ──
+const _origGoPage = goPage;
+function goPage(pageId) {
+  currentPage = pageId;
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('on', n.id === 'nav-' + pageId));
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('on'));
+  const pg = document.getElementById('page-' + pageId);
+  if(pg) {
+    pg.classList.add('on');
+    if(pageId === 'pt-msgs') ptRenderMessages();
+  } else {
+    buildPageContent(pageId);
+  }
 }
 </script>
 </body>
