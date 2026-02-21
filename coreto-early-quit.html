@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CORETO 早期退職アラート</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090f;--card:#0f1119;--card2:#141720;--border:#1e2235;--border2:#252a3d;
+  --gold:#c9a84c;--gold-dim:#7a5f22;
+  --blue:#4f9cf9;--green:#34d399;--red:#f87171;--orange:#fb923c;--purple:#a78bfa;
+  --muted:#4a5270;--sub:#7a849e;--text:#e2e6f3;
+}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.header{display:flex;align-items:center;justify-content:space-between;padding:0 28px;height:54px;
+  border-bottom:1px solid var(--border);background:rgba(7,9,15,.9);backdrop-filter:blur(12px);
+  position:sticky;top:0;z-index:100}
+.logo{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--gold);letter-spacing:3px}
+.view-tabs{display:flex;padding:0 28px;border-bottom:1px solid var(--border);background:var(--card2)}
+.vt{padding:12px 20px;font-size:11px;font-weight:700;cursor:pointer;color:var(--muted);
+  border-bottom:2px solid transparent;transition:all .15s;display:flex;align-items:center;gap:7px}
+.vt.on{color:var(--blue);border-bottom-color:var(--blue)}
+.body{max-width:1280px;margin:0 auto;padding:24px 28px 60px}
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:15px 18px}
+.sc-val{font-family:'DM Mono',monospace;font-size:28px;font-weight:500;line-height:1;margin-bottom:4px}
+.sc-label{font-size:10px;color:var(--muted)}
+.alert-banner{background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.3);
+  border-radius:12px;padding:12px 18px;margin-bottom:18px;display:flex;align-items:center;gap:12px}
+.table-wrap{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:20px}
+.table-hdr{display:flex;align-items:center;justify-content:space-between;
+  padding:14px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px}
+.th-line{width:3px;height:12px;border-radius:2px;flex-shrink:0}
+.th-title{font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;
+  display:flex;align-items:center;gap:8px}
+.filter-row{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+.ft{padding:5px 11px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;
+  color:var(--muted);border:1px solid transparent;transition:all .15s}
+.ft.on{background:rgba(248,113,113,.12);border-color:rgba(248,113,113,.35);color:var(--red)}
+.ft:hover:not(.on){color:var(--sub)}
+.search-box{background:var(--card2);border:1px solid var(--border2);border-radius:8px;
+  padding:6px 12px;font-size:11px;color:var(--text);font-family:'Noto Sans JP',sans-serif;width:180px}
+.search-box:focus{outline:none;border-color:var(--blue)}
+.search-box::placeholder{color:var(--muted)}
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{padding:9px 14px;font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.5px;
+  text-transform:uppercase;border-bottom:1px solid var(--border);background:var(--card2);white-space:nowrap}
+.tbl td{padding:11px 14px;border-bottom:1px solid rgba(30,34,53,.6);font-size:12px;vertical-align:middle}
+.tbl tr:last-child td{border:none}
+.tbl tr:hover td{background:rgba(255,255,255,.012)}
+.tbl tr.urgent td{background:rgba(248,113,113,.035)}
+.mono{font-family:'DM Mono',monospace}
+.guarantee-chip{display:flex;flex-direction:column;gap:3px}
+.gc-row{display:flex;align-items:center;gap:5px;font-size:10px}
+.gc-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.pill{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:6px;font-size:9px;font-weight:700;white-space:nowrap}
+.pill-red{background:rgba(248,113,113,.15);color:var(--red);border:1px solid rgba(248,113,113,.3)}
+.pill-orange{background:rgba(251,146,60,.12);color:var(--orange);border:1px solid rgba(251,146,60,.3)}
+.pill-blue{background:rgba(79,156,249,.12);color:var(--blue);border:1px solid rgba(79,156,249,.25)}
+.pill-green{background:rgba(52,211,153,.12);color:var(--green);border:1px solid rgba(52,211,153,.25)}
+.pill-muted{background:rgba(74,82,112,.15);color:var(--sub);border:1px solid var(--border2)}
+.act-btn{padding:5px 11px;border-radius:7px;font-size:10px;font-weight:700;cursor:pointer;
+  font-family:'Noto Sans JP',sans-serif;border:1px solid var(--border2);
+  background:transparent;color:var(--muted);transition:all .12s;white-space:nowrap;display:block;margin-bottom:4px}
+.act-btn:last-child{margin-bottom:0}
+.act-btn:hover{color:var(--text);border-color:var(--sub)}
+.act-ok{color:var(--green);border-color:rgba(52,211,153,.35);background:rgba(52,211,153,.07)}
+.act-ok:hover{background:rgba(52,211,153,.15)}
+.act-refund{color:var(--red);border-color:rgba(248,113,113,.35);background:rgba(248,113,113,.07)}
+.act-refund:hover{background:rgba(248,113,113,.15)}
+.act-primary{background:linear-gradient(135deg,var(--blue),#3070c0);color:#fff;border:none}
+.act-primary:hover{filter:brightness(1.1)}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.78);backdrop-filter:blur(5px);
+  z-index:300;display:none;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:var(--card);border:1px solid var(--border2);border-radius:16px;
+  width:580px;max-height:90vh;overflow-y:auto}
+.modal-hdr{display:flex;align-items:center;justify-content:space-between;
+  padding:18px 24px;border-bottom:1px solid var(--border);position:sticky;top:0;
+  background:var(--card);z-index:1}
+.modal-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:var(--gold)}
+.modal-close{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer}
+.modal-body{padding:20px 24px}
+.modal-footer{padding:14px 24px;border-top:1px solid var(--border);
+  display:flex;gap:8px;justify-content:flex-end;position:sticky;bottom:0;background:var(--card)}
+.mf-btn{padding:9px 20px;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;
+  font-family:'Noto Sans JP',sans-serif}
+.mf-save{background:linear-gradient(135deg,var(--blue),#3070c0);border:none;color:#fff}
+.mf-danger{background:rgba(248,113,113,.15);border:1px solid rgba(248,113,113,.4);color:var(--red)}
+.mf-cancel{background:transparent;border:1px solid var(--border2);color:var(--sub)}
+.mfield{margin-bottom:14px}
+.mfield label{display:block;font-size:10px;color:var(--sub);margin-bottom:5px}
+.mfield input,.mfield select,.mfield textarea{
+  width:100%;background:#090b13;border:1px solid var(--border2);border-radius:8px;
+  padding:9px 12px;color:var(--text);font-size:12px;font-family:'Noto Sans JP',sans-serif}
+.mfield input:focus,.mfield select:focus,.mfield textarea:focus{outline:none;border-color:var(--blue)}
+.mfield-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.tier-row{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;margin-bottom:8px}
+.tier-row input{background:#090b13;border:1px solid var(--border2);border-radius:7px;
+  padding:8px 10px;color:var(--text);font-size:12px;font-family:'DM Mono',monospace;width:100%}
+.tier-row input:focus{outline:none;border-color:var(--blue)}
+.tier-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:4px}
+.tier-del:hover{color:var(--red)}
+.add-tier-btn{width:100%;padding:8px;border-radius:7px;border:1px dashed var(--border2);
+  background:transparent;color:var(--sub);font-size:11px;cursor:pointer;
+  font-family:'Noto Sans JP',sans-serif;transition:all .15s;margin-top:4px}
+.add-tier-btn:hover{border-color:var(--blue);color:var(--blue)}
+.info-box{background:rgba(79,156,249,.05);border:1px solid rgba(79,156,249,.15);
+  border-radius:9px;padding:12px 14px;font-size:11px;color:var(--sub);line-height:1.8}
+.det-row{display:flex;justify-content:space-between;padding:8px 0;
+  border-bottom:1px solid rgba(30,34,53,.6);font-size:12px;align-items:flex-start;gap:12px}
+.det-row:last-child{border:none}
+.dr-key{color:var(--sub);flex-shrink:0}
+.dr-val{font-weight:600;text-align:right}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div style="display:flex;align-items:center;gap:12px">
+    <div class="logo">CORETO</div>
+    <div style="width:1px;height:18px;background:var(--border2)"></div>
+    <div style="font-size:10px;color:var(--muted);letter-spacing:1px">早期退職アラート</div>
+  </div>
+  <button onclick="window.location.href=history.back()"
+          style="font-size:10px;padding:5px 12px;border-radius:6px;border:1px solid var(--border2);
+          background:transparent;color:var(--muted);cursor:pointer;font-family:'Noto Sans JP',sans-serif">
+    ← 管理ポータル
+  </button>
+</div>
+
+<div class="view-tabs">
+  <div class="vt on" onclick="switchView(0,this)">🏢 HQ管理ビュー</div>
+  <div class="vt" onclick="switchView(1,this)">👤 エージェントビュー（HR案件登録）</div>
+</div>
+
+<!-- HQ VIEW -->
+<div id="view-hq">
+<div class="body">
+  <div class="stats" id="hq-stats"></div>
+  <div id="hq-banner"></div>
+
+  <!-- 第2回支払い -->
+  <div class="table-wrap" style="margin-bottom:20px">
+    <div class="table-hdr">
+      <div class="th-title"><div class="th-line" style="background:var(--blue)"></div>第2回支払い 待機リスト</div>
+      <div class="filter-row">
+        <input class="search-box" type="text" placeholder="🔍 検索" id="s2nd" oninput="render2nd()">
+        <div style="font-size:10px;color:var(--muted)" id="cnt2"></div>
+      </div>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="tbl">
+        <thead><tr>
+          <th>候補者名</th><th>担当AG</th><th>企業名</th><th>入社日</th>
+          <th>第2回予定日</th><th>残日数</th><th>登録保証条件</th><th>第2回支払額</th><th>在籍</th><th>操作</th>
+        </tr></thead>
+        <tbody id="tbody2nd"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 早期退職 -->
+  <div class="table-wrap">
+    <div class="table-hdr">
+      <div class="th-title"><div class="th-line" style="background:var(--red)"></div>早期退職アラート</div>
+      <div class="filter-row">
+        <div class="ft on" data-f="all"     onclick="setAlertFilter('all',this)">全て</div>
+        <div class="ft" data-f="pending"    onclick="setAlertFilter('pending',this)">対応待ち</div>
+        <div class="ft" data-f="done"       onclick="setAlertFilter('done',this)">対応済み</div>
+        <input class="search-box" type="text" placeholder="🔍 検索" id="salt" oninput="renderAlerts()">
+        <div style="font-size:10px;color:var(--muted)" id="cntalt"></div>
+      </div>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="tbl">
+        <thead><tr>
+          <th>候補者名</th><th>担当AG</th><th>企業名</th><th>入社日</th><th>退職日</th>
+          <th>在職期間</th><th>登録保証条件</th><th>返金額</th><th>ステータス</th><th>操作</th>
+        </tr></thead>
+        <tbody id="tbodyAlt"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 22px">
+    <div class="th-title" style="margin-bottom:12px">
+      <div class="th-line" style="background:var(--gold)"></div>ルール説明
+    </div>
+    <div style="font-size:11px;color:var(--sub);line-height:1.9">
+      エージェントが案件登録時に企業との合意内容（○ヶ月以内退職→返金○%）を登録します。<br>
+      会社・求人によって条件は異なるため、各案件ごとに個別設定します。Zapierが毎日退職報告をチェックし、条件に合致した場合にアラートを自動発令します。
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- AGENT VIEW -->
+<div id="view-ag" style="display:none">
+<div class="body" style="max-width:800px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+    <div>
+      <div style="font-size:18px;font-weight:700;margin-bottom:4px">HR案件 返金条件管理</div>
+      <div style="font-size:11px;color:var(--sub)">成約した人材紹介案件の返金保証条件を登録・確認します</div>
+    </div>
+    <button class="act-btn act-primary" style="display:inline-block;padding:9px 18px;font-size:12px" onclick="openRegModal()">＋ 案件を登録</button>
+  </div>
+
+  <div class="info-box" style="margin-bottom:20px">
+    📋 <strong style="color:var(--text)">なぜ登録が必要ですか？</strong><br>
+    企業によって返金保証の期間・率が異なります。成約時に企業との合意内容を登録することで、早期退職が発生した際にHQが正確な返金額を把握できます。
+  </div>
+
+  <div class="table-wrap" style="margin-bottom:20px">
+    <div class="table-hdr">
+      <div class="th-title"><div class="th-line" style="background:var(--purple)"></div>自分のHR案件 一覧</div>
+      <div style="font-size:10px;color:var(--muted)" id="ag-cnt"></div>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="tbl">
+        <thead><tr>
+          <th>候補者名</th><th>企業名</th><th>入社日</th><th>第1回支払</th>
+          <th>登録した返金条件</th><th>在籍状況</th><th>操作</th>
+        </tr></thead>
+        <tbody id="tbody-ag"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <div class="table-hdr">
+      <div class="th-title"><div class="th-line" style="background:var(--red)"></div>退職報告</div>
+    </div>
+    <div style="padding:16px 20px">
+      <div style="font-size:11px;color:var(--sub);margin-bottom:12px;line-height:1.8">
+        候補者が退職した場合、速やかに報告してください。登録された返金条件をもとにHQが返金手続きを進めます。
+      </div>
+      <button class="act-btn act-refund" style="display:inline-block;padding:9px 18px;font-size:12px" onclick="openQuitModal()">
+        ⚠️ 退職を報告する
+      </button>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- Register Modal -->
+<div class="modal-overlay" id="reg-modal" onclick="if(event.target===this)closeRegModal()">
+<div class="modal">
+  <div class="modal-hdr">
+    <div class="modal-title" id="reg-modal-title">HR案件 返金条件登録</div>
+    <button class="modal-close" onclick="closeRegModal()">✕</button>
+  </div>
+  <div class="modal-body">
+    <div style="font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:7px">基本情報</div>
+    <div class="mfield-row">
+      <div class="mfield" style="margin-bottom:0"><label>候補者名 *</label><input type="text" id="r-cname" placeholder="例：山田 太郎"></div>
+      <div class="mfield" style="margin-bottom:0"><label>入社企業名 *</label><input type="text" id="r-company" placeholder="例：株式会社ABC"></div>
+    </div>
+    <div style="margin-bottom:12px"></div>
+    <div class="mfield-row">
+      <div class="mfield" style="margin-bottom:0"><label>入社日 *</label><input type="date" id="r-joindate"></div>
+      <div class="mfield" style="margin-bottom:0"><label>手数料（総額・円）*</label><input type="number" id="r-fee" min="0" step="10000" placeholder="例：693000" style="font-family:'DM Mono',monospace"></div>
+    </div>
+    <div style="margin-bottom:16px"></div>
+    <div style="font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:7px">企業との返金保証条件</div>
+    <div class="mfield">
+      <label>保証タイプ</label>
+      <select id="r-guarantee-type" onchange="updateGuaranteeType()">
+        <option value="tiers">保証あり（期間・返金率を設定）</option>
+        <option value="none">保証なし（入社確定で全額支払い）</option>
+      </select>
+    </div>
+    <div id="tiers-section">
+      <div style="font-size:11px;color:var(--sub);margin-bottom:8px">企業との合意内容を登録してください。複数段階ある場合はすべて追加できます。</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:6px;margin-bottom:6px">
+        <div style="font-size:9px;color:var(--muted)">退職期限（入社後〇ヶ月以内）</div>
+        <div style="font-size:9px;color:var(--muted)">返金率（%）</div>
+        <div></div>
+      </div>
+      <div id="tier-list"></div>
+      <button class="add-tier-btn" onclick="addTierRow()">＋ 保証段階を追加</button>
+    </div>
+    <div id="no-guarantee-section" style="display:none;margin-top:8px">
+      <div style="background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.2);border-radius:9px;padding:12px 14px;font-size:11px;color:var(--sub);line-height:1.8">
+        ✅ 返金保証なし。入社確定で報酬を全額お支払いします。
+      </div>
+    </div>
+    <div style="margin-top:14px"></div>
+    <div class="mfield"><label>メモ（任意）</label><textarea id="r-memo" rows="2" placeholder="例：企業担当：田中様、口頭合意済み"></textarea></div>
+  </div>
+  <div class="modal-footer">
+    <button class="mf-btn mf-cancel" onclick="closeRegModal()">キャンセル</button>
+    <button class="mf-btn mf-save" onclick="saveRegistration()">登録してHQに送信</button>
+  </div>
+</div>
+</div>
+
+<!-- Quit Modal -->
+<div class="modal-overlay" id="quit-modal" onclick="if(event.target===this)closeQuitModal()">
+<div class="modal" style="width:460px">
+  <div class="modal-hdr">
+    <div class="modal-title">退職報告</div>
+    <button class="modal-close" onclick="closeQuitModal()">✕</button>
+  </div>
+  <div class="modal-body">
+    <div style="background:rgba(248,113,113,.07);border:1px solid rgba(248,113,113,.2);border-radius:9px;padding:12px 14px;font-size:11px;color:var(--sub);line-height:1.8;margin-bottom:16px">
+      ⚠️ 退職が確認された場合、登録された返金条件に基づきHQが手続きを進めます。
+    </div>
+    <div class="mfield"><label>案件を選択 *</label>
+      <select id="q-case" onchange="updateQuitPreview()"><option value="">— 選択してください —</option></select>
+    </div>
+    <div class="mfield"><label>退職日 *</label><input type="date" id="q-date" oninput="updateQuitPreview()"></div>
+    <div class="mfield"><label>退職理由（任意）</label>
+      <select id="q-reason">
+        <option value="">—</option>
+        <option value="本人都合">本人都合（転職・家庭の事情等）</option>
+        <option value="会社都合">会社都合（試用期間終了・解雇）</option>
+        <option value="体調不良">体調不良</option>
+        <option value="その他">その他</option>
+      </select>
+    </div>
+    <div class="mfield"><label>備考</label><textarea id="q-note" rows="2"></textarea></div>
+    <div id="q-preview" style="display:none;background:var(--card2);border:1px solid var(--border);border-radius:9px;padding:14px"></div>
+  </div>
+  <div class="modal-footer">
+    <button class="mf-btn mf-cancel" onclick="closeQuitModal()">キャンセル</button>
+    <button class="mf-btn mf-danger" onclick="submitQuit()">退職を報告する</button>
+  </div>
+</div>
+</div>
+
+<!-- HQ Detail Modal -->
+<div class="modal-overlay" id="hq-detail-modal" onclick="if(event.target===this)closeHqDetail()">
+<div class="modal" style="width:500px">
+  <div class="modal-hdr">
+    <div class="modal-title" id="hqd-title">詳細</div>
+    <button class="modal-close" onclick="closeHqDetail()">✕</button>
+  </div>
+  <div class="modal-body" id="hqd-body"></div>
+  <div class="modal-footer" id="hqd-footer"></div>
+</div>
+</div>
+
+<script>
+const TODAY   = new Date('2026-02-20');
+const yen     = v => '\u00a5' + Math.round(v).toLocaleString();
+const fmt     = d => { if(!d) return '\u2014'; const p=d.split('-'); return p[0]+'/'+p[1]+'/'+p[2]; };
+const daysDiff  = d => Math.round((new Date(d)-TODAY)/864e5);
+const daysSince = d => Math.round((TODAY-new Date(d))/864e5);
+const workedDays= (j,q) => Math.floor((new Date(q)-new Date(j))/864e5);
+
+let CASES = [
+  { id:1, candidate:'\u9234\u6728 \u5065\u4e00', agId:'10012', agName:'\u5c71\u7530 \u8aa0',
+    company:'\u682a\u5f0f\u4f1a\u793eABC\u30c6\u30af\u30ce', joinDate:'2025-11-20', fee:693000,
+    totalNet:693000, pay1:346500, pay1Done:true, pay2:346500, pay2Date:'2026-02-20',
+    guaranteeType:'tiers', tiers:[{months:3,pct:100},{months:6,pct:50}],
+    attendance:'pending', quitDate:null, quitStatus:null, memo:'HR\u62c5\u5f53\uff1a\u4f50\u85e4\u69d8' },
+  { id:2, candidate:'\u4e2d\u6751 \u512a\u9999', agId:'20005', agName:'\u7530\u4e2d \u7f8e\u7a42',
+    company:'\u682a\u5f0f\u4f1a\u793e\u30b5\u30f3\u30e9\u30a4\u30ba', joinDate:'2025-11-28', fee:924000,
+    totalNet:924000, pay1:462000, pay1Done:true, pay2:462000, pay2Date:'2026-02-28',
+    guaranteeType:'tiers', tiers:[{months:2,pct:100},{months:4,pct:30}],
+    attendance:'pending', quitDate:null, quitStatus:null, memo:'' },
+  { id:3, candidate:'\u9ad8\u6a4b \u7fd4\u592a', agId:'10012', agName:'\u5c71\u7530 \u8aa0',
+    company:'\u5408\u540c\u4f1a\u793e\u30d5\u30e5\u30fc\u30c1\u30e3\u30fc', joinDate:'2025-12-05', fee:540000,
+    totalNet:540000, pay1:270000, pay1Done:true, pay2:270000, pay2Date:'2026-03-05',
+    guaranteeType:'tiers', tiers:[{months:3,pct:100},{months:6,pct:50}],
+    attendance:'ok', quitDate:null, quitStatus:null, memo:'' },
+  { id:4, candidate:'\u6797 \u3055\u304f\u3089', agId:'20005', agName:'\u7530\u4e2d \u7f8e\u7a42',
+    company:'\u682a\u5f0f\u4f1a\u793e\u30cd\u30af\u30b9\u30c8', joinDate:'2025-12-18', fee:756000,
+    totalNet:756000, pay1:378000, pay1Done:true, pay2:378000, pay2Date:'2026-03-18',
+    guaranteeType:'none', tiers:[],
+    attendance:'ok', quitDate:null, quitStatus:null, memo:'\u4fdd\u8a3c\u306a\u3057\u6761\u4ef6\u3067\u5408\u610f' },
+  { id:5, candidate:'\u6e21\u8fba \u9686\u5fd7', agId:'10041', agName:'\u6e21\u8fba \u9686',
+    company:'\u682a\u5f0f\u4f1a\u793e\u30c7\u30b8\u30bf\u30eb\u30ef\u30fc\u30af', joinDate:'2025-12-01', fee:462000,
+    totalNet:462000, pay1:231000, pay1Done:true, pay2:231000, pay2Date:'2026-03-01',
+    guaranteeType:'tiers', tiers:[{months:3,pct:100},{months:6,pct:50}],
+    attendance:'quit', quitDate:'2026-02-10', quitStatus:'pending', memo:'\u672c\u4eba\u90fd\u5408' },
+  { id:6, candidate:'\u677e\u672c \u5948\u3005', agId:'20005', agName:'\u7530\u4e2d \u7f8e\u7a42',
+    company:'\u682a\u5f0f\u4f1a\u793e\u30b9\u30bf\u30fc', joinDate:'2025-09-10', fee:308000,
+    totalNet:308000, pay1:154000, pay1Done:true, pay2:154000, pay2Done:true, pay2Date:'2025-12-10',
+    guaranteeType:'tiers', tiers:[{months:3,pct:100},{months:6,pct:50}],
+    attendance:'quit', quitDate:'2026-01-15', quitStatus:'done', memo:'2026-02-05 \u8fd4\u91d1\u56de\u53ce\u6e08' },
+];
+
+const AGENT = { id:'10012', name:'\u5c71\u7530 \u8aa0' };
+let alertFilter = 'all';
+let currentView = 0;
+let tiers = [{months:3,pct:100},{months:6,pct:50}];
+let editingId = null;
+
+const COLORS = ['var(--red)','var(--orange)','var(--blue)','var(--purple)'];
+
+function switchView(i, btn) {
+  currentView = i;
+  document.querySelectorAll('.vt').forEach((t,j)=>t.classList.toggle('on',j===i));
+  document.getElementById('view-hq').style.display = i===0?'block':'none';
+  document.getElementById('view-ag').style.display = i===1?'block':'none';
+  if (i===1) renderAgView();
+}
+
+function calcRefund(c) {
+  if (!c.quitDate || c.guaranteeType==='none') return {pct:0,amt:0};
+  const wm = workedDays(c.joinDate, c.quitDate) / 30.44;
+  const hit = c.tiers.filter(t=>wm<t.months)[0];
+  if (!hit) return {pct:0,amt:0};
+  return {pct:hit.pct, amt:Math.round(c.totalNet*hit.pct/100)};
+}
+
+function guaranteeHTML(c) {
+  if (c.guaranteeType==='none') return '<span class="pill pill-green">\u4fdd\u8a3c\u306a\u3057</span>';
+  return c.tiers.map((t,i)=>
+    '<div class="gc-row"><div class="gc-dot" style="background:'+COLORS[i%4]+'"></div>'
+    +'<span style="color:var(--sub)">'+t.months+'\u30f6\u6708\u4ee5\u5185</span>\u2192'
+    +'<strong style="color:'+COLORS[i%4]+'">'+t.pct+'%\u8fd4\u91d1</strong></div>'
+  ).join('');
+}
+
+function renderHQStats() {
+  const active = CASES.filter(c=>!c.quitDate);
+  const quit   = CASES.filter(c=>c.quitDate);
+  const urgent = active.filter(c=>daysDiff(c.pay2Date)<=7&&c.attendance!=='ok');
+  const pending= quit.filter(c=>c.quitStatus==='pending');
+  const totalR = pending.reduce((s,c)=>s+calcRefund(c).amt,0);
+  document.getElementById('hq-stats').innerHTML=[
+    {val:active.length,label:'\u5728\u7c4d\u4e2d\u6848\u4ef6',color:'var(--blue)',icon:'\ud83d\udcbc'},
+    {val:urgent.length,label:'\u5728\u7c4d\u78ba\u8a8d 7\u65e5\u4ee5\u5185',color:'var(--orange)',icon:'\u23f0'},
+    {val:quit.length,label:'\u9000\u8077\u5831\u544a\u3042\u308a',color:'var(--red)',icon:'\u26a0\ufe0f'},
+    {val:pending.length,label:'\u8fd4\u91d1 \u5bfe\u5fdc\u5f85\u3061',color:'var(--red)',icon:'\ud83d\udcb8'},
+    {val:yen(totalR),label:'\u8fd4\u91d1\u8981\u8acb \u5408\u8a08',color:'var(--red)',icon:'\ud83d\udcb0',big:true},
+  ].map(s=>'<div class="stat-card"><div style="font-size:18px;margin-bottom:5px">'+s.icon+'</div>'
+    +'<div class="sc-val" style="color:'+s.color+';font-size:'+(s.big?'18px':'28px')+'">'+s.val+'</div>'
+    +'<div class="sc-label">'+s.label+'</div></div>').join('');
+
+  const urg3 = active.filter(c=>daysDiff(c.pay2Date)<=3&&c.attendance==='pending');
+  document.getElementById('hq-banner').innerHTML = urg3.length
+    ? '<div class="alert-banner"><div style="font-size:20px">\ud83d\udea8</div>'
+      +'<div style="flex:1;font-size:12px;line-height:1.7"><strong style="color:var(--red)">'
+      +urg3.map(c=>c.candidate).join('\u3001')+'\u2014 \u5728\u7c4d\u78ba\u8a8d\u304c3\u65e5\u4ee5\u5185\u306b\u671f\u9650</strong><br>'
+      +'\u7b2c2\u56de\u652f\u6255\u65e5\u307e\u3067\u306b\u5728\u7c4d\u78ba\u8a8d\u304c\u5b8c\u4e86\u3057\u306a\u3044\u5834\u5408\u3001\u652f\u6255\u3044\u304c\u7fd4\u6708\u306b\u5ef6\u671f\u3055\u308c\u307e\u3059\u3002</div>'
+      +'<div style="font-size:16px;font-weight:700;color:var(--red);font-family:'DM Mono',monospace">'+urg3.length+'\u4ef6</div></div>'
+    : '';
+}
+
+function render2nd() {
+  const q = document.getElementById('s2nd').value.toLowerCase();
+  const rows = CASES.filter(c=>!c.quitDate&&(!q||c.candidate.toLowerCase().includes(q)||c.agName.toLowerCase().includes(q)||c.company.toLowerCase().includes(q)));
+  document.getElementById('cnt2').textContent = rows.length+'\u4ef6';
+  document.getElementById('tbody2nd').innerHTML = rows.map(c=>{
+    const dL = daysDiff(c.pay2Date);
+    const dI = daysSince(c.joinDate);
+    const ug = dL<=7&&c.attendance==='pending';
+    const ov = dL<0&&c.attendance==='pending';
+    const ap = c.attendance==='ok'?'<span class="pill pill-green">\u2713 \u5728\u7c4d\u78ba\u8a8d\u6e08</span>'
+      :ov?'<span class="pill pill-red">\u26a0 \u671f\u9650\u8d85\u904e</span>'
+      :ug?'<span class="pill pill-orange">\u23f0 \u8981\u78ba\u8a8d</span>'
+      :'<span class="pill pill-blue">\u78ba\u8a8d\u5f85\u3061</span>';
+    const dd = ov?'<span style="color:var(--red)">+'+Math.abs(dL)+'\u65e5\u8d85\u904e</span>'
+      :'<span style="color:'+(dL<=7?'var(--orange)':'var(--text)')+'">'+dL+'\u65e5\u5f8c</span>';
+    return '<tr class="'+(ug||ov?'urgent':'')+'"><td><div style="font-weight:700">'+c.candidate+'</div></td>'
+      +'<td><div style="font-size:11px">'+c.agName+'</div><div style="font-size:9px;color:var(--muted);font-family:'DM Mono',monospace">'+c.agId+'</div></td>'
+      +'<td style="font-size:11px">'+c.company+'</td>'
+      +'<td style="font-size:11px">'+fmt(c.joinDate)+'<br><span style="font-size:9px;color:var(--muted)">'+dI+'\u65e5\u76ee</span></td>'
+      +'<td style="font-size:11px">'+fmt(c.pay2Date)+'</td>'
+      +'<td class="mono">'+dd+'</td>'
+      +'<td><div class="guarantee-chip">'+guaranteeHTML(c)+'</div></td>'
+      +'<td class="mono" style="font-weight:700;color:var(--gold)">'+yen(c.pay2)+'</td>'
+      +'<td>'+ap+'</td>'
+      +'<td>'+(c.attendance!=='ok'?'<button class="act-btn act-ok" onclick="hqConfirmAttendance('+c.id+')">\u2713 \u5728\u7c4d OK</button>':'')
+      +'<button class="act-btn" onclick="hqShowDetail('+c.id+')">\u8a73\u7d30</button></td></tr>';
+  }).join('')||'<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:24px;font-size:12px">\u30c7\u30fc\u30bf\u306a\u3057</td></tr>';
+}
+
+function setAlertFilter(f,btn) {
+  alertFilter=f;
+  document.querySelectorAll('.ft').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  renderAlerts();
+}
+function renderAlerts() {
+  const q = document.getElementById('salt').value.toLowerCase();
+  const rows = CASES.filter(c=>c.quitDate&&(alertFilter==='all'?true:alertFilter==='pending'?c.quitStatus==='pending':c.quitStatus==='done')&&(!q||c.candidate.toLowerCase().includes(q)||c.agName.toLowerCase().includes(q)));
+  document.getElementById('cntalt').textContent = rows.length+'\u4ef6';
+  document.getElementById('tbodyAlt').innerHTML = rows.map(c=>{
+    const w = workedDays(c.joinDate,c.quitDate);
+    const rf = calcRefund(c);
+    const sp = c.quitStatus==='done'?'<span class="pill pill-green">\u2713 \u5bfe\u5fdc\u6e08\u307f</span>':'<span class="pill pill-red">\u5bfe\u5fdc\u5f85\u3061</span>';
+    return '<tr class="'+(c.quitStatus==='pending'?'urgent':'')+'"><td style="font-weight:700">'+c.candidate+'</td>'
+      +'<td><div style="font-size:11px">'+c.agName+'</div><div style="font-size:9px;color:var(--muted);font-family:'DM Mono',monospace">'+c.agId+'</div></td>'
+      +'<td style="font-size:11px">'+c.company+'</td>'
+      +'<td style="font-size:11px">'+fmt(c.joinDate)+'</td>'
+      +'<td style="color:var(--red);font-weight:700">'+fmt(c.quitDate)+'</td>'
+      +'<td><span class="mono">'+w+'\u65e5</span><br><span style="font-size:9px;color:var(--muted)">'+(w<30?'1\u30f6\u6708\u672a\u6e80':Math.floor(w/30.44)+'\u30f6\u6708')+'</span></td>'
+      +'<td><div class="guarantee-chip">'+guaranteeHTML(c)+'</div></td>'
+      +'<td>'+(rf.amt>0?'<div class="mono" style="font-weight:700;color:var(--red)">'+yen(rf.amt)+'</div><div style="font-size:9px;color:var(--muted)">'+rf.pct+'%\u8fd4\u91d1</div>':'<span class="pill pill-green">\u8fd4\u91d1\u4e0d\u8981</span>')+'</td>'
+      +'<td>'+sp+(c.memo?'<div style="font-size:9px;color:var(--muted);margin-top:2px">'+c.memo+'</div>':'')+'</td>'
+      +'<td>'+(c.quitStatus==='pending'&&rf.amt>0?'<button class="act-btn act-refund" onclick="hqProcessRefund('+c.id+')">\ud83d\udcb8 \u8fd4\u91d1\u51e6\u7406</button>':'')
+      +'<button class="act-btn" onclick="hqShowDetail('+c.id+')">\u8a73\u7d30</button></td></tr>';
+  }).join('')||'<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:24px;font-size:12px">\u8a72\u5f53\u306a\u3057</td></tr>';
+}
+
+function hqConfirmAttendance(id) {
+  const c=CASES.find(x=>x.id===id);
+  if(!confirm('「'+c.candidate+'」\u306e\u5728\u7c4d\u3092\u78ba\u8a8d\u3057\u307e\u3059\u304b\uff1f\n\u7b2c2\u56de\u652f\u6255\u3044 '+yen(c.pay2)+'\u304c\u7fcc25\u65e5\u30d0\u30c3\u30c1\u306b\u8ffd\u52a0\u3055\u308c\u307e\u3059\u3002'))return;
+  c.attendance='ok'; renderAll(); alert('\u2705 \u5728\u7c4d\u78ba\u8a8d\u6e08\u307f\u306b\u66f4\u65b0\u3057\u307e\u3057\u305f\u3002');
+}
+function hqProcessRefund(id) {
+  const c=CASES.find(x=>x.id===id);
+  const rf=calcRefund(c);
+  const note=prompt('\u8fd4\u91d1\u51e6\u7406 \u8fd4\u91d1\u984d\uff1a'+yen(rf.amt)+'\n\n\u30e1\u30e2\u3092\u5165\u529b');
+  if(note===null)return;
+  c.quitStatus='done'; c.memo=note||new Date().toLocaleDateString('ja-JP')+' '+yen(rf.amt)+' \u56de\u53ce\u5b8c\u4e86';
+  renderAll();
+}
+function hqShowDetail(id) {
+  const c=CASES.find(x=>x.id===id);
+  const rf=c.quitDate?calcRefund(c):null;
+  const w=c.quitDate?workedDays(c.joinDate,c.quitDate):daysSince(c.joinDate);
+  document.getElementById('hqd-title').textContent=c.candidate+' \u2014 \u8a73\u7d30';
+  document.getElementById('hqd-body').innerHTML=[
+    ['\u5019\u88dc\u8005',c.candidate],['\u62c5\u5f53AG',c.agName+'\uff08'+c.agId+'\uff09'],
+    ['\u4f01\u696d\u540d',c.company],['\u5165\u793e\u65e5',fmt(c.joinDate)],
+    [c.quitDate?'\u5728\u8077\u65e5\u6570':'\u73fe\u5728\u306e\u5728\u7c4d\u65e5\u6570',w+'\u65e5'],
+    ['\u624b\u6570\u6599',yen(c.fee)],['\u7b2c1\u56de\u652f\u6255',yen(c.pay1)+' \u2713\u6e08'],
+    ['\u7b2c2\u56de\u652f\u6255',yen(c.pay2)+'\uff08'+fmt(c.pay2Date)+'\u4e88\u5b9a\uff09'],
+    ['\u767b\u9332\u8fd4\u91d1\u6761\u4ef6','<div class="guarantee-chip">'+guaranteeHTML(c)+'</div>'],
+    ...(c.quitDate?[['\u9000\u8077\u65e5','<span style="color:var(--red)">'+fmt(c.quitDate)+'</span>'],
+      ['\u8fd4\u91d1\u533a\u5206','<span style="color:'+(rf.amt>0?'var(--red)':'var(--green)')+'">'+
+      (rf.amt>0?rf.pct+'%\u8fd4\u91d1 \u2192 '+yen(rf.amt):'\u8fd4\u91d1\u4e0d\u8981')+'</span>']]:[]
+    ),
+    ...(c.memo?[['\u30e1\u30e2','<span style="font-weight:400;font-size:11px">'+c.memo+'</span>']]:[]
+    ),
+  ].map(([k,v])=>'<div class="det-row"><span class="dr-key">'+k+'</span><span class="dr-val">'+v+'</span></div>').join('');
+  document.getElementById('hqd-footer').innerHTML=
+    (!c.quitDate&&c.attendance!=='ok'?'<button class="mf-btn mf-save" onclick="hqConfirmAttendance('+c.id+');closeHqDetail()">\u2713 \u5728\u7c4d OK</button>':'')
+    +(c.quitDate&&c.quitStatus==='pending'&&rf&&rf.amt>0?'<button class="mf-btn mf-danger" onclick="hqProcessRefund('+c.id+');closeHqDetail()">\ud83d\udcb8 \u8fd4\u91d1\u51e6\u7406</button>':'')
+    +'<button class="mf-btn mf-cancel" onclick="closeHqDetail()">\u9589\u3058\u308b</button>';
+  document.getElementById('hq-detail-modal').classList.add('show');
+}
+function closeHqDetail() { document.getElementById('hq-detail-modal').classList.remove('show'); }
+
+function renderAgView() {
+  const my = CASES.filter(c=>c.agId===AGENT.id);
+  document.getElementById('ag-cnt').textContent = my.length+'\u4ef6';
+  const active = my.filter(c=>!c.quitDate);
+  document.getElementById('q-case').innerHTML='<option value="">\u2014 \u9078\u629e\u3057\u3066\u304f\u3060\u3055\u3044 \u2014</option>'
+    +active.map(c=>'<option value="'+c.id+'">'+c.candidate+'\uff08'+c.company+'\uff09</option>').join('');
+  document.getElementById('tbody-ag').innerHTML = my.map(c=>{
+    const sp=c.quitDate?'<span class="pill pill-red">\u9000\u8077\u6e08</span>'
+      :c.attendance==='ok'?'<span class="pill pill-green">\u2713 \u5728\u7c4d\u78ba\u8a8d\u6e08</span>'
+      :'<span class="pill pill-blue">\u5728\u7c4d\u4e2d</span>';
+    return '<tr><td style="font-weight:700">'+c.candidate+'</td><td style="font-size:11px">'+c.company+'</td>'
+      +'<td style="font-size:11px">'+fmt(c.joinDate)+'</td>'
+      +'<td class="mono">'+yen(c.pay1)+' \u2713</td>'
+      +'<td><div class="guarantee-chip">'+guaranteeHTML(c)+'</div></td>'
+      +'<td>'+sp+'</td>'
+      +'<td><button class="act-btn" onclick="openRegModal('+c.id+')">\u7de8\u96c6</button></td></tr>';
+  }).join('')||'<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px;font-size:12px">\u767b\u9332\u6848\u4ef6\u306a\u3057</td></tr>';
+}
+
+function openRegModal(id) {
+  editingId = id||null;
+  const c = id?CASES.find(x=>x.id===id):null;
+  document.getElementById('reg-modal-title').textContent = c?'\u8fd4\u91d1\u6761\u4ef6\u3092\u7de8\u96c6':'HR\u6848\u4ef6 \u8fd4\u91d1\u6761\u4ef6\u767b\u9332';
+  document.getElementById('r-cname').value=c?c.candidate:'';
+  document.getElementById('r-company').value=c?c.company:'';
+  document.getElementById('r-joindate').value=c?c.joinDate:'';
+  document.getElementById('r-fee').value=c?c.fee:'';
+  document.getElementById('r-memo').value=c?c.memo:'';
+  document.getElementById('r-guarantee-type').value=c?c.guaranteeType:'tiers';
+  tiers = c&&c.tiers.length?c.tiers.map(t=>({...t})):[{months:3,pct:100},{months:6,pct:50}];
+  renderTiers(); updateGuaranteeType();
+  document.getElementById('reg-modal').classList.add('show');
+}
+function closeRegModal() { document.getElementById('reg-modal').classList.remove('show'); }
+
+function updateGuaranteeType() {
+  const v=document.getElementById('r-guarantee-type').value;
+  document.getElementById('tiers-section').style.display=v==='tiers'?'block':'none';
+  document.getElementById('no-guarantee-section').style.display=v==='none'?'block':'none';
+}
+function addTierRow() { tiers.push({months:'',pct:''}); renderTiers(); }
+function removeTier(i) { tiers.splice(i,1); renderTiers(); }
+function renderTiers() {
+  document.getElementById('tier-list').innerHTML=tiers.map((t,i)=>
+    '<div class="tier-row">'
+    +'<div style="position:relative"><input type="number" value="'+(t.months||'')+'" min="1" max="24" placeholder="\u4f8b\uff1a3" oninput="tiers['+i+'].months=parseInt(this.value)||0" style="border-color:'+COLORS[i%4]+'44"><span style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:10px;color:var(--muted)">\u30f6\u6708\u4ee5\u5185</span></div>'
+    +'<div style="position:relative"><input type="number" value="'+(t.pct||'')+'" min="1" max="100" placeholder="\u4f8b\uff1a100" oninput="tiers['+i+'].pct=parseInt(this.value)||0"><span style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:10px;color:var(--muted)">% \u8fd4\u91d1</span></div>'
+    +(tiers.length>1?'<button class="tier-del" onclick="removeTier('+i+')">\u2715</button>':'<div></div>')
+    +'</div>'
+  ).join('');
+}
+
+function saveRegistration() {
+  const cname=document.getElementById('r-cname').value.trim();
+  const company=document.getElementById('r-company').value.trim();
+  const joinDate=document.getElementById('r-joindate').value;
+  const fee=parseFloat(document.getElementById('r-fee').value)||0;
+  const memo=document.getElementById('r-memo').value;
+  const gType=document.getElementById('r-guarantee-type').value;
+  if(!cname||!company||!joinDate||!fee){alert('\u5fc5\u9808\u9805\u76ee\u3092\u3059\u3079\u3066\u5165\u529b\u3057\u3066\u304f\u3060\u3055\u3044');return;}
+  if(gType==='tiers'&&tiers.some(t=>!t.months||!t.pct)){alert('\u4fdd\u8a3c\u671f\u9593\u3068\u8fd4\u91d1\u7387\u3092\u3059\u3079\u3066\u5165\u529b\u3057\u3066\u304f\u3060\u3055\u3044');return;}
+  const vt=gType==='tiers'?[...tiers].sort((a,b)=>a.months-b.months):[];
+  const pay1=Math.ceil(fee*0.5);
+  const pay2=fee-pay1;
+  const d=new Date(joinDate); d.setMonth(d.getMonth()+3);
+  const pay2Date=d.toISOString().slice(0,10);
+  if(editingId){
+    const c=CASES.find(x=>x.id===editingId);
+    Object.assign(c,{candidate:cname,company,joinDate,fee,totalNet:fee,pay1,pay2,pay2Date,guaranteeType:gType,tiers:vt,memo});
+  }else{
+    CASES.push({id:Date.now(),candidate:cname,agId:AGENT.id,agName:AGENT.name,
+      company,joinDate,fee,totalNet:fee,pay1,pay1Done:true,pay2,pay2Date,
+      guaranteeType:gType,tiers:vt,attendance:'pending',quitDate:null,quitStatus:null,memo});
+  }
+  closeRegModal(); renderAll(); alert('\u2705 \u767b\u9332\u5b8c\u4e86\u3002HQ\u306b\u9001\u4fe1\u3057\u307e\u3057\u305f\u3002');
+}
+
+function openQuitModal() {
+  document.getElementById('q-case').value='';
+  document.getElementById('q-date').value='';
+  document.getElementById('q-reason').value='';
+  document.getElementById('q-note').value='';
+  document.getElementById('q-preview').style.display='none';
+  document.getElementById('quit-modal').classList.add('show');
+}
+function closeQuitModal() { document.getElementById('quit-modal').classList.remove('show'); }
+
+function updateQuitPreview() {
+  const cid=parseInt(document.getElementById('q-case').value);
+  const qdate=document.getElementById('q-date').value;
+  if(!cid||!qdate){document.getElementById('q-preview').style.display='none';return;}
+  const c=CASES.find(x=>x.id===cid);
+  if(!c)return;
+  const tmpC={...c,quitDate:qdate};
+  const rf=calcRefund(tmpC);
+  const w=workedDays(c.joinDate,qdate);
+  document.getElementById('q-preview').innerHTML=
+    '<div style="font-size:11px;color:var(--sub);margin-bottom:8px;font-weight:700">\u8fd4\u91d1\u8a66\u7b97\uff08\u767b\u9332\u6761\u4ef6\u3088\u308a\u81ea\u52d5\u8a08\u7b97\uff09</div>'
+    +'<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px"><span style="color:var(--sub)">\u5728\u8077\u671f\u9593</span><span class="mono">'+w+'\u65e5 / \u7d04'+Math.floor(w/30.44)+'\u30f6\u6708</span></div>'
+    +'<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px"><span style="color:var(--sub)">\u9069\u7528\u8fd4\u91d1\u6761\u4ef6</span><span style="color:'+(rf.amt>0?'var(--red)':'var(--green)')+';font-weight:700">'+(rf.amt>0?rf.pct+'%\u8fd4\u91d1':'\u8fd4\u91d1\u4e0d\u8981\uff08\u671f\u9593\u5916\uff09')+'</span></div>'
+    +(rf.amt>0?'<div style="display:flex;justify-content:space-between;font-size:14px;font-weight:700;border-top:1px solid var(--border);padding-top:8px"><span style="color:var(--sub)">\u8fd4\u91d1\u8981\u8acb\u984d</span><span class="mono" style="color:var(--red)">'+yen(rf.amt)+'</span></div>':'');
+  document.getElementById('q-preview').style.display='block';
+}
+
+function submitQuit() {
+  const cid=parseInt(document.getElementById('q-case').value);
+  const qdate=document.getElementById('q-date').value;
+  if(!cid||!qdate){alert('\u6848\u4ef6\u3068\u9000\u8077\u65e5\u3092\u9078\u629e\u3057\u3066\u304f\u3060\u3055\u3044');return;}
+  const c=CASES.find(x=>x.id===cid);
+  const reason=document.getElementById('q-reason').value;
+  const note=document.getElementById('q-note').value;
+  c.quitDate=qdate; c.attendance='quit'; c.quitStatus='pending';
+  c.memo=[reason,note].filter(Boolean).join(' / ');
+  closeQuitModal(); renderAll();
+  alert('\u26a0\ufe0f \u9000\u8077\u5831\u544a\u3092\u9001\u4fe1\u3057\u307e\u3057\u305f\u3002HQ\u304c\u8fd4\u91d1\u624b\u7d9a\u304d\u3092\u9032\u3081\u307e\u3059\u3002');
+}
+
+function renderAll() { renderHQStats(); render2nd(); renderAlerts(); if(currentView===1) renderAgView(); }
+window.addEventListener('DOMContentLoaded', renderAll);
+</script>
+</body>
+</html>

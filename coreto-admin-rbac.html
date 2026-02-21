@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CORETO 管理者ポータル ― 権限設計</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap');
+
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#0d0f14;--card:#161921;--hover:#1e2230;--border:#252a38;
+  --gold:#c9a84c;--gold-l:#e8c96a;--muted:#6b7280;--sub:#9ca3af;
+  --green:#22c55e;--blue:#3b82f6;--orange:#f59e0b;--red:#ef4444;--purple:#a855f7;
+  /* 役職カラー */
+  --clerk:#64748b;     /* 事務員 */
+  --staff:#3b82f6;     /* 社員 */
+  --manager:#f59e0b;   /* 管理職 */
+  --exec:#c9a84c;      /* 経営陣 */
+}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:#e8eaf0;min-height:100vh;}
+
+/* ===== LOGIN ===== */
+#login-screen{
+  min-height:100vh;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(ellipse at 30% 40%,rgba(201,168,76,0.06) 0%,transparent 60%),var(--bg);
+}
+.login-box{
+  width:360px;background:var(--card);border:1px solid var(--border);
+  border-radius:14px;padding:36px;
+}
+.login-logo{font-family:'DM Mono',monospace;font-size:26px;color:var(--gold);letter-spacing:4px;text-align:center;margin-bottom:4px;}
+.login-sub{font-size:11px;color:var(--muted);text-align:center;margin-bottom:28px;}
+.login-label{font-size:11px;color:var(--muted);margin-bottom:6px;display:block;}
+.login-input{
+  width:100%;background:var(--bg);border:1px solid var(--border);
+  border-radius:6px;padding:10px 12px;color:#e8eaf0;font-size:13px;
+  font-family:'Noto Sans JP',sans-serif;margin-bottom:14px;transition:border-color .15s;
+}
+.login-input:focus{outline:none;border-color:var(--gold);}
+.login-select{
+  width:100%;background:var(--bg);border:1px solid var(--border);
+  border-radius:6px;padding:10px 12px;color:#e8eaf0;font-size:13px;
+  font-family:'Noto Sans JP',sans-serif;margin-bottom:20px;
+}
+.login-select option{background:var(--card);}
+.login-btn{
+  width:100%;padding:12px;background:var(--gold);color:#0a0c10;
+  border:none;border-radius:8px;font-size:14px;font-weight:700;
+  cursor:pointer;font-family:'Noto Sans JP',sans-serif;transition:background .15s;
+}
+.login-btn:hover{background:var(--gold-l);}
+.login-demo-hint{font-size:11px;color:var(--muted);text-align:center;margin-top:16px;line-height:1.7;}
+
+/* ===== MAIN APP ===== */
+#main-app{display:none;}
+
+/* ===== SIDEBAR ===== */
+.layout{display:flex;height:100vh;overflow:hidden;}
+.sidebar{
+  width:220px;min-width:220px;background:#0a0c10;
+  border-right:1px solid var(--border);display:flex;flex-direction:column;
+}
+.sidebar-logo{padding:20px;border-bottom:1px solid var(--border);}
+.sidebar-logo-mark{font-family:'DM Mono',monospace;font-size:20px;color:var(--gold);letter-spacing:3px;}
+.sidebar-logo-sub{font-size:10px;color:var(--muted);margin-top:2px;}
+
+.sidebar-user{
+  padding:14px 16px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;
+}
+.role-avatar{
+  width:32px;height:32px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;flex-shrink:0;
+}
+.role-name-text{font-size:12px;font-weight:500;}
+.role-badge-small{font-size:10px;padding:1px 6px;border-radius:3px;font-weight:600;margin-top:2px;display:inline-block;}
+
+.nav{padding:8px 0;flex:1;overflow-y:auto;}
+.nav-item{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 16px;font-size:12px;color:var(--sub);
+  cursor:pointer;transition:all .15s;border-left:2px solid transparent;
+  position:relative;
+}
+.nav-item:hover{color:#e8eaf0;background:var(--hover);}
+.nav-item.active{color:var(--gold);background:rgba(201,168,76,0.08);border-left-color:var(--gold);}
+.nav-item.locked{color:var(--muted);cursor:not-allowed;}
+.nav-item.locked:hover{background:transparent;color:var(--muted);}
+.lock-icon{margin-left:auto;font-size:11px;color:var(--muted);}
+
+.nav-section{padding:14px 16px 4px;font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;}
+
+.sidebar-bottom{padding:12px 16px;border-top:1px solid var(--border);}
+.logout-btn{
+  width:100%;padding:8px;background:transparent;border:1px solid var(--border);
+  border-radius:5px;color:var(--muted);font-size:12px;cursor:pointer;
+  font-family:'Noto Sans JP',sans-serif;transition:all .15s;
+}
+.logout-btn:hover{border-color:var(--red);color:var(--red);}
+
+/* ===== MAIN CONTENT ===== */
+.main{flex:1;overflow-y:auto;display:flex;flex-direction:column;}
+.topbar{
+  padding:18px 28px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  background:var(--bg);position:sticky;top:0;z-index:10;
+}
+.page-title{font-size:17px;font-weight:700;}
+.page-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+.content{padding:24px 28px;flex:1;}
+
+/* ===== PERMISSION DENIED ===== */
+.permission-denied{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  min-height:300px;gap:12px;
+}
+.denied-icon{font-size:48px;}
+.denied-title{font-size:18px;font-weight:700;color:var(--muted);}
+.denied-sub{font-size:13px;color:var(--muted);text-align:center;line-height:1.7;}
+
+/* ===== CARDS / COMMON ===== */
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:16px;}
+.card-title{font-size:14px;font-weight:700;margin-bottom:14px;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px;}
+.stat-label{font-size:11px;color:var(--muted);margin-bottom:6px;}
+.stat-val{font-family:'DM Mono',monospace;font-size:26px;font-weight:700;}
+
+.s-label{font-size:11px;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:12px;margin-top:24px;}
+
+/* ===== TABLE ===== */
+table{width:100%;border-collapse:collapse;}
+th{text-align:left;font-size:11px;color:var(--muted);padding:8px 12px;border-bottom:1px solid var(--border);letter-spacing:0.5px;}
+td{padding:11px 12px;font-size:12px;border-bottom:1px solid rgba(37,42,56,0.5);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+
+/* ===== PERMISSION MATRIX ===== */
+.matrix-table{width:100%;border-collapse:collapse;}
+.matrix-table th{text-align:center;font-size:11px;padding:10px 8px;border-bottom:1px solid var(--border);}
+.matrix-table th.feature-col{text-align:left;min-width:200px;}
+.matrix-table td{padding:10px 8px;text-align:center;border-bottom:1px solid rgba(37,42,56,0.4);font-size:12px;}
+.matrix-table td.feature-name{text-align:left;color:var(--sub);}
+.matrix-table td.feature-name strong{color:#e8eaf0;display:block;margin-bottom:1px;}
+.matrix-table .section-row td{background:rgba(37,42,56,0.4);font-size:11px;color:var(--muted);font-weight:600;letter-spacing:0.5px;padding:6px 12px;}
+
+.perm-ok{color:var(--green);font-size:16px;}
+.perm-partial{color:var(--orange);font-size:16px;}
+.perm-no{color:var(--muted);font-size:16px;}
+
+/* 役職ヘッダー */
+.role-th{padding:8px 16px !important;border-radius:6px;display:flex;flex-direction:column;align-items:center;gap:3px;}
+.role-th-clerk{background:rgba(100,116,139,0.15);color:var(--clerk);}
+.role-th-staff{background:rgba(59,130,246,0.15);color:var(--staff);}
+.role-th-manager{background:rgba(245,158,11,0.15);color:var(--manager);}
+.role-th-exec{background:rgba(201,168,76,0.15);color:var(--exec);}
+
+/* ===== MASKED DATA ===== */
+.masked{
+  background:var(--hover);border-radius:3px;
+  color:transparent;user-select:none;
+  position:relative;filter:blur(4px);
+}
+
+/* ===== BUTTONS ===== */
+.btn{padding:7px 16px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;border:none;font-family:'Noto Sans JP',sans-serif;transition:all .15s;}
+.btn-gold{background:var(--gold);color:#0a0c10;}
+.btn-gold:hover{background:var(--gold-l);}
+.btn-outline{background:transparent;color:var(--sub);border:1px solid var(--border);}
+.btn-outline:hover{border-color:var(--gold);color:var(--gold);}
+.btn-red{background:transparent;color:var(--red);border:1px solid rgba(239,68,68,0.3);}
+.btn-red:hover{background:rgba(239,68,68,0.1);}
+.btn-disabled{background:var(--hover);color:var(--muted);cursor:not-allowed;border:1px solid var(--border);}
+
+/* tag */
+.tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:500;}
+.tag-green{background:rgba(34,197,94,0.15);color:var(--green);}
+.tag-blue{background:rgba(59,130,246,0.15);color:var(--blue);}
+.tag-orange{background:rgba(245,158,11,0.15);color:var(--orange);}
+.tag-gold{background:rgba(201,168,76,0.15);color:var(--gold);}
+.tag-red{background:rgba(239,68,68,0.15);color:var(--red);}
+.tag-gray{background:rgba(100,116,139,0.15);color:var(--clerk);}
+
+/* 操作ログ */
+.log-row{display:flex;gap:12px;align-items:flex-start;padding:9px 0;border-bottom:1px solid rgba(37,42,56,0.4);font-size:12px;}
+.log-row:last-child{border-bottom:none;}
+.log-time{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);min-width:100px;flex-shrink:0;}
+.log-user{min-width:100px;flex-shrink:0;}
+.log-action{flex:1;color:var(--sub);}
+.log-result-ok{color:var(--green);}
+.log-result-deny{color:var(--red);}
+</style>
+</head>
+<body>
+
+<!-- ================================================================ -->
+<!-- LOGIN SCREEN -->
+<!-- ================================================================ -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">CORETO</div>
+    <div class="login-sub">本部管理者ポータル</div>
+
+    <label class="login-label">メールアドレス</label>
+    <input type="email" class="login-input" placeholder="admin@coreto.jp" id="login-email">
+
+    <label class="login-label">パスワード</label>
+    <input type="password" class="login-input" placeholder="••••••••" id="login-pass">
+
+    <label class="login-label">デモ：役職を選択してログイン</label>
+    <select class="login-select" id="login-role">
+      <option value="clerk">🗂 事務員</option>
+      <option value="staff">👤 社員</option>
+      <option value="manager">⭐ 管理職</option>
+      <option value="exec">👑 経営陣</option>
+    </select>
+
+    <button class="login-btn" onclick="doLogin()">ログイン</button>
+
+    <div class="login-demo-hint">
+      役職を切り替えると画面のメニューと<br>操作できる機能が変わります
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================ -->
+<!-- MAIN APP -->
+<!-- ================================================================ -->
+<div id="main-app">
+  <div class="layout">
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-mark">CORETO</div>
+        <div class="sidebar-logo-sub">管理者ポータル</div>
+      </div>
+
+      <div class="sidebar-user">
+        <div class="role-avatar" id="user-avatar"></div>
+        <div>
+          <div class="role-name-text" id="user-name-display">—</div>
+          <span class="role-badge-small" id="user-role-badge"></span>
+        </div>
+      </div>
+
+      <div class="nav" id="sidebar-nav"></div>
+
+      <div class="sidebar-bottom">
+        <button class="logout-btn" onclick="doLogout()">🚪 ログアウト</button>
+      </div>
+    </div>
+
+    <!-- MAIN -->
+    <div class="main">
+      <div class="topbar">
+        <div>
+          <div class="page-title" id="page-title-text">ダッシュボード</div>
+          <div class="page-sub" id="page-sub-text">CORETO 管理者ポータル</div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <div style="font-size:11px;color:var(--muted)" id="topbar-role-label"></div>
+        </div>
+      </div>
+      <div class="content" id="main-content"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ================================================================
+// 権限定義
+// ================================================================
+const ROLES = {
+  clerk: {
+    name: '事務員',
+    color: '#64748b',
+    badge: { text:'事務員', cls:'tag-gray' },
+    avatarBg: 'rgba(100,116,139,0.2)',
+    desc: 'レターパック発送・スキャン・案件閲覧のみ',
+  },
+  staff: {
+    name: '社員',
+    color: '#3b82f6',
+    badge: { text:'社員', cls:'tag-blue' },
+    avatarBg: 'rgba(59,130,246,0.2)',
+    desc: '案件管理・入会審査・基本操作全般',
+  },
+  manager: {
+    name: '管理職',
+    color: '#f59e0b',
+    badge: { text:'管理職', cls:'tag-orange' },
+    avatarBg: 'rgba(245,158,11,0.2)',
+    desc: 'メンバー管理・報酬承認・売上閲覧',
+  },
+  exec: {
+    name: '経営陣',
+    color: '#c9a84c',
+    badge: { text:'経営陣', cls:'tag-gold' },
+    avatarBg: 'rgba(201,168,76,0.2)',
+    desc: '全機能・振込実行・システム設定・操作ログ',
+  },
+};
+
+// ページ定義：各役職が持てる権限
+// view: 閲覧可、edit: 編集可、delete: 削除可、approve: 承認可、execute: 実行可
+const PAGES = [
+  {
+    id: 'dashboard', icon: '📊', label: 'ダッシュボード', section: null,
+    perms: { clerk: ['view'], staff: ['view'], manager: ['view'], exec: ['view'] },
+  },
+  {
+    id: 'cases', icon: '📋', label: '案件管理', section: '業務',
+    perms: { clerk: ['view'], staff: ['view','edit'], manager: ['view','edit','delete'], exec: ['view','edit','delete'] },
+  },
+  {
+    id: 'review', icon: '🔍', label: '入会審査', section: null,
+    perms: { clerk: [], staff: ['view','edit','approve'], manager: ['view','edit','approve'], exec: ['view','edit','approve'] },
+  },
+  {
+    id: 'members', icon: '👥', label: 'メンバー管理', section: null,
+    perms: { clerk: [], staff: ['view'], manager: ['view','edit'], exec: ['view','edit','delete'] },
+  },
+  {
+    id: 'reward', icon: '💰', label: '報酬管理', section: '財務',
+    perms: { clerk: [], staff: [], manager: ['view'], exec: ['view','edit','approve'] },
+  },
+  {
+    id: 'transfer', icon: '🏦', label: '振込実行', section: null,
+    perms: { clerk: [], staff: [], manager: [], exec: ['view','execute'] },
+  },
+  {
+    id: 'sales', icon: '📈', label: '売上・収益', section: null,
+    perms: { clerk: ['view'], staff: ['view'], manager: ['view'], exec: ['view'] },
+  },
+  {
+    id: 'scan', icon: '📡', label: 'スキャンデスク', section: '運用',
+    perms: { clerk: ['view','edit'], staff: ['view','edit'], manager: ['view','edit'], exec: ['view','edit'] },
+  },
+  {
+    id: 'letterpack', icon: '📮', label: 'レターパック追跡', section: null,
+    perms: { clerk: ['view'], staff: ['view'], manager: ['view'], exec: ['view'] },
+  },
+  {
+    id: 'system', icon: '⚙️', label: 'システム設定', section: 'システム',
+    perms: { clerk: [], staff: [], manager: [], exec: ['view','edit'] },
+  },
+  {
+    id: 'connect', icon: '🔗', label: 'Slack/LINE連携', section: null,
+    perms: { clerk: [], staff: [], manager: [], exec: ['view','edit'] },
+  },
+  {
+    id: 'auditlog', icon: '🔐', label: '操作ログ', section: null,
+    perms: { clerk: [], staff: [], manager: ['view'], exec: ['view'] },
+  },
+  {
+    id: 'matrix', icon: '🛡', label: '権限マトリクス', section: null,
+    perms: { clerk: [], staff: [], manager: ['view'], exec: ['view','edit'] },
+  },
+  // ── 新規追加ツール ──────────────────────────────────────────────
+  {
+    id: 'screening', icon: '📋', label: '書類審査', section: '業務ツール',
+    perms: { clerk: [], staff: ['view','edit'], manager: ['view','edit','approve'], exec: ['view','edit','approve'] },
+    url: 'coreto-screening.html',
+  },
+  {
+    id: 'payment-batch', icon: '💴', label: '支払明細・振込バッチ', section: null,
+    perms: { clerk: [], staff: [], manager: ['view','edit'], exec: ['view','edit','execute'] },
+    url: 'coreto-payment.html',
+  },
+  {
+    id: 'codes', icon: '🔖', label: '特別紹介コード管理', section: null,
+    perms: { clerk: [], staff: ['view'], manager: ['view','edit'], exec: ['view','edit','delete'] },
+    url: 'coreto-codes.html',
+  },
+  {
+    id: 'early-quit', icon: '⚠️', label: '早期退職アラート', section: null,
+    perms: { clerk: [], staff: ['view'], manager: ['view','edit'], exec: ['view','edit'] },
+    url: 'coreto-early-quit.html',
+  },
+  {
+    id: 'partner-mgmt', icon: '🤝', label: 'パートナー管理', section: null,
+    perms: { clerk: [], staff: ['view'], manager: ['view','edit'], exec: ['view','edit'] },
+    url: 'coreto-partner.html',
+  },
+  {
+    id: 'rank-mgmt', icon: '⭐', label: 'ランク管理', section: null,
+    perms: { clerk: [], staff: ['view'], manager: ['view','edit'], exec: ['view','edit'] },
+    url: 'coreto-rank.html',
+  },
+];
+
+let currentRole = 'staff';
+let currentPage = 'dashboard';
+
+// ================================================================
+// LOGIN / LOGOUT
+// ================================================================
+function doLogin() {
+  currentRole = document.getElementById('login-role').value;
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('main-app').style.display = 'block';
+  initApp();
+  showPage('dashboard');
+}
+
+function doLogout() {
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('main-app').style.display = 'none';
+}
+
+// ================================================================
+// APP INIT
+// ================================================================
+function initApp() {
+  const role = ROLES[currentRole];
+
+  // ユーザー情報
+  const avatar = document.getElementById('user-avatar');
+  avatar.style.background = role.avatarBg;
+  avatar.style.color = role.color;
+  avatar.textContent = role.name[0];
+  document.getElementById('user-name-display').textContent = '管理ユーザー';
+  const badge = document.getElementById('user-role-badge');
+  badge.textContent = role.name;
+  badge.className = 'role-badge-small ' + role.badge.cls;
+  document.getElementById('topbar-role-label').textContent = role.name + ' ― ' + role.desc;
+
+  // サイドバー
+  buildSidebar();
+}
+
+function buildSidebar() {
+  const nav = document.getElementById('sidebar-nav');
+  nav.innerHTML = '';
+  let lastSection = null;
+
+  PAGES.forEach(page => {
+    const perms = page.perms[currentRole];
+    const canView = perms.includes('view');
+
+    if (page.section && page.section !== lastSection) {
+      const sec = document.createElement('div');
+      sec.className = 'nav-section';
+      sec.textContent = page.section;
+      nav.appendChild(sec);
+      lastSection = page.section;
+    }
+
+    const item = document.createElement('div');
+    item.className = 'nav-item' + (!canView ? ' locked' : '') + (currentPage === page.id ? ' active' : '');
+    item.innerHTML = `
+      <span style="width:18px;text-align:center">${page.icon}</span>
+      <span>${page.label}</span>
+      ${!canView ? '<span class="lock-icon">🔒</span>' : ''}
+    `;
+    if (canView) item.onclick = () => showPage(page.id);
+    nav.appendChild(item);
+  });
+}
+
+// ================================================================
+// PAGE ROUTING
+// ================================================================
+function showPage(pageId) {
+  const page = PAGES.find(p => p.id === pageId);
+  if (!page) return;
+  const perms = page.perms[currentRole];
+  const canView = perms.includes('view');
+
+  currentPage = pageId;
+  buildSidebar();
+
+  document.getElementById('page-title-text').textContent = page.label;
+  const content = document.getElementById('main-content');
+
+  if (!canView) {
+    content.innerHTML = `
+      <div class="permission-denied">
+        <div class="denied-icon">🔒</div>
+        <div class="denied-title">アクセス権限がありません</div>
+        <div class="denied-sub">「${page.label}」は <strong style="color:var(--gold)">${getMinRole(page)}</strong> 以上の権限が必要です。<br>管理者に権限付与を依頼してください。</div>
+      </div>`;
+    return;
+  }
+
+  // ページ別レンダリング
+  const renderers = {
+    dashboard: renderDashboard,
+    cases: renderCases,
+    review: renderReview,
+    members: renderMembers,
+    reward: renderReward,
+    transfer: renderTransfer,
+    sales: renderSales,
+    scan: renderScan,
+    letterpack: renderLetterpack,
+    system: renderSystem,
+    connect: renderConnect,
+    auditlog: renderAuditlog,
+    matrix: renderMatrix,
+    // 新規ツール（外部ツールページへ起動）
+    'screening':    (el) => renderToolLauncher(el, page),
+    'payment-batch':(el) => renderToolLauncher(el, page),
+    'codes':        (el) => renderToolLauncher(el, page),
+    'early-quit':   (el) => renderToolLauncher(el, page),
+    'partner-mgmt': (el) => renderToolLauncher(el, page),
+    'rank-mgmt':    (el) => renderToolLauncher(el, page),
+  };
+  if (renderers[pageId]) renderers[pageId](content, perms);
+  else content.innerHTML = `<div style="color:var(--muted);padding:20px">（実装予定）</div>`;
+}
+
+function getMinRole(page) {
+  const order = ['clerk','staff','manager','exec'];
+  for (const r of order) {
+    if (page.perms[r].includes('view')) return ROLES[r].name;
+  }
+  return '経営陣';
+}
+
+function canDo(action) {
+  const page = PAGES.find(p => p.id === currentPage);
+  return page && page.perms[currentRole].includes(action);
+}
+
+// ================================================================
+// PAGE RENDERERS
+// ================================================================
+
+function renderDashboard(el, perms) {
+  const showFinance = ['manager','exec'].includes(currentRole);
+  const toolShortcuts = [
+    { id:'review',       icon:'🔍', label:'入会審査',          color:'var(--blue)',   roles:['staff','manager','exec'] },
+    { id:'screening',    icon:'📋', label:'書類審査',          color:'var(--blue)',   roles:['staff','manager','exec'] },
+    { id:'cases',        icon:'📁', label:'案件管理',          color:'var(--orange)', roles:['clerk','staff','manager','exec'] },
+    { id:'payment-batch',icon:'💴', label:'支払明細・振込',    color:'var(--gold)',   roles:['manager','exec'] },
+    { id:'codes',        icon:'🔖', label:'紹介コード管理',    color:'var(--purple)', roles:['staff','manager','exec'] },
+    { id:'early-quit',   icon:'⚠️', label:'早期退職アラート', color:'var(--red)',    roles:['staff','manager','exec'] },
+    { id:'partner-mgmt', icon:'🤝', label:'パートナー管理',   color:'var(--green)',  roles:['staff','manager','exec'] },
+    { id:'rank-mgmt',    icon:'⭐', label:'ランク管理',        color:'var(--gold)',   roles:['staff','manager','exec'] },
+    { id:'scan',         icon:'📡', label:'スキャンデスク',    color:'var(--teal)',   roles:['clerk','staff','manager','exec'] },
+    { id:'members',      icon:'👥', label:'メンバー管理',      color:'var(--sub)',    roles:['staff','manager','exec'] },
+    { id:'letterpack',   icon:'📮', label:'レターパック追跡',  color:'var(--sub)',    roles:['clerk','staff','manager','exec'] },
+    { id:'auditlog',     icon:'🔐', label:'操作ログ',          color:'var(--muted)',  roles:['manager','exec'] },
+  ];
+  const visibleTools = toolShortcuts.filter(t => t.roles.includes(currentRole));
+  el.innerHTML = `
+    <div class="grid4" style="margin-bottom:20px">
+      <div class="stat-card"><div class="stat-label">新規案件</div><div class="stat-val" style="color:var(--blue)">8</div></div>
+      <div class="stat-card"><div class="stat-label">進行中</div><div class="stat-val" style="color:var(--orange)">24</div></div>
+      <div class="stat-card"><div class="stat-label">今月成約</div><div class="stat-val" style="color:var(--green)">31</div></div>
+      <div class="stat-card">
+        <div class="stat-label">今月売上</div>
+        <div class="stat-val" style="color:var(--gold)">${showFinance ? '¥4.2M' : '<span style="filter:blur(6px);user-select:none">¥X.XM</span>'}</div>
+        ${!showFinance ? '<div style="font-size:10px;color:var(--muted);margin-top:4px">🔒 管理職以上で閲覧可</div>' : ''}
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+      <div class="card">
+        <div class="card-title">📋 要対応タスク</div>
+        ${[
+          ['入会審査待ち', '3件', 'orange', ['staff','manager','exec']],
+          ['早期退職アラート', '2件', 'red', ['manager','exec']],
+          ['報酬承認待ち', '12件', 'gold', ['manager','exec']],
+          ['不在持戻り通知', '2件', 'red', ['clerk','staff','manager','exec']],
+          ['振込承認待ち', '1件（¥2.3M）', 'red', ['exec']],
+        ].map(([label, val, color, roles]) => {
+          const show = roles.includes(currentRole);
+          return show ? `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(37,42,56,0.4);cursor:pointer" onclick="showPage('${label.includes('審査')?'screening':label.includes('退職')?'early-quit':label.includes('報酬')?'reward':'transfer'}')">
+            <span style="font-size:13px">${label}</span>
+            <span style="font-family:'DM Mono',monospace;color:var(--${color});font-weight:600">${val}</span>
+          </div>` : '';
+        }).join('')}
+      </div>
+      <div class="card">
+        <div class="card-title" style="margin-bottom:12px">🛠 ツールショートカット</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+          ${visibleTools.map(t => `
+            <div onclick="showPage('${t.id}')"
+                 style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:9px;
+                        padding:10px 6px;text-align:center;cursor:pointer;transition:all .15s"
+                 onmouseover="this.style.background='rgba(255,255,255,.07)'"
+                 onmouseout="this.style.background='rgba(255,255,255,.03)'">
+              <div style="font-size:20px;margin-bottom:4px">${t.icon}</div>
+              <div style="font-size:9px;color:${t.color};font-weight:700;line-height:1.3">${t.label}</div>
+            </div>`).join('')}
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderCases(el, perms) {
+  const canEdit = perms.includes('edit');
+  const canDelete = perms.includes('delete');
+  el.innerHTML = `
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div style="font-weight:600">案件一覧</div>
+        ${canEdit ? '<button class="btn btn-gold" onclick="showCaseForm()">＋ 新規案件登録</button>' : '<button class="btn btn-disabled">＋ 新規案件 🔒</button>'}
+      </div>
+      <table>
+        <thead><tr><th>ID</th><th>種別</th><th>エリア</th><th>管理会社</th><th>ステータス</th><th>担当AG</th><th>操作</th></tr></thead>
+        <tbody>
+          ${[
+            ['C-003','賃貸','渋谷区代々木','株式会社渋谷管理','進行中','山田 誠'],
+            ['C-004','売買','世田谷区三軒茶屋','東急リバブル㈱','進行中','高橋 明'],
+            ['C-005','人材','新宿区本社','—','新規','未割当'],
+          ].map(([id,type,area,mgmt,status,agent]) => `
+          <tr>
+            <td style="font-family:'DM Mono',monospace;color:var(--gold)">${id}</td>
+            <td><span class="tag tag-blue">${type}</span></td>
+            <td>${area}</td>
+            <td style="font-size:11px;color:var(--sub)">${mgmt}</td>
+            <td><span class="tag ${status==='進行中'?'tag-orange':'tag-green'}">${status}</span></td>
+            <td>${agent}</td>
+            <td style="display:flex;gap:6px">
+              <button class="btn btn-outline" style="padding:4px 10px;font-size:11px">詳細</button>
+              ${canEdit ? '<button class="btn btn-outline" style="padding:4px 10px;font-size:11px">編集</button>' : '<button class="btn btn-disabled" style="padding:4px 10px;font-size:11px">編集🔒</button>'}
+              ${canDelete ? `<button class="btn btn-red" style="padding:4px 10px;font-size:11px" onclick="openDeleteModal('${id}','${name}')">アカウント削除</button>` : ''}
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- モーダル -->
+    <div id="case-form-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:100;overflow-y:auto;padding:40px 20px">
+      <div style="max-width:640px;margin:0 auto;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:28px">
+
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
+          <div>
+            <div style="font-size:16px;font-weight:700">新規案件登録</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">＊ は必須項目</div>
+          </div>
+          <button onclick="hideCaseForm()" style="background:transparent;border:none;color:var(--muted);font-size:22px;cursor:pointer;line-height:1">✕</button>
+        </div>
+
+        <!-- 基本情報 -->
+        <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">基本情報</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:22px">
+          <div>
+            <label style="font-size:11px;color:var(--sub);display:block;margin-bottom:5px">事業種別 ＊</label>
+            <select id="cf-type" onchange="toggleCaseType()" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:9px 10px;color:#e8eaf0;font-size:13px;font-family:'Noto Sans JP',sans-serif">
+              <option value="">選択してください</option>
+              <option value="rental">賃貸仲介</option>
+              <option value="sales">売買仲介</option>
+              <option value="hr">人材紹介</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--sub);display:block;margin-bottom:5px">エリア ＊</label>
+            <input id="cf-area" type="text" placeholder="例：渋谷区代々木" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:9px 10px;color:#e8eaf0;font-size:13px;font-family:'Noto Sans JP',sans-serif">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--sub);display:block;margin-bottom:5px">担当エージェント ＊</label>
+            <select style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:9px 10px;color:#e8eaf0;font-size:13px;font-family:'Noto Sans JP',sans-serif">
+              <option value="">選択してください</option>
+              <option>山田 誠（不動産AG）</option>
+              <option>高橋 明（不動産AG）</option>
+              <option>中村 リカ（人材AG）</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--sub);display:block;margin-bottom:5px">案件発生源 ＊</label>
+            <select style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:9px 10px;color:#e8eaf0;font-size:13px;font-family:'Noto Sans JP',sans-serif">
+              <option value="">選択してください</option>
+              <option>自己開拓</option>
+              <option>パートナー紹介</option>
+              <option>本部依頼</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 管理会社情報（賃貸・売買時のみ表示） -->
+        <div id="mgmt-section" style="display:none">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+            <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase">管理会社情報</div>
+            <span style="background:rgba(201,168,76,0.15);color:var(--gold);font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px">🏷 宛名ラベル自動生成に使用</span>
+          </div>
+
+          <div style="background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:12px;color:var(--sub);line-height:1.8">
+            ここで入力した情報は <strong style="color:#e8eaf0">Brother QL-820NWB での宛名ラベル印刷</strong> に自動で使用されます。<br>
+            入力漏れがあるとラベルが生成できないため <strong style="color:var(--red)">全項目必須</strong> です。
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+            <div style="grid-column:1/-1">
+              <label style="font-size:11px;color:var(--sub);display:block;margin-bottom:5px">管理会社名 ＊ <span style="color:var(--red)">必須</span></label>
+              <input id="cf-mgmt-name" type="text" placeholder="例：株式会社渋谷管理" oninput="validateMgmt()" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:9px 10px;color:#e8eaf0;font-size:13px;font-family:'Noto Sans JP',sans-serif">
+            </div>
+            <div>
+              <label style="font-size:11px;color:var(--sub);display:block;margin-bottom:5px">郵便番号 ＊ <span style="color:var(--red)">必須</span></label>
+              <input id="cf-mgmt-zip" type="text" placeholder="160-0022" maxlength="8" oninput="fmtZip(this);validateMgmt()" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:9px 10px;color:#e8eaf0;font-size:13px;font-family:'DM Mono',monospace">
+            </div>
+            <div>
+              <label style="font-size:11px;color:var(--sub);display:block;margin-bottom:5px">担当部署・担当者名（任意）</label>
+              <input type="text" placeholder="例：管理部 鈴木様" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:9px 10px;color:#e8eaf0;font-size:13px;font-family:'Noto Sans JP',sans-serif">
+            </div>
+            <div style="grid-column:1/-1">
+              <label style="font-size:11px;color:var(--sub);display:block;margin-bottom:5px">住所 ＊ <span style="color:var(--red)">必須</span></label>
+              <input id="cf-mgmt-addr" type="text" placeholder="例：東京都新宿区新宿2-3-4 ○○ビル5F" oninput="validateMgmt()" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:9px 10px;color:#e8eaf0;font-size:13px;font-family:'Noto Sans JP',sans-serif">
+            </div>
+            <div>
+              <label style="font-size:11px;color:var(--sub);display:block;margin-bottom:5px">電話番号（任意）</label>
+              <input type="text" placeholder="03-1234-5678" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:9px 10px;color:#e8eaf0;font-size:13px;font-family:'DM Mono',monospace">
+            </div>
+            <div>
+              <label style="font-size:11px;color:var(--sub);display:block;margin-bottom:5px">FAX（任意）</label>
+              <input type="text" placeholder="03-1234-5679" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:9px 10px;color:#e8eaf0;font-size:13px;font-family:'DM Mono',monospace">
+            </div>
+          </div>
+
+          <div id="mgmt-validation" style="display:none;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);border-radius:6px;padding:10px 12px;font-size:12px;color:var(--red);margin-bottom:12px">
+            ⚠️ 管理会社名・郵便番号・住所はすべて必須です。
+          </div>
+
+          <div style="background:var(--hover);border-radius:6px;padding:9px 12px;font-size:11px;color:var(--sub);margin-bottom:20px">
+            💡 同じ管理会社を過去に登録済みの場合は住所が自動補完されます。
+            <button style="margin-left:8px;background:transparent;border:1px solid var(--border);color:var(--sub);padding:3px 10px;border-radius:4px;font-size:11px;cursor:pointer;font-family:'Noto Sans JP',sans-serif">マスタから選択</button>
+          </div>
+        </div>
+
+        <!-- 物件情報（賃貸・売買のみ） -->
+        <div id="property-section" style="display:none">
+          <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">物件情報</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:22px">
+            <div style="grid-column:1/-1">
+              <label style="font-size:11px;color:var(--sub);display:block;margin-bottom:5px">物件名 ＊</label>
+              <input type="text" placeholder="例：渋谷代々木ハウス 201号室" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:9px 10px;color:#e8eaf0;font-size:13px;font-family:'Noto Sans JP',sans-serif">
+            </div>
+            <div>
+              <label style="font-size:11px;color:var(--sub);display:block;margin-bottom:5px">家賃 / 売買価格 ＊</label>
+              <input type="text" placeholder="例：¥150,000" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:9px 10px;color:#e8eaf0;font-size:13px;font-family:'DM Mono',monospace">
+            </div>
+            <div>
+              <label style="font-size:11px;color:var(--sub);display:block;margin-bottom:5px">入居予定日</label>
+              <input type="date" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:9px 10px;color:#e8eaf0;font-size:13px;font-family:'DM Mono',monospace">
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:10px;justify-content:flex-end;padding-top:16px;border-top:1px solid var(--border)">
+          <button onclick="hideCaseForm()" class="btn btn-outline">キャンセル</button>
+          <button onclick="submitCaseForm()" class="btn btn-gold" style="padding:10px 24px;font-size:13px">登録する</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function showCaseForm() {
+  document.getElementById('case-form-modal').style.display = 'block';
+}
+function hideCaseForm() {
+  document.getElementById('case-form-modal').style.display = 'none';
+}
+function toggleCaseType() {
+  const type = document.getElementById('cf-type').value;
+  document.getElementById('mgmt-section').style.display = (type === 'rental' || type === 'sales') ? 'block' : 'none';
+  document.getElementById('property-section').style.display = (type === 'rental' || type === 'sales') ? 'block' : 'none';
+}
+function validateMgmt() {
+  const ok = document.getElementById('cf-mgmt-name')?.value && document.getElementById('cf-mgmt-addr')?.value && document.getElementById('cf-mgmt-zip')?.value;
+  const msg = document.getElementById('mgmt-validation');
+  if (msg) msg.style.display = ok ? 'none' : 'block';
+}
+function fmtZip(input) {
+  let v = input.value.replace(/[^0-9]/g,'');
+  if (v.length > 3) v = v.slice(0,3) + '-' + v.slice(3,7);
+  input.value = v;
+}
+function submitCaseForm() {
+  const type = document.getElementById('cf-type')?.value;
+  const area = document.getElementById('cf-area')?.value?.trim();
+  if (!type || !area) { alert('事業種別とエリアは必須です'); return; }
+  if (type !== 'hr') {
+    const name = document.getElementById('cf-mgmt-name')?.value?.trim();
+    const addr = document.getElementById('cf-mgmt-addr')?.value?.trim();
+    const zip  = document.getElementById('cf-mgmt-zip')?.value?.trim();
+    if (!name || !addr || !zip) {
+      document.getElementById('mgmt-validation').style.display = 'block';
+      document.getElementById('cf-mgmt-name').focus();
+      return;
+    }
+  }
+  hideCaseForm();
+  const t = document.createElement('div');
+  t.style.cssText = 'position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:rgba(34,197,94,0.15);border:1px solid #22c55e;color:#22c55e;padding:12px 24px;border-radius:8px;font-size:13px;font-weight:600;z-index:200;white-space:nowrap';
+  t.textContent = '✅ 案件を登録しました';
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+function renderReview(el, perms) {
+  const canApprove = perms.includes('approve');
+  el.innerHTML = `
+    <div class="card">
+      <div class="card-title">入会審査待ち（3件）</div>
+      <table>
+        <thead><tr><th>申請ID</th><th>氏名</th><th>タイプ</th><th>経験</th><th>申請日時</th><th>操作</th></tr></thead>
+        <tbody>
+          ${[
+            ['R-089','伊藤 隆','不動産AG','3年以上','2/19 09:12'],
+            ['R-090','渡辺 純子','人材AG','2年','2/19 10:45'],
+            ['R-091','川村商事㈱','パートナー（法人）','法人','2/19 11:30'],
+          ].map(([id,name,type,exp,date]) => `
+          <tr>
+            <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">${id}</td>
+            <td style="font-weight:500">${name}</td>
+            <td><span class="tag tag-blue" style="font-size:10px">${type}</span></td>
+            <td>${exp}</td>
+            <td style="color:var(--muted)">${date}</td>
+            <td style="display:flex;gap:6px">
+              <button class="btn btn-outline" style="padding:4px 10px;font-size:11px">詳細</button>
+              ${canApprove
+                ? '<button class="btn btn-gold" style="padding:4px 10px;font-size:11px">✓ 合格</button><button class="btn btn-red" style="padding:4px 10px;font-size:11px">✗ 不合格</button>'
+                : '<button class="btn btn-disabled" style="padding:4px 10px;font-size:11px">合格🔒</button>'}
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function renderMembers(el, perms) {
+  const canEdit = perms.includes('edit');
+  const canDelete = perms.includes('delete');
+  const showPersonal = ['manager','exec'].includes(currentRole);
+  el.innerHTML = `
+    <div style="font-size:12px;color:var(--orange);background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:6px;padding:10px 14px;margin-bottom:16px">
+      🔒 口座番号・住所などの個人情報は <strong>管理職以上</strong> のみ閲覧できます
+    </div>
+    <div class="card">
+      <table>
+        <thead><tr><th>ID</th><th>氏名</th><th>タイプ</th><th>ランク</th><th>口座番号</th><th>住所</th><th>操作</th></tr></thead>
+        <tbody>
+          ${[
+            ['M-001','山田 誠','不動産AG','GOLD','1234-567890','東京都豊島区'],
+            ['M-002','中村 リカ','人材AG','SILVER','9876-543210','東京都新宿区'],
+            ['M-003','佐藤 美咲','パートナー','—','5555-111222','東京都渋谷区'],
+          ].map(([id,name,type,rank,bank,addr]) => `
+          <tr>
+            <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">${id}</td>
+            <td style="font-weight:500">${name}</td>
+            <td><span class="tag tag-blue" style="font-size:10px">${type}</span></td>
+            <td style="color:var(--gold)">${rank}</td>
+            <td style="font-family:'DM Mono',monospace;font-size:11px">${showPersonal ? bank : '<span style="filter:blur(5px);user-select:none;color:#555">●●●●-●●●●●●</span>'}</td>
+            <td style="font-size:11px">${showPersonal ? addr : '<span style="filter:blur(5px);user-select:none;color:#555">●●●●●●</span>'}</td>
+            <td style="display:flex;gap:6px">
+              ${canEdit ? '<button class="btn btn-outline" style="padding:4px 10px;font-size:11px">編集</button>' : '<button class="btn btn-disabled" style="padding:4px 10px;font-size:11px">編集🔒</button>'}
+              ${canDelete ? `<button class="btn btn-red" style="padding:4px 10px;font-size:11px" onclick="openDeleteModal('${id}','${name}')">アカウント削除</button>` : ''}
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function renderReward(el, perms) {
+  const canApprove = perms.includes('approve');
+  const canEdit = perms.includes('edit');
+  const showAmounts = currentRole === 'exec';
+
+  if (!showAmounts) {
+    // 管理職：件数・ステータスのみ表示、金額はマスク
+    el.innerHTML = `
+      <div style="background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.2);border-radius:6px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:var(--gold);line-height:1.7">
+        🔒 報酬の金額・明細は <strong>経営陣のみ</strong> 閲覧できます。件数とステータスのみ表示しています。
+      </div>
+      <div class="card">
+        <div class="card-title">報酬承認待ち ― 2月分（金額非表示）</div>
+        <table>
+          <thead><tr><th>エージェント</th><th>成約件数</th><th>報酬額</th><th>振込額</th><th>チェック</th><th>操作</th></tr></thead>
+          <tbody>
+            ${[['山田 誠','4件','✅ 8項目OK'],['高橋 明','3件','✅ 8項目OK'],['中村 リカ','2件','⚠️ 要確認']].map(([name,cnt,check]) => `
+            <tr>
+              <td style="font-weight:500">${name}</td>
+              <td style="font-family:'DM Mono',monospace">${cnt}</td>
+              <td style="filter:blur(5px);user-select:none;color:#555">¥●●●,●●●</td>
+              <td style="filter:blur(5px);user-select:none;color:#555">¥●●●,●●●</td>
+              <td style="font-size:11px">${check}</td>
+              <td><button class="btn btn-outline" style="padding:4px 10px;font-size:11px">詳細</button></td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
+    return;
+  }
+
+  el.innerHTML = `
+    <div class="card">
+      <div class="card-title">報酬承認待ち ― 2月分</div>
+      <table>
+        <thead><tr><th>エージェント</th><th>成約件数</th><th>報酬額（税抜）</th><th>源泉徴収</th><th>振込額</th><th>チェック</th><th>操作</th></tr></thead>
+        <tbody>
+          ${[
+            ['山田 誠','4件','¥409,500','¥41,810','¥367,690','✅ 8項目OK'],
+            ['高橋 明','3件','¥310,000','¥31,642','¥278,358','✅ 8項目OK'],
+            ['中村 リカ','2件','¥673,000','¥68,717','¥604,283','⚠️ 要確認'],
+          ].map(([name,cnt,gross,tax,net,check]) => `
+          <tr>
+            <td style="font-weight:500">${name}</td>
+            <td style="font-family:'DM Mono',monospace">${cnt}</td>
+            <td style="font-family:'DM Mono',monospace;color:var(--blue)">${gross}</td>
+            <td style="font-family:'DM Mono',monospace;color:var(--red)">${tax}</td>
+            <td style="font-family:'DM Mono',monospace;color:var(--green);font-weight:600">${net}</td>
+            <td style="font-size:11px">${check}</td>
+            <td style="display:flex;gap:6px">
+              <button class="btn btn-outline" style="padding:4px 10px;font-size:11px">詳細</button>
+              <button class="btn btn-gold" style="padding:4px 10px;font-size:11px">承認</button>
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function renderTransfer(el, perms) {
+  const canExecute = perms.includes('execute');
+  el.innerHTML = `
+    <div style="max-width:600px">
+      <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:14px;margin-bottom:20px;font-size:12px;color:var(--red);line-height:1.7">
+        ⚠️ 振込実行は <strong>経営陣のみ</strong> 操作できます。実行後の取消はできません。
+      </div>
+      <div class="card">
+        <div class="card-title">2月分 振込データ ― 2026年3月25日実行予定</div>
+        ${[['対象人数','18名'],['振込総額','¥4,238,542'],['うち源泉徴収','¥432,110'],['GMO銀行残高','¥8,120,000'],['実行ステータス','承認待ち']].map(([k,v]) => `
+        <div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid rgba(37,42,56,0.4);font-size:13px">
+          <span style="color:var(--sub)">${k}</span>
+          <span style="font-family:'DM Mono',monospace;font-weight:600">${v}</span>
+        </div>`).join('')}
+        <div style="margin-top:20px;display:flex;gap:10px">
+          <button class="btn btn-outline">振込明細を確認</button>
+          ${canExecute
+            ? '<button class="btn btn-gold" style="padding:10px 24px;font-size:13px">🏦 振込を実行する</button>'
+            : '<button class="btn btn-disabled" style="padding:10px 24px;font-size:13px">🔒 振込実行（経営陣のみ）</button>'}
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderSales(el, perms) {
+  const showDetailFinance = currentRole === 'exec';
+  el.innerHTML = `
+    <div class="grid4" style="margin-bottom:20px">
+      <div class="stat-card"><div class="stat-label">今月売上</div><div class="stat-val" style="color:var(--gold)">¥4.2M</div></div>
+      <div class="stat-card"><div class="stat-label">今月成約数</div><div class="stat-val" style="color:var(--green)">31件</div></div>
+      <div class="stat-card"><div class="stat-label">先月比</div><div class="stat-val" style="color:var(--blue)">+18%</div></div>
+      <div class="stat-card">
+        <div class="stat-label">本部利益</div>
+        <div class="stat-val" style="color:${showDetailFinance?'var(--green)':'var(--muted)'}">
+          ${showDetailFinance ? '¥1.89M' : '<span style="filter:blur(5px);user-select:none">¥X.XXM</span>'}
+        </div>
+        ${!showDetailFinance ? '<div style="font-size:10px;color:var(--muted);margin-top:4px">🔒 経営陣のみ</div>' : ''}
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div class="card-title" style="margin:0">🏆 今月 エージェント別ランキング</div>
+        <div style="font-size:11px;color:var(--muted)">2026年2月 / 全エージェント対象</div>
+      </div>
+
+      ${[
+        { rank:1, name:'山田 誠',  type:'不動産AG', cases:7, sales:'¥820,000', trend:'+2',  medal:'🥇', bar:100 },
+        { rank:2, name:'高橋 明',  type:'不動産AG', cases:6, sales:'¥710,000', trend:'+1',  medal:'🥈', bar:87  },
+        { rank:3, name:'中村 リカ',type:'人材AG',   cases:4, sales:'¥650,000', trend:'±0',  medal:'🥉', bar:79  },
+        { rank:4, name:'伊藤 隆',  type:'不動産AG', cases:4, sales:'¥480,000', trend:'+3',  medal:'',   bar:59  },
+        { rank:5, name:'渡辺 純子',type:'人材AG',   cases:3, sales:'¥390,000', trend:'-1',  medal:'',   bar:48  },
+        { rank:6, name:'木村 翔',  type:'不動産AG', cases:3, sales:'¥310,000', trend:'new', medal:'',   bar:38  },
+      ].map(r => `
+      <div style="display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid rgba(37,42,56,0.4)">
+        <div style="font-family:'DM Mono',monospace;font-size:18px;font-weight:700;min-width:32px;text-align:center;color:${r.rank<=3?'var(--gold)':'var(--muted)'}">
+          ${r.medal || r.rank}
+        </div>
+        <div style="min-width:100px">
+          <div style="font-size:13px;font-weight:600">${r.name}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:1px">${r.type}</div>
+        </div>
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+            <div style="flex:1;height:6px;background:var(--hover);border-radius:3px;overflow:hidden">
+              <div style="height:100%;width:${r.bar}%;background:${r.rank===1?'var(--gold)':r.rank===2?'#c0c0c0':r.rank===3?'#cd7f32':'var(--blue)'};border-radius:3px;transition:width .5s ease"></div>
+            </div>
+          </div>
+          <div style="display:flex;gap:16px;font-size:11px;color:var(--muted)">
+            <span>成約 <strong style="color:#e8eaf0">${r.cases}件</strong></span>
+            <span>売上 <strong style="color:var(--gold)">${r.sales}</strong></span>
+          </div>
+        </div>
+        <div style="font-size:11px;min-width:44px;text-align:right;color:${r.trend.startsWith('+')?'var(--green)':r.trend==='-1'?'var(--red)':r.trend==='new'?'var(--purple)':'var(--muted)'}">
+          ${r.trend==='new'?'🆕 NEW':r.trend.startsWith('+')?'▲'+r.trend.slice(1):r.trend==='±0'?'―':'▼'+r.trend.slice(1)}
+        </div>
+      </div>`).join('')}
+    </div>
+
+    <div class="card">
+      <div class="card-title">📅 月別推移</div>
+      <div style="display:flex;gap:6px;align-items:flex-end;height:80px;padding:4px 0">
+        ${[38,52,45,68,60,76,90,84,105,115,98,130].map((h,i)=>`
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">
+          <div style="width:100%;background:${i===11?'rgba(201,168,76,0.5)':'rgba(59,130,246,0.2)'};border-radius:3px 3px 0 0;height:${h}%;min-height:4px"></div>
+        </div>`).join('')}
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--muted);margin-top:4px;padding:0 1px">
+        ${['3月','4月','5月','6月','7月','8月','9月','10月','11月','12月','1月','2月'].map(m=>`<span>${m}</span>`).join('')}
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:var(--sub);text-align:right">
+        今月（2月）は過去12ヶ月で <strong style="color:var(--gold)">最高売上</strong> 🎉
+      </div>
+    </div>`;
+}
+
+function renderScan(el, perms) {
+  el.innerHTML = `<div style="color:var(--sub);font-size:13px">スキャンデスク（別ファイルの実装を参照）</div>`;
+}
+
+function renderLetterpack(el, perms) {
+  el.innerHTML = `<div style="color:var(--sub);font-size:13px">レターパック追跡一覧（別ファイルの実装を参照）</div>`;
+}
+
+function renderSystem(el, perms) {
+  const canEdit = perms.includes('edit');
+  el.innerHTML = `
+    <div style="max-width:600px">
+      <div class="card">
+        <div class="card-title">⚙️ システム設定</div>
+        ${[['月会費（ブロンズ）','¥980'],['月会費（シルバー）','¥490'],['ランク自動判定','有効'],['人材紹介 返金保証期間','3/6ヶ月'],['源泉徴収率（100万以下）','10.21%']].map(([k,v]) => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(37,42,56,0.4)">
+          <span style="font-size:13px;color:var(--sub)">${k}</span>
+          <div style="display:flex;gap:8px;align-items:center">
+            <span style="font-family:'DM Mono',monospace;font-size:13px">${v}</span>
+            ${canEdit ? '<button class="btn btn-outline" style="padding:3px 10px;font-size:11px">変更</button>' : ''}
+          </div>
+        </div>`).join('')}
+      </div>
+    </div>`;
+}
+
+function renderConnect(el, perms) {
+  el.innerHTML = `
+    <div style="max-width:600px">
+      <div class="card">
+        <div class="card-title" style="color:#e879f9">Slack 連携</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+          <div style="width:8px;height:8px;border-radius:50%;background:var(--green)"></div>
+          <span style="font-size:13px">接続済み：CORETO Workspace</span>
+        </div>
+        <button class="btn btn-outline" style="font-size:12px">設定を変更</button>
+      </div>
+      <div class="card">
+        <div class="card-title" style="color:#06d674">LINE 公式アカウント 連携</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+          <div style="width:8px;height:8px;border-radius:50%;background:var(--green)"></div>
+          <span style="font-size:13px">接続済み：@CORETO</span>
+        </div>
+        <button class="btn btn-outline" style="font-size:12px">設定を変更</button>
+      </div>
+    </div>`;
+}
+
+function renderAuditlog(el, perms) {
+  const logs = [
+    { time:'2/19 15:42', user:'管理ユーザー（経営陣）', action:'振込実行 ― 2月分 ¥4,238,542', result:'ok' },
+    { time:'2/19 14:30', user:'管理ユーザー（管理職）', action:'報酬承認 ― 山田誠 ¥367,690', result:'ok' },
+    { time:'2/19 11:20', user:'管理ユーザー（社員）', action:'入会審査 ― R-089 合格', result:'ok' },
+    { time:'2/19 10:55', user:'管理ユーザー（事務員）', action:'振込実行 ページへのアクセス試行', result:'deny' },
+    { time:'2/19 10:12', user:'管理ユーザー（事務員）', action:'スキャン ― C003-CONTRACT 発送', result:'ok' },
+    { time:'2/18 17:30', user:'管理ユーザー（社員）', action:'メンバー個人情報（口座）閲覧試行', result:'deny' },
+    { time:'2/18 16:00', user:'管理ユーザー（管理職）', action:'システム設定 ページへのアクセス試行', result:'deny' },
+  ];
+  el.innerHTML = `
+    <div class="card">
+      <div class="card-title">🔐 操作ログ ― 直近50件</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:16px">権限外アクセス試行も記録されます</div>
+      ${logs.map(l => `
+      <div class="log-row">
+        <span class="log-time">${l.time}</span>
+        <span class="log-user">${l.user}</span>
+        <span class="log-action">${l.action}</span>
+        <span class="${l.result==='ok'?'log-result-ok':'log-result-deny'}">${l.result==='ok'?'✅ 成功':'🚫 拒否'}</span>
+      </div>`).join('')}
+    </div>`;
+}
+
+function renderMatrix(el, perms) {
+  const features = [
+    { section:'案件・業務', name:'案件閲覧', desc:'', perms:{ clerk:'ok', staff:'ok', manager:'ok', exec:'ok' } },
+    { section:null, name:'案件編集', desc:'', perms:{ clerk:'no', staff:'ok', manager:'ok', exec:'ok' } },
+    { section:null, name:'案件削除', desc:'', perms:{ clerk:'no', staff:'no', manager:'ok', exec:'ok' } },
+    { section:null, name:'入会審査・合否判定', desc:'', perms:{ clerk:'no', staff:'ok', manager:'ok', exec:'ok' } },
+    { section:'メンバー管理', name:'メンバー一覧閲覧', desc:'', perms:{ clerk:'no', staff:'ok', manager:'ok', exec:'ok' } },
+    { section:null, name:'個人情報（口座・住所）', desc:'管理職以上', perms:{ clerk:'no', staff:'no', manager:'ok', exec:'ok' } },
+    { section:null, name:'ランク変更・編集', desc:'', perms:{ clerk:'no', staff:'no', manager:'ok', exec:'ok' } },
+    { section:null, name:'メンバー削除', desc:'', perms:{ clerk:'no', staff:'no', manager:'no', exec:'ok' } },
+    { section:'財務・報酬', name:'報酬一覧（件数・ステータスのみ）', desc:'金額非表示', perms:{ clerk:'no', staff:'no', manager:'ok', exec:'ok' } },
+    { section:null, name:'報酬の金額・明細閲覧', desc:'経営陣のみ', perms:{ clerk:'no', staff:'no', manager:'no', exec:'ok' } },
+    { section:null, name:'報酬承認', desc:'経営陣のみ', perms:{ clerk:'no', staff:'no', manager:'no', exec:'ok' } },
+    { section:null, name:'売上・収益データ閲覧', desc:'全役職OK', perms:{ clerk:'ok', staff:'ok', manager:'ok', exec:'ok' } },
+    { section:null, name:'振込実行', desc:'経営陣のみ', perms:{ clerk:'no', staff:'no', manager:'no', exec:'ok' } },
+    { section:'運用', name:'スキャンデスク操作', desc:'', perms:{ clerk:'ok', staff:'ok', manager:'ok', exec:'ok' } },
+    { section:null, name:'レターパック追跡閲覧', desc:'', perms:{ clerk:'ok', staff:'ok', manager:'ok', exec:'ok' } },
+    { section:'システム', name:'システム設定変更', desc:'経営陣のみ', perms:{ clerk:'no', staff:'no', manager:'no', exec:'ok' } },
+    { section:null, name:'Slack/LINE連携設定', desc:'経営陣のみ', perms:{ clerk:'no', staff:'no', manager:'no', exec:'ok' } },
+    { section:null, name:'操作ログ閲覧', desc:'', perms:{ clerk:'no', staff:'no', manager:'ok', exec:'ok' } },
+    { section:null, name:'権限マトリクス閲覧', desc:'', perms:{ clerk:'no', staff:'no', manager:'ok', exec:'ok' } },
+    { section:null, name:'権限マトリクス編集', desc:'経営陣のみ', perms:{ clerk:'no', staff:'no', manager:'no', exec:'ok' } },
+  ];
+
+  const icon = { ok:'<span class="perm-ok">✓</span>', no:'<span class="perm-no">—</span>', partial:'<span class="perm-partial">△</span>' };
+
+  let lastSection = null;
+  const rows = features.map(f => {
+    let sectionRow = '';
+    if (f.section && f.section !== lastSection) {
+      sectionRow = `<tr class="section-row"><td colspan="5">${f.section}</td></tr>`;
+      lastSection = f.section;
+    }
+    return sectionRow + `
+    <tr>
+      <td class="feature-name">
+        <strong>${f.name}</strong>
+        ${f.desc ? `<span style="font-size:10px;color:var(--gold)">${f.desc}</span>` : ''}
+      </td>
+      <td>${icon[f.perms.clerk]}</td>
+      <td>${icon[f.perms.staff]}</td>
+      <td>${icon[f.perms.manager]}</td>
+      <td>${icon[f.perms.exec]}</td>
+    </tr>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="card" style="overflow-x:auto">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div class="card-title" style="margin:0">🛡 権限マトリクス</div>
+        ${perms.includes('edit') ? '<button class="btn btn-gold">編集</button>' : ''}
+      </div>
+      <table class="matrix-table">
+        <thead>
+          <tr>
+            <th class="feature-col">機能</th>
+            <th><div class="role-th role-th-clerk">🗂<br>事務員</div></th>
+            <th><div class="role-th role-th-staff">👤<br>社員</div></th>
+            <th><div class="role-th role-th-manager">⭐<br>管理職</div></th>
+            <th><div class="role-th role-th-exec">👑<br>経営陣</div></th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <div style="margin-top:14px;display:flex;gap:16px;font-size:12px;color:var(--muted)">
+        <span><span class="perm-ok">✓</span> 可能</span>
+        <span><span class="perm-no">—</span> 不可</span>
+        <span><span class="perm-partial">△</span> 条件付き</span>
+      </div>
+    </div>`;
+}
+
+// 初期フォーカス
+window.addEventListener('load', () => {
+  document.getElementById('login-email').focus();
+});
+
+// ================================================================
+// TOOL LAUNCHER
+// ================================================================
+const TOOL_META = {
+  'screening':    { title:'書類審査チェックシート',     icon:'📋', desc:'入会申請者の書類・経歴を審査し、合否判定を行います。',                 color:'#4f9cf9', url:'coreto-screening.html' },
+  'payment-batch':{ title:'支払明細書・振込バッチ管理', icon:'💴', desc:'月次報酬明細の生成・確認と振込バッチの管理を行います。',               color:'#c9a84c', url:'coreto-payment.html' },
+  'codes':        { title:'特別紹介コード管理',         icon:'🔖', desc:'特別コードの発行・月会費免除・カスタム報酬率の設定を管理します。',       color:'#a78bfa', url:'coreto-codes.html' },
+  'early-quit':   { title:'早期退職アラート',           icon:'⚠️', desc:'HR案件の早期退職を検知し、返金条件に基づいて対応を管理します。',         color:'#f87171', url:'coreto-early-quit.html' },
+  'partner-mgmt': { title:'パートナー管理ポータル',     icon:'🤝', desc:'パートナーの紹介案件・報酬・紹介コードを管理します。',                   color:'#34d399', url:'coreto-partner.html' },
+  'rank-mgmt':    { title:'ランク管理ダッシュボード',   icon:'⭐', desc:'エージェントのランクポイント・実績・昇格状況を確認します。',             color:'#c9a84c', url:'coreto-rank.html' },
+};
+
+function renderToolLauncher(el, page) {
+  const meta = TOOL_META[page.id];
+  if (!meta) { el.innerHTML = '<div style="color:var(--muted);padding:20px">（実装予定）</div>'; return; }
+  const permRows = Object.entries(page.perms).map(([role, p]) => {
+    const r = ROLES[role];
+    const label = p.length ? p.join(' / ') : 'アクセス不可';
+    const opacity = p.length ? '1' : '0.4';
+    return '<span style="margin-right:16px;opacity:' + opacity + '">' + r.name + '：' + label + '</span>';
+  }).join('');
+  el.innerHTML =
+    '<div style="max-width:600px">' +
+    '<div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:32px;text-align:center;margin-bottom:20px">' +
+    '<div style="font-size:56px;margin-bottom:16px">' + meta.icon + '</div>' +
+    '<div style="font-size:22px;font-weight:700;margin-bottom:10px">' + meta.title + '</div>' +
+    '<div style="font-size:13px;color:var(--muted);line-height:1.8;margin-bottom:24px">' + meta.desc + '</div>' +
+    '<button onclick="window.open('' + meta.url + '','_blank')"' +
+    ' style="padding:12px 28px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;border:none;' +
+    'font-family:'Noto Sans JP',sans-serif;background:' + meta.color + ';color:#0a0c10">' +
+    '🔗 ツールを開く（新しいタブ）' +
+    '</button>' +
+    '</div>' +
+    '<div style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:16px">' +
+    '<div style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">アクセス権限</div>' +
+    '<div style="font-size:12px;color:var(--sub);line-height:2">' + permRows + '</div>' +
+    '</div>' +
+    '</div>';
+}
+
+</script>
+
+<!-- ════ アカウント削除モーダル ════ -->
+<div id="del-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);
+     backdrop-filter:blur(5px);z-index:500;align-items:center;justify-content:center">
+  <div style="background:#0f1119;border:1px solid #f87171;border-radius:16px;width:460px;max-width:95vw">
+    <div style="padding:16px 22px;border-bottom:1px solid #1e2235;display:flex;align-items:center;gap:10px">
+      <span style="font-size:20px">⚠️</span>
+      <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:#f87171">アカウント削除</div>
+    </div>
+    <div style="padding:20px 22px">
+      <div style="background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.3);border-radius:10px;
+                  padding:14px;margin-bottom:16px;font-size:12px;line-height:1.9;color:#e2e6f3">
+        ⚠️ <strong style="color:#f87171">この操作は取り消せません。</strong><br>
+        対象エージェント：<strong id="del-name" style="color:#f87171">—</strong>（<span id="del-id" style="font-family:monospace">—</span>）<br>
+        以下の処理が同時に実行されます：<br>
+        <span style="color:#fb923c">• ログインアクセスを即時無効化</span><br>
+        <span style="color:#fb923c">• 月額会費の自動引き落としを停止</span><br>
+        <span style="color:#fb923c">• 進行中案件を「クローズ」に移行</span><br>
+        <span style="color:#fb923c">• 個人情報を3年間アーカイブ後に完全消去</span>
+      </div>
+      <div style="margin-bottom:14px">
+        <div style="font-size:10px;color:#7a849e;margin-bottom:6px;font-weight:600">削除理由 <span style="color:#f87171">*</span></div>
+        <select id="del-reason" style="width:100%;background:#090b13;border:1px solid #252a3d;border-radius:9px;
+                padding:9px 13px;color:#e2e6f3;font-size:12px;font-family:'Noto Sans JP',sans-serif;outline:none">
+          <option value="">— 選択してください —</option>
+          <option>本人からの申し出（相談ベース）</option>
+          <option>業務規約違反</option>
+          <option>長期不活動（6ヶ月以上）</option>
+          <option>不正・詐欺行為</option>
+          <option>その他</option>
+        </select>
+      </div>
+      <div style="margin-bottom:16px">
+        <div style="font-size:10px;color:#7a849e;margin-bottom:6px;font-weight:600">
+          確認のため「<span style="color:#f87171" id="del-confirm-hint">—</span>」と入力してください
+        </div>
+        <input id="del-confirm-input" type="text" placeholder="エージェントIDを入力"
+               style="width:100%;background:#090b13;border:1px solid #252a3d;border-radius:9px;
+                      padding:9px 13px;color:#f87171;font-size:13px;font-family:'DM Mono',monospace;outline:none;
+                      transition:.15s" oninput="checkDelConfirm()">
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button onclick="closeDeleteModal()"
+          style="padding:9px 18px;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;
+                 background:transparent;border:1px solid #252a3d;color:#7a849e;
+                 font-family:'Noto Sans JP',sans-serif">キャンセル</button>
+        <button id="del-exec-btn" onclick="execDelete()" disabled
+          style="padding:9px 18px;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;
+                 background:rgba(248,113,113,.15);border:1px solid rgba(248,113,113,.4);color:#f87171;
+                 font-family:'Noto Sans JP',sans-serif;opacity:.4;transition:.15s">
+          🗑 アカウントを削除する
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── アカウント削除 ─────────────────────────────────────────────────
+var _delId='', _delName='';
+
+function openDeleteModal(id, name) {
+  _delId=id; _delName=name;
+  document.getElementById('del-name').textContent=name;
+  document.getElementById('del-id').textContent=id;
+  document.getElementById('del-confirm-hint').textContent=id;
+  document.getElementById('del-confirm-input').value='';
+  document.getElementById('del-reason').value='';
+  document.getElementById('del-exec-btn').disabled=true;
+  document.getElementById('del-exec-btn').style.opacity='.4';
+  document.getElementById('del-overlay').style.display='flex';
+}
+function closeDeleteModal() {
+  document.getElementById('del-overlay').style.display='none';
+}
+function checkDelConfirm() {
+  var input=document.getElementById('del-confirm-input').value.trim();
+  var reason=document.getElementById('del-reason').value;
+  var ok = input===_delId && reason;
+  document.getElementById('del-exec-btn').disabled=!ok;
+  document.getElementById('del-exec-btn').style.opacity=ok?'1':'.4';
+}
+function execDelete() {
+  var reason=document.getElementById('del-reason').value;
+  closeDeleteModal();
+  // 実行ログをSlackに送信（デモ）
+  console.log('Slack #HQ-admin: アカウント削除実行 '+_delId+' '+_delName+' / 理由: '+reason);
+  setTimeout(function(){
+    alert(
+      '✅ アカウントを削除しました。\n\n' +
+      'エージェント：'+_delName+'（'+_delId+'）\n' +
+      '削除理由：'+reason+'\n\n' +
+      '実行内容：\n' +
+      '• ログインアクセスを無効化\n' +
+      '• 月額会費の自動引き落としを停止\n' +
+      '• 進行中案件をクローズ\n' +
+      '• Slackの #HQ-admin に削除ログを記録\n\n' +
+      '個人情報は3年間アーカイブ後に完全消去されます。'
+    );
+  }, 400);
+}
+</script>
+</body>
+</html>

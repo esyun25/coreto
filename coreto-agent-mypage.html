@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CORETO マイページ</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090f;--card:#0f1119;--card2:#141720;--border:#1e2235;--border2:#252a3d;
+  --gold:#c9a84c;--gold-l:#e8c96a;--gold-dim:#7a5f22;--gold-glow:rgba(201,168,76,.12);
+  --blue:#4f9cf9;--green:#34d399;--red:#f87171;--orange:#fb923c;--purple:#a78bfa;
+  --muted:#4a5270;--sub:#7a849e;--text:#e2e6f3;
+}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;
+  background-image:radial-gradient(ellipse 60% 40% at 80% 10%,rgba(201,168,76,.05) 0%,transparent 60%)}
+
+/* ── ヘッダー ── */
+.header{background:rgba(7,9,15,.9);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);
+  padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:100}
+.logo{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--gold);letter-spacing:3px}
+.header-right{display:flex;align-items:center;gap:12px}
+.header-name{font-size:12px;font-weight:600}
+.header-id{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)}
+.btn-logout{font-size:10px;padding:4px 10px;border-radius:6px;border:1px solid var(--border2);
+  background:transparent;color:var(--muted);cursor:pointer;font-family:'Noto Sans JP',sans-serif}
+.btn-logout:hover{color:var(--text);border-color:var(--sub)}
+
+/* ── メインレイアウト ── */
+.main{max-width:1200px;margin:0 auto;padding:24px}
+
+/* ── プロフィールバナー ── */
+.profile-banner{background:linear-gradient(135deg,rgba(201,168,76,.1),rgba(201,168,76,.03));
+  border:1px solid rgba(201,168,76,.2);border-radius:16px;padding:22px 28px;
+  display:flex;align-items:center;gap:20px;margin-bottom:22px;position:relative;overflow:hidden}
+.profile-banner::before{content:'';position:absolute;right:-60px;top:-60px;width:200px;height:200px;
+  border-radius:50%;background:radial-gradient(circle,rgba(201,168,76,.06) 0%,transparent 70%)}
+.avatar{width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,var(--gold-dim),rgba(201,168,76,.3));
+  display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;
+  border:2px solid rgba(201,168,76,.3)}
+.profile-info{flex:1}
+.profile-greeting{font-size:11px;color:var(--sub);margin-bottom:3px}
+.profile-name{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;line-height:1.1}
+.profile-meta{display:flex;align-items:center;gap:10px;margin-top:6px;flex-wrap:wrap}
+.rank-badge{font-size:10px;font-weight:700;padding:3px 10px;border-radius:5px;letter-spacing:.5px}
+.rb-gold{background:rgba(201,168,76,.2);color:var(--gold);border:1px solid rgba(201,168,76,.3)}
+.rb-platinum{background:rgba(167,139,250,.2);color:var(--purple);border:1px solid rgba(167,139,250,.3)}
+.rb-silver{background:rgba(160,160,160,.15);color:#c0c0c0;border:1px solid rgba(160,160,160,.3)}
+.rb-bronze{background:rgba(180,120,60,.15);color:#cd7f32;border:1px solid rgba(180,120,60,.3)}
+.rb-pt{background:rgba(52,211,153,.15);color:var(--green);border:1px solid rgba(52,211,153,.3)}
+.profile-id{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)}
+.rank-progress{margin-top:12px}
+.rp-label{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:5px}
+.rp-bar{height:4px;background:var(--border2);border-radius:2px;overflow:hidden}
+.rp-fill{height:100%;background:linear-gradient(90deg,var(--gold-dim),var(--gold));
+  border-radius:2px;transition:width .6s ease}
+.profile-stats{display:flex;gap:16px;flex-direction:column;align-items:flex-end}
+.ps-item{text-align:right}
+.ps-val{font-family:'DM Mono',monospace;font-size:20px;font-weight:500;color:var(--gold)}
+.ps-lbl{font-size:10px;color:var(--muted)}
+
+/* ── クイックアクション ── */
+.section-title{font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;
+  margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:8px}
+.section-title::before{content:'';width:3px;height:11px;background:var(--gold);border-radius:2px}
+
+.action-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:22px}
+.action-card{background:var(--card);border:1px solid var(--border);border-radius:12px;
+  padding:18px 14px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden;
+  text-decoration:none;color:inherit;display:flex;flex-direction:column;gap:8px}
+.action-card:hover{transform:translateY(-2px);border-color:var(--border2)}
+.action-card.primary{border-color:rgba(201,168,76,.3);background:rgba(201,168,76,.04)}
+.action-card.primary:hover{border-color:rgba(201,168,76,.5);box-shadow:0 4px 20px rgba(201,168,76,.1)}
+.action-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.action-card.primary::before{background:linear-gradient(90deg,var(--gold-dim),var(--gold))}
+.action-card.blue::before{background:linear-gradient(90deg,rgba(79,156,249,.3),var(--blue))}
+.action-card.green::before{background:linear-gradient(90deg,rgba(52,211,153,.3),var(--green))}
+.action-card.orange::before{background:linear-gradient(90deg,rgba(251,146,60,.3),var(--orange))}
+.action-card.purple::before{background:linear-gradient(90deg,rgba(167,139,250,.3),var(--purple))}
+.ac-icon{font-size:24px}
+.ac-title{font-size:13px;font-weight:700}
+.ac-desc{font-size:10px;color:var(--muted);line-height:1.5}
+.ac-badge{position:absolute;top:10px;right:10px;background:var(--red);color:#fff;
+  font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px}
+
+/* ── 2カラムコンテンツ ── */
+.content-grid{display:grid;grid-template-columns:1fr 320px;gap:16px}
+@media(max-width:960px){.content-grid{grid-template-columns:1fr}}
+
+/* ── パネル ── */
+.panel{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:14px}
+.panel-title{font-size:11px;font-weight:700;color:var(--gold);letter-spacing:1.5px;
+  text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.panel-title::before{content:'';width:3px;height:12px;background:var(--gold);border-radius:2px}
+
+/* ── 案件リスト ── */
+.case-item{background:var(--card2);border:1px solid var(--border2);border-radius:9px;
+  padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;cursor:pointer;
+  transition:border-color .15s}
+.case-item:hover{border-color:rgba(201,168,76,.3)}
+.ci-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.ci-info{flex:1}
+.ci-title{font-size:13px;font-weight:600;margin-bottom:2px}
+.ci-meta{font-size:10px;color:var(--muted)}
+.ci-status{font-size:10px;padding:2px 8px;border-radius:4px;font-weight:600;white-space:nowrap}
+.s-active{background:rgba(52,211,153,.12);color:var(--green)}
+.s-wait{background:rgba(251,146,60,.12);color:var(--orange)}
+.s-draft{background:rgba(79,156,249,.12);color:var(--blue)}
+
+/* ── 通知 ── */
+.notif-item{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid rgba(30,34,53,.6)}
+.notif-item:last-child{border-bottom:none}
+.ni-icon{font-size:18px;flex-shrink:0;margin-top:1px}
+.ni-body{flex:1}
+.ni-text{font-size:12px;line-height:1.6}
+.ni-time{font-size:10px;color:var(--muted);margin-top:2px;font-family:'DM Mono',monospace}
+.ni-new{width:6px;height:6px;border-radius:50%;background:var(--blue);flex-shrink:0;margin-top:5px}
+
+/* ── 実績グラフ風 ── */
+.perf-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.perf-card{background:var(--card2);border-radius:8px;padding:12px}
+.pc-val{font-family:'DM Mono',monospace;font-size:20px;font-weight:500}
+.pc-lbl{font-size:10px;color:var(--muted);margin-top:3px}
+.bar-chart{margin-top:12px}
+.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:10px}
+.bar-label{color:var(--muted);width:24px;text-align:right;flex-shrink:0}
+.bar-wrap{flex:1;height:6px;background:var(--border2);border-radius:3px;overflow:hidden}
+.bar-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--gold-dim),var(--gold))}
+.bar-val{color:var(--sub);width:30px;text-align:right;font-family:'DM Mono',monospace}
+
+.hidden{display:none!important}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">CORETO</div>
+  <div class="header-right">
+    <div>
+      <div class="header-name" id="hdr-name">—</div>
+      <div class="header-id" id="hdr-id">—</div>
+    </div>
+    <button class="btn-logout" onclick="logout()">ログアウト</button>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- プロフィールバナー -->
+  <div class="profile-banner" id="profile-banner">
+    <div class="avatar" id="avatar">👤</div>
+    <div style="flex:1">
+      <div class="profile-greeting">こんにちは</div>
+      <div class="profile-name" id="profile-name">—</div>
+      <div class="profile-meta">
+        <span class="rank-badge" id="rank-badge">—</span>
+        <span class="profile-id" id="profile-id">—</span>
+        <span id="type-label" style="font-size:10px;color:var(--sub)">—</span>
+      </div>
+      <div class="rank-progress" id="rank-progress">
+        <div class="rp-label">
+          <span id="rp-current">Current</span>
+          <span id="rp-next">Next</span>
+        </div>
+        <div class="rp-bar"><div class="rp-fill" id="rp-fill" style="width:60%"></div></div>
+      </div>
+    </div>
+    <div class="profile-stats">
+      <div class="ps-item">
+        <div class="ps-val" id="ps-cases">0</div>
+        <div class="ps-lbl">今月成約</div>
+      </div>
+      <div class="ps-item" style="margin-top:8px">
+        <div class="ps-val" id="ps-reward">¥—</div>
+        <div class="ps-lbl">今月報酬見込み</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- クイックアクション -->
+  <div class="section-title">クイックアクション</div>
+  <div class="action-grid" id="action-grid">
+    <!-- JS生成 -->
+  </div>
+
+  <!-- コンテンツ -->
+  <div class="content-grid">
+    <!-- 左：進行中案件 -->
+    <div>
+      <div class="panel">
+        <div class="panel-title">進行中の案件</div>
+        <div id="cases-list"><!-- JS生成 --></div>
+        <button style="width:100%;padding:9px;border-radius:8px;border:1px solid var(--border2);
+          background:transparent;color:var(--sub);font-size:11px;cursor:pointer;font-family:'Noto Sans JP',sans-serif;margin-top:4px"
+          onclick="openTool('matching')">
+          📋 案件ボードを見る →
+        </button>
+      </div>
+    </div>
+
+    <!-- 右：通知・実績 -->
+    <div>
+      <div class="panel">
+        <div class="panel-title">通知 <span id="notif-count" style="background:var(--blue);color:#fff;font-size:9px;padding:1px 6px;border-radius:8px;margin-left:4px">3</span></div>
+        <div id="notif-list"><!-- JS生成 --></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">今月の実績</div>
+        <div class="perf-grid">
+          <div class="perf-card">
+            <div class="pc-val" id="perf-cases" style="color:var(--gold)">0</div>
+            <div class="pc-lbl">成約件数</div>
+          </div>
+          <div class="perf-card">
+            <div class="pc-val" id="perf-reward" style="color:var(--green)">¥0</div>
+            <div class="pc-lbl">報酬額（手取り）</div>
+          </div>
+        </div>
+        <div class="bar-chart" id="bar-chart"><!-- JS生成 --></div>
+      </div>
+    </div>
+  </div>
+
+    <!-- ════ 名刺発注セクション ════ -->
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;margin-top:16px;overflow:hidden" id="bc-section">
+      <div style="padding:13px 20px;border-bottom:1px solid var(--border);background:var(--card2);
+                  display:flex;align-items:center;justify-content:space-between">
+        <div style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;
+                    display:flex;align-items:center;gap:8px">
+          <span style="display:inline-block;width:3px;height:11px;border-radius:2px;background:var(--gold)"></span>
+          名刺発注
+        </div>
+        <span style="font-size:9px;padding:3px 10px;border-radius:6px;font-weight:700;
+                     background:rgba(201,168,76,.13);color:var(--gold);border:1px solid var(--gold-dim)">
+          ¥2,000 / セット
+        </span>
+      </div>
+      <div style="padding:18px 20px">
+        <!-- 名刺プレビュー -->
+        <div style="display:flex;gap:16px;align-items:flex-start;margin-bottom:16px">
+          <div id="bc-card-preview" style="background:white;border-radius:8px;padding:14px 18px;
+               min-width:200px;box-shadow:0 2px 16px rgba(0,0,0,.25);flex-shrink:0">
+            <div style="font-size:8px;color:#888;letter-spacing:2px;margin-bottom:8px">CORETO</div>
+            <div style="font-size:15px;font-weight:700;color:#1a1a1a;margin-bottom:2px" id="bc-name">—</div>
+            <div style="font-size:10px;color:#888;font-family:monospace;margin-bottom:10px" id="bc-kana">—</div>
+            <div style="width:100%;height:1px;background:#eee;margin-bottom:10px"></div>
+            <div style="font-size:9px;color:#555;line-height:1.9" id="bc-contact">—</div>
+          </div>
+          <div style="flex:1;font-size:11px;color:var(--sub);line-height:2">
+            <div style="font-weight:700;color:var(--text);margin-bottom:6px">📋 名刺セット内容</div>
+            100枚 / セット<br>
+            片面 フルカラー印刷<br>
+            納期：発注後 約1週間<br>
+            費用：<strong style="color:var(--gold)">¥2,000</strong>（登録カードより即時決済）<br><br>
+            <div style="padding:8px 10px;background:var(--card2);border-radius:8px;
+                        border:1px solid var(--border);font-size:10px;color:var(--muted)">
+              ✏️ デザイン変更・旧姓表記は<br>
+              <a onclick="window.location.href='coreto-account-settings.html'"
+                 style="color:var(--blue);cursor:pointer">アカウント設定</a>から設定できます
+            </div>
+          </div>
+        </div>
+
+        <!-- 注文フォーム -->
+        <div id="bc-order-form">
+          <!-- 宅建チェック -->
+          <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;
+                      background:var(--card2);border:1px solid var(--border);border-radius:10px;margin-bottom:12px">
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;flex:1">
+              <input type="checkbox" id="bc-takken" onchange="updateBcPreview()">
+              <span style="font-size:16px">🏛</span>
+              <div>
+                <div style="font-weight:700">宅地建物取引士</div>
+                <div style="font-size:10px;color:var(--muted)">チェックで名刺に肩書きを追加</div>
+              </div>
+            </label>
+            <div id="bc-takken-badge" style="display:none;font-size:9px;padding:3px 10px;border-radius:6px;font-weight:700;
+                 background:rgba(201,168,76,.13);color:var(--gold);border:1px solid var(--gold-dim)">
+              宅建士 表記あり
+            </div>
+          </div>
+
+          <!-- 特記事項 -->
+          <div style="font-size:10px;color:var(--sub);margin-bottom:6px;font-weight:600">特記事項（任意）</div>
+          <textarea id="bc-note" rows="2" placeholder="例：旧姓を表記希望・役職追加など"
+            style="width:100%;background:#090b13;border:1px solid var(--border2);border-radius:9px;
+                   padding:10px 14px;color:var(--text);font-size:12px;
+                   font-family:'Noto Sans JP',sans-serif;resize:vertical;outline:none;
+                   margin-bottom:12px"></textarea>
+
+          <!-- アクションボタン群 -->
+          <div style="display:flex;gap:8px;margin-bottom:12px">
+            <button onclick="previewBcPdf()"
+              style="flex:1;padding:10px;background:rgba(79,156,249,.1);border:1px solid rgba(79,156,249,.3);
+                     color:var(--blue);border-radius:9px;font-size:11px;font-weight:700;
+                     cursor:pointer;font-family:'Noto Sans JP',sans-serif;
+                     display:flex;align-items:center;justify-content:center;gap:6px">
+              👁 PDFプレビュー・入稿用PDF
+            </button>
+            <button onclick="sendToSlack()"
+              style="flex:1;padding:10px;background:rgba(74,82,112,.1);border:1px solid var(--border2);
+                     color:var(--sub);border-radius:9px;font-size:11px;font-weight:700;
+                     cursor:pointer;font-family:'Noto Sans JP',sans-serif;
+                     display:flex;align-items:center;justify-content:center;gap:6px">
+              💬 Slackに情報を送信
+            </button>
+          </div>
+
+          <div style="padding:12px 14px;background:rgba(201,168,76,.05);
+                      border:1px solid var(--gold-dim);border-radius:9px;
+                      font-size:11px;color:var(--sub);margin-bottom:14px;line-height:1.9">
+            💳 発注すると登録カード（Visa ···4242）より <strong style="color:var(--gold)">¥2,000</strong> が即時決済されます。<br>
+            ・<strong style="color:var(--text)">PDFプレビュー</strong>：91×55mmの名刺PDFを生成。印刷業者に直接入稿可能<br>
+            ・<strong style="color:var(--text)">Slack送信</strong>：本部へ氏名・電話・ID・宅建有無を送信（本部がAIで作成）
+          </div>
+
+          <!-- カード情報 -->
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;
+                      background:var(--card2);border:1px solid var(--border);border-radius:10px;margin-bottom:14px">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="font-size:20px">💳</span>
+              <div>
+                <div style="font-size:11px;font-weight:700">Visa ···4242</div>
+                <div style="font-size:10px;color:var(--muted)">登録済みカード</div>
+              </div>
+            </div>
+            <span style="font-size:9px;padding:3px 10px;border-radius:6px;font-weight:700;
+                  background:rgba(52,211,153,.13);color:var(--green);border:1px solid rgba(52,211,153,.3)">
+              ✓ 有効
+            </span>
+          </div>
+
+          <button onclick="orderBusinessCard()"
+            style="width:100%;padding:13px;background:linear-gradient(135deg,var(--gold),#a8742a);
+                   color:#0a0c10;border:none;border-radius:11px;font-size:13px;font-weight:700;
+                   cursor:pointer;font-family:'Noto Sans JP',sans-serif;transition:.15s;
+                   display:flex;align-items:center;justify-content:center;gap:8px">
+            🪪 発注する（¥2,000 即時決済）
+          </button>
+        </div>
+
+        <!-- 発注履歴 -->
+        <div style="margin-top:18px;border-top:1px solid var(--border);padding-top:14px">
+          <div style="font-size:9px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px">
+            発注履歴
+          </div>
+          <div id="bc-history">
+            <div style="display:flex;align-items:center;justify-content:space-between;
+                        padding:10px 12px;background:var(--card2);border-radius:9px;font-size:11px">
+              <div>
+                <div style="font-weight:700">2026/01/10 発注</div>
+                <div style="color:var(--muted);font-size:10px">100枚 / 通常デザイン</div>
+              </div>
+              <div style="text-align:right">
+                <div style="font-family:'DM Mono',monospace;color:var(--red)">-¥2,000</div>
+                <span style="font-size:9px;padding:2px 8px;border-radius:5px;font-weight:700;
+                             background:rgba(52,211,153,.13);color:var(--green);
+                             border:1px solid rgba(52,211,153,.3)">納品済み</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+</div>
+
+<script>
+// ── セッション読み込み ──
+const SESSION_KEY = 'coreto_session';
+
+// デモ用デフォルト（ログインなしでアクセスした場合）
+const DEFAULT_SESSION = {
+  agId: '10012', name: '山田 誠', rank: 'Gold',
+  rankKey: 'gold', type: 're',
+};
+
+let session = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null') || DEFAULT_SESSION;
+
+// ── ダミーデータ（エージェント別） ──
+const AGENT_DATA = {
+  '10012': {
+    cases: 3, rewardEstimate: 847000,
+    progress: 72, progressLabel: 'Gold → Platinum まで 28%',
+    cases_list: [
+      {id:'CASE-0234', title:'池袋エリア 賃貸 1K', status:'active', statusLabel:'入金待ち', color:'#fb923c'},
+      {id:'CASE-0228', title:'新宿エリア 賃貸 1LDK', status:'active', statusLabel:'契約書送付済み', color:'#34d399'},
+      {id:'CASE-0220', title:'渋谷 売買仲介', status:'wait', statusLabel:'IT重説調整中', color:'#4f9cf9'},
+    ],
+    notifs: [
+      {icon:'💰', text:'CASE-0228 全額入金が確認されました。成約報告（/close）を送信してください。', time:'10分前', isNew:true},
+      {icon:'📦', text:'CASE-0234 の契約書が配達されました。', time:'2時間前', isNew:true},
+      {icon:'🏆', text:'今月の成約数が3件に達しました！', time:'昨日', isNew:false},
+    ],
+    monthly: [{label:'10月',val:1},{label:'11月',val:2},{label:'12月',val:1},{label:'1月',val:2},{label:'2月',val:3}],
+  },
+  '10008': {
+    cases: 2, rewardEstimate: 1250000,
+    progress: 90, progressLabel: 'Platinum 維持中',
+    cases_list: [
+      {id:'CASE-0230', title:'中野 賃貸 1K', status:'active', statusLabel:'申込審査中', color:'#4f9cf9'},
+      {id:'CASE-0218', title:'代々木 売買', status:'wait', statusLabel:'契約書到着待ち', color:'#fb923c'},
+    ],
+    notifs: [
+      {icon:'📩', text:'管理会社から書類が届いています。確認してください。', time:'1時間前', isNew:true},
+      {icon:'💰', text:'2月分 振込完了 ¥980,500', time:'2日前', isNew:false},
+    ],
+    monthly: [{label:'10月',val:2},{label:'11月',val:3},{label:'12月',val:2},{label:'1月',val:3},{label:'2月',val:2}],
+  },
+  '20005': {
+    cases: 1, rewardEstimate: 382000,
+    progress: 45, progressLabel: 'Gold → Platinum まで 55%',
+    cases_list: [
+      {id:'CASE-0231', title:'ITエンジニア 転職支援', status:'draft', statusLabel:'面接調整中', color:'#4f9cf9'},
+    ],
+    notifs: [
+      {icon:'👥', text:'CASE-0231 候補者から連絡が来ています。', time:'30分前', isNew:true},
+      {icon:'💰', text:'1月分 第2回払い ¥187,500 振込完了', time:'1週間前', isNew:false},
+    ],
+    monthly: [{label:'10月',val:1},{label:'11月',val:0},{label:'12月',val:1},{label:'1月',val:1},{label:'2月',val:1}],
+  },
+  '10023': {
+    cases: 1, rewardEstimate: 226000,
+    progress: 30, progressLabel: 'Silver → Gold まで 70%',
+    cases_list: [
+      {id:'CASE-0236', title:'豊島区 賃貸 1LDK', status:'draft', statusLabel:'物件探し中', color:'#4f9cf9'},
+    ],
+    notifs: [
+      {icon:'📋', text:'新しい案件がボードに掲載されました（池袋エリア）。', time:'1時間前', isNew:true},
+    ],
+    monthly: [{label:'10月',val:0},{label:'11月',val:1},{label:'12月',val:0},{label:'1月',val:1},{label:'2月',val:1}],
+  },
+  '30007': {
+    cases: 2, rewardEstimate: 156000,
+    progress: 0, progressLabel: 'パートナー',
+    cases_list: [
+      {id:'CASE-0234', title:'紹介案件：池袋エリア賃貸', status:'active', statusLabel:'エージェント対応中', color:'#34d399'},
+      {id:'CASE-0235', title:'紹介案件：新宿エリア賃貸', status:'wait', statusLabel:'マッチング待ち', color:'#fb923c'},
+    ],
+    notifs: [
+      {icon:'🎉', text:'CASE-0228 が成約しました！紹介報酬 ¥78,000 が確定しました。', time:'1日前', isNew:true},
+    ],
+    monthly: [{label:'10月',val:1},{label:'11月',val:2},{label:'12月',val:1},{label:'1月',val:3},{label:'2月',val:2}],
+  },
+};
+
+// ── ツール定義（タイプ別表示切替） ──
+const TOOLS = {
+  re: [
+    {id:'matching', icon:'📋', title:'案件ボード',       desc:'新規案件・マッチング確認',        color:'blue',    url:'coreto-matching.html'},
+    {id:'close',    icon:'🎯', title:'成約報告',          desc:'審査通過→入金確認後に送信',        color:'primary', url:'coreto-batch-close.html'},
+    {id:'naiken',   icon:'🏠', title:'内見依頼書',        desc:'FAX送付・日程登録',               color:'green',   url:'coreto-naiken.html'},
+    {id:'it-setsu', icon:'📝', title:'IT重説・契約書',    desc:'IT重説チェック・スキャン管理',     color:'blue',    url:'coreto-it-setsu.html'},
+    {id:'client',   icon:'👤', title:'顧客DB',            desc:'顧客登録・相談履歴確認',           color:'orange',  url:'coreto-client-id.html'},
+    {id:'label',    icon:'📦', title:'レターパック',      desc:'宛名ラベル印刷・追跡',             color:'purple',  url:'coreto-thermal-label.html'},
+    {id:'rank',     icon:'⭐', title:'ランクダッシュボード', desc:'ポイント・報酬シミュレーター',   color:'',        url:'coreto-rank.html'},
+    {id:'payment',  icon:'💴', title:'支払明細書',        desc:'月次報酬明細の確認',               color:'',        url:'coreto-payment.html'},
+    {id:'sim',      icon:'💰', title:'報酬シミュレーター', desc:'手取り額を事前確認',              color:'',        url:'coreto-commission-simulator.html'},
+  ],
+  hr: [
+    {id:'matching', icon:'📋', title:'案件ボード',        desc:'新規案件・マッチング確認',         color:'blue',    url:'coreto-matching.html'},
+    {id:'close',    icon:'🎯', title:'成約報告',          desc:'入社確定後に送信',                 color:'primary', url:'coreto-batch-close.html'},
+    {id:'early-quit',icon:'⚠️',title:'早期退職管理',      desc:'返金条件登録・退職報告',           color:'',        url:'coreto-early-quit.html'},
+    {id:'client',   icon:'👤', title:'顧客DB',            desc:'求職者情報・面接履歴',             color:'orange',  url:'coreto-client-id.html'},
+    {id:'rank',     icon:'⭐', title:'ランクダッシュボード', desc:'ポイント・報酬シミュレーター',   color:'',        url:'coreto-rank.html'},
+    {id:'payment',  icon:'💴', title:'支払明細書',        desc:'月次報酬明細の確認',               color:'',        url:'coreto-payment.html'},
+    {id:'sim',      icon:'💰', title:'報酬シミュレーター', desc:'2回払いスケジュール確認',         color:'',        url:'coreto-commission-simulator.html'},
+  ],
+  pt: [
+    {id:'portal',   icon:'🏠', title:'パートナーポータル', desc:'紹介案件・報酬・コードの確認',    color:'primary', url:'coreto-partner.html'},
+    {id:'matching', icon:'📋', title:'案件ボード',        desc:'紹介案件の進捗確認',              color:'blue',    url:'coreto-matching.html'},
+    {id:'rank',     icon:'⭐', title:'ランクダッシュボード', desc:'ポイント・報酬シミュレーター',   color:'',        url:'coreto-rank.html'},
+    {id:'payment',  icon:'💴', title:'支払明細書',        desc:'月次報酬明細の確認',               color:'',        url:'coreto-payment.html'},
+    {id:'sim',      icon:'💰', title:'報酬シミュレーター', desc:'紹介報酬額を確認',                color:'',        url:'coreto-commission-simulator.html'},
+  ],
+};
+
+const RANK_BADGE_CLASS = {gold:'rb-gold',platinum:'rb-platinum',silver:'rb-silver',bronze:'rb-bronze',pt:'rb-pt'};
+const TYPE_LABEL = {re:'不動産エージェント',hr:'人材エージェント',pt:'パートナー'};
+const AVATAR_ICON = {re:'🏠',hr:'👥',pt:'🤝'};
+
+// ── 初期化 ──
+function init() {
+  const ag = session;
+  const data = AGENT_DATA[ag.agId] || AGENT_DATA['10012'];
+
+  // ヘッダー
+  document.getElementById('hdr-name').textContent = ag.name;
+  document.getElementById('hdr-id').textContent = ag.agId;
+
+  // バナー
+  document.getElementById('avatar').textContent = AVATAR_ICON[ag.type] || '👤';
+  document.getElementById('profile-name').textContent = ag.name + ' 様';
+  document.getElementById('profile-id').textContent = ag.agId;
+  document.getElementById('type-label').textContent = TYPE_LABEL[ag.type] || '';
+
+  const rb = document.getElementById('rank-badge');
+  rb.textContent = ag.rank;
+  rb.className = 'rank-badge ' + (RANK_BADGE_CLASS[ag.rankKey] || 'rb-gold');
+
+  document.getElementById('ps-cases').textContent = data.cases + '件';
+  document.getElementById('ps-reward').textContent = '¥' + data.rewardEstimate.toLocaleString();
+  document.getElementById('perf-cases').textContent = data.cases;
+  document.getElementById('perf-reward').textContent = '¥' + Math.floor(data.rewardEstimate*.85).toLocaleString();
+
+  // ランク進捗（パートナーは非表示）
+  if(ag.type === 'pt') {
+    document.getElementById('rank-progress').style.display = 'none';
+  } else {
+    document.getElementById('rp-current').textContent = ag.rank;
+    document.getElementById('rp-next').textContent = data.progressLabel;
+    document.getElementById('rp-fill').style.width = data.progress + '%';
+  }
+
+  // アクション
+  renderActions(ag.type);
+
+  // 案件リスト
+  renderCases(data.cases_list);
+
+  // 通知
+  renderNotifs(data.notifs);
+
+  // バーチャート
+  renderChart(data.monthly);
+
+  // 名刺プレビュー
+  initBusinessCard(ag);
+}
+
+function renderActions(type) {
+  const tools = TOOLS[type] || TOOLS['re'];
+  document.getElementById('action-grid').innerHTML = tools.map(t => `
+    <div class="action-card ${t.color}" onclick="openTool('${t.id}','${t.url}')">
+      ${t.id==='close'?'<span class="ac-badge">要対応</span>':''}
+      <div class="ac-icon">${t.icon}</div>
+      <div>
+        <div class="ac-title">${t.title}</div>
+        <div class="ac-desc">${t.desc}</div>
+      </div>
+    </div>`).join('');
+}
+
+function renderCases(list) {
+  if(!list.length) {
+    document.getElementById('cases-list').innerHTML = '<div style="text-align:center;padding:24px;color:var(--muted);font-size:12px">進行中の案件はありません</div>';
+    return;
+  }
+  document.getElementById('cases-list').innerHTML = list.map(c => `
+    <div class="case-item" onclick="openTool('matching','coreto-matching.html')">
+      <div class="ci-dot" style="background:${c.color}"></div>
+      <div class="ci-info">
+        <div class="ci-title">${c.title}</div>
+        <div class="ci-meta">${c.id}</div>
+      </div>
+      <div class="ci-status s-${c.status}">${c.statusLabel}</div>
+    </div>`).join('');
+}
+
+function renderNotifs(list) {
+  document.getElementById('notif-count').textContent = list.filter(n=>n.isNew).length;
+  document.getElementById('notif-list').innerHTML = list.map(n => `
+    <div class="notif-item">
+      <div class="ni-icon">${n.icon}</div>
+      <div class="ni-body">
+        <div class="ni-text">${n.text}</div>
+        <div class="ni-time">${n.time}</div>
+      </div>
+      ${n.isNew ? '<div class="ni-new"></div>' : ''}
+    </div>`).join('');
+}
+
+function renderChart(monthly) {
+  const max = Math.max(...monthly.map(m=>m.val), 1);
+  document.getElementById('bar-chart').innerHTML = monthly.map(m => `
+    <div class="bar-row">
+      <div class="bar-label">${m.label}</div>
+      <div class="bar-wrap"><div class="bar-fill" style="width:${Math.round(m.val/max*100)}%"></div></div>
+      <div class="bar-val">${m.val}件</div>
+    </div>`).join('');
+}
+
+
+
+// ══════════════════════════════════════════════════════════════════
+// 名刺 PDF生成・Slack送信
+// ══════════════════════════════════════════════════════════════════
+let _bcAgent = null; // initBusinessCard時に保存
+
+function initBusinessCard(ag) {
+  _bcAgent = ag;
+  const nameDisplay = ag.nameOld && ag.showOldOnCard
+    ? ag.name.split(' ')[0]+'（旧姓：'+ag.nameOld+'）'+(ag.name.split(' ')[1]||'')
+    : (ag.name || '—');
+  const nameEl = document.getElementById('bc-name');
+  const kanaEl = document.getElementById('bc-kana');
+  const contactEl = document.getElementById('bc-contact');
+  if (nameEl) nameEl.textContent = nameDisplay;
+  if (kanaEl) kanaEl.textContent = ag.nameKana || '—';
+  if (contactEl) contactEl.innerHTML = (ag.phone||'—')+'<br>'+(ag.email||'—');
+}
+
+function updateBcPreview() {
+  const hasTakken = document.getElementById('bc-takken').checked;
+  const badge = document.getElementById('bc-takken-badge');
+  if (badge) badge.style.display = hasTakken ? 'inline-flex' : 'none';
+  // Update mini preview title
+  const titleEl = document.getElementById('bc-takken-title');
+  if (titleEl) titleEl.style.display = hasTakken ? 'block' : 'none';
+}
+
+// ── ビジネスカードデータ取得 ──────────────────────────────────────
+function getBcData() {
+  const ag = _bcAgent || {};
+  const hasTakken = (document.getElementById('bc-takken')||{}).checked || false;
+  const note      = (document.getElementById('bc-note')||{}).value || '';
+  const nameOld   = ag.nameOld || '';
+  const showOld   = ag.showOldOnCard || false;
+  const nameMain  = showOld && nameOld
+    ? ag.name.split(' ')[0]+'（旧姓：'+nameOld+'）'+(ag.name.split(' ')[1]||'')
+    : (ag.name || '—');
+  return {
+    nameMain,
+    nameKana:  ag.nameKana  || '—',
+    phone:     ag.phone     || '—',
+    email:     ag.email     || '—',
+    agentId:   ag.id        || '—',
+    agentType: ag.type      || 're',
+    rank:      ag.rank      || '—',
+    hasTakken,
+    note,
+    company: '株式会社CORETO',
+    address: '東京都渋谷区恵比寿1-1-1 COREBLDGビル8F',
+    tel_office: '03-1234-5678',
+    url: 'https://coreto.jp',
+  };
+}
+
+// ── PDF プレビュー（新規ウィンドウ） ─────────────────────────────
+function previewBcPdf() {
+  const d = getBcData();
+  const takkenLine = d.hasTakken
+    ? `<div style="font-size:6.5pt;color:#c9a84c;letter-spacing:.5px;margin-bottom:5px;font-weight:700">宅地建物取引士</div>`
+    : '';
+  const noteDiv = d.note
+    ? `<div style="font-size:6pt;color:#999;margin-top:6px;border-top:0.5px solid #ddd;padding-top:4px">${d.note}</div>`
+    : '';
+
+  const html = `<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>名刺 — ${d.nameMain}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Noto+Serif+JP:wght@400;700&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { background:#f0f0f0; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; font-family:'Noto Sans JP',sans-serif; }
+
+  /* 画面表示用 */
+  .card-wrap {
+    background:white;
+    width:91mm; height:55mm;
+    border-radius:1.5mm;
+    box-shadow:0 4px 24px rgba(0,0,0,.2);
+    position:relative;
+    display:flex;
+    overflow:hidden;
+  }
+  /* 左アクセントライン */
+  .card-accent {
+    width:3mm; height:100%;
+    background:linear-gradient(180deg,#c9a84c,#7a5f22);
+    flex-shrink:0;
+  }
+  .card-body {
+    flex:1;
+    padding:5mm 5mm 5mm 4mm;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+  }
+  /* 上部：ロゴ + 社名 */
+  .card-top {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+  .card-logo {
+    font-size:10pt;
+    font-weight:800;
+    letter-spacing:3px;
+    color:#c9a84c;
+    font-family:'Noto Serif JP','Noto Sans JP',sans-serif;
+  }
+  .card-id-badge {
+    font-size:6pt;
+    color:#aaa;
+    font-family:monospace;
+    border:0.3mm solid #ddd;
+    padding:1mm 2mm;
+    border-radius:0.5mm;
+  }
+  /* 中央：名前 */
+  .card-center { flex:1; display:flex; flex-direction:column; justify-content:center; padding:2mm 0; }
+  .card-takken { font-size:6.5pt; color:#c9a84c; letter-spacing:.5px; margin-bottom:2mm; font-weight:700; }
+  .card-name { font-size:16pt; font-weight:700; letter-spacing:1px; color:#1a1a1a; line-height:1.1; margin-bottom:1mm; }
+  .card-kana { font-size:7pt; color:#888; letter-spacing:1.5px; font-family:monospace; }
+  /* 下部：連絡先 */
+  .card-bottom { font-size:7pt; color:#555; line-height:1.8; }
+  .card-company { font-size:6.5pt; color:#999; margin-bottom:0.5mm; }
+  .card-divider { width:100%; height:0.2mm; background:#eee; margin:1mm 0; }
+
+  /* 印刷専用 */
+  @media print {
+    @page {
+      size: 91mm 55mm;
+      margin: 0;
+    }
+    html, body {
+      width:91mm; height:55mm;
+      background:white;
+      display:block;
+    }
+    .controls { display:none !important; }
+    .card-wrap {
+      width:91mm; height:55mm;
+      box-shadow:none;
+      border-radius:0;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="controls" style="text-align:center;margin-bottom:16px">
+  <div style="font-size:13px;color:#666;margin-bottom:12px">
+    名刺プレビュー（91×55mm）— 印刷業者入稿用
+  </div>
+  <button onclick="window.print()" style="padding:10px 24px;background:#c9a84c;color:#0a0c10;
+    border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;margin-right:8px;
+    font-family:'Noto Sans JP',sans-serif">
+    📄 PDFとして保存（Ctrl+P → PDFで保存）
+  </button>
+  <button onclick="window.close()" style="padding:10px 16px;background:transparent;
+    border:1px solid #ccc;border-radius:8px;font-size:12px;cursor:pointer;
+    font-family:'Noto Sans JP',sans-serif;color:#666">
+    閉じる
+  </button>
+  <div style="font-size:10px;color:#aaa;margin-top:10px">
+    ブラウザの印刷ダイアログで「PDFに保存」を選択 → 用紙サイズ「カスタム: 91×55mm」に設定
+  </div>
+</div>
+
+<div class="card-wrap">
+  <div class="card-accent"></div>
+  <div class="card-body">
+    <div class="card-top">
+      <div class="card-logo">CORETO</div>
+      <div class="card-id-badge">ID: ${d.agentId}</div>
+    </div>
+    <div class="card-center">
+      ${d.hasTakken ? '<div class="card-takken">宅地建物取引士</div>' : ''}
+      <div class="card-name">${d.nameMain}</div>
+      <div class="card-kana">${d.nameKana}</div>
+    </div>
+    <div>
+      <div class="card-divider"></div>
+      <div class="card-company">${d.company}</div>
+      <div class="card-bottom">
+        📱 ${d.phone}<br>
+        ✉ ${d.email}
+      </div>
+      ${d.note ? `<div style="font-size:6pt;color:#999;margin-top:2mm">${d.note}</div>` : ''}
+    </div>
+  </div>
+</div>
+
+<div class="controls" style="margin-top:20px;font-size:10px;color:#aaa;text-align:center;max-width:400px">
+  <strong style="color:#666">印刷業者への入稿手順：</strong><br>
+  1. 「PDFとして保存」をクリック<br>
+  2. 印刷ダイアログ → 送信先「PDFに保存」を選択<br>
+  3. その他の設定 → 用紙サイズ「カスタム」→ 91mm × 55mm<br>
+  4. 余白を「なし」に設定して保存<br>
+  5. 保存したPDFを印刷業者に入稿
+</div>
+
+</body>
+</html>`;
+
+  const w = window.open('', '_blank', 'width=700,height=600');
+  w.document.write(html);
+  w.document.close();
+}
+
+// ── Slack送信（構造化データ） ────────────────────────────────────
+function sendToSlack() {
+  const d = getBcData();
+  const takkenLabel = d.hasTakken ? '✅ あり（肩書き追加）' : '❌ なし';
+  const msg = [
+    '━━━━━━━━━━━━━━━━━━━━━━',
+    '🪪 *名刺発注リクエスト*',
+    '━━━━━━━━━━━━━━━━━━━━━━',
+    `👤 *氏名*：${d.nameMain}`,
+    `　　カナ：${d.nameKana}`,
+    `🪪 *ID*：${d.agentId}`,
+    `📱 *電話番号*：${d.phone}`,
+    `✉️ *メール*：${d.email}`,
+    `🏛 *宅地建物取引士*：${takkenLabel}`,
+    d.note ? `📝 *特記事項*：${d.note}` : null,
+    '━━━━━━━━━━━━━━━━━━━━━━',
+    `💳 ¥2,000 カード決済完了`,
+    `🕐 ${new Date().toLocaleString('ja-JP')}`,
+  ].filter(Boolean).join('\n');
+
+  // デモ: Slack Webhook送信シミュレーション（本番はwebhook URLに差し替え）
+  console.log('Slack payload:', msg);
+
+  // コピー用テキスト表示
+  const textarea = document.createElement('textarea');
+  textarea.value = msg;
+  document.body.appendChild(textarea);
+  textarea.select();
+  try { document.execCommand('copy'); } catch(e) {}
+  document.body.removeChild(textarea);
+
+  alert('✅ Slackに名刺発注情報を送信しました。\n\n' +
+        '━━━━━━━━━━━━━━━━━━━━\n' + msg.replace(/\*/g,'') + '\n━━━━━━━━━━━━━━━━━━━━\n\n' +
+        '（本部Slackの #名刺発注 チャンネルに投稿されました）\n' +
+        'テキストをクリップボードにコピーしました。');
+}
+
+function orderBusinessCard() {
+  const note = (document.getElementById('bc-note')||{}).value || '';
+  const hasTakken = (document.getElementById('bc-takken')||{}).checked || false;
+  if (!confirm('名刺を発注しますか？\n\n登録カード（Visa ···4242）より ¥2,000 が即時決済されます。\n発注後のキャンセルはできません。')) return;
+
+  const btn = event.target.closest('button');
+  btn.disabled = true;
+  btn.textContent = '⏳ 決済中...';
+
+  setTimeout(() => {
+    btn.textContent = '✅ 発注完了';
+    btn.style.background = 'rgba(52,211,153,.15)';
+    btn.style.border = '1px solid rgba(52,211,153,.3)';
+    btn.style.color = 'var(--green)';
+
+    const hist = document.getElementById('bc-history');
+    if (hist) {
+      const now = new Date().toLocaleDateString('ja-JP',{year:'numeric',month:'2-digit',day:'2-digit'});
+      const takkenStr = hasTakken ? '・宅建士表記' : '';
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--card2);border-radius:9px;font-size:11px;margin-top:8px';
+      row.innerHTML = `
+        <div>
+          <div style="font-weight:700">${now} 発注</div>
+          <div style="color:var(--muted);font-size:10px">100枚 / ${note||'通常'}${takkenStr}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-family:'DM Mono',monospace;color:var(--red)">-¥2,000</div>
+          <span style="font-size:9px;padding:2px 8px;border-radius:5px;font-weight:700;
+                       background:rgba(251,146,60,.12);color:var(--orange);
+                       border:1px solid rgba(251,146,60,.3)">制作中</span>
+        </div>`;
+      hist.insertBefore(row, hist.firstChild);
+    }
+
+    // 自動でSlack通知も送信
+    sendToSlack();
+  }, 1400);
+}
+
+// ── ツールを開く（エージェント情報をsessionStorageで渡す） ──
+function openTool(toolId, url) {
+  if(!url) return;
+  // セッションは既にsessionStorageにあるので各ツール側で読み込む
+  // 同一オリジン内であれば sessionStorage 共有可能
+  window.location.href = url;
+}
+
+// ── ログアウト ──
+function logout() {
+  if(confirm('ログアウトしますか？')) {
+    sessionStorage.removeItem('coreto_session');
+    window.location.href = 'coreto-hub.html';
+  }
+}
+
+// 各ツールに「ログイン情報から自動入力」を伝える関数
+// 各ツールのページ側では以下を先頭に追加する：
+// const s = JSON.parse(sessionStorage.getItem('coreto_session')||'null');
+// if(s) { /* エージェント名・IDをフォームに自動入力 */ }
+
+init();
+</script>
+</body>
+</html>

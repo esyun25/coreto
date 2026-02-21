@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CORETO — 収益ダッシュボード【経営陣専用】</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Kaisei+Tokumin:wght@400;700&family=DM+Mono:wght@400;500&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d0f14;--bg2:#13161e;--bg3:#1a1e29;
+  --border:#252a38;--border2:#2e3447;
+  --text:#e8eaf0;--sub:#8b90a8;--muted:#4a4f68;
+  --gold:#c9a840;--gold2:#e8c85a;--gold-bg:rgba(201,168,64,.08);--gold-glow:rgba(201,168,64,.2);
+  --re:#4fa3c8;--hr:#52c49a;--pt:#a78bfa;
+  --red:#f87171;--green:#4ade80;--blue:#60a5fa;
+}
+html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans-serif}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(circle at 20% 20%,rgba(201,168,64,.04),transparent 50%),radial-gradient(circle at 80% 80%,rgba(79,163,200,.03),transparent 50%);pointer-events:none}
+
+/* Header */
+.hdr{position:sticky;top:0;z-index:99;height:52px;background:rgba(13,15,20,.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 24px}
+.hdr-logo{font-family:'Kaisei Tokumin',serif;font-size:17px;letter-spacing:3px;color:var(--gold)}
+.hdr-badge{font-size:9px;padding:3px 8px;border-radius:4px;background:rgba(245,158,11,.12);color:#f59e0b;border:1px solid rgba(245,158,11,.25);font-family:'DM Mono',monospace;letter-spacing:1.5px}
+.hdr-right{display:flex;align-items:center;gap:10px}
+.hdr-btn{padding:6px 14px;border-radius:7px;border:1px solid var(--border2);background:transparent;color:var(--sub);font-size:11px;cursor:pointer;transition:.15s;font-family:'Noto Sans JP',sans-serif}
+.hdr-btn:hover{border-color:var(--gold);color:var(--gold)}
+
+/* Period toggle */
+.period-bar{display:flex;gap:6px;padding:16px 24px 0}
+.period-btn{padding:6px 16px;border-radius:7px;border:1px solid var(--border2);background:transparent;color:var(--sub);font-size:11px;cursor:pointer;transition:.15s;font-family:'DM Mono',monospace}
+.period-btn:hover{border-color:var(--gold);color:var(--gold)}
+.period-btn.active{background:var(--gold-bg);border-color:var(--gold);color:var(--gold)}
+
+/* Main grid */
+.main{padding:20px 24px 60px;max-width:1400px;position:relative;z-index:1}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px}
+
+/* KPI cards */
+.kpi-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:18px 20px}
+.kpi-label{font-size:9px;color:var(--muted);letter-spacing:2px;font-family:'DM Mono',monospace;text-transform:uppercase;margin-bottom:8px}
+.kpi-val{font-family:'DM Mono',monospace;font-size:26px;font-weight:500;line-height:1}
+.kpi-val.gold{color:var(--gold2)}
+.kpi-val.green{color:var(--green)}
+.kpi-val.red{color:var(--red)}
+.kpi-val.blue{color:var(--blue)}
+.kpi-delta{font-size:10px;margin-top:6px;font-family:'DM Mono',monospace}
+.kpi-delta.up{color:var(--green)}
+.kpi-delta.down{color:var(--red)}
+.kpi-delta.flat{color:var(--muted)}
+.kpi-sub{font-size:10px;color:var(--muted);margin-top:3px}
+
+/* Cards */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.card-hdr{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.card-title{font-size:11px;font-weight:700;letter-spacing:.5px}
+.card-sub{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace}
+.card-body{padding:16px 18px}
+
+/* Section label */
+.sec-label{font-size:9px;color:var(--muted);letter-spacing:3px;text-transform:uppercase;font-family:'DM Mono',monospace;margin:24px 0 12px}
+
+/* Bar chart */
+.bar-chart{display:flex;align-items:flex-end;gap:8px;height:160px;padding:0 0 8px}
+.bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
+.bar-wrap{width:100%;flex:1;display:flex;align-items:flex-end;position:relative}
+.bar-bg{position:absolute;bottom:0;left:0;right:0;height:100%;background:var(--border);border-radius:4px 4px 0 0}
+.bar-fill{position:absolute;bottom:0;left:0;right:0;border-radius:4px 4px 0 0;transition:height .6s cubic-bezier(.4,0,.2,1)}
+.bar-label{font-size:9px;color:var(--muted);font-family:'DM Mono',monospace;white-space:nowrap}
+.bar-val{font-size:9px;font-family:'DM Mono',monospace;white-space:nowrap}
+
+/* Stacked bar (income/cost/profit) */
+.stacked-chart{display:flex;align-items:flex-end;gap:6px;height:180px;padding:0 0 8px}
+.stacked-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
+.stacked-wrap{width:100%;flex:1;display:flex;flex-direction:column;justify-content:flex-end;border-radius:4px 4px 0 0;overflow:hidden;position:relative}
+.stacked-income{background:rgba(79,163,200,.5)}
+.stacked-cost{background:rgba(248,113,113,.5)}
+.stacked-profit{background:rgba(74,222,128,.7)}
+
+/* Donut */
+.donut-wrap{display:flex;align-items:center;gap:24px}
+.donut{width:120px;height:120px;flex-shrink:0}
+.donut-legend{flex:1}
+.dl-item{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)}
+.dl-item:last-child{border-bottom:none}
+.dl-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.dl-label{font-size:11px;flex:1}
+.dl-pct{font-family:'DM Mono',monospace;font-size:11px;color:var(--sub)}
+.dl-val{font-family:'DM Mono',monospace;font-size:11px;color:var(--text)}
+
+/* PL table */
+.pl-table{width:100%;border-collapse:collapse;font-size:12px}
+.pl-table tr{border-bottom:1px solid var(--border)}
+.pl-table tr:last-child{border-bottom:none}
+.pl-table td{padding:9px 12px;vertical-align:middle}
+.pl-table td:first-child{color:var(--sub);width:45%}
+.pl-table td:last-child{font-family:'DM Mono',monospace;text-align:right}
+.pl-subtotal{background:var(--bg3)}
+.pl-subtotal td{font-weight:700}
+.pl-total{background:var(--gold-bg)}
+.pl-total td{color:var(--gold2);font-weight:700;font-size:13px}
+.pl-indent td:first-child{padding-left:24px;font-size:11px}
+
+/* Agent top list */
+.agent-row{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--border)}
+.agent-row:last-child{border-bottom:none}
+.agent-rank{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);width:20px;text-align:center;flex-shrink:0}
+.agent-name{flex:1;font-size:12px}
+.agent-bar-wrap{width:120px;height:6px;background:var(--border);border-radius:3px;flex-shrink:0}
+.agent-bar{height:100%;border-radius:3px;background:var(--gold);transition:width .6s}
+.agent-val{font-family:'DM Mono',monospace;font-size:11px;color:var(--sub);width:70px;text-align:right;flex-shrink:0}
+.type-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+
+/* Alert row */
+.alert-row{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;margin-bottom:8px;font-size:11px}
+.alert-red{background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.2);color:var(--red)}
+.alert-yellow{background:rgba(234,179,8,.08);border:1px solid rgba(234,179,8,.2);color:#facc15}
+.alert-green{background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.2);color:var(--green)}
+
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div style="display:flex;align-items:center;gap:12px">
+    <div class="hdr-logo">CORETO</div>
+    <div class="hdr-badge">👁 EXEC ONLY</div>
+  </div>
+  <div style="font-size:11px;color:var(--sub)">収益ダッシュボード — P&amp;L</div>
+  <div class="hdr-right">
+    <button class="hdr-btn" onclick="location.href='coreto-hub.html'">← Hub</button>
+  </div>
+</div>
+
+<div class="period-bar">
+  <button class="period-btn active" onclick="setPeriod('monthly',this)">月次</button>
+  <button class="period-btn" onclick="setPeriod('quarterly',this)">四半期</button>
+  <button class="period-btn" onclick="setPeriod('ytd',this)">年度累計</button>
+  <span style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;line-height:30px;margin-left:12px">基準月: 2026年2月</span>
+</div>
+
+<div class="main">
+
+<!-- ─ KPIs ─ -->
+<div class="sec-label">KEY PERFORMANCE INDICATORS</div>
+<div class="grid4">
+  <div class="kpi-card">
+    <div class="kpi-label">総収入（仲介料）</div>
+    <div class="kpi-val gold" id="kpi-income">¥9.84M</div>
+    <div class="kpi-delta up" id="kpi-income-d">▲ +12.3% 前月比</div>
+    <div class="kpi-sub" id="kpi-income-s">成約18件 × 平均単価</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">エージェント支払総額</div>
+    <div class="kpi-val red" id="kpi-cost">¥6.84M</div>
+    <div class="kpi-delta down" id="kpi-cost-d">▼ +8.1% 前月比</div>
+    <div class="kpi-sub" id="kpi-cost-s">報酬 + 月会費控除</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">純利益（粗利）</div>
+    <div class="kpi-val green" id="kpi-profit">¥3.00M</div>
+    <div class="kpi-delta up" id="kpi-profit-d">▲ +18.5% 前月比</div>
+    <div class="kpi-sub" id="kpi-profit-s">利益率 30.5%</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">月会費収入</div>
+    <div class="kpi-val blue" id="kpi-fee">¥48,580</div>
+    <div class="kpi-delta flat" id="kpi-fee-d">→ Bronze 38名 + Silver 24名</div>
+    <div class="kpi-sub" id="kpi-fee-s">¥980 × 38 ＋ ¥490 × 24</div>
+  </div>
+</div>
+
+<div class="grid4">
+  <div class="kpi-card">
+    <div class="kpi-label">成約件数</div>
+    <div class="kpi-val" id="kpi-cases">18件</div>
+    <div class="kpi-delta up" id="kpi-cases-d">▲ +3件 前月比</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">稼働エージェント</div>
+    <div class="kpi-val" id="kpi-agents">31名</div>
+    <div class="kpi-delta up" id="kpi-agents-d">RE:18 / HR:13</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">即時払い手数料収入</div>
+    <div class="kpi-val gold" id="kpi-instant">¥312,750</div>
+    <div class="kpi-delta flat" id="kpi-instant-d">5件 × 15%</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">返金リスク（早期退職）</div>
+    <div class="kpi-val red" id="kpi-refund">¥693,000</div>
+    <div class="kpi-delta down" id="kpi-refund-d">対応待ち 2件</div>
+  </div>
+</div>
+
+<!-- ─ Charts row ─ -->
+<div class="grid2">
+  <!-- Monthly bar chart -->
+  <div class="card">
+    <div class="card-hdr">
+      <div class="card-title">月次収益推移</div>
+      <div class="card-sub">直近6ヶ月</div>
+    </div>
+    <div class="card-body">
+      <div style="display:flex;gap:12px;margin-bottom:12px;font-size:10px">
+        <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:rgba(79,163,200,.6);display:inline-block"></span>総収入</span>
+        <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:rgba(248,113,113,.5);display:inline-block"></span>支払</span>
+        <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:rgba(74,222,128,.7);display:inline-block"></span>純利益</span>
+      </div>
+      <div id="bar-chart-monthly" class="stacked-chart"></div>
+    </div>
+  </div>
+
+  <!-- Revenue breakdown donut -->
+  <div class="card">
+    <div class="card-hdr">
+      <div class="card-title">収入内訳（今月）</div>
+      <div class="card-sub">2026年2月</div>
+    </div>
+    <div class="card-body">
+      <div class="donut-wrap">
+        <svg class="donut" viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r="50" fill="none" stroke="var(--border)" stroke-width="18"/>
+          <!-- RE brokerage: 68% -->
+          <circle cx="60" cy="60" r="50" fill="none" stroke="var(--re)" stroke-width="18"
+            stroke-dasharray="213.6 100" stroke-dashoffset="0" transform="rotate(-90 60 60)"/>
+          <!-- HR placement: 22% -->
+          <circle cx="60" cy="60" r="50" fill="none" stroke="var(--hr)" stroke-width="18"
+            stroke-dasharray="69.1 244.5" stroke-dashoffset="-213.6" transform="rotate(-90 60 60)"/>
+          <!-- Fee income: 5% -->
+          <circle cx="60" cy="60" r="50" fill="none" stroke="var(--gold)" stroke-width="18"
+            stroke-dasharray="15.7 298" stroke-dashoffset="-282.7" transform="rotate(-90 60 60)"/>
+          <!-- Instant fee: 5% -->
+          <circle cx="60" cy="60" r="50" fill="none" stroke="var(--pt)" stroke-width="18"
+            stroke-dasharray="15.7 298" stroke-dashoffset="-298.4" transform="rotate(-90 60 60)"/>
+          <text x="60" y="56" text-anchor="middle" fill="var(--gold2)" font-size="11" font-family="DM Mono">¥9.84M</text>
+          <text x="60" y="68" text-anchor="middle" fill="var(--muted)" font-size="8">総収入</text>
+        </svg>
+        <div class="donut-legend">
+          <div class="dl-item"><div class="dl-dot" style="background:var(--re)"></div><div class="dl-label">不動産仲介料</div><div class="dl-pct">68%</div><div class="dl-val">¥6.69M</div></div>
+          <div class="dl-item"><div class="dl-dot" style="background:var(--hr)"></div><div class="dl-label">人材紹介料</div><div class="dl-pct">22%</div><div class="dl-val">¥2.16M</div></div>
+          <div class="dl-item"><div class="dl-dot" style="background:var(--gold)"></div><div class="dl-label">月会費収入</div><div class="dl-pct">0.5%</div><div class="dl-val">¥48,580</div></div>
+          <div class="dl-item"><div class="dl-dot" style="background:var(--pt)"></div><div class="dl-label">即時払い手数料</div><div class="dl-pct">3%</div><div class="dl-val">¥312,750</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─ P&L Table + Top agents ─ -->
+<div class="grid2">
+  <!-- P&L -->
+  <div class="card">
+    <div class="card-hdr">
+      <div class="card-title">P&amp;L — 2026年2月</div>
+      <div class="card-sub">概算</div>
+    </div>
+    <div class="card-body" style="padding:0">
+      <table class="pl-table">
+        <tr><td colspan="2" style="padding:10px 12px;font-size:9px;color:var(--muted);letter-spacing:2px;font-family:'DM Mono',monospace">■ 収入</td></tr>
+        <tr class="pl-indent"><td>不動産仲介手数料</td><td style="color:var(--blue)">¥6,691,200</td></tr>
+        <tr class="pl-indent"><td>人材紹介手数料</td><td style="color:var(--blue)">¥2,163,840</td></tr>
+        <tr class="pl-indent"><td>月会費収入</td><td style="color:var(--blue)">¥48,580</td></tr>
+        <tr class="pl-indent"><td>即時払い手数料</td><td style="color:var(--blue)">¥312,750</td></tr>
+        <tr class="pl-subtotal"><td>収入合計</td><td style="color:var(--gold2)">¥9,216,370</td></tr>
+        <tr><td colspan="2" style="padding:10px 12px;font-size:9px;color:var(--muted);letter-spacing:2px;font-family:'DM Mono',monospace">■ エージェント支払</td></tr>
+        <tr class="pl-indent"><td>不動産AG報酬</td><td style="color:var(--red)">▲ ¥4,862,400</td></tr>
+        <tr class="pl-indent"><td>人材AG報酬（第1回）</td><td style="color:var(--red)">▲ ¥1,513,688</td></tr>
+        <tr class="pl-indent"><td>パートナー紹介料</td><td style="color:var(--red)">▲ ¥462,400</td></tr>
+        <tr class="pl-subtotal"><td>支払合計</td><td style="color:var(--red)">▲ ¥6,838,488</td></tr>
+        <tr class="pl-total"><td>粗利益</td><td>¥2,377,882</td></tr>
+        <tr class="pl-indent"><td style="color:var(--muted)">利益率</td><td style="color:var(--green)">25.8%</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- Top agents -->
+  <div class="card">
+    <div class="card-hdr">
+      <div class="card-title">売上上位エージェント（今月）</div>
+      <div class="card-sub">個人売上</div>
+    </div>
+    <div class="card-body" id="top-agents-list">
+    </div>
+  </div>
+</div>
+
+<!-- ─ Alerts & risks ─ -->
+<div class="sec-label">ALERTS &amp; RISKS</div>
+<div class="alert-row alert-red">
+  🚨 <strong>早期退職 未対応2件</strong> — 返金リスク合計 ¥693,000。鈴木健一（第2回支払期限 本日）、田中拓海（確認待ち7日超過）
+</div>
+<div class="alert-row alert-yellow">
+  ⚠️ <strong>KYC審査待ち 4件</strong> — 名義不一致フラグ 1件（要確認）。平均処理待ち 2.3日
+</div>
+<div class="alert-row alert-yellow">
+  ⚠️ <strong>即時払い申請 3件</strong> — 2FA認証済み振込待ち。合計 ¥2,085,000
+</div>
+<div class="alert-row alert-green">
+  ✅ <strong>今月バッチ準備完了</strong> — 3月25日振込予定 ¥6,838,488。全銀データ出力可能
+</div>
+
+<!-- ─ Cost breakdown ─ -->
+<div class="sec-label">支払コスト内訳</div>
+<div class="card">
+  <div class="card-hdr"><div class="card-title">エージェント種別 × コスト（今月）</div></div>
+  <div class="card-body">
+    <div id="cost-bar-chart" class="bar-chart" style="height:120px"></div>
+  </div>
+</div>
+
+</div><!-- /main -->
+
+<script>
+// ─ Data ─
+const DATA = {
+  monthly: {
+    months:['9月','10月','11月','12月','1月','2月'],
+    income:[7200000,7800000,8100000,8600000,8750000,9216370],
+    cost:  [5100000,5500000,5700000,6000000,6320000,6838488],
+    profit:[2100000,2300000,2400000,2600000,2430000,2377882],
+  },
+  quarterly: {
+    months:['Q2 FY25','Q3 FY25','Q4 FY25','Q1 FY26'],
+    income:[20800000,23100000,24450000,26566370],
+    cost:  [14600000,16200000,17020000,18458488],
+    profit:[6200000, 6900000, 7430000, 8107882],
+  },
+  ytd: {
+    months:['4月','5月','6月','7月','8月','9月','10月','11月','12月','1月','2月'],
+    income:[6200000,6500000,6800000,7000000,7100000,7200000,7800000,8100000,8600000,8750000,9216370],
+    cost:  [4400000,4600000,4800000,4900000,5000000,5100000,5500000,5700000,6000000,6320000,6838488],
+    profit:[1800000,1900000,2000000,2100000,2100000,2100000,2300000,2400000,2600000,2430000,2377882],
+  },
+};
+
+const TOP_AGENTS = [
+  { name:'佐藤 花子',  type:'re', rev:1800000 },
+  { name:'山田 誠',    type:'re', rev:1200000 },
+  { name:'小林 俊介',  type:'re', rev:1000000 },
+  { name:'田中 美穂',  type:'hr', rev:860000  },
+  { name:'松本 由美',  type:'hr', rev:560000  },
+  { name:'鈴木 健太',  type:'re', rev:720000  },
+  { name:'吉田 大輔',  type:'re', rev:490000  },
+];
+
+const COST_DATA = [
+  { label:'不動産AG', val:4862400, color:'var(--re)' },
+  { label:'人材AG',   val:1513688, color:'var(--hr)' },
+  { label:'パートナー', val:462400, color:'var(--pt)' },
+];
+
+const TYPE_COLOR = { re:'var(--re)', hr:'var(--hr)', pt:'var(--pt)' };
+
+let currentPeriod = 'monthly';
+
+function setPeriod(p, btn) {
+  currentPeriod = p;
+  document.querySelectorAll('.period-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderCharts();
+  updateKPIs();
+}
+
+function yen(v) {
+  if(v>=1000000) return '¥'+(v/1000000).toFixed(2)+'M';
+  if(v>=1000) return '¥'+(v/1000).toFixed(0)+'K';
+  return '¥'+v.toLocaleString();
+}
+
+function renderCharts() {
+  const d = DATA[currentPeriod];
+  const maxVal = Math.max(...d.income);
+  const chart = document.getElementById('bar-chart-monthly');
+  chart.innerHTML = d.months.map((m,i) => {
+    const incH = Math.round((d.income[i]/maxVal)*100);
+    const costH = Math.round((d.cost[i]/maxVal)*100);
+    const profH = Math.round((d.profit[i]/maxVal)*100);
+    return `<div class="stacked-col">
+      <div class="bar-val" style="color:var(--gold2);font-size:8px">${yen(d.profit[i])}</div>
+      <div class="stacked-wrap" style="height:${incH}%">
+        <div style="height:${Math.round(profH/incH*100)}%;background:rgba(74,222,128,.7)"></div>
+        <div style="height:${Math.round((costH/incH)*100)}%;background:rgba(248,113,113,.4)"></div>
+      </div>
+      <div class="bar-label">${m}</div>
+    </div>`;
+  }).join('');
+
+  // Cost breakdown bar
+  const maxCost = Math.max(...COST_DATA.map(c=>c.val));
+  document.getElementById('cost-bar-chart').innerHTML = COST_DATA.map(c => {
+    const pct = Math.round(c.val/maxCost*100);
+    return `<div class="bar-col">
+      <div class="bar-val" style="color:${c.color}">${yen(c.val)}</div>
+      <div class="bar-wrap"><div class="bar-bg"></div><div class="bar-fill" style="height:${pct}%;background:${c.color};opacity:.7"></div></div>
+      <div class="bar-label">${c.label}</div>
+    </div>`;
+  }).join('');
+}
+
+function updateKPIs() {
+  const d = DATA[currentPeriod];
+  const last = d.income.length-1;
+  const prev = last > 0 ? last-1 : 0;
+  const inc = d.income[last], prevInc = d.income[prev];
+  const cost = d.cost[last], prevCost = d.cost[prev];
+  const prof = d.profit[last], prevProf = d.profit[prev];
+  const incDelta = prevInc > 0 ? ((inc-prevInc)/prevInc*100).toFixed(1) : 0;
+  const profDelta = prevProf > 0 ? ((prof-prevProf)/prevProf*100).toFixed(1) : 0;
+  const profRate = (prof/inc*100).toFixed(1);
+
+  document.getElementById('kpi-income').textContent = yen(inc);
+  document.getElementById('kpi-income-d').textContent = (incDelta>0?'▲ +':'▼ ')+incDelta+'%';
+  document.getElementById('kpi-income-d').className = 'kpi-delta '+(incDelta>=0?'up':'down');
+  document.getElementById('kpi-cost').textContent = yen(cost);
+  document.getElementById('kpi-profit').textContent = yen(prof);
+  document.getElementById('kpi-profit-d').textContent = (profDelta>0?'▲ +':'▼ ')+profDelta+'%';
+  document.getElementById('kpi-profit-d').className = 'kpi-delta '+(profDelta>=0?'up':'down');
+  document.getElementById('kpi-profit-s').textContent = '利益率 '+profRate+'%';
+}
+
+function renderTopAgents() {
+  const max = TOP_AGENTS[0].rev;
+  document.getElementById('top-agents-list').innerHTML = TOP_AGENTS.map((a,i) =>
+    `<div class="agent-row">
+      <div class="agent-rank">${i+1}</div>
+      <div class="type-dot" style="background:${TYPE_COLOR[a.type]}"></div>
+      <div class="agent-name">${a.name}</div>
+      <div class="agent-bar-wrap"><div class="agent-bar" style="width:${Math.round(a.rev/max*100)}%"></div></div>
+      <div class="agent-val">${yen(a.rev)}</div>
+    </div>`
+  ).join('');
+}
+
+// Init
+renderCharts();
+renderTopAgents();
+</script>
+</body>
+</html>

@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CORETO 顧客ID管理システム</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#0d0f14;--card:#161921;--hover:#1e2230;--border:#252a38;
+  --gold:#c9a84c;--gold-l:#e8c96a;--muted:#6b7280;--sub:#9ca3af;
+  --green:#22c55e;--blue:#3b82f6;--orange:#f59e0b;--red:#ef4444;--purple:#a855f7;
+}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:#e8eaf0;min-height:100vh;}
+
+/* HEADER */
+.header{background:#0a0c10;border-bottom:1px solid var(--border);padding:13px 28px;display:flex;align-items:center;justify-content:space-between;}
+.logo{font-family:'DM Mono',monospace;font-size:19px;color:var(--gold);letter-spacing:3px;}
+.header-sub{font-size:10px;color:var(--muted);margin-top:2px;}
+.staff-switcher{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--sub);}
+.staff-switcher select{background:var(--hover);border:1px solid var(--border);color:#e8eaf0;padding:5px 10px;border-radius:5px;font-size:11px;font-family:'Noto Sans JP',sans-serif;}
+
+/* TABS */
+.tabs{background:#0a0c10;border-bottom:1px solid var(--border);padding:0 28px;display:flex;}
+.tab{padding:11px 16px;font-size:12px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap;background:none;border-top:none;border-left:none;border-right:none;font-family:'Noto Sans JP',sans-serif;}
+.tab:hover{color:#e8eaf0;}
+.tab.active{color:var(--gold);border-bottom-color:var(--gold);}
+
+.page{display:none;padding:24px 28px;max-width:1280px;margin:0 auto;}
+.page.active{display:block;}
+
+/* LAYOUT */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+.grid-detail{display:grid;grid-template-columns:340px 1fr;gap:20px;align-items:start;}
+
+/* CARDS */
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin-bottom:14px;}
+.card-title{font-size:13px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+
+/* FORM */
+.s-label{font-size:10px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;margin-top:18px;padding-bottom:5px;border-bottom:1px solid var(--border);}
+.s-label:first-child{margin-top:0;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:11px;}
+.form-row.three{grid-template-columns:1fr 1fr 1fr;}
+.form-row.single{grid-template-columns:1fr;}
+.fg{margin-bottom:11px;}
+.fg label{font-size:11px;color:var(--sub);display:block;margin-bottom:4px;}
+.fg label .req{color:var(--red);font-size:9px;font-weight:700;margin-left:3px;}
+.fg input,.fg select,.fg textarea{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:#e8eaf0;font-size:13px;font-family:'Noto Sans JP',sans-serif;transition:border-color .15s;}
+.fg input:focus,.fg select:focus,.fg textarea:focus{outline:none;border-color:var(--gold);}
+.fg textarea{resize:vertical;min-height:70px;line-height:1.7;}
+.fg select option{background:var(--card);}
+.mono{font-family:'DM Mono',monospace !important;}
+
+/* TAGS */
+.tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;}
+.tag-re{background:rgba(59,130,246,0.15);color:var(--blue);}
+.tag-hr{background:rgba(34,197,94,0.15);color:var(--green);}
+.tag-both{background:rgba(168,85,247,0.15);color:var(--purple);}
+.tag-lead{background:rgba(201,168,76,0.15);color:var(--gold);}
+.tag-active{background:rgba(245,158,11,0.15);color:var(--orange);}
+.tag-done{background:rgba(34,197,94,0.15);color:var(--green);}
+
+/* BUTTONS */
+.btn{padding:8px 16px;border-radius:7px;font-size:12px;font-weight:500;cursor:pointer;border:none;font-family:'Noto Sans JP',sans-serif;transition:all .15s;}
+.btn-gold{background:var(--gold);color:#0a0c10;}
+.btn-gold:hover{background:var(--gold-l);}
+.btn-outline{background:transparent;color:var(--sub);border:1px solid var(--border);}
+.btn-outline:hover{border-color:var(--gold);color:var(--gold);}
+.btn-ghost{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:11px;padding:3px 8px;border-radius:4px;font-family:'Noto Sans JP',sans-serif;transition:all .15s;}
+.btn-ghost:hover{background:var(--hover);color:#e8eaf0;}
+.btn-danger{background:transparent;border:none;color:var(--red);cursor:pointer;font-size:11px;padding:3px 8px;border-radius:4px;font-family:'Noto Sans JP',sans-serif;transition:all .15s;}
+.btn-danger:hover{background:rgba(239,68,68,0.1);}
+.btn-sm{padding:5px 12px;font-size:11px;}
+.btn-full{width:100%;padding:11px;}
+
+/* INNER TABS */
+.inner-tabs{display:flex;border:1px solid var(--border);border-radius:7px;overflow:hidden;margin-bottom:16px;}
+.inner-tab{flex:1;padding:8px;text-align:center;font-size:12px;cursor:pointer;background:var(--bg);color:var(--muted);border:none;font-family:'Noto Sans JP',sans-serif;transition:all .15s;}
+.inner-tab.active{background:var(--gold);color:#0a0c10;font-weight:700;}
+
+/* TABLE */
+table{width:100%;border-collapse:collapse;}
+th{text-align:left;font-size:10px;color:var(--muted);padding:8px 12px;border-bottom:1px solid var(--border);font-weight:500;}
+td{padding:10px 12px;font-size:12px;border-bottom:1px solid rgba(37,42,56,0.5);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr.clickable:hover td{background:rgba(30,34,48,0.5);cursor:pointer;}
+
+/* DATA VIEW */
+.dv-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px;}
+.dv-row.three{grid-template-columns:1fr 1fr 1fr;}
+.dv-item .dv-label{font-size:10px;color:var(--muted);margin-bottom:2px;}
+.dv-item .dv-val{font-size:12px;color:#e8eaf0;}
+.dv-item .dv-empty{color:var(--muted);}
+
+/* NOTE CARDS */
+.note-card{background:var(--hover);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:10px;transition:border-color .15s;}
+.note-card.mine{border-color:rgba(201,168,76,0.3);background:rgba(201,168,76,0.03);}
+.note-card.editing{border-color:var(--gold);}
+.note-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;}
+.note-author{font-size:12px;font-weight:600;}
+.note-time{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:2px;}
+.note-body{font-size:13px;color:var(--sub);line-height:1.8;white-space:pre-wrap;}
+.note-edit-textarea{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:8px 10px;color:#e8eaf0;font-size:13px;font-family:'Noto Sans JP',sans-serif;resize:vertical;min-height:70px;line-height:1.7;}
+.note-edit-textarea:focus{outline:none;border-color:var(--gold);}
+
+/* PERMISSION BADGES */
+.pb{font-size:10px;padding:2px 7px;border-radius:3px;font-weight:600;}
+.pb-own{background:rgba(201,168,76,0.15);color:var(--gold);}
+.pb-hq{background:rgba(59,130,246,0.15);color:var(--blue);}
+.pb-lock{background:rgba(100,116,139,0.12);color:var(--muted);}
+
+/* CHIPS */
+.chip-area{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;}
+
+/* LINK BOX */
+.link-box{background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:8px 12px;display:flex;align-items:center;gap:8px;margin-top:10px;}
+.link-url{font-family:'DM Mono',monospace;font-size:11px;color:var(--sub);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+/* QR */
+.qr{width:82px;height:82px;background:white;border-radius:5px;padding:6px;display:flex;flex-direction:column;gap:2px;flex-shrink:0;}
+.qr .qr-row{display:flex;gap:2px;}
+.qr .q{width:9px;height:9px;border-radius:1px;}
+.qr .b{background:#111;}.qr .w{background:transparent;}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(16px);background:rgba(34,197,94,0.15);border:1px solid var(--green);color:var(--green);padding:9px 22px;border-radius:8px;font-size:12px;font-weight:600;opacity:0;transition:all .3s;pointer-events:none;z-index:300;white-space:nowrap;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div><div class="logo">CORETO
+  <button onclick="window.location.href='coreto-agent-mypage.html'"
+            style="font-size:10px;padding:5px 12px;border-radius:6px;border:1px solid var(--border2);
+            background:transparent;color:var(--muted);cursor:pointer;font-family:'Noto Sans JP',sans-serif">
+    ← マイページ
+  </button>
+</div><div class="header-sub">顧客ID管理システム</div></div>
+  <div class="staff-switcher">
+    <span>ログイン中：</span>
+    <select id="current-staff" onchange="onStaffChange()">
+      <option value="yamada">山田 誠（不動産AG）</option>
+      <option value="takahashi">高橋 明（不動産AG）</option>
+      <option value="nakamura">中村 リカ（人材AG）</option>
+      <option value="sato">佐藤 美咲（パートナー）</option>
+      <option value="hq">本部スタッフ（管理職）</option>
+    </select>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <button class="tab active"      onclick="showTab('new',this)">➕ 新規登録・送付</button>
+  <button class="tab"             onclick="showTab('list',this)">📋 顧客一覧</button>
+  <button class="tab"             onclick="showTab('detail',this)">🔍 顧客詳細・追記</button>
+  <button class="tab"             onclick="showTab('client',this)">📱 顧客向けフォーム（プレビュー）</button>
+</div>
+
+<!-- ================================================================
+     TAB 1: 新規登録・送付
+================================================================ -->
+<div id="tab-new" class="page active">
+  <div class="grid2">
+    <div>
+      <!-- 発行予定ID -->
+      <div style="background:linear-gradient(135deg,rgba(201,168,76,0.12),rgba(201,168,76,0.03));border:1.5px solid rgba(201,168,76,0.4);border-radius:12px;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <div>
+          <div style="font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:4px">発行予定 顧客ID</div>
+          <div style="font-family:'DM Mono',monospace;font-size:26px;color:var(--gold);letter-spacing:3px">CL-00248</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:3px">登録完了時に確定・自動採番</div>
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="toast('CL-00248 をコピーしました')">IDコピー</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📋 担当者・接触情報</div>
+        <div class="form-row">
+          <div class="fg"><label>担当エージェント<span class="req">必須</span></label>
+            <select><option>山田 誠（不動産AG）</option><option>高橋 明（不動産AG）</option><option>中村 リカ（人材AG）</option><option>佐藤 美咲（パートナー）</option></select>
+          </div>
+          <div class="fg"><label>接触経路</label>
+            <select><option>自己開拓</option><option>パートナー紹介</option><option>本部依頼</option><option>WEB問合せ</option><option>SNS</option><option>知人紹介</option></select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="fg"><label>顧客種別<span class="req">必須</span></label>
+            <select id="new-type"><option value="re">不動産（賃貸・売買）</option><option value="hr">人材紹介</option><option value="both">両方</option></select>
+          </div>
+          <div class="fg"><label>初回接触日</label><input type="date" class="mono" value="2026-02-20"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📤 フォームの送付方法</div>
+        <div class="inner-tabs">
+          <button class="inner-tab active" id="mode-a" onclick="setMode('send')">📱 顧客に送付する</button>
+          <button class="inner-tab"        id="mode-b" onclick="setMode('staff')">👤 担当者が代わりに入力</button>
+        </div>
+
+        <div id="send-section">
+          <div style="display:flex;gap:14px;align-items:flex-start">
+            <div class="qr">
+              <div class="qr-row"><div class="q b"></div><div class="q b"></div><div class="q b"></div><div class="q w"></div><div class="q b"></div><div class="q b"></div><div class="q b"></div></div>
+              <div class="qr-row"><div class="q b"></div><div class="q w"></div><div class="q b"></div><div class="q w"></div><div class="q b"></div><div class="q w"></div><div class="q b"></div></div>
+              <div class="qr-row"><div class="q b"></div><div class="q w"></div><div class="q b"></div><div class="q b"></div><div class="q b"></div><div class="q w"></div><div class="q b"></div></div>
+              <div class="qr-row"><div class="q w"></div><div class="q b"></div><div class="q w"></div><div class="q b"></div><div class="q w"></div><div class="q b"></div><div class="q w"></div></div>
+              <div class="qr-row"><div class="q b"></div><div class="q w"></div><div class="q b"></div><div class="q b"></div><div class="q b"></div><div class="q w"></div><div class="q b"></div></div>
+              <div class="qr-row"><div class="q b"></div><div class="q b"></div><div class="q w"></div><div class="q b"></div><div class="q w"></div><div class="q b"></div><div class="q b"></div></div>
+              <div class="qr-row"><div class="q b"></div><div class="q b"></div><div class="q b"></div><div class="q w"></div><div class="q b"></div><div class="q b"></div><div class="q b"></div></div>
+            </div>
+            <div style="flex:1">
+              <div style="font-size:12px;color:var(--sub);line-height:1.8;margin-bottom:10px">顧客専用URLをLINE/SMSで送付するか、その場でQRを読み込んでもらいます。<br>顧客が送信すると担当者に通知されます。<br><strong style="color:#e8eaf0">備考欄は顧客フォームにはありません。</strong></div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button class="btn btn-outline btn-sm" onclick="toast('LINEアプリを開きます')">🟢 LINEで送る</button>
+                <button class="btn btn-outline btn-sm" onclick="toast('SMSアプリを開きます')">💬 SMSで送る</button>
+              </div>
+            </div>
+          </div>
+          <div class="link-box">
+            <span class="link-url">https://form.coreto.jp/cl/new?agent=AG-012&ref=CL-00248&type=re</span>
+            <button class="btn-ghost" onclick="toast('URLをコピーしました')">コピー</button>
+          </div>
+        </div>
+
+        <div id="staff-section" style="display:none">
+          <div style="font-size:12px;color:var(--sub);line-height:1.8;padding:10px;background:var(--hover);border-radius:6px;margin-bottom:12px">
+            担当者が顧客の代わりに情報を入力します。「📱 顧客向けフォーム」タブと同じ項目です。<br>
+            <strong style="color:#e8eaf0">備考・メモは別途「顧客詳細・追記」タブから入力してください。</strong>
+          </div>
+          <button class="btn btn-gold btn-full" onclick="showTab('client',document.querySelectorAll('.tab')[3])">入力フォームへ進む →</button>
+        </div>
+      </div>
+
+      <button class="btn btn-gold btn-full" onclick="toast('✅ 顧客ID CL-00248 を発行しました')">顧客IDを発行して登録する</button>
+    </div>
+
+    <div>
+      <div class="card">
+        <div class="card-title">🔒 メモ・追記の権限設計</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="background:var(--hover);border-radius:7px;padding:12px">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+              <span class="pb pb-own">入力した担当者</span>
+            </div>
+            <div style="font-size:12px;color:var(--sub);line-height:1.8">自分が投稿したメモのみ<strong style="color:#e8eaf0">編集・削除が可能</strong>。<br>他の担当者のメモは閲覧のみ。</div>
+          </div>
+          <div style="background:var(--hover);border-radius:7px;padding:12px">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+              <span class="pb pb-hq">本部スタッフ</span>
+              <span style="font-size:10px;color:var(--muted)">権限は後から設定</span>
+            </div>
+            <div style="font-size:12px;color:var(--sub);line-height:1.8">全メモの閲覧可。編集・削除権限は<br>本部内のロール設定で後から決定します。</div>
+          </div>
+          <div style="background:var(--hover);border-radius:7px;padding:12px">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+              <span class="pb pb-lock">他の担当者</span>
+            </div>
+            <div style="font-size:12px;color:var(--sub);line-height:1.8">閲覧のみ。編集・削除ボタンは非表示。</div>
+          </div>
+        </div>
+        <div style="margin-top:12px;padding:10px;background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.2);border-radius:6px;font-size:11px;color:var(--sub);line-height:1.8">
+          💡 引き継ぎ時は前担当者のメモがすべて履歴として残ります。<br>
+          投稿後の編集には「編集済み」と日時が自動記録されます。
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📐 登録から案件化までのフロー</div>
+        <div style="display:flex;flex-direction:column;gap:9px">
+          ${[
+            ['var(--blue)','STEP 1','顧客と接触・ID発行','顧客にフォームURLを送付 or 担当者が代行入力。備考なし。'],
+            ['var(--gold)','STEP 2','顧客が情報を入力','基本情報・希望条件を入力して送信。担当者に通知。'],
+            ['var(--orange)','STEP 3','担当者がメモを追記','面談内容・審査状況・引き継ぎ事項を日時付きで記録。'],
+            ['var(--purple)','STEP 4','リード管理','本部がマッチング。パートナー紹介はここで担当AGを決定。'],
+            ['var(--green)','STEP 5','案件化','案件登録フォームに顧客IDを入力→顧客情報が自動反映。'],
+          ].map(([c,s,t,d])=>`
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <div style="width:3px;flex-shrink:0;border-radius:2px;background:${c};min-height:40px;margin-top:2px"></div>
+            <div>
+              <div style="font-size:11px;font-weight:700;color:${c}">${s} ${t}</div>
+              <div style="font-size:11px;color:var(--sub);line-height:1.7;margin-top:1px">${d}</div>
+            </div>
+          </div>`).join('')}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================
+     TAB 2: 顧客一覧
+================================================================ -->
+<div id="tab-list" class="page">
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div class="card-title" style="margin:0">📋 顧客一覧（リード含む）</div>
+      <div style="display:flex;gap:8px">
+        <select style="background:var(--hover);border:1px solid var(--border);color:#e8eaf0;padding:5px 10px;border-radius:5px;font-size:11px;font-family:'Noto Sans JP',sans-serif">
+          <option>全ステータス</option><option>リード</option><option>案件進行中</option><option>成約済み</option>
+        </select>
+        <select style="background:var(--hover);border:1px solid var(--border);color:#e8eaf0;padding:5px 10px;border-radius:5px;font-size:11px;font-family:'Noto Sans JP',sans-serif">
+          <option>全種別</option><option>不動産</option><option>人材</option><option>両方</option>
+        </select>
+      </div>
+    </div>
+    <table>
+      <thead><tr><th>顧客ID</th><th>氏名</th><th>種別</th><th>担当AG</th><th>ステータス</th><th>紐付き案件</th><th>メモ</th><th>登録日</th></tr></thead>
+      <tbody id="tbl-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ================================================================
+     TAB 3: 顧客詳細・追記
+================================================================ -->
+<div id="tab-detail" class="page">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap">
+    <select id="detail-sel" onchange="loadDetail(this.value)" style="background:var(--hover);border:1px solid var(--border);color:#e8eaf0;padding:7px 12px;border-radius:6px;font-size:13px;font-family:'Noto Sans JP',sans-serif">
+      <option value="CL-00244">CL-00244 ― 田中 花子（不動産）</option>
+      <option value="CL-00245">CL-00245 ― 山田 太郎（両方）</option>
+      <option value="CL-00246">CL-00246 ― 鈴木 美咲（不動産）</option>
+      <option value="CL-00247">CL-00247 ― 橋本 隆（人材）</option>
+    </select>
+    <span id="detail-status"></span>
+  </div>
+
+  <div class="grid-detail">
+    <!-- 左：顧客情報（読み取り専用） -->
+    <div>
+      <div class="card">
+        <div class="card-title">👤 顧客情報<span style="font-size:10px;color:var(--muted);font-weight:400;margin-left:4px">顧客入力・読み取り専用</span></div>
+        <div id="customer-view"></div>
+      </div>
+    </div>
+
+    <!-- 右：担当者追記エリア -->
+    <div>
+      <!-- ===== メモセクション ===== -->
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <div class="card-title" style="margin:0">📝 担当者メモ<span style="font-size:10px;font-weight:400;color:var(--muted);margin-left:6px">引き継ぎ履歴として保存されます</span></div>
+        </div>
+
+        <!-- メモ一覧 -->
+        <div id="note-list"></div>
+
+        <!-- 新規投稿エリア -->
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px;margin-top:4px">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:8px">
+            ✏️ 新しいメモ　<span id="note-poster" style="color:var(--gold);font-weight:600"></span> として投稿
+          </div>
+          <textarea id="note-input" class="note-edit-textarea" placeholder="面談内容・審査状況・引き継ぎ事項など&#10;投稿すると日時と担当者名が自動記録されます"></textarea>
+          <div style="display:flex;justify-content:flex-end;margin-top:8px">
+            <button class="btn btn-gold btn-sm" onclick="addNote()">投稿する</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== 担当者追記フォーム ===== -->
+      <div class="card">
+        <div class="card-title">➕ 担当者追記情報<span style="font-size:10px;font-weight:400;color:var(--muted);margin-left:6px">面談後に確認した内容を追記</span></div>
+        <div id="addl-form"></div>
+        <button class="btn btn-outline btn-full" style="margin-top:8px" onclick="toast('✅ 追記情報を保存しました')">追記情報を保存する</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================
+     TAB 4: 顧客向けフォーム（プレビュー）
+================================================================ -->
+<div id="tab-client" class="page">
+  <div style="max-width:580px;margin:0 auto">
+    <div style="background:rgba(59,130,246,0.07);border:1px solid rgba(59,130,246,0.2);border-radius:7px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:var(--sub);line-height:1.8">
+      📱 これは顧客向けフォームのプレビューです。備考欄はありません。<br>担当者メモは「顧客詳細・追記」タブから別途入力します。
+    </div>
+
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+        <div style="font-size:17px;font-weight:700;color:var(--gold);font-family:'DM Mono',monospace;letter-spacing:2px">CORETO</div>
+        <div style="font-size:12px;color:var(--muted)">お客様情報入力フォーム</div>
+      </div>
+
+      <div class="fg"><label>ご相談内容<span class="req">必須</span></label>
+        <select id="cf-type" onchange="updateCF()">
+          <option value="re">不動産（賃貸・購入）</option>
+          <option value="hr">お仕事・転職</option>
+          <option value="both">両方</option>
+        </select>
+      </div>
+
+      <!-- 基本情報 -->
+      <div class="s-label">お客様の基本情報</div>
+      <div class="form-row">
+        <div class="fg"><label>お名前（漢字）<span class="req">必須</span></label><input placeholder="例：鈴木 一郎"></div>
+        <div class="fg"><label>フリガナ<span class="req">必須</span></label><input placeholder="スズキ イチロウ"></div>
+      </div>
+      <div class="form-row three">
+        <div class="fg"><label>生年月日<span class="req">必須</span></label><input type="date" class="mono"></div>
+        <div class="fg"><label>性別<span class="req">必須</span></label><select><option value="">―</option><option>男性</option><option>女性</option><option>回答しない</option></select></div>
+        <div class="fg"><label>国籍</label><select><option>日本</option><option>中国</option><option>韓国</option><option>その他アジア</option><option>その他</option></select></div>
+      </div>
+      <div class="form-row">
+        <div class="fg"><label>電話番号<span class="req">必須</span></label><input placeholder="090-XXXX-XXXX" class="mono"></div>
+        <div class="fg"><label>メールアドレス</label><input type="email" placeholder="example@email.com" class="mono"></div>
+      </div>
+
+      <!-- 現住所 -->
+      <div class="s-label">現在のご住所</div>
+      <div class="form-row single"><div class="fg"><label>現住所<span class="req">必須</span></label><input placeholder="例：東京都豊島区池袋1-1-1"></div></div>
+      <div class="form-row">
+        <div class="fg"><label>最寄り駅</label><input placeholder="例：池袋駅"></div>
+        <div class="fg"><label>通勤先の最寄り駅（任意）</label><input placeholder="例：新宿駅"></div>
+      </div>
+
+      <!-- 不動産：家族・生活 -->
+      <div id="cf-re-family">
+        <div class="s-label">ご家族・同居について</div>
+        <div class="form-row three">
+          <div class="fg"><label>ご家族構成</label><select><option>おひとり</option><option>カップル</option><option>ご夫婦（お子様なし）</option><option>お子様あり（小学生以下）</option><option>お子様あり（中学生以上）</option><option>法人</option></select></div>
+          <div class="fg"><label>同居人数</label><select><option>1名</option><option>2名</option><option>3名</option><option>4名</option><option>5名以上</option></select></div>
+          <div class="fg"><label>ペット</label><select><option>なし</option><option>犬（小型）</option><option>犬（中・大型）</option><option>猫</option><option>その他</option></select></div>
+        </div>
+        <div class="form-row">
+          <div class="fg"><label>楽器演奏</label><select><option>なし</option><option>あり（ピアノ等）</option><option>あり（管楽器等）</option></select></div>
+        </div>
+      </div>
+
+      <!-- 不動産：職業・収入 -->
+      <div id="cf-re-job">
+        <div class="s-label">職業・収入について</div>
+        <div class="form-row">
+          <div class="fg"><label>ご職業</label><select><option value="">選択</option><option>会社員</option><option>公務員</option><option>自営業</option><option>フリーランス</option><option>学生</option><option>主婦・主夫</option><option>無職</option><option>その他</option></select></div>
+          <div class="fg"><label>雇用形態</label><select><option value="">選択</option><option>正社員</option><option>契約社員</option><option>派遣社員</option><option>業務委託</option><option>アルバイト</option><option>役員・代表</option></select></div>
+        </div>
+        <div class="form-row three">
+          <div class="fg"><label>勤務先名（任意）</label><input placeholder="株式会社○○"></div>
+          <div class="fg"><label>勤続年数</label><select><option value="">選択</option><option>1年未満</option><option>1〜3年</option><option>3〜5年</option><option>5〜10年</option><option>10年以上</option></select></div>
+          <div class="fg"><label>年収（税込）</label><select><option value="">選択</option><option>200万未満</option><option>200〜300万</option><option>300〜400万</option><option>400〜500万</option><option>500〜700万</option><option>700万以上</option></select></div>
+        </div>
+      </div>
+
+      <!-- 人材：現在のキャリア -->
+      <div id="cf-hr-career" style="display:none">
+        <div class="s-label">現在のお仕事について</div>
+        <div class="form-row">
+          <div class="fg"><label>現在の職種</label><input placeholder="例：不動産営業、経理"></div>
+          <div class="fg"><label>現在の業界</label><select><option value="">選択</option><option>不動産</option><option>建設・施工管理</option><option>金融・保険</option><option>IT・通信</option><option>製造業</option><option>小売・流通</option><option>医療・福祉</option><option>教育</option><option>サービス業</option><option>公務員</option><option>その他</option></select></div>
+        </div>
+        <div class="form-row three">
+          <div class="fg"><label>現在の雇用形態</label><select><option value="">選択</option><option>正社員</option><option>契約社員</option><option>派遣社員</option><option>業務委託</option><option>アルバイト</option><option>役員・代表</option><option>無職</option></select></div>
+          <div class="fg"><label>現在の年収（税込）</label><select><option value="">選択</option><option>200万未満</option><option>200〜300万</option><option>300〜400万</option><option>400〜500万</option><option>500〜700万</option><option>700〜1000万</option><option>1000万以上</option></select></div>
+          <div class="fg"><label>業界経験年数</label><select><option value="">選択</option><option>未経験</option><option>1年未満</option><option>1〜3年</option><option>3〜5年</option><option>5〜10年</option><option>10年以上</option></select></div>
+        </div>
+        <div class="form-row">
+          <div class="fg"><label>保有資格</label><input placeholder="例：宅建、管理業務主任者、FP2級"></div>
+          <div class="fg"><label>転職をお考えの理由</label><select><option value="">選択</option><option>年収アップ</option><option>キャリアアップ</option><option>職場環境</option><option>労働時間・残業</option><option>会社の安定性</option><option>業界・職種転換</option><option>独立前のステップ</option><option>その他</option></select></div>
+        </div>
+        <div class="form-row">
+          <div class="fg"><label>転職活動の状況</label><select><option value="">選択</option><option>情報収集中</option><option>積極的に活動中</option><option>内定あり・比較検討中</option><option>すでに離職済み</option></select></div>
+          <div class="fg"><label>現在のご状況</label><select><option>在職中</option><option>離職中</option></select></div>
+        </div>
+      </div>
+
+      <!-- 不動産：希望条件 -->
+      <div id="cf-re-pref">
+        <div class="s-label">お探しの物件について</div>
+        <div class="form-row">
+          <div class="fg"><label>ご希望の種別</label><select><option>賃貸</option><option>購入（新築）</option><option>購入（中古）</option><option>どちらでも</option></select></div>
+          <div class="fg"><label>ご希望のエリア</label><input placeholder="例：池袋・要町周辺"></div>
+        </div>
+        <div class="form-row three">
+          <div class="fg"><label>ご予算</label><input placeholder="例：10〜12万円" class="mono"></div>
+          <div class="fg"><label>ご希望の間取り</label><select><option value="">こだわらない</option><option>ワンルーム・1K</option><option>1DK・1LDK</option><option>2LDK</option><option>3LDK以上</option></select></div>
+          <div class="fg"><label>ご入居希望時期</label><input placeholder="例：3〜4月"></div>
+        </div>
+        <div class="fg"><label>こだわり条件（複数可）</label><div class="chip-area" id="re-chips"></div></div>
+      </div>
+
+      <!-- 人材：転職希望条件 -->
+      <div id="cf-hr-pref" style="display:none">
+        <div class="s-label">ご希望の転職条件</div>
+        <div class="form-row">
+          <div class="fg"><label>ご希望の職種</label><input placeholder="例：不動産営業、PM、事務"></div>
+          <div class="fg"><label>ご希望の業界</label><select><option value="">こだわらない</option><option>不動産</option><option>建設・施工管理</option><option>金融・保険</option><option>IT・通信</option><option>製造業</option><option>医療・福祉</option><option>その他</option></select></div>
+        </div>
+        <div class="form-row three">
+          <div class="fg"><label>ご希望の雇用形態</label><select><option>正社員</option><option>契約社員</option><option>業務委託</option><option>こだわらない</option></select></div>
+          <div class="fg"><label>ご希望の年収</label><input placeholder="例：500〜650万" class="mono"></div>
+          <div class="fg"><label>転職ご希望時期</label><select><option value="">選択</option><option>できるだけ早く</option><option>1〜3ヶ月以内</option><option>3〜6ヶ月以内</option><option>半年以上先</option></select></div>
+        </div>
+        <div class="form-row">
+          <div class="fg"><label>ご希望の勤務地</label><input placeholder="例：東京都内・リモート可"></div>
+          <div class="fg"><label>テレワークのご希望</label><select><option>どちらでもよい</option><option>リモート必須</option><option>出社を希望</option><option>週1〜2日出社程度</option></select></div>
+        </div>
+        <div class="form-row">
+          <div class="fg"><label>残業の許容度</label><select><option>なるべく少なく（月20時間未満）</option><option>ある程度OK（月20〜40時間）</option><option>繁忙期は許容（月40時間超）</option></select></div>
+          <div class="fg"><label>転勤</label><select><option>不可</option><option>関東圏内なら可</option><option>国内全般可</option><option>海外も可</option></select></div>
+        </div>
+        <div class="fg"><label>重視する条件（複数可）</label><div class="chip-area" id="hr-chips"></div></div>
+      </div>
+
+      <!-- 送信ボタン（備考なし） -->
+      <div style="margin-top:20px">
+        <button class="btn btn-gold btn-full" onclick="toast('✅ 送信しました。担当者よりご連絡します。')">送信する</button>
+        <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:8px">送信後、担当エージェントよりご連絡いたします</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast-el"></div>
+
+<script>
+// ================================================================
+// マスタデータ
+// ================================================================
+const STAFF = {
+  yamada:    { name:'山田 誠',    label:'不動産AG' },
+  takahashi: { name:'高橋 明',    label:'不動産AG' },
+  nakamura:  { name:'中村 リカ',  label:'人材AG'  },
+  sato:      { name:'佐藤 美咲',  label:'パートナー' },
+  hq:        { name:'本部スタッフ',label:'本部管理職' },
+};
+let ME = 'yamada';
+
+const DB = {
+  'CL-00244': {
+    name:'田中 花子', kana:'タナカ ハナコ', dob:'1992-05-14', gender:'女性', nationality:'日本',
+    tel:'070-1234-5678', email:'hanako@example.com',
+    addr:'東京都豊島区池袋3-1-1', station:'池袋駅', commute:'新宿駅',
+    type:'re', status:'案件進行中', caseId:'C-001', agent:'yamada', agentName:'山田 誠', reg:'2026-02-15',
+    family:'単身', occupants:'1名', pet:'なし', instrument:'なし',
+    job:'会社員', employ:'正社員', employer:'株式会社○○商事', tenure:'3〜5年', income:'400〜500万',
+    rePrefType:'賃貸', reArea:'池袋・要町 徒歩15分以内', reBudget:'¥100,000〜120,000', reMadori:'1LDK', reTiming:'3〜4月',
+    reChips:['オートロック','バストイレ別','宅配ボックス'],
+  },
+  'CL-00245': {
+    name:'山田 太郎', kana:'ヤマダ タロウ', dob:'1988-11-03', gender:'男性', nationality:'日本',
+    tel:'090-8765-4321', email:'taro@example.com',
+    addr:'東京都新宿区新宿2-2-2', station:'新宿駅', commute:'渋谷駅',
+    type:'both', status:'案件進行中', caseId:'C-002', agent:'nakamura', agentName:'中村 リカ', reg:'2026-02-17',
+    family:'カップル', occupants:'2名', pet:'なし', instrument:'なし',
+    job:'会社員', employ:'正社員', employer:'株式会社△△不動産', tenure:'5〜10年', income:'500〜700万',
+    rePrefType:'賃貸', reArea:'渋谷区・目黒区', reBudget:'¥150,000〜180,000', reMadori:'2LDK', reTiming:'即日〜',
+    reChips:['南向き','2階以上'],
+    hrCurrentJob:'不動産営業', hrCurrentIndustry:'不動産', hrCurrentEmploy:'正社員', hrCurrentIncome:'500〜700万', hrExpYears:'5〜10年', hrLicense:'宅地建物取引士', hrReason:'年収アップ', hrStatus:'積極的に活動中', hrWorking:'在職中',
+    hrJob:'不動産営業', hrIndustry:'不動産', hrEmploy:'正社員', hrIncome:'600〜750万', hrTiming:'3〜6ヶ月以内',
+    hrLocation:'東京都内', hrRemote:'どちらでもよい', hrOvertime:'繁忙期は許容', hrRelocation:'関東圏内なら可',
+    hrChips:['年収アップ優先','インセンティブ制度あり'],
+  },
+  'CL-00246': {
+    name:'鈴木 美咲', kana:'スズキ ミサキ', dob:'1995-08-22', gender:'女性', nationality:'日本',
+    tel:'080-1111-2222', email:'misaki@example.com',
+    addr:'東京都渋谷区恵比寿1-1-1', station:'恵比寿駅', commute:'渋谷駅',
+    type:'re', status:'リード', caseId:null, agent:'yamada', agentName:'山田 誠（パートナー経由）', reg:'2026-02-19',
+    family:'単身', occupants:'1名', pet:'猫', instrument:'なし',
+    job:'会社員', employ:'契約社員', employer:'—', tenure:'1〜3年', income:'300〜400万',
+    rePrefType:'賃貸', reArea:'渋谷区・目黒区・世田谷区', reBudget:'¥130,000〜150,000', reMadori:'1LDK', reTiming:'4月',
+    reChips:['ペット可','オートロック','2階以上'],
+  },
+  'CL-00247': {
+    name:'橋本 隆', kana:'ハシモト タカシ', dob:'1985-03-10', gender:'男性', nationality:'日本',
+    tel:'090-3333-4444', email:'takashi@example.com',
+    addr:'東京都世田谷区三軒茶屋2-2-2', station:'三軒茶屋駅', commute:'渋谷駅',
+    type:'hr', status:'リード', caseId:null, agent:'nakamura', agentName:'中村 リカ', reg:'2026-02-20',
+    hrCurrentJob:'施工管理・PM', hrCurrentIndustry:'建設・施工管理', hrCurrentEmploy:'正社員', hrCurrentIncome:'700〜1000万', hrExpYears:'10年以上', hrLicense:'一級建築士・宅地建物取引士', hrReason:'キャリアアップ', hrStatus:'積極的に活動中', hrWorking:'在職中',
+    hrJob:'不動産PM・施工管理', hrIndustry:'不動産', hrEmploy:'正社員', hrIncome:'800〜950万', hrTiming:'1〜3ヶ月以内',
+    hrLocation:'東京都内・神奈川', hrRemote:'週1〜2日出社程度', hrOvertime:'ある程度OK', hrRelocation:'不可',
+    hrChips:['キャリアアップ優先','管理職候補','大手・上場企業希望'],
+  },
+};
+
+// メモDB
+const NOTES = {
+  'CL-00244': [
+    { id:1, by:'yamada', byName:'山田 誠', byLabel:'不動産AG', text:'初回面談完了。職場は新宿のため池袋・要町沿線を最優先で案内予定。\n外資系勤務のため審査で確認事項あり。保証会社は数社確認中。', at:'2026/02/15 14:32', edited:null },
+    { id:2, by:'yamada', byName:'山田 誠', byLabel:'不動産AG', text:'物件A（要町徒歩5分・1LDK）を紹介済み。内見希望 → 2/22 14時で調整。', at:'2026/02/17 10:05', edited:null },
+    { id:3, by:'hq',     byName:'本部スタッフ', byLabel:'本部管理職', text:'C-001として案件登録済み。管理会社への書類送付スケジュール確認のこと。', at:'2026/02/18 09:20', edited:null },
+  ],
+  'CL-00245': [
+    { id:4, by:'nakamura', byName:'中村 リカ', byLabel:'人材AG', text:'不動産・人材両方のニーズあり。賃貸は山田AGに引き継ぎ、人材は私担当。\n転職はまだ情報収集段階。急ぎではない。', at:'2026/02/17 16:45', edited:null },
+  ],
+  'CL-00246': [
+    { id:5, by:'yamada', byName:'山田 誠', byLabel:'不動産AG', text:'パートナー（佐藤様）経由の紹介。猫を飼っているためペット可物件限定。\n恵比寿〜渋谷沿線で2〜3件リストアップ中。', at:'2026/02/19 11:15', edited:null },
+  ],
+  'CL-00247': [],
+};
+let NID = 100;
+
+// ================================================================
+// タブ
+// ================================================================
+function showTab(t, el) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+t).classList.add('active');
+  if (el) el.classList.add('active');
+  if (t==='list')   renderList();
+  if (t==='detail') { loadDetail(document.getElementById('detail-sel').value); updateNoteLabel(); }
+  if (t==='client') { buildChips(); }
+}
+
+// ================================================================
+// スタッフ切替
+// ================================================================
+function onStaffChange() {
+  ME = document.getElementById('current-staff').value;
+  const sel = document.getElementById('detail-sel');
+  if (sel && document.getElementById('tab-detail').classList.contains('active')) {
+    loadDetail(sel.value);
+    updateNoteLabel();
+  }
+}
+function updateNoteLabel() {
+  const el = document.getElementById('note-poster');
+  if (el) el.textContent = STAFF[ME].name + '（' + STAFF[ME].label + '）';
+}
+
+// ================================================================
+// 顧客一覧
+// ================================================================
+function renderList() {
+  const tbody = document.getElementById('tbl-body');
+  tbody.innerHTML = Object.entries(DB).map(([id,c])=>{
+    const nc = (NOTES[id]||[]).length;
+    return `<tr class="clickable" onclick="openDetail('${id}')">
+      <td><span style="font-family:'DM Mono',monospace;color:var(--gold)">${id}</span></td>
+      <td style="font-weight:500">${c.name}</td>
+      <td><span class="tag tag-${c.type}">${c.type==='re'?'不動産':c.type==='hr'?'人材':'両方'}</span></td>
+      <td style="font-size:11px;color:var(--sub)">${c.agentName}</td>
+      <td><span class="tag ${c.status==='案件進行中'?'tag-active':c.status==='リード'?'tag-lead':'tag-done'}">${c.status}</span></td>
+      <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--blue)">${c.caseId||'—'}</td>
+      <td style="color:${nc>0?'var(--gold)':'var(--muted)'};font-weight:${nc>0?'600':'400'}">${nc}件</td>
+      <td style="color:var(--muted);font-size:11px">${c.reg}</td>
+    </tr>`;
+  }).join('');
+}
+
+function openDetail(id) {
+  document.getElementById('detail-sel').value = id;
+  showTab('detail', document.querySelectorAll('.tab')[2]);
+}
+
+// ================================================================
+// 顧客詳細
+// ================================================================
+function loadDetail(id) {
+  const c = DB[id]; if (!c) return;
+
+  // ステータス
+  document.getElementById('detail-status').outerHTML =
+    `<span id="detail-status" class="tag ${c.status==='案件進行中'?'tag-active':c.status==='リード'?'tag-lead':'tag-done'}">${c.status}</span>`;
+
+  // 顧客データ表示
+  let h = '';
+  h += `<div class="s-label" style="margin-top:0">基本情報</div>`;
+  h += dv2('顧客ID', id, '氏名', c.name);
+  h += dv2('フリガナ', c.kana||'—', '生年月日', c.dob||'—');
+  h += dv2('性別', c.gender||'—', '国籍', c.nationality||'—');
+  h += dv2('電話番号', c.tel, 'メール', c.email||'—');
+  h += dv1('現住所', c.addr||'—');
+  h += dv2('最寄り駅', c.station||'—', '通勤先最寄', c.commute||'—');
+  h += `<div style="margin-bottom:10px"><span class="tag tag-${c.type}">${c.type==='re'?'不動産':c.type==='hr'?'人材':'両方'}</span> <span style="font-size:10px;color:var(--muted)">担当：${c.agentName}　登録：${c.reg}</span></div>`;
+
+  if (c.type==='re'||c.type==='both') {
+    h += `<div class="s-label">家族・生活（不動産）</div>`;
+    h += dv3('家族構成', c.family||'—', '同居人数', c.occupants||'—', 'ペット', c.pet||'—');
+    h += dv1('楽器演奏', c.instrument||'—');
+    h += `<div class="s-label">職業・収入（入居審査）</div>`;
+    h += dv2('職業', c.job||'—', '雇用形態', c.employ||'—');
+    h += dv3('勤務先', c.employer||'—', '勤続年数', c.tenure||'—', '年収', c.income||'—');
+    h += `<div class="s-label">不動産希望条件</div>`;
+    h += dv2('種別', c.rePrefType||'—', '希望エリア', c.reArea||'—');
+    h += dv3('予算', c.reBudget||'—', '間取り', c.reMadori||'—', '時期', c.reTiming||'—');
+    if (c.reChips?.length) h += chips(c.reChips, 'rgba(201,168,76,0.12)', 'var(--gold)');
+  }
+  if (c.type==='hr'||c.type==='both') {
+    h += `<div class="s-label">現在のキャリア（人材）</div>`;
+    h += dv2('現在の職種', c.hrCurrentJob||'—', '業界', c.hrCurrentIndustry||'—');
+    h += dv3('雇用形態', c.hrCurrentEmploy||'—', '現在の年収', c.hrCurrentIncome||'—', '経験年数', c.hrExpYears||'—');
+    h += dv2('保有資格', c.hrLicense||'—', '転職理由', c.hrReason||'—');
+    h += dv2('転職活動状況', c.hrStatus||'—', '在職・離職', c.hrWorking||'—');
+    h += `<div class="s-label">転職希望条件</div>`;
+    h += dv2('希望職種', c.hrJob||'—', '希望業界', c.hrIndustry||'—');
+    h += dv3('雇用形態', c.hrEmploy||'—', '希望年収', c.hrIncome||'—', '希望時期', c.hrTiming||'—');
+    h += dv2('希望勤務地', c.hrLocation||'—', 'テレワーク', c.hrRemote||'—');
+    h += dv2('残業許容度', c.hrOvertime||'—', '転勤', c.hrRelocation||'—');
+    if (c.hrChips?.length) h += chips(c.hrChips, 'rgba(34,197,94,0.12)', 'var(--green)');
+  }
+
+  document.getElementById('customer-view').innerHTML = h;
+
+  // 追記フォーム
+  let af = '';
+  if (c.type==='re'||c.type==='both') {
+    af += `<div style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">不動産追記</div>`;
+    af += `<div class="form-row"><div class="fg"><label>過去の審査落ち</label><select><option>なし</option><option>あり（詳細はメモへ）</option></select></div><div class="fg"><label>保証人</label><select><option>あり</option><option>なし（保証会社）</option><option>未定</option></select></div></div>`;
+    af += `<div class="form-row single"><div class="fg"><label>審査補足</label><input placeholder="例：源泉徴収票確認済、保証会社○○にて審査通過"></div></div>`;
+  }
+  if (c.type==='hr'||c.type==='both') {
+    if (c.type==='both') af += `<div style="border-top:1px solid var(--border);margin:12px 0"></div>`;
+    af += `<div style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">人材追記</div>`;
+    af += `<div class="form-row"><div class="fg"><label>面談実施</label><select><option>未実施</option><option>実施済み</option></select></div><div class="fg"><label>内定状況</label><select><option>なし</option><option>選考中</option><option>内定あり</option></select></div></div>`;
+    af += `<div class="form-row single"><div class="fg"><label>非公開希望企業・NGワード</label><input placeholder="例：現職（株式会社□□建設）には応募不可"></div></div>`;
+  }
+  document.getElementById('addl-form').innerHTML = af || '<div style="font-size:12px;color:var(--muted)">追記項目なし</div>';
+
+  // メモ
+  renderNotes(id);
+  updateNoteLabel();
+}
+
+function dv1(l,v) {
+  const e = !v||v==='—';
+  return `<div style="margin-bottom:10px"><div class="dv-item"><div class="dv-label">${l}</div><div class="dv-val ${e?'dv-empty':''}">${v||'—'}</div></div></div>`;
+}
+function dv2(l1,v1,l2,v2) {
+  return `<div class="dv-row" style="margin-bottom:8px">
+    <div class="dv-item"><div class="dv-label">${l1}</div><div class="dv-val ${(!v1||v1==='—')?'dv-empty':''}">${v1||'—'}</div></div>
+    <div class="dv-item"><div class="dv-label">${l2}</div><div class="dv-val ${(!v2||v2==='—')?'dv-empty':''}">${v2||'—'}</div></div>
+  </div>`;
+}
+function dv3(l1,v1,l2,v2,l3,v3) {
+  return `<div class="dv-row three" style="margin-bottom:8px">
+    <div class="dv-item"><div class="dv-label">${l1}</div><div class="dv-val ${(!v1||v1==='—')?'dv-empty':''}">${v1||'—'}</div></div>
+    <div class="dv-item"><div class="dv-label">${l2}</div><div class="dv-val ${(!v2||v2==='—')?'dv-empty':''}">${v2||'—'}</div></div>
+    <div class="dv-item"><div class="dv-label">${l3}</div><div class="dv-val ${(!v3||v3==='—')?'dv-empty':''}">${v3||'—'}</div></div>
+  </div>`;
+}
+function chips(arr, bg, color) {
+  return `<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px">${arr.map(x=>`<span style="background:${bg};color:${color};padding:2px 9px;border-radius:12px;font-size:11px">${x}</span>`).join('')}</div>`;
+}
+
+// ================================================================
+// メモ
+// ================================================================
+function renderNotes(id) {
+  const notes = NOTES[id]||[];
+  const el = document.getElementById('note-list');
+  if (!notes.length) {
+    el.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:8px 0 12px">まだメモはありません。下のフォームから追記してください。</div>`;
+    return;
+  }
+  el.innerHTML = notes.map(n => {
+    const canEdit = (n.by === ME) || (ME === 'hq');
+    return `
+    <div class="note-card ${n.by===ME?'mine':''}" id="nc-${n.id}">
+      <div class="note-header">
+        <div>
+          <div class="note-author">
+            ${n.byName}
+            <span style="font-size:10px;color:var(--muted);font-weight:400;margin-left:4px">${n.byLabel}</span>
+            ${n.by===ME ? `<span class="pb pb-own" style="margin-left:6px">自分</span>` : ''}
+            ${ME==='hq'&&n.by!==ME ? `<span class="pb pb-hq" style="margin-left:6px">本部</span>` : ''}
+            ${!canEdit ? `<span class="pb pb-lock" style="margin-left:6px">閲覧のみ</span>` : ''}
+          </div>
+          <div class="note-time">${n.at}${n.edited?` <span style="color:var(--muted)">（編集済：${n.edited}）</span>`:''}</div>
+        </div>
+        ${canEdit ? `
+        <div style="display:flex;gap:4px">
+          <button class="btn-ghost" onclick="startEdit(${n.id})">編集</button>
+          <button class="btn-danger" onclick="delNote(${n.id},'${id}')">削除</button>
+        </div>` : ''}
+      </div>
+      <div class="note-body" id="nb-${n.id}">${escHtml(n.text)}</div>
+    </div>`;
+  }).join('');
+}
+
+function addNote() {
+  const inp = document.getElementById('note-input');
+  const txt = inp.value.trim();
+  if (!txt) { toast('⚠️ メモを入力してください'); return; }
+  const id = document.getElementById('detail-sel').value;
+  if (!NOTES[id]) NOTES[id]=[];
+  NOTES[id].push({ id:NID++, by:ME, byName:STAFF[ME].name, byLabel:STAFF[ME].label, text:txt, at:nowStr(), edited:null });
+  inp.value='';
+  renderNotes(id);
+  toast('✅ メモを投稿しました');
+}
+
+function startEdit(nid) {
+  const nb = document.getElementById('nb-'+nid);
+  const nc = document.getElementById('nc-'+nid);
+  const orig = nb.innerText;
+  nc.classList.add('editing');
+  nb.innerHTML = `
+    <textarea class="note-edit-textarea" id="ea-${nid}">${orig}</textarea>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+      <button class="btn btn-outline btn-sm" onclick="cancelEdit(${nid},\`${orig.replace(/`/g,'\\`')}\`)">キャンセル</button>
+      <button class="btn btn-gold btn-sm" onclick="saveEdit(${nid})">保存</button>
+    </div>`;
+  document.getElementById('ea-'+nid).focus();
+}
+
+function cancelEdit(nid, orig) {
+  const nb = document.getElementById('nb-'+nid);
+  const nc = document.getElementById('nc-'+nid);
+  nb.className = 'note-body';
+  nb.textContent = orig;
+  nc.classList.remove('editing');
+}
+
+function saveEdit(nid) {
+  const txt = document.getElementById('ea-'+nid).value.trim();
+  if (!txt) { toast('⚠️ 内容を入力してください'); return; }
+  const id = document.getElementById('detail-sel').value;
+  const n = (NOTES[id]||[]).find(x=>x.id===nid);
+  if (n) { n.text=txt; n.edited=nowStr(); }
+  renderNotes(id);
+  toast('✅ メモを更新しました');
+}
+
+function delNote(nid, cid) {
+  if (!confirm('このメモを削除しますか？')) return;
+  NOTES[cid] = (NOTES[cid]||[]).filter(n=>n.id!==nid);
+  renderNotes(cid);
+  toast('🗑 メモを削除しました');
+}
+
+function nowStr() {
+  const d=new Date();
+  return `${d.getFullYear()}/${p(d.getMonth()+1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+function p(n){return String(n).padStart(2,'0');}
+function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+// ================================================================
+// 送付モード切替
+// ================================================================
+function setMode(m) {
+  document.getElementById('mode-a').classList.toggle('active', m==='send');
+  document.getElementById('mode-b').classList.toggle('active', m==='staff');
+  document.getElementById('send-section').style.display   = m==='send'  ?'block':'none';
+  document.getElementById('staff-section').style.display  = m==='staff' ?'block':'none';
+}
+
+// ================================================================
+// 顧客フォーム 種別切替
+// ================================================================
+function updateCF() {
+  const v = document.getElementById('cf-type').value;
+  const re = v==='re'||v==='both';
+  const hr = v==='hr'||v==='both';
+  document.getElementById('cf-re-family').style.display = re?'block':'none';
+  document.getElementById('cf-re-job').style.display    = re?'block':'none';
+  document.getElementById('cf-re-pref').style.display   = re?'block':'none';
+  document.getElementById('cf-hr-career').style.display = hr?'block':'none';
+  document.getElementById('cf-hr-pref').style.display   = hr?'block':'none';
+}
+
+// ================================================================
+// チップ
+// ================================================================
+const RE_CHIPS=['ペット可','楽器可','事務所利用可','駐車場必須','バストイレ別','2階以上','オートロック','宅配ボックス','南向き','リノベーション済','新築・築浅'];
+const HR_CHIPS=['年収アップ優先','キャリアアップ優先','安定重視','大手・上場企業希望','ベンチャー歓迎','フルリモート希望','副業OK','服装自由','資格取得支援','産育休取得実績','管理職候補','インセンティブ制度あり'];
+const reOn=new Set(), hrOn=new Set();
+
+function buildChips() {
+  buildChipArea('re-chips', RE_CHIPS, reOn, 'rgba(201,168,76,0.2)', 'rgba(201,168,76,0.6)', 'var(--gold)', 'buildChips');
+  buildChipArea('hr-chips', HR_CHIPS, hrOn, 'rgba(34,197,94,0.15)', 'rgba(34,197,94,0.4)', 'var(--green)', 'buildChips');
+}
+function buildChipArea(areaId, list, set, bgOn, bordOn, colorOn, rebuild) {
+  const el = document.getElementById(areaId); if (!el) return;
+  el.innerHTML='';
+  list.forEach(c=>{
+    const on=set.has(c);
+    const btn=document.createElement('button');
+    btn.textContent=(on?'✓ ':'')+c;
+    btn.style.cssText=`padding:5px 11px;border-radius:20px;font-size:11px;cursor:pointer;font-family:inherit;transition:all .15s;background:${on?bgOn:'rgba(37,42,56,0.6)'};border:${on?`1px solid ${bordOn}`:'1px solid rgba(37,42,56,0.8)'};color:${on?colorOn:'var(--muted)'}`;
+    btn.onclick=()=>{on?set.delete(c):set.add(c);window[rebuild]();};
+    el.appendChild(btn);
+  });
+}
+
+// ================================================================
+// Toast
+// ================================================================
+function toast(msg) {
+  const el=document.getElementById('toast-el');
+  el.textContent=msg; el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),3000);
+}
+
+// ================================================================
+// 初期化
+// ================================================================
+renderList();
+buildChips();
+</script>
+</body>
+</html>

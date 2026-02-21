@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CORETO ランクダッシュボード</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090f;--card:#0f1119;--card2:#141720;--border:#1e2235;--border2:#252a3d;
+  --gold:#c9a84c;--gold-l:#e8c96a;--gold-dim:#7a5f22;
+  --blue:#4f9cf9;--green:#34d399;--red:#f87171;--orange:#fb923c;--purple:#a78bfa;
+  --teal:#2dd4bf;--muted:#4a5270;--sub:#7a849e;--text:#e2e6f3;
+  --bronze:#cd7f32;--bronze-bg:rgba(205,127,50,.12);--bronze-bd:rgba(205,127,50,.3);
+  --silver:#c0c0c0;--silver-bg:rgba(192,192,192,.1);--silver-bd:rgba(192,192,192,.25);
+  --gold-bg:rgba(201,168,76,.12);--gold-bd:rgba(201,168,76,.3);
+  --plat:#a78bfa;--plat-bg:rgba(167,139,250,.12);--plat-bd:rgba(167,139,250,.3);
+}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* ─ Header ─ */
+.header{display:flex;align-items:center;justify-content:space-between;padding:0 28px;height:54px;
+  border-bottom:1px solid var(--border);background:rgba(7,9,15,.9);backdrop-filter:blur(12px);
+  position:sticky;top:0;z-index:100}
+.logo{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--gold);letter-spacing:3px}
+.hdr-right{display:flex;align-items:center;gap:14px}
+.hdr-name{font-size:13px;font-weight:700}
+.hdr-id{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)}
+
+/* ─ Body ─ */
+.body{max-width:1280px;margin:0 auto;padding:24px 28px 60px}
+
+/* ─ Rank Hero ─ */
+.rank-hero{border-radius:20px;padding:32px 36px;margin-bottom:24px;
+  overflow:hidden;border:1px solid;position:relative}
+.rank-hero::after{content:'';position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(ellipse 60% 80% at 100% 50%,var(--hero-glow,transparent),transparent)}
+.rank-hero.bronze{border-color:var(--bronze-bd);background:linear-gradient(135deg,rgba(205,127,50,.08),rgba(7,9,15,0));--hero-glow:rgba(205,127,50,.06)}
+.rank-hero.silver{border-color:var(--silver-bd);background:linear-gradient(135deg,rgba(192,192,192,.07),rgba(7,9,15,0));--hero-glow:rgba(192,192,192,.05)}
+.rank-hero.gold{border-color:var(--gold-bd);background:linear-gradient(135deg,rgba(201,168,76,.1),rgba(7,9,15,0));--hero-glow:rgba(201,168,76,.08)}
+.rank-hero.platinum{border-color:var(--plat-bd);background:linear-gradient(135deg,rgba(167,139,250,.1),rgba(7,9,15,0));--hero-glow:rgba(167,139,250,.08)}
+.hero-bg-txt{position:absolute;right:-16px;top:-24px;font-family:'Syne',sans-serif;
+  font-size:140px;font-weight:800;opacity:.04;pointer-events:none;line-height:1;user-select:none}
+
+.hero-grid{display:grid;grid-template-columns:auto 1fr auto;gap:32px;align-items:center;position:relative;z-index:1}
+
+/* rank emblem */
+.emblem-wrap{display:flex;flex-direction:column;align-items:center;gap:8px}
+.emblem{width:84px;height:84px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-size:38px;border:2px solid;position:relative}
+.emblem.bronze{background:var(--bronze-bg);border-color:var(--bronze-bd)}
+.emblem.silver{background:var(--silver-bg);border-color:var(--silver-bd)}
+.emblem.gold{background:var(--gold-bg);border-color:var(--gold-bd)}
+.emblem.platinum{background:var(--plat-bg);border-color:var(--plat-bd)}
+.emblem-label{font-family:'Syne',sans-serif;font-size:12px;font-weight:800;letter-spacing:3px}
+.emblem-label.bronze{color:var(--bronze)}
+.emblem-label.silver{color:var(--silver)}
+.emblem-label.gold{color:var(--gold)}
+.emblem-label.platinum{color:var(--plat)}
+.perm-badge{font-size:9px;padding:2px 7px;border-radius:3px;font-weight:700;letter-spacing:.5px}
+.perm-1yr{background:rgba(52,211,153,.12);color:var(--green);border:1px solid rgba(52,211,153,.25)}
+.perm-forever{background:rgba(201,168,76,.15);color:var(--gold);border:1px solid var(--gold-dim)}
+
+/* hero center */
+.hero-name{font-size:26px;font-weight:700;margin-bottom:4px}
+.hero-sub{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:16px}
+.hero-stats{display:flex;gap:28px;flex-wrap:wrap}
+.hstat{display:flex;flex-direction:column;gap:3px}
+.hstat-val{font-family:'DM Mono',monospace;font-size:20px;font-weight:500;line-height:1}
+.hstat-label{font-size:9px;color:var(--muted);letter-spacing:.5px}
+.hdiv{width:1px;background:var(--border2);align-self:stretch}
+
+/* hero right: points this month */
+.pts-box{background:rgba(0,0,0,.3);border:1px solid var(--border2);border-radius:16px;
+  padding:18px 20px;min-width:230px}
+.pts-title{font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:14px}
+.pts-total{display:flex;align-items:baseline;gap:8px;margin-bottom:14px}
+.pts-total-val{font-family:'DM Mono',monospace;font-size:40px;font-weight:500;color:var(--gold);line-height:1}
+.pts-total-unit{font-size:11px;color:var(--sub)}
+.pts-breakdown{display:flex;flex-direction:column;gap:7px}
+.pb-row{display:flex;align-items:center;gap-6px;font-size:11px}
+.pb-icon{font-size:13px;width:20px;flex-shrink:0}
+.pb-label{color:var(--sub);flex:1}
+.pb-val{font-family:'DM Mono',monospace;color:var(--text);font-weight:600;min-width:40px;text-align:right}
+.pb-bar{height:3px;border-radius:2px;margin-top:3px;transition:width .5s}
+
+/* ─ Point gauge ─ */
+.pt-gauge-wrap{margin-top:16px;padding-top:14px;border-top:1px solid var(--border2)}
+.gauge-track{position:relative;height:10px;background:var(--border2);border-radius:5px;overflow:visible;margin:8px 0}
+.gauge-fill{height:100%;border-radius:5px;transition:width .6s cubic-bezier(.4,0,.2,1);position:relative}
+.gauge-marks{display:flex;justify-content:space-between;position:relative;margin-top:4px}
+.gauge-mark{font-size:9px;color:var(--muted);font-family:'DM Mono',monospace}
+.gauge-needle{position:absolute;top:-5px;width:2px;height:20px;border-radius:1px;background:white;
+  transform:translateX(-50%);transition:left .6s cubic-bezier(.4,0,.2,1);z-index:2}
+.gauge-zones{display:flex;gap:0;margin-top:3px}
+.gz{flex:1;text-align:center;font-size:8px;padding:2px 0;border-radius:2px;font-weight:700}
+
+/* ─ Tabs ─ */
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:20px}
+.tab{padding:9px 18px;font-size:11px;font-weight:600;cursor:pointer;color:var(--muted);
+  border-bottom:2px solid transparent;transition:all .15s;letter-spacing:.5px;white-space:nowrap}
+.tab.on{color:var(--gold);border-bottom-color:var(--gold)}
+.tab:hover:not(.on){color:var(--sub)}
+.tp{display:none}.tp.on{display:block}
+
+/* ─ Grid ─ */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px}
+
+/* ─ Card ─ */
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px}
+.card-t{font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;
+  margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.card-t::before{content:'';width:3px;height:12px;background:var(--gold);border-radius:2px}
+
+/* ─ Rank road ─ */
+.rank-road{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.rr-node{background:var(--card2);border-radius:12px;padding:14px;text-align:center;
+  border:1px solid var(--border2);position:relative;transition:all .2s}
+.rr-node.current{border-color:var(--node-color,var(--gold));box-shadow:0 0 0 3px var(--node-glow,rgba(201,168,76,.1))}
+.rr-icon{font-size:28px;margin-bottom:6px}
+.rr-name{font-size:11px;font-weight:800;letter-spacing:2px;margin-bottom:4px}
+.rr-pts{font-family:'DM Mono',monospace;font-size:11px;color:var(--sub);margin-bottom:6px}
+.rr-rate-re{font-size:10px;margin-bottom:1px}
+.rr-rate-hr{font-size:10px;margin-bottom:4px}
+.rr-fee{font-size:9px;color:var(--muted)}
+.rr-mentor{font-size:9px;color:var(--green);margin-top:3px}
+.cur-chip{position:absolute;top:-9px;left:50%;transform:translateX(-50%);
+  background:var(--gold);color:#0a0c10;font-size:8px;font-weight:800;
+  padding:2px 8px;border-radius:4px;white-space:nowrap}
+.rr-node.locked{opacity:.35}
+.rr-node.achieved{border-color:rgba(52,211,153,.3)}
+
+/* ─ Stability tracker ─ */
+.stability-card{padding:0;overflow:hidden}
+.stab-hd{padding:18px 20px 14px;border-bottom:1px solid var(--border)}
+.stab-grid{display:grid;grid-template-columns:1fr 1fr;gap:0}
+.stab-col{padding:16px 20px}
+.stab-col:first-child{border-right:1px solid var(--border)}
+.stab-col-title{font-size:9px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px}
+.stab-progress{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.stab-num{font-family:'DM Mono',monospace;font-size:28px;font-weight:500;line-height:1}
+.stab-denom{font-size:12px;color:var(--sub);margin-top:2px}
+.stab-bar{flex:1;background:var(--border2);height:6px;border-radius:3px;overflow:hidden}
+.stab-bar-fill{height:100%;border-radius:3px;transition:width .6s}
+.stab-label{font-size:11px;color:var(--sub);line-height:1.7}
+.stab-reward{font-size:10px;color:var(--green);margin-top:6px;font-weight:600}
+
+/* ─ Month history table ─ */
+.month-table{width:100%;border-collapse:collapse;font-size:11px}
+.month-table th{padding:7px 10px;font-size:9px;color:var(--muted);font-weight:600;
+  border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
+.month-table td{padding:8px 10px;border-bottom:1px solid rgba(30,34,53,.5);vertical-align:middle}
+.month-table tr:last-child td{border:none}
+.month-table tr.cur td{background:rgba(79,156,249,.05)}
+.mono{font-family:'DM Mono',monospace}
+.rank-chip{display:inline-flex;padding:2px 8px;border-radius:4px;font-size:9px;font-weight:800;letter-spacing:1px}
+.rc-bronze{background:var(--bronze-bg);color:var(--bronze);border:1px solid var(--bronze-bd)}
+.rc-silver{background:var(--silver-bg);color:var(--silver);border:1px solid var(--silver-bd)}
+.rc-gold{background:var(--gold-bg);color:var(--gold);border:1px solid var(--gold-bd)}
+.rc-platinum{background:var(--plat-bg);color:var(--plat);border:1px solid var(--plat-bd)}
+
+/* ─ Mentor ─ */
+.mentor-row{display:flex;align-items:center;gap:12px;background:var(--card2);
+  border-radius:10px;padding:12px 14px;margin-bottom:8px}
+.m-avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-size:18px;flex-shrink:0}
+.m-info{flex:1}
+.m-name{font-size:12px;font-weight:700}
+.m-rank-badge{display:inline-block;font-size:8px;font-weight:800;padding:1px 6px;
+  border-radius:3px;margin-top:2px;letter-spacing:1px}
+.m-right{text-align:right}
+.m-reward{font-family:'DM Mono',monospace;font-size:13px;color:var(--green);font-weight:600}
+.m-pts{font-size:10px;color:var(--muted);margin-top:2px}
+
+/* ─ Simulator ─ */
+.sim-rb{padding:6px 14px;border-radius:7px;font-size:11px;font-weight:700;margin-right:5px;margin-bottom:5px;
+  border:1px solid var(--border2);background:transparent;color:var(--muted);
+  cursor:pointer;font-family:'Noto Sans JP',sans-serif;transition:all .15s;display:inline-block}
+.sim-rb.on{background:rgba(201,168,76,.12);border-color:var(--gold-dim);color:var(--gold)}
+.rt-row{display:flex;justify-content:space-between;align-items:center;
+  padding:7px 0;border-bottom:1px solid rgba(30,34,53,.6);font-size:12px}
+.rt-row:last-child{border:none;padding-top:10px;font-weight:700}
+.rt-key{color:var(--sub)}
+.rt-val{font-family:'DM Mono',monospace}
+.rt-minus{color:var(--red)}
+
+/* ─ Compare grid ─ */
+.cmp-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:12px}
+.cmp-cell{background:var(--card2);border-radius:9px;padding:12px;text-align:center;
+  border:1px solid var(--border2)}
+.cmp-cell.cur{border-color:var(--gold-bd);background:var(--gold-bg)}
+
+/* ─ Misc ─ */
+.alert-box{border-radius:9px;padding:10px 14px;font-size:11px;line-height:1.8;margin-bottom:12px}
+.ab-info{background:rgba(79,156,249,.06);border:1px solid rgba(79,156,249,.2);color:var(--blue)}
+.ab-warn{background:rgba(251,146,60,.06);border:1px solid rgba(251,146,60,.2);color:var(--orange)}
+.ab-ok{background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.2);color:var(--green)}
+.tag{display:inline-block;font-size:9px;padding:1px 6px;border-radius:3px;font-weight:700}
+
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div style="display:flex;align-items:center;gap:12px">
+    <div class="logo">CORETO</div>
+    <div style="width:1px;height:18px;background:var(--border2)"></div>
+    <div style="font-size:10px;color:var(--muted);letter-spacing:1px">ランクダッシュボード</div>
+  </div>
+  <div class="hdr-right">
+    <div>
+      <div class="hdr-name" id="hdr-name">—</div>
+      <div class="hdr-id" id="hdr-id">—</div>
+    </div>
+    <button onclick="history.back()"
+      style="font-size:10px;padding:5px 12px;border-radius:6px;border:1px solid var(--border2);
+      background:transparent;color:var(--muted);cursor:pointer;font-family:'Noto Sans JP',sans-serif">
+      ← 戻る
+    </button>
+  </div>
+</div>
+
+<div class="body">
+
+<!-- ① Rank Hero -->
+<div class="rank-hero" id="rank-hero">
+  <div class="hero-bg-txt" id="hero-bg-txt"></div>
+  <div class="hero-grid">
+
+    <!-- 左：ランク -->
+    <div class="emblem-wrap">
+      <div class="emblem" id="emblem"></div>
+      <div class="emblem-label" id="emblem-label"></div>
+      <div id="perm-badge"></div>
+    </div>
+
+    <!-- 中：基本情報 -->
+    <div>
+      <div class="hero-name" id="hero-name">—</div>
+      <div class="hero-sub" id="hero-sub">—</div>
+      <div class="hero-stats">
+        <div class="hstat">
+          <div class="hstat-val" id="hs-rate" style="color:var(--gold)">—</div>
+          <div class="hstat-label">報酬率（不動産）</div>
+        </div>
+        <div class="hdiv"></div>
+        <div class="hstat">
+          <div class="hstat-val" id="hs-rate-hr">—</div>
+          <div class="hstat-label">報酬率（人材）</div>
+        </div>
+        <div class="hdiv"></div>
+        <div class="hstat">
+          <div class="hstat-val" id="hs-mentor-rate" style="color:var(--green)">—</div>
+          <div class="hstat-label">メンター報酬率</div>
+        </div>
+        <div class="hdiv"></div>
+        <div class="hstat">
+          <div class="hstat-val" id="hs-fee">—</div>
+          <div class="hstat-label">月会費</div>
+        </div>
+        <div class="hdiv"></div>
+        <div class="hstat">
+          <div class="hstat-val" id="hs-cum-pts">—</div>
+          <div class="hstat-label">累計成約件数</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右：今月ポイント -->
+    <div class="pts-box">
+      <div class="pts-title">今月のポイント</div>
+      <div class="pts-total">
+        <div class="pts-total-val" id="pts-total">—</div>
+        <div class="pts-total-unit">pt</div>
+      </div>
+      <div class="pts-breakdown" id="pts-breakdown"></div>
+
+      <!-- ゲージ -->
+      <div class="pt-gauge-wrap">
+        <div style="font-size:9px;color:var(--muted);margin-bottom:6px">ランク帯</div>
+        <div class="gauge-track">
+          <div class="gauge-fill" id="gauge-fill"></div>
+          <div class="gauge-needle" id="gauge-needle"></div>
+        </div>
+        <div class="gauge-marks">
+          <span class="gauge-mark">0</span>
+          <span class="gauge-mark">10</span>
+          <span class="gauge-mark">20</span>
+          <span class="gauge-mark">30</span>
+          <span class="gauge-mark">40+</span>
+        </div>
+        <div class="gauge-zones" style="margin-top:4px;gap:4px">
+          <div class="gz" style="background:var(--bronze-bg);color:var(--bronze);flex:10">Bronze<br><span style="font-size:7px;font-weight:400">〜9</span></div>
+          <div class="gz" style="background:var(--silver-bg);color:var(--silver);flex:10">Silver<br><span style="font-size:7px;font-weight:400">10〜19</span></div>
+          <div class="gz" style="background:var(--gold-bg);color:var(--gold);flex:10">Gold<br><span style="font-size:7px;font-weight:400">20〜29</span></div>
+          <div class="gz" style="background:var(--plat-bg);color:var(--plat);flex:10">Platinum<br><span style="font-size:7px;font-weight:400">30+</span></div>
+        </div>
+        <div style="font-size:10px;margin-top:8px" id="gauge-label"></div>
+      </div>
+    </div>
+  </div>
+</div><!-- /rank-hero -->
+
+<!-- Tabs -->
+<div class="tabs">
+  <div class="tab on" onclick="switchTab(0,this)">📊 サマリー</div>
+  <div class="tab" onclick="switchTab(1,this)">📅 月次ポイント履歴</div>
+  <div class="tab" onclick="switchTab(2,this)">🔒 ランク保証</div>
+  <div class="tab" onclick="switchTab(3,this)">🎓 メンター</div>
+  <div class="tab" onclick="switchTab(4,this)">💰 シミュレーター</div>
+</div>
+
+<!-- ─ TAB 0: サマリー ─ -->
+<div class="tp on" id="tp-0">
+  <div class="g2">
+    <!-- ランクロード -->
+    <div class="card" style="grid-column:span 2">
+      <div class="card-t">ランクロード ／ ポイント制</div>
+      <div class="rank-road" id="rank-road"></div>
+      <div class="alert-box ab-info" style="margin-top:14px;margin-bottom:0">
+        📌 <strong>ポイント計算：</strong>
+        仲介手数料 <strong>¥10万ごと＋1pt</strong>　案件完遂 <strong>1件＋1pt</strong>　メンター報酬 <strong>¥5,000ごと＋1pt</strong>
+        　｜　判定：<strong>月末</strong>　→　翌月ランク確定
+      </div>
+    </div>
+  </div>
+
+  <div class="g3">
+    <!-- 今月実績 -->
+    <div class="card">
+      <div class="card-t">今月の実績</div>
+      <div style="display:flex;flex-direction:column;gap:10px" id="cur-stats"></div>
+    </div>
+    <!-- 直近6ヶ月 -->
+    <div class="card" style="grid-column:span 2">
+      <div class="card-t">直近6ヶ月のポイント推移</div>
+      <div id="mini-bars"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ─ TAB 1: 月次履歴 ─ -->
+<div class="tp" id="tp-1">
+  <div class="card">
+    <div class="card-t">月次ポイント履歴（直近12ヶ月）</div>
+    <div class="alert-box ab-info" style="margin-bottom:14px">
+      💡 手数料ポイント＝手数料合計 ÷ ¥10万（切り捨て）　案件ポイント＝完遂件数　メンターポイント＝メンター報酬 ÷ ¥5,000（切り捨て）
+    </div>
+    <div style="overflow-x:auto">
+      <table class="month-table" id="history-table"></table>
+    </div>
+  </div>
+</div>
+
+<!-- ─ TAB 2: ランク保証 ─ -->
+<div class="tp" id="tp-2">
+  <div class="g2">
+    <div class="card stability-card">
+      <div class="stab-hd">
+        <div class="card-t" style="margin-bottom:0">ランク保証システム</div>
+      </div>
+      <div class="stab-grid">
+        <div class="stab-col">
+          <div class="stab-col-title">📅 6ヶ月継続 → 1年保証</div>
+          <div class="stab-progress">
+            <div>
+              <div class="stab-num" id="stab-6m-cur" style="color:var(--green)">—</div>
+              <div class="stab-denom">/ 6ヶ月</div>
+            </div>
+            <div style="flex:1">
+              <div class="stab-bar"><div class="stab-bar-fill" id="stab-6m-bar" style="background:var(--green)"></div></div>
+            </div>
+          </div>
+          <div class="stab-label" id="stab-6m-label">—</div>
+          <div class="stab-reward" id="stab-6m-reward"></div>
+        </div>
+        <div class="stab-col">
+          <div class="stab-col-title">🏆 3年継続 → 永久保証</div>
+          <div class="stab-progress">
+            <div>
+              <div class="stab-num" id="stab-3y-cur" style="color:var(--gold)">—</div>
+              <div class="stab-denom">/ 36ヶ月</div>
+            </div>
+            <div style="flex:1">
+              <div class="stab-bar"><div class="stab-bar-fill" id="stab-3y-bar" style="background:var(--gold)"></div></div>
+            </div>
+          </div>
+          <div class="stab-label" id="stab-3y-label">—</div>
+          <div class="stab-reward" id="stab-3y-reward"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-t">保証ルールの詳細</div>
+      <div style="display:flex;flex-direction:column;gap:10px;font-size:11px">
+        <div style="background:var(--card2);border-radius:9px;padding:13px;border-left:2px solid var(--green)">
+          <div style="font-weight:700;color:var(--green);margin-bottom:5px">📅 6ヶ月継続達成</div>
+          <div style="color:var(--sub);line-height:1.9">
+            同ランク以上を6ヶ月連続で維持すると<br>
+            達成した翌月から <strong style="color:var(--text)">1年間</strong> そのランクが保証されます。<br>
+            保証期間中はポイントが下回ってもランクを維持。
+          </div>
+        </div>
+        <div style="background:var(--card2);border-radius:9px;padding:13px;border-left:2px solid var(--gold)">
+          <div style="font-weight:700;color:var(--gold);margin-bottom:5px">🏆 3年継続達成</div>
+          <div style="color:var(--sub);line-height:1.9">
+            同ランク以上を36ヶ月連続で維持すると<br>
+            <strong style="color:var(--gold)">永久にそのランクが保証</strong> されます。<br>
+            ポイントに関わらず、ランクは変動しません。
+          </div>
+        </div>
+        <div style="background:var(--card2);border-radius:9px;padding:13px">
+          <div style="font-weight:700;margin-bottom:5px">📝 保証の上位互換</div>
+          <div style="color:var(--sub);line-height:1.9">
+            Goldで1年保証取得後にPlatinumを達成した場合、<br>
+            Platinum継続のカウントが新たにスタートします。<br>
+            上位ランクを達成するほど保証も強固になります。
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-t">ランク保証 月別履歴</div>
+    <div style="overflow-x:auto">
+      <table class="month-table" id="stab-table"></table>
+    </div>
+  </div>
+</div>
+
+<!-- ─ TAB 3: メンター ─ -->
+<div class="tp" id="tp-3">
+  <div class="g2">
+    <div class="card">
+      <div class="card-t">育成エージェント一覧</div>
+      <div id="mentor-list"></div>
+      <div style="margin-top:12px;padding:12px 14px;background:var(--card2);
+                  border-radius:9px;font-size:10px;color:var(--sub)">
+        ✅ メンター登録は本部へ申請。育成エージェントの成約ごとにメンター報酬が付与され、<br>
+        報酬÷¥5,000のポイントが <strong style="color:var(--text)">あなたのポイントに加算</strong> されます。
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-t">メンター報酬率（ランク別）</div>
+      <div style="display:flex;flex-direction:column;gap:8px" id="mentor-rate-table"></div>
+      <div style="margin-top:14px;padding:12px 14px;background:var(--card2);
+                  border-radius:9px;font-size:11px;color:var(--sub)">
+        <div style="font-weight:700;color:var(--text);margin-bottom:5px">計算例（Gold / 7%の場合）</div>
+        育成エージェントの仲介手数料 <span style="color:var(--text)">¥300,000</span><br>
+        → メンター報酬：¥300,000 × <span style="color:var(--green);font-weight:700">7% = ¥21,000</span><br>
+        → ポイント加算：¥21,000 ÷ ¥5,000 = <span style="color:var(--gold);font-weight:700">4pt</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─ TAB 4: シミュレーター ─ -->
+<div class="tp" id="tp-4">
+  <div class="g2">
+    <div class="card">
+      <div class="card-t">ポイント＆報酬シミュレーター</div>
+
+      <div style="margin-bottom:14px">
+        <div style="font-size:11px;color:var(--sub);margin-bottom:7px">シミュレーション対象ランク</div>
+        <div id="sim-rank-btns" style="display:flex;flex-wrap:wrap;gap:4px"></div>
+      </div>
+
+      <div style="margin-bottom:12px">
+        <label style="font-size:11px;color:var(--sub);display:block;margin-bottom:5px">月の成約件数</label>
+        <input type="number" id="sim-cases" value="5" min="0" max="30" oninput="updateSim()"
+          style="width:100%;background:#0a0c14;border:1px solid var(--border2);border-radius:8px;
+          padding:9px 12px;color:var(--text);font-size:14px;font-family:'DM Mono',monospace">
+      </div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:11px;color:var(--sub);display:block;margin-bottom:5px">
+          通常案件 手数料<span style="color:var(--blue);font-size:10px;margin-left:6px">10万円→1pt</span>
+        </label>
+        <input type="number" id="sim-fee" value="1500000" min="0" oninput="updateSim()"
+          style="width:100%;background:#0a0c14;border:1px solid var(--border2);border-radius:8px;
+          padding:9px 12px;color:var(--text);font-size:14px;font-family:'DM Mono',monospace">
+      </div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:11px;color:var(--sub);display:block;margin-bottom:5px">
+          パートナー案件 手数料<span style="color:var(--orange);font-size:10px;margin-left:6px">10万円→0.5pt（PTと折半）</span>
+        </label>
+        <input type="number" id="sim-fee-pt" value="0" min="0" oninput="updateSim()"
+          style="width:100%;background:#0a0c14;border:1px solid rgba(251,146,60,.25);border-radius:8px;
+          padding:9px 12px;color:var(--text);font-size:14px;font-family:'DM Mono',monospace">
+      </div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:11px;color:var(--sub);display:block;margin-bottom:5px">
+          メンター報酬合計<span style="color:var(--muted);font-size:10px;margin-left:6px">¥5,000ごとに0.5pt</span>
+        </label>
+        <input type="number" id="sim-mentor" value="0" min="0" oninput="updateSim()"
+          style="width:100%;background:#0a0c14;border:1px solid var(--border2);border-radius:8px;
+          padding:9px 12px;color:var(--text);font-size:14px;font-family:'DM Mono',monospace">
+      </div>
+      <div style="margin-bottom:14px;display:flex;gap:8px;align-items:center">
+        <input type="checkbox" id="sim-sanmei" onchange="updateSim()" style="width:16px;height:16px">
+        <label for="sim-sanmei" style="font-size:11px;color:var(--sub);cursor:pointer">三為取引を含む（報酬率 −15%）</label>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-t">シミュレーション結果</div>
+
+      <!-- ポイント結果 -->
+      <div style="background:var(--card2);border-radius:12px;padding:16px;margin-bottom:14px">
+        <div style="font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:10px">今月のポイント内訳</div>
+        <div id="sim-pt-breakdown" style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px"></div>
+        <div style="display:flex;align-items:baseline;gap:8px;padding-top:10px;border-top:1px solid var(--border2)">
+          <div id="sim-pt-total" style="font-family:'DM Mono',monospace;font-size:32px;color:var(--gold);font-weight:500">—</div>
+          <div style="font-size:12px;color:var(--sub)">pt → 来月ランク：<strong id="sim-next-rank" style="color:var(--text)">—</strong></div>
+        </div>
+      </div>
+
+      <!-- 報酬結果 -->
+      <div style="font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:8px">報酬計算</div>
+      <div id="sim-reward-breakdown"></div>
+
+      <!-- 4ランク比較 -->
+      <div style="font-size:9px;color:var(--muted);letter-spacing:1px;margin:14px 0 8px">ランク別 手取り比較</div>
+      <div class="cmp-grid" id="sim-compare"></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /body -->
+<script>
+// ================================================================
+//  Config & Data
+// ================================================================
+const _S = (()=>{try{return JSON.parse(sessionStorage.getItem('coreto_session')||'null')}catch{return null}})();
+
+const AGENT = {
+  id:   (_S&&_S.agId)    || '10012',
+  name: (_S&&_S.name)    || '山田 誠',
+  rank: (_S&&_S.rankKey) || 'gold',
+  type: (_S&&_S.type)    || 're',
+};
+
+// ランク定義
+const RANKS = {
+  bronze:  { label:'BRONZE',  icon:'🥉', color:'var(--bronze)', bg:'var(--bronze-bg)', bd:'var(--bronze-bd)',
+             rateRE:.65, rateHR:.45, fee:980,  mentorRate:.05, ptsMin:0,  ptsMax:9  },
+  silver:  { label:'SILVER',  icon:'🥈', color:'var(--silver)', bg:'var(--silver-bg)', bd:'var(--silver-bd)',
+             rateRE:.675,rateHR:.475,fee:490,  mentorRate:.06, ptsMin:10, ptsMax:19 },
+  gold:    { label:'GOLD',    icon:'🥇', color:'var(--gold)',   bg:'var(--gold-bg)',   bd:'var(--gold-bd)',
+             rateRE:.70, rateHR:.50, fee:0,    mentorRate:.07, ptsMin:20, ptsMax:29 },
+  platinum:{ label:'PLATINUM',icon:'💎', color:'var(--plat)',  bg:'var(--plat-bg)',   bd:'var(--plat-bd)',
+             rateRE:.75, rateHR:.55, fee:0,    mentorRate:.08, ptsMin:30, ptsMax:999},
+};
+const RANK_ORDER = ['bronze','silver','gold','platinum'];
+const yen = v=>'¥'+Math.round(v).toLocaleString();
+
+// ポイント計算関数
+// feePT: パートナー案件の手数料（10万→0.5pt）
+// fee:   通常案件の手数料（10万→1pt）
+// mentorReward: メンター報酬（5000円→0.5pt）
+// 全事業種・全案件タイプのポイントは合算
+function calcPoints(cases, fee, mentorReward, feePT) {
+  feePT = feePT || 0;
+  const feeP_normal = Math.floor(fee   / 100000);          // 通常: 1pt/10万
+  const feeP_pt     = Math.floor(feePT / 100000) * 0.5;    // PT案件: 0.5pt/10万
+  const feeP        = feeP_normal + feeP_pt;
+  const caseP       = cases;
+  const mentorP     = Math.floor(mentorReward / 5000) * 0.5; // 0.5pt/5000円
+  const total       = feeP + caseP + mentorP;
+  return { feeP, feeP_normal, feeP_pt, caseP, mentorP, total };
+}
+
+function rankFromPts(pts) {
+  if (pts >= 30) return 'platinum';
+  if (pts >= 20) return 'gold';
+  if (pts >= 10) return 'silver';
+  return 'bronze';
+}
+
+// ─ 月次デモデータ（直近12ヶ月）─
+const HISTORY = [
+  { label:'2025/03', cases:3, fee: 900000, mentorRw:0 },
+  { label:'2025/04', cases:4, fee:1200000, mentorRw:0 },
+  { label:'2025/05', cases:4, fee:1100000, mentorRw:0 },
+  { label:'2025/06', cases:2, fee: 600000, mentorRw:0 },
+  { label:'2025/07', cases:5, fee:1500000, mentorRw:15000 },
+  { label:'2025/08', cases:4, fee:1200000, mentorRw:21000 },
+  { label:'2025/09', cases:4, fee:1300000, mentorRw:21000 },
+  { label:'2025/10', cases:5, fee:1600000, mentorRw:21000 },
+  { label:'2025/11', cases:4, fee:1200000, mentorRw:21000 },
+  { label:'2025/12', cases:5, fee:1500000, mentorRw:21000 },
+  { label:'2026/01', cases:5, fee:1550000, mentorRw:21000 },
+  { label:'2026/02', cases:7, fee:1850000, mentorRw:33000, current:true },
+];
+// ポイント付与
+HISTORY.forEach(m => { m.pts = calcPoints(m.cases, m.fee, m.mentorRw, m.feePT||0); m.rank = rankFromPts(m.pts.total); });
+
+// 育成エージェント
+const MENTEES = [
+  { id:'10041', name:'渡辺 隆', emoji:'🥉', rank:'bronze', curMonthDeals:2, curMonthFee:330000 },
+];
+
+// ================================================================
+//  Init
+// ================================================================
+window.addEventListener('DOMContentLoaded', ()=>{
+  document.getElementById('hdr-name').textContent = AGENT.name;
+  document.getElementById('hdr-id').textContent   = AGENT.id;
+  renderHero();
+  renderRankRoad();
+  renderCurStats();
+  renderMiniBars();
+  renderHistoryTable();
+  renderStabilityTracker();
+  renderStabTable();
+  renderMentors();
+  renderMentorRateTable();
+  initSimulator();
+  updateSim();
+});
+
+// ================================================================
+//  Hero
+// ================================================================
+function renderHero() {
+  const r   = RANKS[AGENT.rank];
+  const cur = HISTORY[HISTORY.length-1];
+  const pts = cur.pts.total;
+  const hero= document.getElementById('rank-hero');
+
+  hero.className = 'rank-hero ' + AGENT.rank;
+  document.getElementById('hero-bg-txt').textContent = r.label;
+
+  const emb = document.getElementById('emblem');
+  emb.className   = 'emblem ' + AGENT.rank;
+  emb.textContent = r.icon;
+  const el = document.getElementById('emblem-label');
+  el.className   = 'emblem-label ' + AGENT.rank;
+  el.textContent = r.label;
+
+  // 保証バッジ（デモ：6ヶ月達成済み = 1年保証中）
+  const stab6m = calcStability();
+  document.getElementById('perm-badge').innerHTML = stab6m.achieved1yr
+    ? `<div class="perm-badge perm-1yr">🔒 1年保証中</div>`
+    : stab6m.achievedForever
+    ? `<div class="perm-badge perm-forever">♾ 永久保証</div>` : '';
+
+  document.getElementById('hero-name').textContent = AGENT.name;
+  document.getElementById('hero-sub').textContent  = AGENT.id + ' ｜ ' + (AGENT.type==='re'?'不動産エージェント':AGENT.type==='hr'?'人材エージェント':'パートナー');
+
+  document.getElementById('hs-rate').textContent        = Math.round(r.rateRE*100) + '%';
+  document.getElementById('hs-rate-hr').textContent     = Math.round(r.rateHR*100) + '%';
+  document.getElementById('hs-mentor-rate').textContent = Math.round(r.mentorRate*100) + '%';
+  document.getElementById('hs-fee').textContent         = r.fee ? yen(r.fee) : '¥0（無料）';
+  document.getElementById('hs-cum-pts').textContent     = HISTORY.reduce((s,m)=>s+m.cases,0) + '件';
+
+  // Points breakdown
+  const pb = cur.pts;
+  const items = [
+    { icon:'🏠', label:`案件完遂 ${cur.cases}件`, val:pb.caseP, clr:'var(--blue)' },
+    { icon:'💰', label:`手数料 ${yen(cur.fee)}`, val:pb.feeP, clr:'var(--gold)' },
+    { icon:'🎓', label:`メンター報酬 ${yen(cur.mentorRw)}`, val:pb.mentorP, clr:'var(--green)' },
+  ];
+  document.getElementById('pts-breakdown').innerHTML = items.map(it=>
+    `<div class="pb-row" style="gap:6px">
+      <span class="pb-icon">${it.icon}</span>
+      <span class="pb-label">${it.label}</span>
+      <span class="pb-val" style="color:${it.clr}">+${it.val}pt</span>
+    </div>`).join('');
+  document.getElementById('pts-total').textContent = pts;
+
+  // Gauge (max display = 40 for 100%)
+  const maxG = 40;
+  const pct  = Math.min(100, Math.round(pts/maxG*100));
+  document.getElementById('gauge-fill').style.width      = pct+'%';
+  document.getElementById('gauge-fill').style.background = r.color;
+  document.getElementById('gauge-needle').style.left     = pct+'%';
+  document.getElementById('gauge-needle').style.background = r.color;
+
+  const nextPts  = r.ptsMax < 999 ? r.ptsMax + 1 : null;
+  const toNext   = nextPts ? nextPts - pts : 0;
+  const nextRank = RANK_ORDER[RANK_ORDER.indexOf(AGENT.rank)+1];
+  document.getElementById('gauge-label').innerHTML = nextRank
+    ? `<span style="color:${r.color};font-weight:700">${pts}pt</span>　<span style="color:var(--muted)">→ ${RANKS[nextRank].label}まであと <strong style="color:${RANKS[nextRank].color}">${toNext}pt</strong></span>`
+    : `<span style="color:var(--plat);font-weight:700">最高ランク達成中 🎉</span>`;
+}
+
+// ================================================================
+//  Rank Road
+// ================================================================
+function renderRankRoad() {
+  const curIdx = RANK_ORDER.indexOf(AGENT.rank);
+  document.getElementById('rank-road').innerHTML = RANK_ORDER.map((rk,i)=>{
+    const r  = RANKS[rk];
+    const isCur = i === curIdx;
+    const achieved = i < curIdx;
+    const locked   = i > curIdx;
+    const cls = isCur ? 'current' : achieved ? 'achieved' : 'locked';
+    return `<div class="rr-node ${cls}" style="--node-color:${r.color};--node-glow:${r.bg}">
+      ${isCur ? `<div class="cur-chip">NOW</div>` : ''}
+      <div class="rr-icon">${r.icon}</div>
+      <div class="rr-name" style="color:${(!locked)?r.color:'var(--muted)'}">${r.label}</div>
+      <div class="rr-pts" style="color:${(!locked)?'var(--sub)':'var(--border2)'}">
+        ${r.ptsMin===0 ? '〜9pt' : r.ptsMax < 999 ? r.ptsMin+'〜'+r.ptsMax+'pt' : r.ptsMin+'pt以上'}
+      </div>
+      <div class="rr-rate-re" style="color:${!locked?'var(--text)':'var(--border2)'}">不動産：${Math.round(r.rateRE*100)}%</div>
+      <div class="rr-rate-hr" style="color:${!locked?'var(--sub)':'var(--border2)'}">人材：${Math.round(r.rateHR*100)}%</div>
+      <div class="rr-fee" style="color:${!locked?'var(--muted)':'var(--border2)'}">月会費：${r.fee?'¥'+r.fee:'無料'}</div>
+      <div class="rr-mentor" style="color:${!locked?'var(--green)':'var(--border2)'}">メンター：${Math.round(r.mentorRate*100)}%</div>
+    </div>`;
+  }).join('');
+}
+
+// ================================================================
+//  Current stats
+// ================================================================
+function renderCurStats() {
+  const m = HISTORY[HISTORY.length-1];
+  const r = RANKS[AGENT.rank];
+  const items = [
+    { label:'今月ポイント', val: m.pts.total + 'pt', sub:'内訳 → 案件'+m.pts.caseP+' / 手数料'+m.pts.feeP+' / メンター'+m.pts.mentorP, clr:'var(--gold)' },
+    { label:'来月確定ランク', val: RANKS[m.rank].icon+' '+RANKS[m.rank].label, sub:'月末判定で翌月から適用', clr:RANKS[m.rank].color },
+    { label:'今月成約件数', val: m.cases + '件', sub:'手数料合計：'+yen(m.fee), clr:'var(--blue)' },
+    { label:'今月メンター報酬', val: yen(m.mentorRw), sub: '+'+m.pts.mentorP+'pt 加算', clr:'var(--green)' },
+  ];
+  document.getElementById('cur-stats').innerHTML = items.map(it=>`
+    <div style="background:var(--card2);border-radius:9px;padding:11px 13px;
+      border-left:2px solid ${it.clr}">
+      <div style="font-size:10px;color:var(--muted);margin-bottom:3px">${it.label}</div>
+      <div style="font-size:15px;font-weight:700;color:${it.clr}">${it.val}</div>
+      <div style="font-size:10px;color:var(--sub);margin-top:2px">${it.sub}</div>
+    </div>`).join('');
+}
+
+// ================================================================
+//  Mini bars (直近6ヶ月)
+// ================================================================
+function renderMiniBars() {
+  const last6 = HISTORY.slice(-6);
+  const maxP  = Math.max(...last6.map(m=>m.pts.total), 35);
+  const zones = [{pts:30,clr:'var(--plat)'},{pts:20,clr:'var(--gold)'},{pts:10,clr:'var(--silver)'}];
+
+  document.getElementById('mini-bars').innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;align-items:end;height:140px;position:relative">
+      ${last6.map(m=>{
+        const h  = Math.round(m.pts.total/maxP*120);
+        const r  = RANKS[m.rank];
+        return `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;justify-content:flex-end;height:140px">
+          <div style="font-family:'DM Mono',monospace;font-size:11px;color:${r.color};font-weight:700">${m.pts.total}pt</div>
+          <div style="width:100%;height:${h}px;border-radius:4px 4px 0 0;
+            background:${r.color};opacity:${m.current?1:.7};position:relative;min-height:4px">
+            ${m.current?'<div style="position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:8px;color:var(--blue);white-space:nowrap;font-weight:700">今月</div>':''}
+          </div>
+          <div style="font-size:9px;color:var(--muted)">${m.label.slice(5)}</div>
+          <div style="font-size:8px;font-weight:700;color:${r.color}">${r.icon}</div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div style="display:flex;gap:12px;margin-top:12px;font-size:10px">
+      ${RANK_ORDER.map(rk=>`<span>${RANKS[rk].icon} ${RANKS[rk].label}：${RANKS[rk].ptsMin===0?'0〜9':RANKS[rk].ptsMax<999?RANKS[rk].ptsMin+'〜'+RANKS[rk].ptsMax:RANKS[rk].ptsMin+'+'}pt</span>`).join('')}
+    </div>`;
+}
+
+// ================================================================
+//  History table
+// ================================================================
+function renderHistoryTable() {
+  const head = `<thead><tr style="border-bottom:1px solid var(--border)">
+    <th style="padding:8px 10px;text-align:left">月</th>
+    <th style="padding:8px 10px;text-align:center">成約件数</th>
+    <th style="padding:8px 10px;text-align:right">手数料合計</th>
+    <th style="padding:8px 10px;text-align:center">手数料pt</th>
+    <th style="padding:8px 10px;text-align:center">案件pt</th>
+    <th style="padding:8px 10px;text-align:right">メンター報酬</th>
+    <th style="padding:8px 10px;text-align:center">メンターpt</th>
+    <th style="padding:8px 10px;text-align:center;color:var(--gold)">合計pt</th>
+    <th style="padding:8px 10px;text-align:center">翌月ランク</th>
+  </tr></thead>`;
+
+  const rows = HISTORY.map(m=>{
+    const rc = 'rc-'+m.rank;
+    const r  = RANKS[m.rank];
+    const cur = m.current;
+    return `<tr class="${cur?'cur':''}" style="border-bottom:1px solid rgba(30,34,53,.5)">
+      <td class="mono" style="padding:8px 10px;color:${cur?'var(--blue)':'var(--sub)'};font-size:11px">
+        ${m.label}${cur?' ◀ 今月':''}
+      </td>
+      <td class="mono" style="padding:8px 10px;text-align:center">${m.cases}</td>
+      <td class="mono" style="padding:8px 10px;text-align:right;font-size:11px">${yen(m.fee)}</td>
+      <td class="mono" style="padding:8px 10px;text-align:center;color:var(--gold);font-weight:700">+${m.pts.feeP}</td>
+      <td class="mono" style="padding:8px 10px;text-align:center;color:var(--blue);font-weight:700">+${m.pts.caseP}</td>
+      <td class="mono" style="padding:8px 10px;text-align:right;font-size:11px;color:var(--green)">${m.mentorRw?yen(m.mentorRw):'—'}</td>
+      <td class="mono" style="padding:8px 10px;text-align:center;color:var(--green);font-weight:700">${m.pts.mentorP?'+'+m.pts.mentorP:'—'}</td>
+      <td class="mono" style="padding:8px 10px;text-align:center;font-size:15px;font-weight:700;color:${r.color}">${m.pts.total}</td>
+      <td style="padding:8px 10px;text-align:center">
+        <span class="rank-chip ${rc}">${r.icon} ${r.label}</span>
+      </td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('history-table').innerHTML = head + `<tbody>${rows}</tbody>`;
+}
+
+// ================================================================
+//  Stability
+// ================================================================
+function calcStability() {
+  // 現在ランク以上で連続している月数を数える
+  const curRankIdx = RANK_ORDER.indexOf(AGENT.rank);
+  let streak = 0;
+  for (let i = HISTORY.length-1; i >= 0; i--) {
+    if (RANK_ORDER.indexOf(HISTORY[i].rank) >= curRankIdx) streak++;
+    else break;
+  }
+  return {
+    streak,
+    achieved1yr:    streak >= 6  && streak < 36,
+    achievedForever: streak >= 36,
+    to1yr:   Math.max(0, 6  - streak),
+    toForever: Math.max(0, 36 - streak),
+  };
+}
+
+function renderStabilityTracker() {
+  const s = calcStability();
+  const r = RANKS[AGENT.rank];
+
+  // 6ヶ月
+  document.getElementById('stab-6m-cur').textContent = Math.min(s.streak, 6);
+  document.getElementById('stab-6m-bar').style.width = Math.min(100, Math.round(s.streak/6*100))+'%';
+  document.getElementById('stab-6m-label').innerHTML = s.achieved1yr || s.achievedForever
+    ? `✅ 6ヶ月達成済み。<strong style="color:var(--green)">${r.label}ランクを1年間保証中</strong>`
+    : `あと <strong>${s.to1yr}ヶ月</strong> で${r.label}ランクが1年間保証されます`;
+  document.getElementById('stab-6m-reward').textContent = s.achieved1yr ? '🔒 保証期間中：ポイントが下回っても維持' : '';
+
+  // 3年
+  document.getElementById('stab-3y-cur').textContent = Math.min(s.streak, 36);
+  document.getElementById('stab-3y-bar').style.width = Math.min(100, Math.round(s.streak/36*100))+'%';
+  document.getElementById('stab-3y-label').innerHTML = s.achievedForever
+    ? `✅ 永久保証達成！<strong style="color:var(--gold)">${r.label}ランクが永久に確定</strong>`
+    : `あと <strong>${s.toForever}ヶ月</strong> で${r.label}ランクが永久保証されます`;
+  document.getElementById('stab-3y-reward').textContent = s.achievedForever ? '♾ 永久にポイントによるランク変動なし' : '';
+}
+
+function renderStabTable() {
+  const curRankIdx = RANK_ORDER.indexOf(AGENT.rank);
+  const head = `<thead><tr style="border-bottom:1px solid var(--border)">
+    <th style="padding:8px 10px;text-align:left">月</th>
+    <th style="padding:8px 10px;text-align:center">ランク</th>
+    <th style="padding:8px 10px;text-align:center">連続継続月数</th>
+    <th style="padding:8px 10px;text-align:center">6ヶ月保証</th>
+    <th style="padding:8px 10px;text-align:center">36ヶ月永久保証</th>
+  </tr></thead>`;
+
+  let streak = 0;
+  const rows = HISTORY.map((m,i) => {
+    if (RANK_ORDER.indexOf(m.rank) >= curRankIdx) streak++;
+    else streak = 0;
+    const has1yr  = streak >= 6;
+    const hasPerm = streak >= 36;
+    const r = RANKS[m.rank];
+    return `<tr class="${m.current?'cur':''}" style="border-bottom:1px solid rgba(30,34,53,.5)">
+      <td class="mono" style="padding:8px 10px;color:${m.current?'var(--blue)':'var(--sub)'};font-size:11px">
+        ${m.label}${m.current?' ◀ 今月':''}
+      </td>
+      <td style="padding:8px 10px;text-align:center">
+        <span class="rank-chip rc-${m.rank}">${r.icon} ${r.label}</span>
+      </td>
+      <td class="mono" style="padding:8px 10px;text-align:center;color:var(--gold);font-weight:700">${streak}ヶ月</td>
+      <td style="padding:8px 10px;text-align:center;font-size:12px">${has1yr?'<span style="color:var(--green)">🔒 保証中</span>':'<span style="color:var(--muted)">—</span>'}</td>
+      <td style="padding:8px 10px;text-align:center;font-size:12px">${hasPerm?'<span style="color:var(--gold)">♾ 永久</span>':'<span style="color:var(--muted)">—</span>'}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('stab-table').innerHTML = head + `<tbody>${rows}</tbody>`;
+}
+
+// ================================================================
+//  Mentors
+// ================================================================
+function renderMentors() {
+  const r = RANKS[AGENT.rank];
+  document.getElementById('mentor-list').innerHTML = MENTEES.length
+    ? MENTEES.map(m => {
+        const reward = Math.floor(m.curMonthFee * r.mentorRate);
+        const pts    = Math.floor(reward / 5000);
+        return `<div class="mentor-row">
+          <div class="m-avatar" style="background:var(--bronze-bg);border:1px solid var(--bronze-bd)">${m.emoji}</div>
+          <div class="m-info">
+            <div class="m-name">${m.name}</div>
+            <span class="m-rank-badge" style="background:var(--bronze-bg);color:var(--bronze);border:1px solid var(--bronze-bd)">
+              ${RANKS[m.rank].label}
+            </span>
+          </div>
+          <div class="m-right">
+            <div class="m-reward">+${yen(reward)}</div>
+            <div class="m-pts">今月：${m.curMonthDeals}件 → +${pts}pt加算</div>
+          </div>
+        </div>`;
+      }).join('')
+    : `<div style="text-align:center;padding:24px;color:var(--muted);font-size:12px">
+        育成中のエージェントはまだいません<br>
+        <span style="font-size:10px">本部へメンター登録を申請してください</span>
+       </div>`;
+}
+
+function renderMentorRateTable() {
+  document.getElementById('mentor-rate-table').innerHTML = RANK_ORDER.map(rk=>{
+    const r      = RANKS[rk];
+    const isCur  = rk === AGENT.rank;
+    return `<div style="display:flex;align-items:center;gap:12px;padding:10px 13px;
+      background:${isCur?r.bg:'var(--card2)'};border-radius:9px;
+      border:1px solid ${isCur?r.bd:'var(--border2)'}">
+      <div style="font-size:20px">${r.icon}</div>
+      <div style="flex:1">
+        <div style="font-size:11px;font-weight:700;color:${r.color}">${r.label}</div>
+        <div style="font-size:10px;color:var(--muted)">${r.ptsMin===0?'0〜9pt':r.ptsMax<999?r.ptsMin+'〜'+r.ptsMax+'pt':r.ptsMin+'pt+'}</div>
+      </div>
+      <div style="font-family:'DM Mono',monospace;font-size:18px;font-weight:600;color:var(--green)">
+        ${Math.round(r.mentorRate*100)}%
+      </div>
+      ${isCur?'<div style="font-size:9px;font-weight:800;color:var(--gold);background:rgba(201,168,76,.15);padding:2px 7px;border-radius:3px">現在</div>':''}
+    </div>`;
+  }).join('');
+}
+
+// ================================================================
+//  Simulator
+// ================================================================
+let simRank = AGENT.rank;
+
+function initSimulator() {
+  document.getElementById('sim-rank-btns').innerHTML = RANK_ORDER.map(rk=>{
+    const r = RANKS[rk];
+    return `<button class="sim-rb ${rk===simRank?'on':''}"
+      onclick="simSetRank('${rk}',this)">${r.icon} ${r.label}</button>`;
+  }).join('');
+}
+
+function simSetRank(rk, btn) {
+  simRank = rk;
+  document.querySelectorAll('#sim-rank-btns .sim-rb').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  updateSim();
+}
+
+function updateSim() {
+  const cases   = parseInt(document.getElementById('sim-cases').value)||0;
+  const fee     = parseFloat(document.getElementById('sim-fee').value)||0;
+  const feePT   = parseFloat(document.getElementById('sim-fee-pt').value)||0;
+  const mentorR = parseFloat(document.getElementById('sim-mentor').value)||0;
+  const sanmei  = document.getElementById('sim-sanmei').checked;
+
+  const pts     = calcPoints(cases, fee, mentorR, feePT); // 全事業・全案件タイプ合算
+  const nextRk  = rankFromPts(pts.total);
+  const nextR   = RANKS[nextRk];
+
+  // Points breakdown
+  const feePTLocal = parseFloat(document.getElementById('sim-fee-pt').value)||0;
+  const feeLabel = feePT>0
+    ? `通常${yen(fee)}→${pts.feeP_normal}pt ＋ PT${yen(feePT)}→${pts.feeP_pt}pt`
+    : `${yen(fee)} ÷ ¥10万`;
+  document.getElementById('sim-pt-breakdown').innerHTML = [
+    { icon:'🏠', label:'案件完遂 '+cases+'件', pts: pts.caseP, clr:'var(--blue)' },
+    { icon:'💰', label:'手数料 '+feeLabel, pts: pts.feeP, clr:'var(--gold)' },
+    { icon:'🎓', label:'メンター報酬 '+yen(mentorR)+' ÷ ¥5,000 × 0.5', pts: pts.mentorP, clr:'var(--green)' },
+  ].map(it=>`
+    <div style="display:flex;align-items:center;gap:8px;font-size:11px">
+      <span style="font-size:13px">${it.icon}</span>
+      <span style="flex:1;color:var(--sub)">${it.label}</span>
+      <span style="font-family:'DM Mono',monospace;color:${it.clr};font-weight:700">+${it.pts}pt</span>
+    </div>`).join('');
+
+  document.getElementById('sim-pt-total').textContent    = pts.total;
+  document.getElementById('sim-pt-total').style.color    = nextR.color;
+  document.getElementById('sim-next-rank').textContent   = nextR.icon + ' ' + nextR.label;
+  document.getElementById('sim-next-rank').style.color   = nextR.color;
+
+  // Reward calc for simRank
+  const r      = RANKS[simRank];
+  let baseRate = AGENT.type==='hr' ? r.rateHR : r.rateRE;
+  if (sanmei) baseRate -= 0.15;
+  const T1=5e6,T2=10e6;
+  let gross = fee<=T1 ? fee*baseRate
+    : fee<=T2 ? T1*baseRate+(fee-T1)*(baseRate+.05)
+    : T1*baseRate+(T2-T1)*(baseRate+.05)+(fee-T2)*(baseRate+.10);
+  gross = Math.floor(gross);
+  const M = 1e6;
+  const tax = gross<=M ? Math.floor(gross*.1021) : Math.floor(M*.1021+(gross-M)*.2042);
+  const net = gross - tax - r.fee;
+
+  document.getElementById('sim-reward-breakdown').innerHTML = [
+    {k:'総手数料額', v:yen(fee)},
+    {k:`報酬率（${r.label}${sanmei?' 三為':''}）`, v: Math.round(baseRate*100)+'%'},
+    {k:'報酬額（税抜）', v:yen(gross)},
+    {k:'源泉徴収', v:'−'+yen(tax), minus:true},
+    {k:'月会費', v:r.fee?'−'+yen(r.fee):'¥0', minus:r.fee>0},
+    {k:'メンター報酬', v:'+'+yen(mentorR), plus:true},
+    {k:'手取り合計（推定）', v:yen(net+mentorR), total:true},
+  ].map(row=>`
+    <div class="rt-row">
+      <div class="rt-key">${row.k}</div>
+      <div class="rt-val ${row.minus?'rt-minus':''}" style="${row.total?'color:var(--gold);font-size:15px':''}${row.plus?';color:var(--green)':''}">
+        ${row.v}
+      </div>
+    </div>`).join('');
+
+  // 4-rank compare
+  document.getElementById('sim-compare').innerHTML = RANK_ORDER.map(rk=>{
+    const rc     = RANKS[rk];
+    let br       = AGENT.type==='hr' ? rc.rateHR : rc.rateRE;
+    if (sanmei) br -= 0.15;
+    let g = fee<=T1?fee*br:fee<=T2?T1*br+(fee-T1)*(br+.05):T1*br+(T2-T1)*(br+.05)+(fee-T2)*(br+.10);
+    g = Math.floor(g);
+    const t = g<=M?Math.floor(g*.1021):Math.floor(M*.1021+(g-M)*.2042);
+    const n = g - t - rc.fee + mentorR;
+    const isCur = rk === simRank;
+    return `<div class="cmp-cell ${isCur?'cur':''}">
+      <div style="font-size:20px;margin-bottom:4px">${rc.icon}</div>
+      <div style="font-size:9px;font-weight:800;color:${rc.color};letter-spacing:1px;margin-bottom:4px">${rc.label}</div>
+      <div style="font-family:'DM Mono',monospace;font-size:12px;font-weight:600">${yen(n)}</div>
+      <div style="font-size:9px;color:var(--muted);margin-top:2px">${Math.round(br*100)}%</div>
+      ${isCur?'<div style="font-size:8px;color:var(--gold);margin-top:4px;font-weight:700">選択中</div>':''}
+    </div>`;
+  }).join('');
+}
+
+// ================================================================
+//  Tab switch
+// ================================================================
+function switchTab(i, el) {
+  document.querySelectorAll('.tab').forEach((t,j)=>t.classList.toggle('on',j===i));
+  document.querySelectorAll('.tp').forEach((p,j)=>p.classList.toggle('on',j===i));
+}
+</script>
+</body>
+</html>

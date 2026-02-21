@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CORETO エージェント・パートナー 応募フォーム</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600;700&family=DM+Mono:wght@400;500&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #faf9f6;
+  --card: #ffffff;
+  --border: #e8e4dc;
+  --border2: #d4cfc4;
+  --text: #1a1a18;
+  --sub: #6b6760;
+  --muted: #a09b93;
+  --gold: #8b6914;
+  --gold-light: #c9a840;
+  --gold-bg: #fdf8ef;
+  --gold-border: #e8d8a0;
+  --re: #1d4e6b;
+  --re-bg: #edf4f9;
+  --re-border: #b8d4e8;
+  --hr: #2d5a3d;
+  --hr-bg: #edf6f0;
+  --hr-border: #b0d8bc;
+  --pt: #5a2d7a;
+  --pt-bg: #f4edf9;
+  --pt-border: #cbb8e0;
+  --danger: #c0392b;
+  --danger-bg: #fdf0ee;
+  --success: #1d6b3a;
+  --success-bg: #edf8f2;
+}
+
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Noto Sans JP', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.7;
+  min-height: 100vh;
+}
+
+/* ─ Page texture ─ */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    radial-gradient(circle at 15% 20%, rgba(139,105,20,.04) 0%, transparent 50%),
+    radial-gradient(circle at 85% 75%, rgba(29,78,107,.04) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ─ Header ─ */
+.hdr {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(250,249,246,.95);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 32px;
+  display: flex; align-items: center; justify-content: space-between;
+  height: 56px;
+}
+.hdr-logo {
+  font-family: 'Shippori Mincho', serif;
+  font-size: 20px; font-weight: 700;
+  letter-spacing: 4px;
+  color: var(--gold);
+}
+.hdr-sub {
+  font-size: 10px; color: var(--muted);
+  letter-spacing: 1.5px; text-transform: uppercase;
+}
+.hdr-step {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px; color: var(--muted);
+}
+
+/* ─ Progress bar ─ */
+.prog-wrap {
+  height: 3px; background: var(--border);
+  position: sticky; top: 56px; z-index: 99;
+}
+.prog-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--gold-light), var(--gold));
+  transition: width .5s cubic-bezier(.4,0,.2,1);
+}
+
+/* ─ Main layout ─ */
+.main {
+  position: relative; z-index: 1;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 48px 24px 100px;
+}
+
+/* ─ Step panels ─ */
+.step { display: none; }
+.step.active { display: block; animation: fadeUp .35s ease; }
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.step-eyebrow {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px; color: var(--gold);
+  letter-spacing: 3px; text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.step-title {
+  font-family: 'Shippori Mincho', serif;
+  font-size: 26px; font-weight: 700;
+  color: var(--text);
+  line-height: 1.4;
+  margin-bottom: 6px;
+}
+.step-desc {
+  font-size: 13px; color: var(--sub);
+  margin-bottom: 32px;
+  border-left: 2px solid var(--gold-border);
+  padding-left: 12px;
+}
+
+/* ─ Type cards ─ */
+.type-grid { display: grid; grid-template-columns: 1fr; gap: 14px; margin-bottom: 32px; }
+.type-card {
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  padding: 22px 24px;
+  cursor: pointer;
+  transition: all .2s;
+  background: var(--card);
+  display: flex; align-items: flex-start; gap: 18px;
+  position: relative;
+  overflow: hidden;
+}
+.type-card::before {
+  content: '';
+  position: absolute; inset: 0;
+  opacity: 0;
+  transition: opacity .2s;
+}
+.type-card[data-type="re"]::before   { background: linear-gradient(135deg, var(--re-bg) 0%, transparent 60%); }
+.type-card[data-type="hr"]::before   { background: linear-gradient(135deg, var(--hr-bg) 0%, transparent 60%); }
+.type-card[data-type="pt"]::before   { background: linear-gradient(135deg, var(--pt-bg) 0%, transparent 60%); }
+.type-card:hover::before, .type-card.sel::before { opacity: 1; }
+
+.type-card:hover {
+  border-color: var(--border2);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(0,0,0,.06);
+}
+.type-card.sel[data-type="re"] { border-color: var(--re); box-shadow: 0 0 0 3px rgba(29,78,107,.12); }
+.type-card.sel[data-type="hr"] { border-color: var(--hr); box-shadow: 0 0 0 3px rgba(45,90,61,.12); }
+.type-card.sel[data-type="pt"] { border-color: var(--pt); box-shadow: 0 0 0 3px rgba(90,45,122,.12); }
+
+.type-icon { font-size: 30px; flex-shrink: 0; line-height: 1; margin-top: 2px; }
+.type-body { flex: 1; position: relative; z-index: 1; }
+.type-name {
+  font-family: 'Shippori Mincho', serif;
+  font-size: 16px; font-weight: 700;
+  margin-bottom: 4px;
+}
+.type-card.sel[data-type="re"] .type-name { color: var(--re); }
+.type-card.sel[data-type="hr"] .type-name { color: var(--hr); }
+.type-card.sel[data-type="pt"] .type-name { color: var(--pt); }
+.type-desc { font-size: 12px; color: var(--sub); line-height: 1.7; }
+.type-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.type-tag {
+  font-size: 10px; padding: 2px 8px; border-radius: 20px;
+  font-family: 'DM Mono', monospace; letter-spacing: .5px;
+}
+.type-card[data-type="re"] .type-tag { background: var(--re-bg); color: var(--re); border: 1px solid var(--re-border); }
+.type-card[data-type="hr"] .type-tag { background: var(--hr-bg); color: var(--hr); border: 1px solid var(--hr-border); }
+.type-card[data-type="pt"] .type-tag { background: var(--pt-bg); color: var(--pt); border: 1px solid var(--pt-border); }
+.type-check {
+  width: 22px; height: 22px; border-radius: 50%;
+  border: 2px solid var(--border2);
+  flex-shrink: 0; margin-top: 3px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .2s;
+  position: relative; z-index: 1;
+}
+.type-card.sel[data-type="re"] .type-check { background: var(--re); border-color: var(--re); color: #fff; }
+.type-card.sel[data-type="hr"] .type-check { background: var(--hr); border-color: var(--hr); color: #fff; }
+.type-card.sel[data-type="pt"] .type-check { background: var(--pt); border-color: var(--pt); color: #fff; }
+
+/* ─ Form fields ─ */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 24px; }
+.form-grid.single { grid-template-columns: 1fr; }
+.form-grid.triple { grid-template-columns: 1fr 1fr 1fr; }
+.fg { display: flex; flex-direction: column; gap: 6px; }
+.fg.span2 { grid-column: span 2; }
+.fg.span3 { grid-column: span 3; }
+label {
+  font-size: 11px; font-weight: 700;
+  color: var(--sub);
+  letter-spacing: .5px;
+  display: flex; align-items: center; gap: 6px;
+}
+.req {
+  font-size: 9px; padding: 1px 5px; border-radius: 3px;
+  background: #fff0f0; color: var(--danger);
+  font-weight: 700; letter-spacing: 0;
+}
+.opt {
+  font-size: 9px; padding: 1px 5px; border-radius: 3px;
+  background: #f0f0f0; color: var(--muted);
+  font-weight: 700; letter-spacing: 0;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="tel"],
+input[type="date"],
+input[type="number"],
+select,
+textarea {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 9px;
+  background: var(--card);
+  color: var(--text);
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 13px;
+  transition: border-color .2s, box-shadow .2s;
+  outline: none;
+  -webkit-appearance: none;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: var(--gold-light);
+  box-shadow: 0 0 0 3px rgba(201,168,64,.1);
+}
+input.err, select.err, textarea.err {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px rgba(192,57,43,.08);
+}
+textarea { resize: vertical; min-height: 120px; line-height: 1.8; }
+select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23a09b93' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 36px; }
+.field-hint { font-size: 11px; color: var(--muted); margin-top: 3px; }
+.field-err { font-size: 11px; color: var(--danger); margin-top: 3px; display: none; }
+.field-err.show { display: block; }
+.char-count { font-size: 11px; color: var(--muted); text-align: right; margin-top: 3px; }
+.char-count.warn { color: var(--danger); }
+
+/* ─ Radio / Checkbox groups ─ */
+.radio-group, .check-group {
+  display: flex; flex-wrap: wrap; gap: 10px;
+}
+.radio-group.vertical, .check-group.vertical {
+  flex-direction: column; gap: 8px;
+}
+.rc-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 16px;
+  border: 1.5px solid var(--border);
+  border-radius: 9px;
+  cursor: pointer;
+  transition: all .15s;
+  background: var(--card);
+  user-select: none;
+}
+.rc-item:hover { border-color: var(--border2); background: var(--gold-bg); }
+.rc-item input { display: none; }
+.rc-dot {
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid var(--border2);
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .15s;
+}
+.rc-sq {
+  width: 16px; height: 16px; border-radius: 4px;
+  border: 2px solid var(--border2);
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .15s;
+}
+.rc-item input:checked ~ .rc-dot { background: var(--gold); border-color: var(--gold); box-shadow: inset 0 0 0 3px #fff; }
+.rc-item input:checked ~ .rc-sq  { background: var(--gold); border-color: var(--gold); }
+.rc-item input:checked ~ .rc-sq::after { content: '✓'; color: #fff; font-size: 10px; font-weight: 700; }
+.rc-item input:checked + .rc-dot + span, .rc-item input:checked + .rc-sq + span { font-weight: 600; }
+.rc-label { font-size: 13px; }
+.rc-sub { font-size: 10px; color: var(--muted); margin-top: 1px; }
+
+/* ─ Section divider ─ */
+.sec-div {
+  display: flex; align-items: center; gap: 12px;
+  margin: 32px 0 24px;
+}
+.sec-div-line { flex: 1; height: 1px; background: var(--border); }
+.sec-div-label {
+  font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--muted); white-space: nowrap;
+  font-family: 'DM Mono', monospace;
+}
+
+/* ─ Conditional sections ─ */
+.cond { display: none; }
+.cond.show { display: block; animation: fadeUp .25s ease; }
+
+/* ─ Info box ─ */
+.info-box {
+  padding: 14px 16px;
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 1.8;
+  margin-bottom: 20px;
+  display: flex; align-items: flex-start; gap: 10px;
+}
+.info-gold { background: var(--gold-bg); border: 1px solid var(--gold-border); }
+.info-re   { background: var(--re-bg);   border: 1px solid var(--re-border);   color: var(--re); }
+.info-hr   { background: var(--hr-bg);   border: 1px solid var(--hr-border);   color: var(--hr); }
+.info-warn { background: #fff8e8; border: 1px solid #f0dc8c; color: #6b4c00; }
+
+/* ─ Agree block ─ */
+.agree-block {
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 20px 22px;
+  margin-bottom: 20px;
+}
+.agree-title { font-size: 12px; font-weight: 700; margin-bottom: 12px; color: var(--sub); }
+.agree-text {
+  font-size: 11px; color: var(--sub);
+  line-height: 2; max-height: 120px; overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 7px; padding: 12px 14px;
+  background: var(--bg);
+  margin-bottom: 14px;
+}
+.agree-check {
+  display: flex; align-items: center; gap: 10px;
+  cursor: pointer; font-size: 13px; font-weight: 600;
+}
+.agree-check input { display: none; }
+.agree-box {
+  width: 20px; height: 20px; border-radius: 5px;
+  border: 2px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; transition: all .15s;
+}
+.agree-check input:checked ~ .agree-box { background: var(--text); border-color: var(--text); }
+.agree-check input:checked ~ .agree-box::after { content: '✓'; color: #fff; font-size: 11px; font-weight: 700; }
+
+/* ─ Confirm table ─ */
+.confirm-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 20px; }
+.confirm-table tr { border-bottom: 1px solid var(--border); }
+.confirm-table tr:last-child { border-bottom: none; }
+.confirm-table td:first-child {
+  width: 36%; padding: 10px 12px;
+  color: var(--muted); font-weight: 600; vertical-align: top;
+  font-size: 11px; letter-spacing: .3px;
+}
+.confirm-table td:last-child { padding: 10px 12px; color: var(--text); }
+.confirm-type-badge {
+  display: inline-block; padding: 3px 10px; border-radius: 5px;
+  font-size: 10px; font-weight: 700; letter-spacing: 1px;
+}
+.badge-re { background: var(--re-bg); color: var(--re); border: 1px solid var(--re-border); }
+.badge-hr { background: var(--hr-bg); color: var(--hr); border: 1px solid var(--hr-border); }
+.badge-pt { background: var(--pt-bg); color: var(--pt); border: 1px solid var(--pt-border); }
+
+/* ─ Buttons ─ */
+.btn-row { display: flex; gap: 12px; align-items: center; justify-content: space-between; margin-top: 36px; }
+.btn {
+  padding: 13px 28px; border-radius: 10px;
+  border: none; cursor: pointer;
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 13px; font-weight: 700;
+  transition: all .2s;
+  letter-spacing: .5px;
+}
+.btn-ghost {
+  background: transparent;
+  color: var(--sub);
+  border: 1.5px solid var(--border);
+}
+.btn-ghost:hover { border-color: var(--border2); color: var(--text); }
+.btn-primary {
+  background: var(--text);
+  color: #fff;
+  flex: 1; max-width: 240px;
+}
+.btn-primary:hover { background: #333; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,0,0,.15); }
+.btn-primary:disabled { background: var(--muted); cursor: not-allowed; transform: none; box-shadow: none; }
+.btn-submit {
+  background: linear-gradient(135deg, var(--gold) 0%, #a87820 100%);
+  color: #fff;
+  flex: 1; max-width: 260px;
+  font-size: 14px;
+}
+.btn-submit:hover { opacity: .9; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(139,105,20,.3); }
+
+/* ─ Complete screen ─ */
+.complete {
+  text-align: center;
+  padding: 64px 24px;
+}
+.complete-seal {
+  width: 80px; height: 80px; border-radius: 50%;
+  background: var(--success-bg);
+  border: 2px solid var(--hr-border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 36px;
+  margin: 0 auto 24px;
+}
+.complete-id {
+  font-family: 'DM Mono', monospace;
+  font-size: 18px; font-weight: 500;
+  color: var(--gold);
+  padding: 8px 20px;
+  background: var(--gold-bg);
+  border: 1px solid var(--gold-border);
+  border-radius: 8px;
+  display: inline-block;
+  margin: 12px 0 24px;
+  letter-spacing: 2px;
+}
+.complete-title {
+  font-family: 'Shippori Mincho', serif;
+  font-size: 22px; font-weight: 700;
+  margin-bottom: 12px;
+}
+.complete-sub { font-size: 13px; color: var(--sub); line-height: 2; max-width: 440px; margin: 0 auto 32px; }
+.next-steps {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px 24px;
+  text-align: left;
+  max-width: 440px;
+  margin: 0 auto;
+}
+.ns-title { font-size: 11px; color: var(--muted); letter-spacing: 2px; margin-bottom: 14px; font-family: 'DM Mono', monospace; }
+.ns-item { display: flex; gap: 14px; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.ns-item:last-child { border-bottom: none; }
+.ns-num { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); min-width: 24px; padding-top: 1px; }
+.ns-text { font-size: 12px; color: var(--sub); line-height: 1.7; }
+.ns-text strong { color: var(--text); }
+
+/* ─ Responsive ─ */
+@media (max-width: 560px) {
+  .main { padding: 32px 16px 80px; }
+  .form-grid { grid-template-columns: 1fr; }
+  .form-grid .fg.span2 { grid-column: span 1; }
+  .step-title { font-size: 22px; }
+  .hdr { padding: 0 16px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="hdr">
+  <div>
+    <div class="hdr-logo">CORETO</div>
+  </div>
+  <div class="hdr-sub">エージェント・パートナー 応募フォーム</div>
+  <div class="hdr-step" id="hdr-step-label">STEP 1 / 4</div>
+</div>
+<div class="prog-wrap"><div class="prog-bar" id="prog-bar" style="width:25%"></div></div>
+
+<div class="main">
+
+<!-- ═══ STEP 1: タイプ選択 ═══ -->
+<div class="step active" id="step-1">
+  <div class="step-eyebrow">STEP 01</div>
+  <div class="step-title">ご希望の<br>活動タイプを選択</div>
+  <div class="step-desc">あなたのご経験・ご希望に合ったタイプをお選びください。後から変更することもできます。</div>
+
+  <div class="type-grid">
+    <div class="type-card" data-type="re" onclick="selectType('re',this)">
+      <div class="type-icon">🏠</div>
+      <div class="type-body">
+        <div class="type-name">不動産エージェント</div>
+        <div class="type-desc">賃貸・売買仲介を担当。宅建士資格があれば専任登録も可能。個人事業主として業務委託契約。</div>
+        <div class="type-tags">
+          <span class="type-tag">賃貸仲介</span>
+          <span class="type-tag">売買仲介</span>
+          <span class="type-tag">IT重説</span>
+          <span class="type-tag">個人のみ</span>
+        </div>
+      </div>
+      <div class="type-check" id="check-re">✓</div>
+    </div>
+
+    <div class="type-card" data-type="hr" onclick="selectType('hr',this)">
+      <div class="type-icon">👥</div>
+      <div class="type-body">
+        <div class="type-name">人材エージェント</div>
+        <div class="type-desc">人材紹介・採用支援を担当。CA・RA経験者歓迎。業界経験1年以上が必要です。</div>
+        <div class="type-tags">
+          <span class="type-tag">人材紹介</span>
+          <span class="type-tag">CA / RA</span>
+          <span class="type-tag">経験1年以上</span>
+          <span class="type-tag">個人のみ</span>
+        </div>
+      </div>
+      <div class="type-check" id="check-hr">✓</div>
+    </div>
+
+    <div class="type-card" data-type="pt" onclick="selectType('pt',this)">
+      <div class="type-icon">🤝</div>
+      <div class="type-body">
+        <div class="type-name">パートナー</div>
+        <div class="type-desc">顧客の紹介・集客を担当。不動産・人材問わず幅広く紹介可能。法人での登録もOK。</div>
+        <div class="type-tags">
+          <span class="type-tag">顧客紹介</span>
+          <span class="type-tag">個人 / 法人</span>
+          <span class="type-tag">月会費無料</span>
+        </div>
+      </div>
+      <div class="type-check" id="check-pt">✓</div>
+    </div>
+  </div>
+
+  <div class="info-box info-gold">
+    <span>⚠️</span>
+    <div>不動産エージェント・人材エージェントは<strong>個人事業主のみ</strong>登録可能です（法人不可）。パートナーは法人でのご登録も承ります。</div>
+  </div>
+
+  <div class="form-grid single" style="margin-bottom:0">
+    <div class="fg">
+      <label>紹介者コード<span class="opt">任意</span></label>
+      <input type="text" id="f-referral" placeholder="紹介者のエージェントIDまたは特別コードを入力" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
+      <div class="field-hint">紹介者（メンター）のエージェントIDまたは特別紹介コードをお持ちの場合のみご入力ください。</div>
+    </div>
+  </div>
+
+  <div class="btn-row" style="justify-content:flex-end">
+    <button class="btn btn-primary" onclick="goStep(2)" id="btn-step1-next" disabled>次へ →</button>
+  </div>
+</div>
+
+<!-- ═══ STEP 2: 基本情報 ═══ -->
+<div class="step" id="step-2">
+  <div class="step-eyebrow">STEP 02</div>
+  <div class="step-title">基本情報の<br>ご入力</div>
+  <div class="step-desc" id="step2-desc">以下の項目をすべてご入力ください。</div>
+
+  <!-- 氏名 -->
+  <div class="form-grid">
+    <div class="fg">
+      <label>氏名（姓）<span class="req">必須</span></label>
+      <input type="text" id="f-sei" placeholder="帝国" oninput="syncField(this)">
+      <div class="field-err" id="err-sei">姓を入力してください</div>
+    </div>
+    <div class="fg">
+      <label>氏名（名）<span class="req">必須</span></label>
+      <input type="text" id="f-mei" placeholder="太郎" oninput="syncField(this)">
+      <div class="field-err" id="err-mei">名を入力してください</div>
+    </div>
+    <div class="fg">
+      <label>フリガナ（セイ）<span class="req">必須</span></label>
+      <input type="text" id="f-sei-kana" placeholder="テイコク" oninput="syncField(this)">
+      <div class="field-err" id="err-sei-kana">フリガナ（セイ）を入力してください</div>
+    </div>
+    <div class="fg">
+      <label>フリガナ（メイ）<span class="req">必須</span></label>
+      <input type="text" id="f-mei-kana" placeholder="タロウ" oninput="syncField(this)">
+      <div class="field-err" id="err-mei-kana">フリガナ（メイ）を入力してください</div>
+    </div>
+  </div>
+
+  <div class="form-grid triple">
+    <div class="fg">
+      <label>生年月日<span class="req">必須</span></label>
+      <input type="date" id="f-dob" max="2008-02-21" oninput="syncField(this)">
+      <div class="field-err" id="err-dob">生年月日を入力してください（18歳以上）</div>
+    </div>
+    <div class="fg">
+      <label>性別<span class="opt">任意</span></label>
+      <select id="f-gender">
+        <option value="">選択しない</option>
+        <option value="男性">男性</option>
+        <option value="女性">女性</option>
+        <option value="その他">その他</option>
+      </select>
+    </div>
+    <div class="fg">
+      <label>現在の職業<span class="req">必須</span></label>
+      <select id="f-job" oninput="syncField(this)">
+        <option value="">選択してください</option>
+        <option>会社員（正社員）</option>
+        <option>会社員（契約・派遣）</option>
+        <option>個人事業主・フリーランス</option>
+        <option>不動産業（現役）</option>
+        <option>人材業（現役）</option>
+        <option>経営者・役員</option>
+        <option>無職・求職中</option>
+        <option>その他</option>
+      </select>
+      <div class="field-err" id="err-job">職業を選択してください</div>
+    </div>
+  </div>
+
+  <div class="form-grid">
+    <div class="fg">
+      <label>メールアドレス<span class="req">必須</span></label>
+      <input type="email" id="f-email" placeholder="taro@example.com" oninput="syncField(this)">
+      <div class="field-err" id="err-email">正しいメールアドレスを入力してください</div>
+    </div>
+    <div class="fg">
+      <label>電話番号<span class="req">必須</span></label>
+      <input type="tel" id="f-tel" placeholder="090-0000-0000" oninput="syncField(this)">
+      <div class="field-err" id="err-tel">電話番号を入力してください</div>
+    </div>
+  </div>
+
+  <div class="form-grid">
+    <div class="fg">
+      <label>郵便番号<span class="req">必須</span></label>
+      <input type="text" id="f-postal" placeholder="100-0001" maxlength="8" oninput="onPostal(this)">
+      <div class="field-hint">ハイフンあり・なし両方可</div>
+    </div>
+    <div class="fg">
+      <label>都道府県<span class="req">必須</span></label>
+      <select id="f-pref" oninput="syncField(this)">
+        <option value="">選択してください</option>
+        <option>北海道</option><option>青森県</option><option>岩手県</option><option>宮城県</option><option>秋田県</option><option>山形県</option><option>福島県</option><option>茨城県</option><option>栃木県</option><option>群馬県</option><option>埼玉県</option><option>千葉県</option><option>東京都</option><option>神奈川県</option><option>新潟県</option><option>富山県</option><option>石川県</option><option>福井県</option><option>山梨県</option><option>長野県</option><option>岐阜県</option><option>静岡県</option><option>愛知県</option><option>三重県</option><option>滋賀県</option><option>京都府</option><option>大阪府</option><option>兵庫県</option><option>奈良県</option><option>和歌山県</option><option>鳥取県</option><option>島根県</option><option>岡山県</option><option>広島県</option><option>山口県</option><option>徳島県</option><option>香川県</option><option>愛媛県</option><option>高知県</option><option>福岡県</option><option>佐賀県</option><option>長崎県</option><option>熊本県</option><option>大分県</option><option>宮崎県</option><option>鹿児島県</option><option>沖縄県</option>
+      </select>
+      <div class="field-err" id="err-pref">都道府県を選択してください</div>
+    </div>
+    <div class="fg span2">
+      <label>市区町村・番地<span class="req">必須</span></label>
+      <input type="text" id="f-addr" placeholder="千代田区丸の内1-1-1" oninput="syncField(this)">
+      <div class="field-err" id="err-addr">住所を入力してください</div>
+    </div>
+  </div>
+
+  <!-- パートナー法人 -->
+  <div class="cond" id="cond-corp-toggle">
+    <div class="sec-div"><div class="sec-div-line"></div><div class="sec-div-label">契約形態</div><div class="sec-div-line"></div></div>
+    <div class="form-grid single" style="margin-bottom:16px">
+      <div class="fg">
+        <label>登録形態<span class="req">必須</span></label>
+        <div class="radio-group">
+          <label class="rc-item">
+            <input type="radio" name="contract" value="individual" checked onchange="onContractChange(this)">
+            <div class="rc-dot"></div><div><div class="rc-label">個人</div></div>
+          </label>
+          <label class="rc-item">
+            <input type="radio" name="contract" value="corporate" onchange="onContractChange(this)">
+            <div class="rc-dot"></div><div><div class="rc-label">法人</div><div class="rc-sub">法人名・法人番号が必要</div></div>
+          </label>
+        </div>
+      </div>
+    </div>
+    <div class="cond" id="cond-corp">
+      <div class="info-box info-gold" style="margin-bottom:16px">
+        <span>💼</span>
+        <div>法人でご登録の場合、報酬は法人口座にお振り込みします。源泉徴収は原則不要です。</div>
+      </div>
+      <div class="form-grid">
+        <div class="fg span2">
+          <label>法人名<span class="req">必須</span></label>
+          <input type="text" id="f-corp-name" placeholder="株式会社○○">
+        </div>
+        <div class="fg">
+          <label>法人番号（13桁）<span class="req">必須</span></label>
+          <input type="text" id="f-corp-no" placeholder="1234567890123" maxlength="13">
+        </div>
+        <div class="fg">
+          <label>代表者氏名<span class="req">必須</span></label>
+          <input type="text" id="f-corp-rep" placeholder="山田 太郎">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-ghost" onclick="goStep(1)">← 戻る</button>
+    <button class="btn btn-primary" onclick="validateStep2()">次へ →</button>
+  </div>
+</div>
+
+<!-- ═══ STEP 3: 専門情報 ═══ -->
+<div class="step" id="step-3">
+  <div class="step-eyebrow">STEP 03</div>
+  <div class="step-title" id="step3-title">ご経験・<br>資格情報</div>
+  <div class="step-desc" id="step3-desc">業務に関連するご経験・資格をお知らせください。</div>
+
+  <!-- RE専用 -->
+  <div class="cond" id="cond-re">
+    <div class="form-grid single" style="margin-bottom:8px">
+      <div class="fg">
+        <label>宅地建物取引士（宅建士）資格<span class="req">必須</span></label>
+        <div class="radio-group">
+          <label class="rc-item" id="rc-takken-yes">
+            <input type="radio" name="takken" value="yes" onchange="onTakkenChange('yes')">
+            <div class="rc-dot"></div>
+            <div><div class="rc-label">保有している</div><div class="rc-sub">専任登録で月会費・名刺費が無料に</div></div>
+          </label>
+          <label class="rc-item">
+            <input type="radio" name="takken" value="no" onchange="onTakkenChange('no')">
+            <div class="rc-dot"></div>
+            <div><div class="rc-label">保有していない</div><div class="rc-sub">資格なしでも登録可能</div></div>
+          </label>
+        </div>
+        <div class="field-err" id="err-takken">宅建士資格の有無を選択してください</div>
+      </div>
+    </div>
+    <div class="cond" id="cond-takken-info">
+      <div class="form-grid triple">
+        <div class="fg span2">
+          <label>宅建士証 登録番号<span class="req">必須</span></label>
+          <input type="text" id="f-takken-no" placeholder="東京都知事(2)第123456号">
+          <div class="field-hint">例：東京都知事(2)第123456号</div>
+        </div>
+        <div class="fg">
+          <label>有効期限<span class="req">必須</span></label>
+          <input type="date" id="f-takken-exp" min="2026-02-21">
+        </div>
+      </div>
+    </div>
+
+    <div class="sec-div"><div class="sec-div-line"></div><div class="sec-div-label">経験・得意分野</div><div class="sec-div-line"></div></div>
+    <div class="form-grid">
+      <div class="fg">
+        <label>不動産業界経験年数<span class="req">必須</span></label>
+        <select id="f-re-exp" oninput="syncField(this)">
+          <option value="">選択してください</option>
+          <option>未経験</option>
+          <option>1年未満</option>
+          <option>1〜3年</option>
+          <option>3〜5年</option>
+          <option>5〜10年</option>
+          <option>10年以上</option>
+        </select>
+        <div class="field-err" id="err-re-exp">経験年数を選択してください</div>
+      </div>
+      <div class="fg">
+        <label>得意物件タイプ<span class="opt">任意</span></label>
+        <input type="text" id="f-re-proptype" placeholder="マンション・戸建て">
+      </div>
+      <div class="fg span2">
+        <label>得意エリア<span class="opt">任意</span></label>
+        <input type="text" id="f-re-area" placeholder="渋谷区・港区・新宿区">
+      </div>
+    </div>
+    <div class="form-grid single">
+      <div class="fg">
+        <label>これまでの実績・経験（具体的に）<span class="opt">任意</span></label>
+        <textarea id="f-re-detail" placeholder="月平均成約件数、得意な案件の種類、前職での役割など" style="min-height:90px"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- HR専用 -->
+  <div class="cond" id="cond-hr">
+    <div class="info-box info-hr">
+      <span>📋</span>
+      <div>人材エージェントは<strong>人材業界経験1年以上</strong>が必須です。未経験の方は不動産エージェントまたはパートナーとして応募ください。</div>
+    </div>
+    <div class="form-grid">
+      <div class="fg">
+        <label>人材業界経験年数<span class="req">必須</span></label>
+        <select id="f-hr-exp" onchange="onHRExpChange(this)" oninput="syncField(this)">
+          <option value="">選択してください</option>
+          <option value="insufficient">1年未満（応募資格なし）</option>
+          <option>1〜3年</option>
+          <option>3〜5年</option>
+          <option>5〜10年</option>
+          <option>10年以上</option>
+        </select>
+        <div class="field-err" id="err-hr-exp">経験年数を選択してください</div>
+      </div>
+      <div class="fg">
+        <label>得意業界<span class="opt">任意</span></label>
+        <input type="text" id="f-hr-industry" placeholder="IT・製造・金融">
+      </div>
+    </div>
+    <div class="cond" id="cond-hr-ineligible">
+      <div class="info-box info-warn">
+        <span>⚠️</span>
+        <div>人材エージェントへの応募には業界経験1年以上が必要です。<br>不動産エージェントまたはパートナーとして応募することをご検討ください。</div>
+      </div>
+    </div>
+    <div class="form-grid single">
+      <div class="fg">
+        <label>担当職務（複数選択可）<span class="req">必須</span></label>
+        <div class="check-group vertical" id="hr-duties">
+          <label class="rc-item">
+            <input type="checkbox" name="duty" value="CA（キャリアアドバイザー）" onchange="onDutyChange()">
+            <div class="rc-sq"></div><div><div class="rc-label">CA（キャリアアドバイザー）</div></div>
+          </label>
+          <label class="rc-item">
+            <input type="checkbox" name="duty" value="RA（リクルーティングアドバイザー）" onchange="onDutyChange()">
+            <div class="rc-sq"></div><div><div class="rc-label">RA（リクルーティングアドバイザー）</div></div>
+          </label>
+          <label class="rc-item">
+            <input type="checkbox" name="duty" value="両面型（CA・RA）" onchange="onDutyChange()">
+            <div class="rc-sq"></div><div><div class="rc-label">両面型（CA・RA）</div></div>
+          </label>
+          <label class="rc-item">
+            <input type="checkbox" name="duty" value="人材営業" onchange="onDutyChange()">
+            <div class="rc-sq"></div><div><div class="rc-label">人材営業</div></div>
+          </label>
+          <label class="rc-item">
+            <input type="checkbox" name="duty" value="事務・受付" onchange="onDutyChange()">
+            <div class="rc-sq"></div><div><div class="rc-label">事務・受付</div></div>
+          </label>
+        </div>
+        <div class="field-err" id="err-hr-duties">担当職務を1つ以上選択してください</div>
+      </div>
+    </div>
+    <div class="form-grid">
+      <div class="fg span2">
+        <label>得意職種<span class="opt">任意</span></label>
+        <input type="text" id="f-hr-occ" placeholder="エンジニア・営業職・管理職">
+      </div>
+    </div>
+  </div>
+
+  <!-- PT専用 -->
+  <div class="cond" id="cond-pt">
+    <div class="info-box info-gold">
+      <span>🤝</span>
+      <div>パートナーは紹介ネットワークを活かして活動いただきます。特別な資格・経験は不要です。</div>
+    </div>
+    <div class="form-grid">
+      <div class="fg">
+        <label>お持ちのネットワーク・人脈<span class="opt">任意</span></label>
+        <input type="text" id="f-pt-network" placeholder="不動産オーナー・中小企業経営者など">
+      </div>
+      <div class="fg">
+        <label>ご紹介いただける案件の種類<span class="opt">任意</span></label>
+        <input type="text" id="f-pt-casetype" placeholder="賃貸・売買・採用支援など">
+      </div>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-ghost" onclick="goStep(2)">← 戻る</button>
+    <button class="btn btn-primary" onclick="validateStep3()">次へ →</button>
+  </div>
+</div>
+
+<!-- ═══ STEP 4: 志望動機・確認 ═══ -->
+<div class="step" id="step-4">
+  <div class="step-eyebrow">STEP 04</div>
+  <div class="step-title">志望動機・<br>最終確認</div>
+  <div class="step-desc">志望動機をご入力後、入力内容をご確認のうえ送信してください。</div>
+
+  <div class="form-grid single">
+    <div class="fg">
+      <label>志望動機<span class="req">必須・50文字以上</span></label>
+      <textarea id="f-motivation" placeholder="COREBLDGを選んだ理由、これまでの経験をどのように活かしたいか、目標など具体的にご記入ください。" oninput="onMotivation(this)" style="min-height:150px"></textarea>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
+        <div class="field-err" id="err-motivation" style="position:static;margin-top:0">50文字以上入力してください</div>
+        <div class="char-count" id="moti-count">0 / 50文字以上</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 確認テーブル -->
+  <div class="sec-div"><div class="sec-div-line"></div><div class="sec-div-label">入力内容の確認</div><div class="sec-div-line"></div></div>
+  <div style="background:var(--card);border:1.5px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:24px">
+    <table class="confirm-table" id="confirm-table"></table>
+  </div>
+
+  <!-- 規約同意 -->
+  <div class="agree-block">
+    <div class="agree-title">個人情報の取り扱いについて</div>
+    <div class="agree-text">
+      ご入力いただいた個人情報は、株式会社COREBLDGが書類審査・面接選考のために利用します。第三者への提供は行いません。選考終了後、不合格の場合は申込情報を速やかに廃棄します。なお、本フォームの送信をもって上記に同意したものとみなします。
+    </div>
+    <label class="agree-check">
+      <input type="checkbox" id="agree-check" onchange="onAgreeChange(this)">
+      <div class="agree-box"></div>
+      <span>個人情報の取り扱いに同意します</span>
+    </label>
+  </div>
+  <div class="agree-block">
+    <div class="agree-title">反社会的勢力排除に関する確認</div>
+    <div class="agree-text">
+      申込者本人（および法人の場合は代表者・役員）が、暴力団、暴力団員、暴力団準構成員、暴力団関係企業、総会屋等、社会運動等標榜ゴロ、特殊知能暴力集団等、その他これらに準ずる者（以下「反社会的勢力」）に該当しないことを誓約します。
+    </div>
+    <label class="agree-check">
+      <input type="checkbox" id="anti-check" onchange="onAgreeChange(this)">
+      <div class="agree-box"></div>
+      <span>反社会的勢力に該当しないことを誓約します</span>
+    </label>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-ghost" onclick="goStep(3)">← 戻る</button>
+    <button class="btn btn-submit" onclick="submitForm()" id="btn-submit" disabled>📨 応募を送信する</button>
+  </div>
+</div>
+
+<!-- ═══ STEP 5: 完了 ═══ -->
+<div class="step" id="step-5">
+  <div class="complete">
+    <div class="complete-seal">✉️</div>
+    <div class="complete-title">ご応募ありがとうございます</div>
+    <div class="complete-id" id="app-id-display">APP-20260221-XXX</div>
+    <div class="complete-sub">
+      書類審査の結果は、ご登録のメールアドレスに<strong>3〜5営業日以内</strong>にご連絡いたします。<br>
+      通過された方には、面接日程のご案内をお送りします。
+    </div>
+    <div class="next-steps">
+      <div class="ns-title">NEXT STEPS</div>
+      <div class="ns-item">
+        <div class="ns-num">01</div>
+        <div class="ns-text"><strong>書類審査</strong> — 本部スタッフが内容を確認します（3〜5営業日）</div>
+      </div>
+      <div class="ns-item">
+        <div class="ns-num">02</div>
+        <div class="ns-text"><strong>選考結果のご連絡</strong> — メールにて審査結果をお知らせします</div>
+      </div>
+      <div class="ns-item">
+        <div class="ns-num">03</div>
+        <div class="ns-text"><strong>面接</strong> — 通過された方にはオンライン面接のご案内をお送りします（30〜60分）</div>
+      </div>
+      <div class="ns-item">
+        <div class="ns-num">04</div>
+        <div class="ns-text"><strong>入会オンボーディング</strong> — 面接通過後、招待リンクをお送りします</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /main -->
+
+<script>
+// ─ State ─
+const form = {
+  type: '', sei:'', mei:'', seiKana:'', meiKana:'',
+  dob:'', gender:'', job:'', email:'', tel:'',
+  postal:'', pref:'', addr:'',
+  contract:'individual', corpName:'', corpNo:'', corpRep:'',
+  takken:'', takkenNo:'', takkenExp:'',
+  reExp:'', reArea:'', rePropType:'', reDetail:'',
+  hrExp:'', hrDuties:[], hrIndustry:'', hrOcc:'',
+  ptNetwork:'', ptCaseType:'',
+  motivation:'', referral:''
+};
+
+let currentStep = 1;
+const TOTAL = 4;
+const PROGRESS = [0, 25, 50, 75, 100];
+
+function goStep(n) {
+  document.getElementById('step-'+currentStep).classList.remove('active');
+  document.getElementById('step-'+n).classList.add('active');
+  currentStep = n;
+  document.getElementById('prog-bar').style.width = PROGRESS[n]+'%';
+  document.getElementById('hdr-step-label').textContent = n <= 4 ? `STEP ${n} / ${TOTAL}` : '完了';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  if (n === 4) buildConfirmTable();
+}
+
+// ─ Step 1: Type selection ─
+function selectType(type, card) {
+  form.type = type;
+  document.querySelectorAll('.type-card').forEach(c => c.classList.remove('sel'));
+  card.classList.add('sel');
+  document.getElementById('btn-step1-next').disabled = false;
+  // Show/hide corp toggle for partner
+  showCond('cond-corp-toggle', type === 'pt');
+  // Update step 2 desc
+  const descs = { re:'不動産エージェントとしてご活躍いただくにあたり、基本情報をご入力ください。', hr:'人材エージェントとしてご活躍いただくにあたり、基本情報をご入力ください。', pt:'パートナーとして基本情報をご入力ください。法人登録の場合は法人情報もご入力ください。' };
+  document.getElementById('step2-desc').textContent = descs[type] || '';
+  const t3 = { re:'不動産業界での経験・資格をお知らせください。', hr:'人材業界でのご経験をお知らせください。', pt:'活動の背景をお聞かせください。' };
+  document.getElementById('step3-desc').textContent = t3[type] || '';
+  const t3title = { re:'ご経験・資格情報', hr:'ご経験・担当職務', pt:'活動背景（任意）' };
+  document.getElementById('step3-title').textContent = t3title[type] || '';
+}
+
+function onContractChange(radio) {
+  form.contract = radio.value;
+  showCond('cond-corp', radio.value === 'corporate');
+}
+
+// ─ Step 2 validation ─
+function syncField(el) { /* live feedback */ el.classList.remove('err'); }
+
+function showErr(id, show) {
+  document.getElementById(id).classList.toggle('show', show);
+}
+function markErr(fieldId, errId, show) {
+  document.getElementById(fieldId).classList.toggle('err', show);
+  showErr(errId, show);
+}
+
+function validateStep2() {
+  let ok = true;
+  const checks = [
+    ['f-sei',      'err-sei',      v => v.trim().length > 0],
+    ['f-mei',      'err-mei',      v => v.trim().length > 0],
+    ['f-sei-kana', 'err-sei-kana', v => v.trim().length > 0],
+    ['f-mei-kana', 'err-mei-kana', v => v.trim().length > 0],
+    ['f-dob',      'err-dob',      v => { if(!v) return false; const d=new Date(v); const min=new Date('1900-01-01'); const max=new Date(); max.setFullYear(max.getFullYear()-18); return d>=min&&d<=max; }],
+    ['f-job',      'err-job',      v => v !== ''],
+    ['f-email',    'err-email',    v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)],
+    ['f-tel',      'err-tel',      v => v.trim().length >= 10],
+    ['f-pref',     'err-pref',     v => v !== ''],
+    ['f-addr',     'err-addr',     v => v.trim().length > 0],
+  ];
+  checks.forEach(([fid, eid, fn]) => {
+    const val = document.getElementById(fid).value;
+    const pass = fn(val);
+    markErr(fid, eid, !pass);
+    if (!pass) ok = false;
+  });
+
+  // Corp fields
+  if (form.type === 'pt' && form.contract === 'corporate') {
+    const cn = document.getElementById('f-corp-name').value.trim();
+    const cno = document.getElementById('f-corp-no').value.trim();
+    const cr = document.getElementById('f-corp-rep').value.trim();
+    if (!cn||!cno||!cr) { ok = false; }
+  }
+
+  if (ok) {
+    // Save values
+    form.sei = v('f-sei'); form.mei = v('f-mei');
+    form.seiKana = v('f-sei-kana'); form.meiKana = v('f-mei-kana');
+    form.dob = v('f-dob'); form.gender = v('f-gender'); form.job = v('f-job');
+    form.email = v('f-email'); form.tel = v('f-tel');
+    form.postal = v('f-postal'); form.pref = v('f-pref'); form.addr = v('f-addr');
+    form.corpName = v('f-corp-name'); form.corpNo = v('f-corp-no'); form.corpRep = v('f-corp-rep');
+
+    // Show correct step 3 panel
+    showCond('cond-re', form.type === 're');
+    showCond('cond-hr', form.type === 'hr');
+    showCond('cond-pt', form.type === 'pt');
+    goStep(3);
+  }
+}
+
+function v(id) { const el = document.getElementById(id); return el ? el.value : ''; }
+
+function onPostal(el) {
+  let val = el.value.replace(/[^\d]/g, '');
+  if (val.length > 3) val = val.slice(0,3) + '-' + val.slice(3,7);
+  el.value = val;
+}
+
+// ─ Step 3 ─
+function onTakkenChange(val) {
+  form.takken = val;
+  showCond('cond-takken-info', val === 'yes');
+  document.getElementById('err-takken').classList.remove('show');
+}
+
+function onHRExpChange(sel) {
+  showCond('cond-hr-ineligible', sel.value === 'insufficient');
+  syncField(sel);
+}
+
+function onDutyChange() {
+  form.hrDuties = Array.from(document.querySelectorAll('input[name="duty"]:checked')).map(el => el.value);
+  document.getElementById('err-hr-duties').classList.toggle('show', form.hrDuties.length === 0);
+}
+
+function validateStep3() {
+  let ok = true;
+  if (form.type === 're') {
+    const takken = document.querySelector('input[name="takken"]:checked');
+    if (!takken) { document.getElementById('err-takken').classList.add('show'); ok = false; }
+    else {
+      form.takken = takken.value;
+      if (takken.value === 'yes') {
+        const tn = v('f-takken-no').trim();
+        const te = v('f-takken-exp');
+        if (!tn || !te) ok = false;
+        form.takkenNo = tn; form.takkenExp = te;
+      }
+    }
+    const re = document.getElementById('f-re-exp').value;
+    if (!re) { markErr('f-re-exp','err-re-exp',true); ok = false; }
+    else { form.reExp = re; form.reArea = v('f-re-area'); form.rePropType = v('f-re-proptype'); form.reDetail = v('f-re-detail'); }
+  }
+
+  if (form.type === 'hr') {
+    const he = document.getElementById('f-hr-exp').value;
+    if (!he || he === 'insufficient') { markErr('f-hr-exp','err-hr-exp',!he); ok = false; }
+    else form.hrExp = he;
+    const duties = Array.from(document.querySelectorAll('input[name="duty"]:checked'));
+    if (!duties.length) { document.getElementById('err-hr-duties').classList.add('show'); ok = false; }
+    else { form.hrDuties = duties.map(d=>d.value); form.hrIndustry = v('f-hr-industry'); form.hrOcc = v('f-hr-occ'); }
+  }
+
+  if (form.type === 'pt') {
+    form.ptNetwork = v('f-pt-network');
+    form.ptCaseType = v('f-pt-casetype');
+  }
+
+  if (ok) goStep(4);
+}
+
+// ─ Step 4 ─
+function onMotivation(el) {
+  const len = el.value.trim().length;
+  const cnt = document.getElementById('moti-count');
+  cnt.textContent = len + ' / 50文字以上';
+  cnt.classList.toggle('warn', len < 50);
+  el.classList.toggle('err', len > 0 && len < 50);
+  onAgreeChange();
+}
+
+function onAgreeChange() {
+  const agree = document.getElementById('agree-check').checked;
+  const anti  = document.getElementById('anti-check').checked;
+  const moti  = v('f-motivation').trim().length >= 50;
+  document.getElementById('btn-submit').disabled = !(agree && anti && moti);
+}
+
+function buildConfirmTable() {
+  const typeLabel = { re:'🏠 不動産エージェント', hr:'👥 人材エージェント', pt:'🤝 パートナー' }[form.type];
+  const typeBadge = `<span class="confirm-type-badge badge-${form.type}">${typeLabel}</span>`;
+  let rows = [
+    ['活動タイプ', typeBadge],
+    ['氏名', `${form.sei} ${form.mei}（${form.seiKana} ${form.meiKana}）`],
+    ['生年月日', form.dob.replace(/-/g,'/')],
+    ['職業', form.job],
+    ['メール', form.email],
+    ['電話', form.tel],
+    ['住所', `${form.pref} ${form.addr}`],
+  ];
+
+  if (form.type === 'pt' && form.contract === 'corporate') {
+    rows.push(['法人名', form.corpName], ['法人番号', form.corpNo], ['代表者', form.corpRep]);
+  }
+
+  if (form.type === 're') {
+    rows.push(['宅建士資格', form.takken === 'yes' ? `✅ 保有（${form.takkenNo}）` : '❌ 保有していない']);
+    rows.push(['不動産経験', form.reExp]);
+    if (form.reArea) rows.push(['得意エリア', form.reArea]);
+  }
+
+  if (form.type === 'hr') {
+    rows.push(['人材経験', form.hrExp]);
+    rows.push(['担当職務', form.hrDuties.join('、')]);
+    if (form.hrIndustry) rows.push(['得意業界', form.hrIndustry]);
+  }
+
+  if (form.type === 'pt') {
+    if (form.ptNetwork) rows.push(['保有ネットワーク', form.ptNetwork]);
+  }
+
+  rows.push(['紹介コード', form.referral || '（なし）']);
+
+  document.getElementById('confirm-table').innerHTML = rows.map(([l,v]) =>
+    `<tr><td>${l}</td><td>${v}</td></tr>`
+  ).join('');
+}
+
+function submitForm() {
+  form.motivation = v('f-motivation');
+  form.referral   = v('f-referral');
+
+  // Generate APP ID
+  const now = new Date();
+  const ymd = now.getFullYear().toString() +
+    String(now.getMonth()+1).padStart(2,'0') +
+    String(now.getDate()).padStart(2,'0');
+  const appId = `APP-${ymd}-${String(Math.floor(Math.random()*900)+100)}`;
+  document.getElementById('app-id-display').textContent = appId;
+
+  // In production: POST to Kintone API / Form Bridge here
+  console.log('Application submitted:', { ...form, appId });
+
+  goStep(5);
+}
+
+// ─ Utils ─
+function showCond(id, show) {
+  const el = document.getElementById(id);
+  if (el) el.classList.toggle('show', show);
+}
+
+// ─ Init ─
+document.getElementById('prog-bar').style.width = '25%';
+</script>
+
+</body>
+</html>

@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CORETO — 案件パイプライン</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090f;--card:#0f1119;--card2:#141720;--border:#1e2235;--border2:#252a3d;
+  --gold:#c9a84c;--gold-dim:#7a5f22;
+  --blue:#4f9cf9;--green:#34d399;--red:#f87171;--orange:#fb923c;--purple:#a78bfa;
+  --teal:#2dd4bf;
+  --muted:#4a5270;--sub:#7a849e;--text:#e2e6f3;
+}
+html,body{height:100%;font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);overflow:hidden}
+.hdr{height:54px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 22px;border-bottom:1px solid var(--border);background:rgba(7,9,15,.95);z-index:50;position:relative}
+.logo{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:var(--gold);letter-spacing:3px}
+.toolbar{display:flex;align-items:center;gap:10px;padding:10px 22px;
+  border-bottom:1px solid var(--border);background:var(--card2)}
+/* Kanban board */
+.board{display:flex;gap:0;height:calc(100vh - 54px - 50px);overflow-x:auto;overflow-y:hidden}
+.col{width:280px;flex-shrink:0;display:flex;flex-direction:column;border-right:1px solid var(--border)}
+.col:last-child{border-right:none}
+.col-hdr{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.col-title{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+.col-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.col-count{font-size:9px;padding:2px 8px;border-radius:10px;font-weight:700}
+.col-body{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px}
+/* Case card */
+.case-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;
+  cursor:pointer;transition:.15s;position:relative}
+.case-card:hover{border-color:var(--border2);background:#11141f;transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,0,0,.3)}
+.case-card.dragging{opacity:.5}
+.cc-type{font-size:8px;font-weight:700;letter-spacing:1px;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.cc-client{font-size:13px;font-weight:700;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cc-sub{font-size:10px;color:var(--muted);margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cc-meta{display:flex;align-items:center;justify-content:space-between;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
+.cc-id{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted)}
+.cc-amount{font-family:'DM Mono',monospace;font-size:11px;color:var(--gold);font-weight:700}
+.cc-days{font-size:9px;padding:2px 7px;border-radius:5px;font-weight:700}
+.cc-agent{font-size:9px;color:var(--sub);margin-top:4px;display:flex;align-items:center;gap:4px}
+/* Stale indicator */
+.cc-stale{position:absolute;top:8px;right:8px;width:7px;height:7px;border-radius:50%;background:var(--red)}
+/* Pills */
+.pill{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:5px;font-size:9px;font-weight:700}
+.btn{padding:7px 14px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;
+  font-family:'Noto Sans JP',sans-serif;transition:.15s;border:none;display:inline-flex;align-items:center;gap:6px}
+.btn-blue{background:linear-gradient(135deg,var(--blue),#3070c0);color:#fff}
+.btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--sub)}
+.btn-ghost:hover{color:var(--text)}
+.btn-sm{padding:4px 10px;font-size:10px;border-radius:6px}
+/* Add card button */
+.add-card{padding:8px;border:1px dashed var(--border2);border-radius:8px;
+  text-align:center;font-size:11px;color:var(--muted);cursor:pointer;transition:.15s}
+.add-card:hover{border-color:var(--blue);color:var(--blue);background:rgba(79,156,249,.04)}
+/* Detail panel */
+.panel{position:fixed;right:0;top:54px;width:400px;height:calc(100vh - 54px);
+  background:var(--card);border-left:1px solid var(--border);z-index:100;
+  display:none;flex-direction:column;overflow:hidden}
+.panel.show{display:flex}
+.panel-hdr{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.panel-body{flex:1;overflow-y:auto;padding:18px 20px}
+.panel-close{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer}
+/* Select move */
+.move-btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.move-btn{padding:6px 12px;border-radius:7px;font-size:10px;font-weight:700;cursor:pointer;
+  border:1px solid var(--border2);background:transparent;color:var(--sub);
+  font-family:'Noto Sans JP',sans-serif;transition:.15s}
+.move-btn:hover{color:var(--text);border-color:var(--sub)}
+.move-btn.cur{border-color:var(--blue);color:var(--blue);background:rgba(79,156,249,.08)}
+/* Filter */
+.filter-btn{padding:5px 12px;border-radius:7px;font-size:10px;font-weight:700;cursor:pointer;
+  border:1px solid var(--border2);background:transparent;color:var(--sub);
+  font-family:'Noto Sans JP',sans-serif;transition:.15s}
+.filter-btn.on{border-color:var(--blue);color:var(--blue);background:rgba(79,156,249,.08)}
+/* Timeline memo */
+.memo-item{display:flex;gap:10px;padding-bottom:12px}
+.memo-dot{width:8px;height:8px;border-radius:50%;background:var(--border2);flex-shrink:0;margin-top:4px}
+.memo-dot.act{background:var(--blue)}
+.memo-line{width:1px;background:var(--border2);flex-shrink:0;margin:-4px 3.5px 0;align-self:stretch}
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+</style>
+</head>
+<body>
+<div class="hdr">
+  <div style="display:flex;align-items:center;gap:12px">
+    <div class="logo">CORETO</div>
+    <div style="width:1px;height:18px;background:var(--border2)"></div>
+    <span style="font-size:10px;color:var(--muted);letter-spacing:1px">案件パイプライン</span>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center">
+    <span id="my-name-pill" style="font-size:11px;color:var(--sub)">山田 誠 / 10012</span>
+    <button class="btn btn-blue btn-sm" onclick="openAddCase()">＋ 新規案件</button>
+    <button class="btn btn-ghost btn-sm" onclick="window.location.href='coreto-hub.html'">🏠 ホーム</button>
+  </div>
+</div>
+
+<!-- Toolbar / Filter -->
+<div class="toolbar">
+  <span style="font-size:10px;color:var(--muted);font-weight:700;letter-spacing:1px">フィルター：</span>
+  <button class="filter-btn on" onclick="filter('all',this)">すべて</button>
+  <button class="filter-btn" onclick="filter('re',this)">🏠 賃貸仲介</button>
+  <button class="filter-btn" onclick="filter('sale',this)">🏢 売買</button>
+  <button class="filter-btn" onclick="filter('hr',this)">👥 人材紹介</button>
+  <div style="margin-left:auto;font-size:11px;color:var(--muted)">
+    🔴 = 7日以上動きなし
+  </div>
+</div>
+
+<!-- Kanban -->
+<div class="board" id="board"></div>
+
+<!-- Detail Panel -->
+<div class="panel" id="detail-panel">
+  <div class="panel-hdr">
+    <div>
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)" id="dp-id">—</div>
+      <div style="font-size:14px;font-weight:800;margin-top:2px" id="dp-name">—</div>
+    </div>
+    <button class="panel-close" onclick="closePanel()">✕</button>
+  </div>
+  <div class="panel-body" id="dp-body"></div>
+</div>
+
+<script>
+const SESSION_KEY = 'coreto_session';
+const s = (() => { try { return JSON.parse(sessionStorage.getItem(SESSION_KEY)||'{}'); } catch(e){return {};} })();
+const ME = { id: s.id||'10012', name: s.name||'山田 誠', type: s.type||'re' };
+
+const STAGES = [
+  { id:'new',      label:'新規問合せ',  color:'var(--sub)',    dot:'#4a5270' },
+  { id:'naiken',   label:'内見調整中',  color:'var(--blue)',   dot:'#4f9cf9' },
+  { id:'apply',    label:'申込・審査',  color:'var(--orange)', dot:'#fb923c' },
+  { id:'contract', label:'契約締結中',  color:'var(--gold)',   dot:'#c9a84c' },
+  { id:'payment',  label:'入金待ち',    color:'var(--purple)', dot:'#a78bfa' },
+  { id:'done',     label:'成約完了',    color:'var(--green)',  dot:'#34d399' },
+];
+
+const TYPE_LABEL = { re:'🏠 賃貸', sale:'🏢 売買', hr:'👥 人材' };
+const TYPE_COLOR = { re:'var(--blue)', sale:'var(--gold)', hr:'var(--green)' };
+
+let CASES = [
+  {id:'R042857',client:'田中 雄介',sub:'渋谷区 2LDK 想定¥220,000',stage:'naiken', type:'re',amt:220000,agent:'10012',days:3,memo:['2/19 内見実施。好感触。']},
+  {id:'R039102',client:'木村 彩香',sub:'品川区 1K 想定¥85,000',  stage:'apply',   type:'re',amt:85000, agent:'10012',days:1,memo:['2/20 申込書類受領。审查中。']},
+  {id:'S819204',client:'吉田 大輔',sub:'目黒区 一戸建て 3,200万',stage:'contract', type:'sale',amt:3200000,agent:'10008',days:5,memo:['2/15 契約書作成中。']},
+  {id:'R041003',client:'斎藤 亮',  sub:'新宿区 1LDK 想定¥130,000',stage:'new',   type:'re',amt:130000,agent:'10023',days:9,memo:['2/11 問合せ受信。未連絡。'],stale:true},
+  {id:'H334521',client:'ITスタートアップA社',sub:'エンジニア 年収700万',stage:'apply',type:'hr',amt:700000,agent:'20005',days:2,memo:['2/19 書類選考通過。']},
+  {id:'R038291',client:'松本 浩二',sub:'渋谷区 2K 想定¥170,000',stage:'payment', type:'re',amt:170000,agent:'10012',days:0,memo:['2/21 入金確認待ち。']},
+  {id:'R040011',client:'中村 由美',sub:'港区 1R 想定¥95,000',    stage:'done',   type:'re',amt:95000, agent:'10012',days:0,memo:['2/18 成約。報酬確定済み。']},
+  {id:'H335002',client:'大手製造業B社',sub:'営業職 年収550万',   stage:'naiken', type:'hr',amt:550000,agent:'20005',days:4,memo:['2/17 一次面接設定完了。']},
+];
+
+let activeFilter = 'all';
+let activeCase = null;
+
+function filter(type, btn) {
+  activeFilter = type;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  renderBoard();
+}
+
+function renderBoard() {
+  const board = document.getElementById('board');
+  const cases = activeFilter === 'all' ? CASES : CASES.filter(c=>c.type===activeFilter);
+  board.innerHTML = STAGES.map(stage => {
+    const cols = cases.filter(c=>c.stage===stage.id);
+    return `
+    <div class="col">
+      <div class="col-hdr">
+        <div class="col-title">
+          <div class="col-dot" style="background:${stage.dot}"></div>
+          ${stage.label}
+        </div>
+        <span class="col-count" style="background:${stage.dot}22;color:${stage.color};border:1px solid ${stage.dot}44">${cols.length}</span>
+      </div>
+      <div class="col-body">
+        ${cols.map(c=>renderCard(c)).join('')}
+        <div class="add-card" onclick="openAddCase('${stage.id}')">＋ 追加</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderCard(c) {
+  const daysLabel = c.days === 0 ? '本日' : `${c.days}日前`;
+  const daysColor = c.days >= 7 ? 'var(--red)' : c.days >= 3 ? 'var(--orange)' : 'var(--muted)';
+  const staleIndicator = c.stale ? '<div class="cc-stale" title="7日以上動きなし"></div>' : '';
+  const ym = c.type==='hr' ? '万' : '万';
+  const amtDisplay = c.amt >= 1000000 ? `¥${(c.amt/10000).toFixed(0)}万` : `¥${(c.amt/10000).toFixed(0)}万`;
+  return `
+  <div class="case-card" onclick="openCase('${c.id}')">
+    ${staleIndicator}
+    <div class="cc-type" style="color:${TYPE_COLOR[c.type]}">${TYPE_LABEL[c.type] || c.type}</div>
+    <div class="cc-client">${c.client}</div>
+    <div class="cc-sub">${c.sub}</div>
+    <div class="cc-meta">
+      <div class="cc-id">${c.id}</div>
+      <div class="cc-amount">${amtDisplay}</div>
+    </div>
+    <div class="cc-agent">👤 ${c.agent}
+      <span style="margin-left:auto;font-size:9px;color:${daysColor}">更新 ${daysLabel}</span>
+    </div>
+  </div>`;
+}
+
+function openCase(id) {
+  activeCase = CASES.find(c=>c.id===id);
+  if (!activeCase) return;
+  const c = activeCase;
+  const panel = document.getElementById('detail-panel');
+  const body = document.getElementById('dp-body');
+  document.getElementById('dp-id').textContent = c.id;
+  document.getElementById('dp-name').textContent = c.client;
+  panel.classList.add('show');
+
+  const stageIdx = STAGES.findIndex(s=>s.id===c.stage);
+  body.innerHTML = `
+    <div style="margin-bottom:14px">
+      <div style="font-size:10px;color:var(--muted);margin-bottom:6px;font-weight:600">現在のステージ</div>
+      <div class="move-btns">
+        ${STAGES.map((s,i)=>`<button class="move-btn ${s.id===c.stage?'cur':''}" onclick="moveCase('${c.id}','${s.id}')">${s.label}</button>`).join('')}
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:12px;margin-bottom:16px;
+                padding:12px;background:var(--card2);border-radius:10px">
+      <span style="color:var(--muted)">種別</span><span>${TYPE_LABEL[c.type]}</span>
+      <span style="color:var(--muted)">顧客</span><span style="font-weight:700">${c.client}</span>
+      <span style="color:var(--muted)">物件/案件</span><span>${c.sub}</span>
+      <span style="color:var(--muted)">想定報酬</span><span style="font-family:'DM Mono';color:var(--gold);font-weight:700">¥${c.amt.toLocaleString()}</span>
+      <span style="color:var(--muted)">担当者</span><span>${c.agent}</span>
+      <span style="color:var(--muted)">最終更新</span><span>${c.days===0?'本日':`${c.days}日前`}</span>
+    </div>
+
+    <div style="margin-bottom:14px">
+      <div style="font-size:10px;color:var(--muted);margin-bottom:8px;font-weight:600">メモ・活動履歴</div>
+      <div style="display:flex;flex-direction:column;gap:0" id="memo-list">
+        ${(c.memo||[]).map((m,i)=>`
+          <div class="memo-item">
+            <div style="display:flex;flex-direction:column;align-items:center">
+              <div class="memo-dot ${i===0?'act':''}"></div>
+              ${i<(c.memo.length-1)?'<div class="memo-line"></div>':''}
+            </div>
+            <div style="flex:1;font-size:11px;padding-top:1px;line-height:1.6">${m}</div>
+          </div>`).join('')}
+      </div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <input type="text" id="memo-input" placeholder="活動メモを追加..." style="flex:1;background:#090b13;
+          border:1px solid var(--border2);border-radius:8px;padding:8px 12px;color:var(--text);
+          font-size:11px;font-family:'Noto Sans JP',sans-serif;outline:none"
+          onkeydown="if(event.key==='Enter')addMemo('${c.id}')">
+        <button class="btn btn-blue btn-sm" onclick="addMemo('${c.id}')">追加</button>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-ghost btn-sm" onclick="window.location.href='coreto-matching.html'">
+        📋 案件ボードで開く
+      </button>
+      ${c.stage==='payment'?`<button class="btn btn-blue btn-sm" onclick="reportClose('${c.id}')">🎯 成約報告へ</button>`:''}
+    </div>
+  `;
+}
+
+function moveCase(id, newStage) {
+  const c = CASES.find(c=>c.id===id);
+  if (c) { c.stage=newStage; c.days=0; c.stale=false; }
+  renderBoard();
+  openCase(id);
+}
+
+function addMemo(id) {
+  const input = document.getElementById('memo-input');
+  const text = input.value.trim();
+  if (!text) return;
+  const c = CASES.find(c=>c.id===id);
+  if (c) {
+    const now = new Date().toLocaleDateString('ja-JP',{month:'numeric',day:'numeric'});
+    c.memo.unshift(now+' '+text);
+    c.days = 0; c.stale = false;
+  }
+  input.value = '';
+  renderBoard();
+  openCase(id);
+}
+
+function closePanel() { document.getElementById('detail-panel').classList.remove('show'); }
+
+function reportClose(id) {
+  window.location.href = 'coreto-batch-close.html';
+}
+
+function openAddCase(stage) {
+  const id = (stage && stage!=='add') ? stage : 'new';
+  alert(`新規案件追加（ステージ：${STAGES.find(s=>s.id===id)?.label||'新規問合せ'}）\n※本番ではモーダルで詳細入力`);
+}
+
+renderBoard();
+</script>
+</body>
+</html>

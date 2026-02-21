@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CORETO マッチングシステム</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0b0d12;--card:#13161f;--card2:#191c27;--border:#222638;
+  --gold:#c9a84c;--gold-l:#e8c96a;--gold-dim:#7a5f22;
+  --blue:#3b82f6;--green:#22c55e;--red:#ef4444;--orange:#f59e0b;--purple:#a855f7;--teal:#14b8a6;
+  --muted:#5a6378;--sub:#8892a4;--text:#dde1ed;
+}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* ── ヘッダー ── */
+.header{background:linear-gradient(135deg,#0d1020,#141828);border-bottom:1px solid var(--border);padding:0 28px;display:flex;align-items:center;justify-content:space-between;height:52px}
+.logo{font-family:'DM Mono',monospace;font-size:18px;color:var(--gold);letter-spacing:3px}
+.logo-sub{font-size:9px;color:var(--muted);letter-spacing:1px;margin-top:1px}
+.hdr-right{display:flex;align-items:center;gap:12px}
+.role-badge{font-size:10px;padding:3px 10px;border-radius:20px;font-weight:700;letter-spacing:.5px}
+.rb-hq{background:rgba(168,85,247,.2);color:var(--purple);border:1px solid rgba(168,85,247,.3)}
+.rb-ag{background:rgba(59,130,246,.2);color:var(--blue);border:1px solid rgba(59,130,246,.3)}
+.rb-pt{background:rgba(34,197,94,.2);color:var(--green);border:1px solid rgba(34,197,94,.3)}
+.role-sw{display:flex;gap:4px}
+.rsw{font-size:10px;padding:3px 8px;border-radius:4px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'Noto Sans JP',sans-serif}
+.rsw.on{background:rgba(201,168,76,.15);border-color:var(--gold-dim);color:var(--gold)}
+
+/* ── タブ ── */
+.tabs{background:#0e1019;border-bottom:1px solid var(--border);display:flex;padding:0 28px;gap:0}
+.tab{padding:11px 18px;font-size:11px;cursor:pointer;border-bottom:2px solid transparent;color:var(--muted);transition:all .2s;white-space:nowrap}
+.tab.on{color:var(--gold);border-bottom-color:var(--gold)}
+.tab-badge{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;font-size:9px;font-weight:700;margin-left:5px;background:var(--red);color:#fff}
+
+/* ── ページ ── */
+.page{display:none;padding:20px 28px;max-width:1320px;margin:0 auto}.page.on{display:block}
+
+/* ── 共通コンポーネント ── */
+.panel{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:14px}
+.panel-title{font-size:11px;font-weight:700;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.panel-title::before{content:'';width:3px;height:13px;background:var(--gold);border-radius:2px;flex-shrink:0}
+.s-label{font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;padding:9px 0 6px;border-bottom:1px solid rgba(34,38,56,.8);margin-bottom:9px;margin-top:12px}
+.s-label:first-child{margin-top:0}
+.fg{margin-bottom:9px}
+.fg label{font-size:11px;color:var(--sub);display:block;margin-bottom:3px}
+.fg input,.fg select,.fg textarea{width:100%;background:#0d0f18;border:1px solid var(--border);border-radius:7px;padding:8px 11px;color:var(--text);font-size:13px;font-family:'Noto Sans JP',sans-serif;transition:border-color .15s}
+.fg textarea{resize:vertical;min-height:70px}
+.fg input:focus,.fg select:focus,.fg textarea:focus{outline:none;border-color:var(--gold)}
+.mono{font-family:'DM Mono',monospace}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.tg-group{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.tg{padding:5px 11px;border-radius:6px;font-size:11px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--sub);font-family:'Noto Sans JP',sans-serif;transition:all .15s}
+.tg.on{background:rgba(201,168,76,.15);border-color:var(--gold-dim);color:var(--gold);font-weight:700}
+.tg.on.blue{background:rgba(59,130,246,.15);border-color:rgba(59,130,246,.4);color:var(--blue)}
+.tg.on.green{background:rgba(34,197,94,.15);border-color:rgba(34,197,94,.4);color:var(--green)}
+.tg.on.red{background:rgba(239,68,68,.15);border-color:rgba(239,68,68,.4);color:var(--red)}
+
+/* ── ボタン ── */
+.btn{padding:10px 18px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:none;font-family:'Noto Sans JP',sans-serif;transition:all .15s;letter-spacing:.5px}
+.btn-gold{background:var(--gold);color:#0a0c10}.btn-gold:hover{background:var(--gold-l)}
+.btn-blue{background:rgba(59,130,246,.2);color:var(--blue);border:1px solid rgba(59,130,246,.4)}.btn-blue:hover{background:rgba(59,130,246,.3)}
+.btn-green{background:rgba(34,197,94,.2);color:var(--green);border:1px solid rgba(34,197,94,.4)}.btn-green:hover{background:rgba(34,197,94,.3)}
+.btn-red{background:rgba(239,68,68,.2);color:var(--red);border:1px solid rgba(239,68,68,.4)}.btn-red:hover{background:rgba(239,68,68,.3)}
+.btn-muted{background:transparent;color:var(--muted);border:1px solid var(--border)}.btn-muted:hover{color:var(--text)}
+.btn-sm{padding:5px 11px;font-size:10px;border-radius:5px}
+.btn-full{width:100%;padding:12px;font-size:13px;margin-top:8px}
+
+/* ── アラート ── */
+.alert{border-radius:8px;padding:10px 13px;font-size:11px;line-height:1.7;margin-bottom:12px}
+.ao{background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.22);color:var(--orange)}
+.ag{background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.22);color:var(--green)}
+.ab{background:rgba(59,130,246,.07);border:1px solid rgba(59,130,246,.22);color:var(--blue)}
+.ar{background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.22);color:var(--red)}
+.ap{background:rgba(168,85,247,.07);border:1px solid rgba(168,85,247,.22);color:var(--purple)}
+
+/* ── バッジ ── */
+.badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:4px;font-size:9px;font-weight:700;white-space:nowrap}
+.bdg-re{background:rgba(59,130,246,.15);color:var(--blue)}
+.bdg-hr{background:rgba(20,184,166,.15);color:var(--teal)}
+.bdg-pt{background:rgba(34,197,94,.15);color:var(--green)}
+.bdg-hq{background:rgba(168,85,247,.15);color:var(--purple)}
+.bdg-gold{background:rgba(201,168,76,.15);color:var(--gold)}
+.bdg-wait{background:rgba(245,158,11,.15);color:var(--orange)}
+.bdg-matched{background:rgba(34,197,94,.15);color:var(--green)}
+.bdg-open{background:rgba(59,130,246,.15);color:var(--blue)}
+.bdg-closed{background:rgba(90,99,120,.15);color:var(--muted)}
+
+/* ── 案件カード ── */
+.case-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;margin-bottom:14px}
+.case-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;cursor:pointer;transition:border-color .15s;position:relative}
+.case-card:hover{border-color:rgba(201,168,76,.4)}
+.case-card.selected{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold-dim)}
+.case-card.matched{border-color:rgba(34,197,94,.4)}
+.case-card.applying{border-color:rgba(59,130,246,.4)}
+.cc-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+.cc-id{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)}
+.cc-badges{display:flex;gap:5px;flex-wrap:wrap}
+.cc-title{font-size:14px;font-weight:700;margin-bottom:4px;color:var(--text)}
+.cc-sub{font-size:11px;color:var(--sub);margin-bottom:8px}
+.cc-meta{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:10px}
+.cc-meta-item{font-size:10px;color:var(--muted)}.cc-meta-item span{color:var(--sub);font-weight:500}
+.cc-footer{display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid rgba(34,38,56,.6)}
+.cc-timer{font-size:10px;color:var(--orange);display:flex;align-items:center;gap:4px}
+.cc-apply-count{font-size:10px;color:var(--muted)}
+.cc-status-bar{position:absolute;top:0;left:0;right:0;height:3px;border-radius:12px 12px 0 0}
+.sb-open{background:linear-gradient(90deg,var(--blue),rgba(59,130,246,.3))}
+.sb-matched{background:linear-gradient(90deg,var(--green),rgba(34,197,94,.3))}
+.sb-closed{background:var(--border)}
+.sb-pending{background:linear-gradient(90deg,var(--orange),rgba(245,158,11,.3))}
+
+/* ── 案件詳細モーダル風サイドパネル ── */
+.detail-wrap{display:grid;grid-template-columns:1fr 380px;gap:14px}
+@media(max-width:1100px){.detail-wrap{grid-template-columns:1fr}}
+.detail-panel{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;position:sticky;top:20px;height:fit-content}
+.dp-section{margin-bottom:16px}
+.dp-label{font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px}
+.dp-val{font-size:13px;color:var(--text)}
+.dp-divider{height:1px;background:var(--border);margin:14px 0}
+.masked{font-size:13px;color:var(--muted);font-style:italic;display:flex;align-items:center;gap:6px}
+.mask-icon{font-size:16px}
+
+/* ── 応募者リスト ── */
+.applicant-list{display:flex;flex-direction:column;gap:8px}
+.applicant-row{background:var(--card2);border:1px solid var(--border);border-radius:9px;padding:11px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.applicant-row.first{border-color:rgba(201,168,76,.4);background:rgba(201,168,76,.04)}
+.ap-info{flex:1}
+.ap-name{font-size:13px;font-weight:600}
+.ap-meta{font-size:10px;color:var(--muted);margin-top:2px;display:flex;gap:8px;align-items:center}
+.ap-time{font-family:'DM Mono',monospace;font-size:10px;color:var(--orange)}
+.ap-rank{font-size:10px;padding:2px 6px;border-radius:4px;font-weight:700}
+.rank-bronze{background:rgba(180,120,60,.15);color:#cd7f32}
+.rank-silver{background:rgba(160,160,160,.15);color:#c0c0c0}
+.rank-gold{background:rgba(201,168,76,.15);color:var(--gold)}
+.rank-platinum{background:rgba(200,200,255,.12);color:#b0c4de}
+.rank-founding{background:rgba(168,85,247,.15);color:var(--purple)}
+
+/* ── タイムライン ── */
+.tl{display:flex;flex-direction:column}
+.tl-row{display:flex;gap:10px;padding-bottom:10px}
+.tl-row:last-child{padding-bottom:0}
+.tl-left{display:flex;flex-direction:column;align-items:center;width:14px;flex-shrink:0}
+.tl-dot{width:9px;height:9px;border-radius:50%;border:2px solid var(--gold);background:var(--bg);margin-top:3px;flex-shrink:0}
+.tl-dot.g{border-color:var(--green);background:var(--green)}
+.tl-dot.o{border-color:var(--orange);background:var(--orange)}
+.tl-dot.b{border-color:var(--blue);background:var(--blue)}
+.tl-dot.f{background:var(--gold)}
+.tl-dot.m{border-color:var(--muted);background:transparent}
+.tl-line{width:1px;background:var(--border);flex:1;margin-top:2px}
+.tl-row:last-child .tl-line{display:none}
+.tl-date{font-family:'DM Mono',monospace;font-size:10px;color:var(--gold)}
+.tl-event{font-size:11px;margin-top:1px}
+.tl-sub{font-size:10px;color:var(--muted);margin-top:2px;line-height:1.5}
+
+/* ── フィルターバー ── */
+.filter-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+.filter-chip{padding:4px 12px;border-radius:20px;font-size:11px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'Noto Sans JP',sans-serif;transition:all .15s}
+.filter-chip.on{background:rgba(201,168,76,.15);border-color:var(--gold-dim);color:var(--gold);font-weight:700}
+.search-box{flex:1;min-width:180px;max-width:280px;position:relative}
+.search-box input{background:#0d0f18;border:1px solid var(--border);border-radius:20px;padding:5px 12px 5px 30px;color:var(--text);font-size:11px;width:100%;font-family:'Noto Sans JP',sans-serif}
+.search-box::before{content:'🔍';position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:11px}
+
+/* ── 統計カード ── */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+@media(max-width:900px){.stats-row{grid-template-columns:repeat(2,1fr)}}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px}
+.stat-num{font-family:'DM Mono',monospace;font-size:28px;font-weight:500;line-height:1}
+.stat-label{font-size:10px;color:var(--muted);margin-top:4px}
+
+.empty{text-align:center;padding:48px 20px;color:var(--muted);font-size:13px;line-height:2}
+.hidden{display:none!important}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* 案件ソース別カラー */
+.src-pt .cc-status-bar{background:linear-gradient(90deg,var(--green),rgba(34,197,94,.2))}
+.src-hq .cc-status-bar{background:linear-gradient(90deg,var(--purple),rgba(168,85,247,.2))}
+.src-self .cc-status-bar{background:linear-gradient(90deg,var(--blue),rgba(59,130,246,.2))}
+
+/* 通知ドット */
+.notify-dot{width:8px;height:8px;border-radius:50%;background:var(--red);display:inline-block;margin-left:4px;animation:blink 1.5s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* 確認ダイアログ風 */
+.confirm-box{background:rgba(201,168,76,.06);border:1px solid rgba(201,168,76,.25);border-radius:10px;padding:16px;margin-bottom:12px}
+</style>
+</head>
+<body>
+
+<!-- ── ヘッダー ── -->
+<div class="header">
+  <div>
+    <div class="logo">CORETO</div>
+    <div class="logo-sub">マッチングシステム</div>
+  </div>
+  <div class="hdr-right">
+    <div class="role-sw">
+      <button class="rsw on" onclick="setRole('hq',this)">本部HQ</button>
+      <button class="rsw" onclick="setRole('ag',this)">エージェント</button>
+      <button class="rsw" onclick="setRole('pt',this)">パートナー</button>
+    </div>
+    <div id="role-badge" class="role-badge rb-hq">本部 HQ</div>
+  </div>
+</div>
+
+<!-- ── タブ ── -->
+<div class="tabs" id="tabs-bar">
+  <!-- HQ tabs -->
+  <div class="tab on" id="tab-board" onclick="switchTab('board')">📋 案件ボード</div>
+  <div class="tab" id="tab-post" onclick="switchTab('post')">✏️ 案件起票</div>
+  <div class="tab" id="tab-mgmt" onclick="switchTab('mgmt')">⚙️ マッチング管理 <span class="tab-badge" id="badge-mgmt">2</span></div>
+  <div class="tab" id="tab-history" onclick="switchTab('history')">📁 履歴</div>
+</div>
+
+<!-- ════════════════════════════════════
+  PAGE: 案件ボード
+════════════════════════════════════ -->
+<div class="page on" id="page-board">
+
+  <!-- 統計 -->
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-num" style="color:var(--blue)">8</div><div class="stat-label">📋 募集中</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--orange)">2</div><div class="stat-label">⏳ 承認待ち（仮マッチ）</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--green)">15</div><div class="stat-label">✅ 今月マッチング済み</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--gold)">3</div><div class="stat-label">🎉 今月成約</div></div>
+  </div>
+
+  <!-- フィルター -->
+  <div class="filter-bar">
+    <div class="search-box"><input type="text" placeholder="エリア・物件名・条件で検索..." oninput="filterCases()"></div>
+    <button class="filter-chip on" onclick="filterBy(this,'all')">すべて</button>
+    <button class="filter-chip" onclick="filterBy(this,'re')">🏠 不動産</button>
+    <button class="filter-chip" onclick="filterBy(this,'hr')">👥 人材</button>
+    <button class="filter-chip" onclick="filterBy(this,'open')">募集中</button>
+    <button class="filter-chip" onclick="filterBy(this,'mine')">自分の案件</button>
+    <div style="margin-left:auto;font-size:10px;color:var(--muted)" id="case-count">8件表示中</div>
+  </div>
+
+  <!-- 案件グリッド + 詳細 -->
+  <div class="detail-wrap">
+    <div>
+      <div class="case-grid" id="case-grid"><!-- JS生成 --></div>
+    </div>
+    <!-- 案件詳細サイドパネル -->
+    <div id="detail-panel">
+      <div class="panel"><div class="empty">← 案件を選択してください</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+  PAGE: 案件起票（PT投稿 / HQ起票）
+════════════════════════════════════ -->
+<div class="page" id="page-post">
+<div style="max-width:680px">
+  <div class="panel">
+    <div class="panel-title">案件起票</div>
+
+    <div class="alert ab" id="post-mode-note">HQモード：直接アサイン または ボード掲載を選択できます</div>
+
+    <div class="s-label">案件ソース</div>
+    <div class="fg">
+      <div class="tg-group" id="g-source">
+        <button class="tg on" data-v="pt" onclick="tog('g-source',this);updatePostMode()">パートナー紹介</button>
+        <button class="tg" data-v="hq" onclick="tog('g-source',this);updatePostMode()">本部起票（HQ）</button>
+        <button class="tg" data-v="self" onclick="tog('g-source',this);updatePostMode()">自己開拓（AG）</button>
+      </div>
+    </div>
+
+    <!-- HQ起票オプション -->
+    <div id="sec-hq-assign" class="hidden">
+      <div class="fg">
+        <label>アサイン方法</label>
+        <div class="tg-group" id="g-assign-mode">
+          <button class="tg on green" data-v="direct" onclick="tog('g-assign-mode',this);toggleDirectAssign()">直接指定</button>
+          <button class="tg" data-v="board" onclick="tog('g-assign-mode',this);toggleDirectAssign()">ボード掲載（先着）</button>
+        </div>
+      </div>
+      <div id="sec-direct-agent" class="row2">
+        <div class="fg"><label>担当エージェント指定</label>
+          <select id="direct-agent">
+            <option value="">-- エージェントを選択 --</option>
+            <option>山田 誠（AG-012）Gold / 不動産</option>
+            <option>佐藤 花子（AG-008）Platinum / 不動産</option>
+            <option>鈴木 健太（AG-023）Silver / 不動産</option>
+            <option>田中 美穂（HR-005）Gold / 人材</option>
+          </select>
+        </div>
+        <div class="fg"><label>依頼メッセージ（任意）</label>
+          <input type="text" placeholder="例：急ぎでお願いします">
+        </div>
+      </div>
+    </div>
+
+    <!-- PT起票の場合：パートナー情報 -->
+    <div id="sec-pt-info" class="row2">
+      <div class="fg"><label>パートナー名</label><input type="text" id="pt-name" placeholder="佐藤 美咲"></div>
+      <div class="fg"><label>パートナーID</label><input type="text" id="pt-id" class="mono" placeholder="PT-007"></div>
+    </div>
+
+    <div class="s-label">事業種別</div>
+    <div class="fg">
+      <div class="tg-group" id="g-biz">
+        <button class="tg on blue" data-v="re-rent" onclick="tog('g-biz',this);updateBizFields()">🏠 賃貸仲介</button>
+        <button class="tg" data-v="re-sale" onclick="tog('g-biz',this);updateBizFields()">🏢 売買仲介</button>
+        <button class="tg" data-v="hr" onclick="tog('g-biz',this);updateBizFields()">👥 人材紹介</button>
+      </div>
+    </div>
+
+    <!-- 不動産フィールド -->
+    <div id="sec-re">
+      <div class="s-label">物件情報</div>
+      <div class="row2">
+        <div class="fg"><label>エリア・駅</label><input type="text" placeholder="例：池袋駅徒歩10分以内"></div>
+        <div class="fg"><label>家賃（賃貸）/ 価格帯（売買）</label><input type="text" class="mono" placeholder="例：80,000〜100,000円"></div>
+      </div>
+      <div class="row3">
+        <div class="fg"><label>間取り</label><input type="text" placeholder="例：1K〜1LDK"></div>
+        <div class="fg"><label>入居希望時期</label><input type="date"></div>
+        <div class="fg"><label>その他条件</label><input type="text" placeholder="例：ペット可、駐車場希望"></div>
+      </div>
+    </div>
+
+    <!-- 人材紹介フィールド -->
+    <div id="sec-hr" class="hidden">
+      <div class="s-label">人材情報</div>
+      <div class="row2">
+        <div class="fg"><label>希望業界</label><input type="text" placeholder="例：IT・Web、不動産"></div>
+        <div class="fg"><label>希望職種</label><input type="text" placeholder="例：エンジニア、営業"></div>
+      </div>
+      <div class="row3">
+        <div class="fg"><label>現職種・経験</label><input type="text" placeholder="例：営業3年"></div>
+        <div class="fg"><label>希望年収</label><input type="text" class="mono" placeholder="例：500〜700万円"></div>
+        <div class="fg"><label>転職希望時期</label>
+          <select>
+            <option>できるだけ早く</option>
+            <option>1ヶ月以内</option>
+            <option>3ヶ月以内</option>
+            <option>半年以内</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- 顧客情報（スタッフ入力・非公開） -->
+    <div class="s-label">顧客情報 <span style="color:var(--red);font-size:9px">🔒 マッチング確定後に担当AGへ開示</span></div>
+    <div class="row2">
+      <div class="fg"><label>顧客氏名</label><input type="text" placeholder="山田 太郎"></div>
+      <div class="fg"><label>電話番号</label><input type="tel" class="mono" placeholder="080-XXXX-XXXX"></div>
+    </div>
+    <div class="row2">
+      <div class="fg"><label>メールアドレス</label><input type="email" placeholder="taro@example.com"></div>
+      <div class="fg"><label>顧客ID（既存の場合）</label><input type="text" class="mono" placeholder="CL-XXXXX（任意）"></div>
+    </div>
+
+    <div class="s-label">公開情報・備考</div>
+    <div class="fg"><label>ボードへの掲載メモ（エージェントに見せる情報）</label>
+      <textarea placeholder="例：条件は柔軟です。急ぎで動いています。内見対応できる方歓迎。"></textarea>
+    </div>
+    <div class="row2">
+      <div class="fg"><label>希望エージェントランク（最低ランク）</label>
+        <select>
+          <option value="">指定なし（全ランク対象）</option>
+          <option value="silver">Silver以上</option>
+          <option value="gold">Gold以上</option>
+          <option value="platinum">Platinum以上</option>
+        </select>
+      </div>
+      <div class="fg"><label>応募期限</label>
+        <select>
+          <option>24時間</option>
+          <option>48時間</option>
+          <option>72時間</option>
+          <option>期限なし</option>
+        </select>
+      </div>
+    </div>
+
+    <button class="btn btn-gold btn-full" onclick="submitCase()">案件をボードに掲載する</button>
+  </div>
+</div>
+</div>
+
+<!-- ════════════════════════════════════
+  PAGE: マッチング管理（HQ）
+════════════════════════════════════ -->
+<div class="page" id="page-mgmt">
+
+  <div class="alert ao" style="margin-bottom:14px">
+    ⚡ 先着1名が自動で仮マッチングされます。本部の承認で確定し、担当エージェントに顧客情報が開示されます。
+  </div>
+
+  <!-- 承認待ち案件 -->
+  <div class="panel">
+    <div class="panel-title">承認待ち（仮マッチング済み） <span class="notify-dot"></span></div>
+
+    <!-- 案件1 -->
+    <div class="confirm-box" style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+            <span class="badge bdg-re">賃貸</span>
+            <span class="badge bdg-pt">PT紹介</span>
+            <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">0234</span>
+          </div>
+          <div style="font-size:15px;font-weight:700">池袋エリア 1K〜1LDK 賃貸</div>
+          <div style="font-size:11px;color:var(--sub);margin-top:2px">紹介：佐藤 美咲（PT-007）　家賃：¥80,000〜100,000</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:10px;color:var(--muted)">仮マッチング</div>
+          <div style="font-size:11px;color:var(--orange);font-weight:600">⏳ 承認待ち</div>
+        </div>
+      </div>
+
+      <!-- 仮マッチ済みエージェント -->
+      <div style="background:rgba(201,168,76,.06);border:1px solid rgba(201,168,76,.2);border-radius:8px;padding:12px;margin-bottom:10px">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:6px">🏆 仮マッチング（先着1番）</div>
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <div style="font-size:14px;font-weight:700">山田 誠</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px">
+              <span class="ap-rank rank-gold">Gold</span>
+              &nbsp;AG-012 / 不動産エージェント
+            </div>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px">得意エリア：池袋・豊島区　実績：今月3件成約</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--orange)">応募 14:32:08</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px">案件投稿から 3分後</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 他の応募者 -->
+      <div style="font-size:10px;color:var(--muted);margin-bottom:6px">その他の応募者（2名）</div>
+      <div class="applicant-list" style="margin-bottom:12px">
+        <div class="applicant-row">
+          <div class="ap-info">
+            <div class="ap-name">鈴木 健太</div>
+            <div class="ap-meta">
+              <span class="ap-rank rank-silver">Silver</span>
+              AG-023 / 不動産
+              <span class="ap-time">14:38:52（6分後）</span>
+            </div>
+          </div>
+        </div>
+        <div class="applicant-row">
+          <div class="ap-info">
+            <div class="ap-name">渡辺 隆</div>
+            <div class="ap-meta">
+              <span class="ap-rank rank-bronze">Bronze</span>
+              AG-041 / 不動産
+              <span class="ap-time">14:45:11（13分後）</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-green" onclick="confirmMatch('0234','山田 誠','AG-012')">✅ 山田 誠 に確定・顧客情報を開示</button>
+        <button class="btn btn-muted btn-sm" onclick="changeAgent('0234')">担当者を変更</button>
+        <button class="btn btn-red btn-sm">案件を戻す</button>
+      </div>
+    </div>
+
+    <!-- 案件2 -->
+    <div class="confirm-box">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+            <span class="badge bdg-hr">人材</span>
+            <span class="badge bdg-hq">HQ起票</span>
+            <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">0231</span>
+          </div>
+          <div style="font-size:15px;font-weight:700">IT・Web系 エンジニア転職支援</div>
+          <div style="font-size:11px;color:var(--sub);margin-top:2px">経験3年・希望年収600〜800万円・3ヶ月以内転職希望</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:10px;color:var(--muted)">仮マッチング</div>
+          <div style="font-size:11px;color:var(--orange);font-weight:600">⏳ 承認待ち</div>
+        </div>
+      </div>
+      <div style="background:rgba(201,168,76,.06);border:1px solid rgba(201,168,76,.2);border-radius:8px;padding:12px;margin-bottom:10px">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:6px">🏆 仮マッチング（先着1番）</div>
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <div style="font-size:14px;font-weight:700">田中 美穂</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px">
+              <span class="ap-rank rank-gold">Gold</span>
+              &nbsp;HR-005 / 人材エージェント
+            </div>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px">得意業界：IT・Web・スタートアップ　CA/RA両面型</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--orange)">応募 09:15:44</div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-green" onclick="confirmMatch('0231','田中 美穂','HR-005')">✅ 田中 美穂 に確定・顧客情報を開示</button>
+        <button class="btn btn-muted btn-sm">担当者を変更</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- マッチング済み（進行中） -->
+  <div class="panel">
+    <div class="panel-title">マッチング確定済み（進行中）</div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead>
+        <tr style="border-bottom:1px solid var(--border)">
+          <th style="text-align:left;padding:8px 10px;font-size:10px;color:var(--muted);font-weight:600">案件ID</th>
+          <th style="text-align:left;padding:8px 10px;font-size:10px;color:var(--muted);font-weight:600">内容</th>
+          <th style="text-align:left;padding:8px 10px;font-size:10px;color:var(--muted);font-weight:600">担当AG</th>
+          <th style="text-align:left;padding:8px 10px;font-size:10px;color:var(--muted);font-weight:600">確定日</th>
+          <th style="text-align:left;padding:8px 10px;font-size:10px;color:var(--muted);font-weight:600">ステータス</th>
+          <th style="padding:8px 10px"></th>
+        </tr>
+      </thead>
+      <tbody id="matched-table">
+        <tr style="border-bottom:1px solid rgba(34,38,56,.4)">
+          <td style="padding:9px 10px;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">0228</td>
+          <td style="padding:9px 10px"><div style="font-weight:600">新宿エリア 賃貸</div><div style="font-size:10px;color:var(--sub)">PT紹介 / 家賃10万円台</div></td>
+          <td style="padding:9px 10px"><div>佐藤 花子</div><div style="font-size:10px;color:var(--muted)">AG-008 Platinum</div></td>
+          <td style="padding:9px 10px;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">2/19</td>
+          <td style="padding:9px 10px"><span class="badge" style="background:rgba(245,158,11,.15);color:var(--orange)">入金待ち</span></td>
+          <td style="padding:9px 10px"><button class="btn btn-muted btn-sm" onclick="viewCaseDetail('0228')">詳細</button></td>
+        </tr>
+        <tr style="border-bottom:1px solid rgba(34,38,56,.4)">
+          <td style="padding:9px 10px;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">0225</td>
+          <td style="padding:9px 10px"><div style="font-weight:600">メーカー営業 転職支援</div><div style="font-size:10px;color:var(--sub)">HQ起票 / 希望年収500万円</div></td>
+          <td style="padding:9px 10px"><div>田中 美穂</div><div style="font-size:10px;color:var(--muted)">HR-005 Gold</div></td>
+          <td style="padding:9px 10px;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">2/18</td>
+          <td style="padding:9px 10px"><span class="badge" style="background:rgba(59,130,246,.15);color:var(--blue)">面接調整中</span></td>
+          <td style="padding:9px 10px"><button class="btn btn-muted btn-sm">詳細</button></td>
+        </tr>
+        <tr>
+          <td style="padding:9px 10px;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">0220</td>
+          <td style="padding:9px 10px"><div style="font-weight:600">渋谷 売買仲介</div><div style="font-size:10px;color:var(--sub)">自己開拓 / 3,500万円台</div></td>
+          <td style="padding:9px 10px"><div>山田 誠</div><div style="font-size:10px;color:var(--muted)">AG-012 Gold</div></td>
+          <td style="padding:9px 10px;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">2/15</td>
+          <td style="padding:9px 10px"><span class="badge" style="background:rgba(34,197,94,.15);color:var(--green)">契約書送付済み</span></td>
+          <td style="padding:9px 10px"><button class="btn btn-muted btn-sm">詳細</button></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+  PAGE: 履歴
+════════════════════════════════════ -->
+<div class="page" id="page-history">
+  <div class="panel">
+    <div class="panel-title">マッチング履歴</div>
+    <div class="filter-bar">
+      <button class="filter-chip on">すべて</button>
+      <button class="filter-chip">成約済み</button>
+      <button class="filter-chip">不成立</button>
+      <button class="filter-chip">キャンセル</button>
+    </div>
+    <div class="empty">📁 履歴データはここに表示されます</div>
+  </div>
+</div>
+
+<script>
+// ── セッション読み込み（マイページから自動入力） ──
+(function() {
+  const _S = JSON.parse(sessionStorage.getItem('coreto_session') || 'null');
+  if (!_S) return;
+  window.addEventListener('DOMContentLoaded', () => {
+    // マイページへ戻るリンクをタブバーに追加
+    const tabs = document.querySelector('.tabs');
+    if (tabs) {
+      const back = document.createElement('div');
+      back.style.cssText = 'margin-left:auto;padding:0 16px;display:flex;align-items:center;gap:10px';
+      back.innerHTML = '<span style="font-size:10px;color:var(--muted)">👤 '+_S.name+'</span>' +
+        '<button onclick="window.location.href='coreto-hub.html'" style="font-size:10px;padding:4px 10px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;font-family:sans-serif">← マイページ</button>';
+      tabs.appendChild(back);
+    }
+  });
+})();
+
+// ── 状態 ──
+let currentRole = 'hq';
+let selectedCase = null;
+let currentFilter = 'all';
+
+// ── サンプルデータ ──
+const CASES = [
+  {id:'0234',biz:'re',bizLabel:'賃貸',src:'pt',srcLabel:'PT紹介',
+   title:'池袋エリア 1K〜1LDK 賃貸',
+   area:'池袋駅徒歩10分以内',rent:'¥80,000〜100,000',madori:'1K〜1LDK',
+   date:'3月中',note:'条件は柔軟です。急ぎで動いています。内見すぐ対応できる方歓迎。',
+   minRank:'none',posted:'14:29',deadline:'23h32m',
+   applyCount:3,status:'pending_approval',
+   ptName:'佐藤 美咲',ptId:'PT-007',
+   // 顧客情報はマッチング確定後のみ開示
+   customerName:'【確定後に開示】',customerPhone:'【確定後に開示】',customerEmail:'【確定後に開示】'},
+
+  {id:'0233',biz:'re',bizLabel:'賃貸',src:'pt',srcLabel:'PT紹介',
+   title:'新宿 2LDK ファミリー向け',
+   area:'新宿駅15分圏内',rent:'¥130,000〜150,000',madori:'2LDK',
+   date:'4月初旬',note:'ファミリー向け。小学校区を重視。',
+   minRank:'silver',posted:'11:15',deadline:'36h15m',
+   applyCount:1,status:'open',
+   ptName:'木村 拓海',ptId:'PT-012',
+   customerName:'【確定後に開示】',customerPhone:'【確定後に開示】',customerEmail:'【確定後に開示】'},
+
+  {id:'0232',biz:'hr',bizLabel:'人材',src:'hq',srcLabel:'HQ起票',
+   title:'Web系スタートアップ / プロダクトマネージャー',
+   area:'—',rent:'—',
+   industry:'IT・Web・スタートアップ',job:'プロダクトマネージャー',exp:'PM経験2年以上',salary:'700〜1,000万円',timing:'1ヶ月以内',
+   note:'シリーズB調達済みの急成長スタートアップ。スピード感を大事にする方。',
+   minRank:'gold',posted:'09:00',deadline:'47h',
+   applyCount:0,status:'open',ptName:'—',ptId:'—',
+   customerName:'【確定後に開示】',customerPhone:'【確定後に開示】',customerEmail:'【確定後に開示】'},
+
+  {id:'0231',biz:'hr',bizLabel:'人材',src:'hq',srcLabel:'HQ起票',
+   title:'IT・Web系 エンジニア転職支援',
+   area:'—',rent:'—',
+   industry:'IT・Web',job:'エンジニア（フロント/バック問わず）',exp:'経験3年以上',salary:'600〜800万円',timing:'3ヶ月以内',
+   note:'技術スタックは問わない。人柄重視の企業。',
+   minRank:'none',posted:'08:50',deadline:'承認待ち',
+   applyCount:1,status:'pending_approval',ptName:'—',ptId:'—',
+   customerName:'【確定後に開示】',customerPhone:'【確定後に開示】',customerEmail:'【確定後に開示】'},
+
+  {id:'0230',biz:'re',bizLabel:'賃貸',src:'pt',srcLabel:'PT紹介',
+   title:'中野 単身向け 1R / 1K',
+   area:'中野〜東中野エリア',rent:'¥65,000〜80,000',madori:'1R〜1K',
+   date:'2月末',note:'学生・若手社会人。バイク駐輪場希望。',
+   minRank:'none',posted:'昨日',deadline:'5h30m',
+   applyCount:5,status:'open',
+   ptName:'森 さくら',ptId:'PT-031',
+   customerName:'【確定後に開示】',customerPhone:'【確定後に開示】',customerEmail:'【確定後に開示】'},
+
+  {id:'0228',biz:'re',bizLabel:'賃貸',src:'pt',srcLabel:'PT紹介',
+   title:'新宿エリア 賃貸（マッチング済み）',
+   area:'新宿駅周辺',rent:'¥100,000〜120,000',madori:'1LDK',
+   date:'3月',note:'',
+   minRank:'none',posted:'2/18',deadline:'—',
+   applyCount:2,status:'matched',assignedAg:'佐藤 花子（AG-008）',
+   ptName:'田中 健',ptId:'PT-019',
+   customerName:'鈴木 一郎',customerPhone:'090-1234-5678',customerEmail:'ichiro@example.com'},
+
+  {id:'0226',biz:'re',bizLabel:'売買',src:'self',srcLabel:'自己開拓',
+   title:'豊島区 戸建て 売買',
+   area:'池袋エリア',rent:'—',price:'2,800〜3,200万円',
+   note:'夫婦2人。築20年以内。駐車場必須。',
+   minRank:'none',posted:'2/17',deadline:'—',
+   applyCount:0,status:'self',assignedAg:'山田 誠（AG-012）',
+   customerName:'【確定後に開示】',customerPhone:'【確定後に開示】',customerEmail:'【確定後に開示】'},
+
+  {id:'0224',biz:'hr',bizLabel:'人材',src:'pt',srcLabel:'PT紹介',
+   title:'金融系 営業職 転職支援',
+   area:'—',rent:'—',
+   industry:'金融・保険',job:'営業職',exp:'金融営業経験1年以上',salary:'400〜600万円',timing:'半年以内',
+   note:'大手銀行・証券会社の紹介実績がある方歓迎。',
+   minRank:'silver',posted:'2/16',deadline:'期限切れ',
+   applyCount:0,status:'expired',ptName:'—',ptId:'—',
+   customerName:'【確定後に開示】',customerPhone:'【確定後に開示】',customerEmail:'【確定後に開示】'},
+];
+
+const RANK_ORDER = {none:0,bronze:1,silver:2,gold:3,platinum:4,founding:5};
+const RANK_LABEL = {none:'指定なし',bronze:'Bronze以上',silver:'Silver以上',gold:'Gold以上',platinum:'Platinum以上'};
+const STATUS_LABEL = {open:'募集中',pending_approval:'承認待ち',matched:'マッチング済み',self:'自己開拓',expired:'期限切れ'};
+const STATUS_BADGE = {
+  open:'bdg-open',pending_approval:'bdg-wait',matched:'bdg-matched',
+  self:'bdg-pt',expired:'bdg-closed'
+};
+
+// ── ロール切替 ──
+function setRole(role, btn) {
+  currentRole = role;
+  document.querySelectorAll('.rsw').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  const badge = document.getElementById('role-badge');
+  badge.className = 'role-badge';
+  if(role==='hq'){badge.classList.add('rb-hq');badge.textContent='本部 HQ';}
+  else if(role==='ag'){badge.classList.add('rb-ag');badge.textContent='エージェント';}
+  else{badge.classList.add('rb-pt');badge.textContent='パートナー';}
+  updateTabsForRole();
+  renderCases();
+}
+
+function updateTabsForRole() {
+  const mgmtTab = document.getElementById('tab-mgmt');
+  const postTab = document.getElementById('tab-post');
+  if(currentRole==='hq'){
+    mgmtTab.style.display='';postTab.style.display='';
+    document.getElementById('post-mode-note').textContent='HQモード：直接アサイン または ボード掲載を選択できます';
+    document.getElementById('post-mode-note').className='alert ab';
+  } else if(currentRole==='pt'){
+    mgmtTab.style.display='none';
+    postTab.style.display='';
+    document.getElementById('post-mode-note').textContent='パートナーモード：案件情報を入力してボードに投稿してください。顧客の個人情報はマッチング確定後に担当エージェントへ開示されます。';
+    document.getElementById('post-mode-note').className='alert ag';
+    document.getElementById('sec-hq-assign').classList.add('hidden');
+  } else {
+    mgmtTab.style.display='none';postTab.style.display='none';
+  }
+}
+
+// ── トグル ──
+function tog(gid, btn) {
+  document.querySelectorAll('#'+gid+' .tg').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+}
+function gv(gid){const a=document.querySelector('#'+gid+' .tg.on');return a?a.dataset.v:null;}
+
+// ── 投稿フォーム制御 ──
+function updatePostMode() {
+  const src = gv('g-source');
+  document.getElementById('sec-pt-info').classList.toggle('hidden', src!=='pt');
+  document.getElementById('sec-hq-assign').classList.toggle('hidden', src!=='hq');
+}
+function toggleDirectAssign() {
+  const mode = gv('g-assign-mode');
+  document.getElementById('sec-direct-agent').classList.toggle('hidden', mode!=='direct');
+}
+function updateBizFields() {
+  const biz = gv('g-biz');
+  document.getElementById('sec-re').classList.toggle('hidden', biz==='hr');
+  document.getElementById('sec-hr').classList.toggle('hidden', biz!=='hr');
+}
+
+// ── タブ切替 ──
+function switchTab(name) {
+  ['board','post','mgmt','history'].forEach(n=>{
+    document.getElementById('tab-'+n)?.classList.toggle('on',n===name);
+    document.getElementById('page-'+n)?.classList.toggle('on',n===name);
+  });
+  if(name==='board') renderCases();
+}
+
+// ── フィルター ──
+function filterBy(btn, filter) {
+  document.querySelectorAll('.filter-chip').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  currentFilter = filter;
+  renderCases();
+}
+function filterCases(){renderCases();}
+
+// ── 案件ボードレンダー ──
+function renderCases() {
+  const grid = document.getElementById('case-grid');
+  let filtered = CASES.filter(c=>{
+    if(currentRole==='ag' && c.status==='expired') return false;
+    if(currentRole==='pt') return c.src==='pt';
+    if(currentFilter==='re') return c.biz==='re';
+    if(currentFilter==='hr') return c.biz==='hr';
+    if(currentFilter==='open') return c.status==='open';
+    if(currentFilter==='mine') return c.assignedAg && c.assignedAg.includes('AG-012');
+    return true;
+  });
+
+  document.getElementById('case-count').textContent = filtered.length+'件表示中';
+
+  if(!filtered.length){
+    grid.innerHTML='<div class="empty" style="grid-column:1/-1">案件がありません</div>';
+    return;
+  }
+
+  grid.innerHTML = filtered.map(c => {
+    const srcClass = c.src==='pt'?'src-pt':c.src==='hq'?'src-hq':'src-self';
+    const isSelected = selectedCase===c.id;
+    const isMatched = c.status==='matched';
+    const isApplied = c.id==='0230'; // 自分が応募済みサンプル
+
+    let statusBar = '';
+    if(c.status==='open') statusBar='sb-open';
+    else if(c.status==='pending_approval') statusBar='sb-pending';
+    else if(c.status==='matched') statusBar='sb-matched';
+    else statusBar='sb-closed';
+
+    let metaHtml = '';
+    if(c.biz==='re'){
+      metaHtml = `
+        <div class="cc-meta-item">エリア<br><span>${c.area||'—'}</span></div>
+        <div class="cc-meta-item">家賃<br><span>${c.rent||c.price||'—'}</span></div>
+        <div class="cc-meta-item">間取り<br><span>${c.madori||'—'}</span></div>
+        <div class="cc-meta-item">入居希望<br><span>${c.date||'—'}</span></div>
+      `;
+    } else {
+      metaHtml = `
+        <div class="cc-meta-item">希望業界<br><span>${c.industry||'—'}</span></div>
+        <div class="cc-meta-item">希望年収<br><span>${c.salary||'—'}</span></div>
+        <div class="cc-meta-item">経験<br><span>${c.exp||'—'}</span></div>
+        <div class="cc-meta-item">転職希望<br><span>${c.timing||'—'}</span></div>
+      `;
+    }
+
+    let footerHtml = '';
+    if(isMatched){
+      footerHtml = `<div style="font-size:10px;color:var(--green)">✅ 担当：${c.assignedAg}</div>`;
+    } else if(c.status==='open' && currentRole==='ag'){
+      if(isApplied){
+        footerHtml = `<span class="badge" style="background:rgba(59,130,246,.15);color:var(--blue)">✋ 応募済み（先着1番）</span>`;
+      } else {
+        footerHtml = `<button class="btn btn-green btn-sm" onclick="applyCase(event,'${c.id}')">✋ 対応する</button>`;
+      }
+    } else if(c.status==='pending_approval'){
+      footerHtml = `<span class="badge bdg-wait">⏳ 本部承認待ち</span>`;
+    } else if(c.status==='expired'){
+      footerHtml = `<span class="badge bdg-closed">期限切れ</span>`;
+    } else {
+      footerHtml = `<div style="font-size:10px;color:var(--muted)">投稿：${c.posted}</div>`;
+    }
+
+    return `
+    <div class="case-card ${srcClass} ${isSelected?'selected':''} ${isMatched?'matched':''} ${isApplied?'applying':''}"
+         onclick="selectCase('${c.id}')">
+      <div class="cc-status-bar ${statusBar}"></div>
+      <div class="cc-head">
+        <div class="cc-id">${c.id}</div>
+        <div class="cc-badges">
+          <span class="badge ${c.biz==='re'?'bdg-re':'bdg-hr'}">${c.bizLabel}</span>
+          <span class="badge ${c.src==='pt'?'bdg-pt':c.src==='hq'?'bdg-hq':'bdg-re'}">${c.srcLabel}</span>
+          <span class="badge ${STATUS_BADGE[c.status]||'bdg-closed'}">${STATUS_LABEL[c.status]||c.status}</span>
+        </div>
+      </div>
+      <div class="cc-title">${c.title}</div>
+      <div class="cc-sub">${c.note||'備考なし'}</div>
+      <div class="cc-meta">${metaHtml}</div>
+      <div class="cc-footer">
+        ${footerHtml}
+        <div style="display:flex;align-items:center;gap:8px">
+          ${c.minRank && c.minRank!=='none'?`<span class="badge bdg-gold">🏅 ${RANK_LABEL[c.minRank]}</span>`:''}
+          ${c.status==='open'?`<div class="cc-timer">⏱ ${c.deadline}</div>`:''}
+          ${c.applyCount>0?`<div class="cc-apply-count">${c.applyCount}名応募</div>`:''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── 案件選択 → サイドパネル ──
+function selectCase(id) {
+  selectedCase = id;
+  const c = CASES.find(x=>x.id===id);
+  if(!c) return;
+  renderCases();
+
+  const isRevealed = c.status==='matched';
+  const canSeeCustomer = (currentRole==='hq') || 
+    (isRevealed && (c.assignedAg||'').includes('AG-012'));
+
+  const customerHtml = canSeeCustomer ? `
+    <div class="dp-label">顧客情報（開示済み）</div>
+    <div style="background:rgba(34,197,94,.05);border:1px solid rgba(34,197,94,.2);border-radius:8px;padding:12px;margin-bottom:8px">
+      <div style="font-size:12px;font-weight:700;margin-bottom:4px">${c.customerName}</div>
+      <div style="font-size:11px;color:var(--sub)">${c.customerPhone}</div>
+      <div style="font-size:11px;color:var(--sub)">${c.customerEmail}</div>
+    </div>
+  ` : `
+    <div class="dp-label">顧客情報</div>
+    <div class="masked"><div class="mask-icon">🔒</div>マッチング確定後に担当エージェントへ開示されます</div>
+  `;
+
+  let detailFields = '';
+  if(c.biz==='re'){
+    detailFields = `
+      <div class="dp-label">物件情報</div>
+      <div class="dp-val">${c.area}</div>
+      <div style="height:6px"></div>
+      <div class="dp-label">家賃 / 価格</div>
+      <div class="dp-val">${c.rent||c.price||'—'}</div>
+      <div style="height:6px"></div>
+      <div class="dp-label">間取り</div>
+      <div class="dp-val">${c.madori||'—'}</div>
+      <div style="height:6px"></div>
+      <div class="dp-label">入居希望</div>
+      <div class="dp-val">${c.date||'—'}</div>
+    `;
+  } else {
+    detailFields = `
+      <div class="dp-label">希望業界</div><div class="dp-val">${c.industry||'—'}</div>
+      <div style="height:6px"></div>
+      <div class="dp-label">希望職種</div><div class="dp-val">${c.job||'—'}</div>
+      <div style="height:6px"></div>
+      <div class="dp-label">経験</div><div class="dp-val">${c.exp||'—'}</div>
+      <div style="height:6px"></div>
+      <div class="dp-label">希望年収</div><div class="dp-val">${c.salary||'—'}</div>
+      <div style="height:6px"></div>
+      <div class="dp-label">転職希望時期</div><div class="dp-val">${c.timing||'—'}</div>
+    `;
+  }
+
+  const actionHtml = (currentRole==='ag' && c.status==='open') ?
+    `<button class="btn btn-green btn-full" onclick="applyCase(event,'${c.id}')">✋ この案件に対応する</button>
+     <div style="font-size:10px;color:var(--muted);text-align:center;margin-top:6px">先着順・本部確定後に顧客情報が届きます</div>` :
+    (c.status==='matched' && currentRole==='hq') ?
+    `<button class="btn btn-muted btn-full" style="margin-top:8px">担当者を変更</button>` : '';
+
+  document.getElementById('detail-panel').innerHTML = `
+  <div class="detail-panel">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
+      <div>
+        <div class="cc-badges" style="margin-bottom:6px">
+          <span class="badge ${c.biz==='re'?'bdg-re':'bdg-hr'}">${c.bizLabel}</span>
+          <span class="badge ${c.src==='pt'?'bdg-pt':c.src==='hq'?'bdg-hq':'bdg-re'}">${c.srcLabel}</span>
+        </div>
+        <div style="font-size:16px;font-weight:700">${c.title}</div>
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-top:4px">${c.id}</div>
+      </div>
+      <span class="badge ${STATUS_BADGE[c.status]||'bdg-closed'}">${STATUS_LABEL[c.status]||c.status}</span>
+    </div>
+
+    <div class="dp-divider"></div>
+
+    <div class="dp-section">
+      ${detailFields}
+    </div>
+
+    ${c.note ? `<div class="dp-divider"></div>
+    <div class="dp-section">
+      <div class="dp-label">備考・メモ</div>
+      <div style="font-size:12px;color:var(--sub);line-height:1.7">${c.note}</div>
+    </div>` : ''}
+
+    <div class="dp-divider"></div>
+
+    <div class="dp-section">
+      ${customerHtml}
+    </div>
+
+    ${c.src==='pt' ? `
+    <div class="dp-divider"></div>
+    <div class="dp-section">
+      <div class="dp-label">紹介パートナー</div>
+      <div class="dp-val">${c.ptName} <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">(${c.ptId})</span></div>
+    </div>` : ''}
+
+    <div class="dp-divider"></div>
+
+    <div class="dp-section">
+      <div class="dp-label">応募条件</div>
+      <div style="font-size:12px;color:var(--sub)">${RANK_LABEL[c.minRank]||'指定なし'}</div>
+    </div>
+    <div class="dp-section">
+      <div class="dp-label">応募締切</div>
+      <div style="font-size:12px;color:${c.deadline.includes('h')?'var(--orange)':'var(--sub)'}">${c.deadline}</div>
+    </div>
+    <div class="dp-section">
+      <div class="dp-label">応募状況</div>
+      <div style="font-size:12px;color:var(--sub)">${c.applyCount}名応募</div>
+    </div>
+
+    ${actionHtml}
+  </div>`;
+}
+
+// ── 案件応募 ──
+function applyCase(e, id) {
+  e.stopPropagation();
+  const c = CASES.find(x=>x.id===id);
+  if(!c) return;
+  c.applyCount++;
+  if(c.status==='open'){
+    c.status='pending_approval';
+    alert(`✋ 案件「${c.title}」に対応申請しました。\n\n先着1番として仮マッチングされました。\n本部の承認後に顧客情報が開示されます。\n\nSlackにも通知が届きます。`);
+  }
+  renderCases();
+}
+
+// ── マッチング確定 ──
+function confirmMatch(caseId, agName, agId) {
+  const c = CASES.find(x=>x.id===caseId);
+  if(!c) return;
+
+  if(confirm(`「${c.title}」を\n${agName}（${agId}）に確定しますか？\n\n確定後、顧客情報が${agName}に開示されます。`)){
+    c.status = 'matched';
+    c.assignedAg = `${agName}（${agId}）`;
+    // 顧客情報を開示
+    c.customerName = '田中 一郎（サンプル）';
+    c.customerPhone = '090-1234-5678';
+    c.customerEmail = 'ichiro.tanaka@example.com';
+
+    document.getElementById('badge-mgmt').textContent = 
+      parseInt(document.getElementById('badge-mgmt').textContent) - 1;
+
+    alert(`✅ マッチング確定！\n\n${agName} に顧客情報を開示しました。\nSlack DM・メールで通知を送りました。`);
+    switchTab('board');
+  }
+}
+
+// ── 案件詳細（管理テーブルから） ──
+function viewCaseDetail(caseId) {
+  switchTab('board');
+  setTimeout(() => selectCase(caseId), 50);
+}
+
+// ── 担当者変更 ──
+function changeAgent(caseId) {
+  alert('担当者変更：他の応募者から選択、または新たにボードに戻すことができます。\n\n（本実装ではモーダルで選択UI）');
+}
+
+// ── 案件起票 ──
+function submitCase() {
+  const src = gv('g-source');
+  const biz = gv('g-biz');
+  const assignMode = src==='hq' ? gv('g-assign-mode') : 'board';
+
+  let msg = '案件を掲載しました！\n\n';
+  if(src==='hq' && assignMode==='direct'){
+    const ag = document.getElementById('direct-agent').value;
+    msg += ag ? `✅ 担当エージェント「${ag}」に直接アサインされました。\nSlack DMで通知されます。` : '担当エージェントを選択してください。';
+  } else {
+    msg += '📋 案件ボードに掲載されました。\nエージェントからの応募を待ちます。\n先着1名が仮マッチングされ、本部の承認後に顧客情報が開示されます。';
+  }
+  if(document.getElementById('direct-agent')?.value || src!=='hq' || assignMode!=='direct'){
+    alert(msg);
+    switchTab('board');
+  }
+}
+
+// ── 初期描画 ──
+renderCases();
+updateTabsForRole();
+</script>
+</body>
+</html>

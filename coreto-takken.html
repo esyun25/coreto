@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CORETO — 専任宅建士管理</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090f;--card:#0f1119;--card2:#141720;--border:#1e2235;--border2:#252a3d;
+  --gold:#c9a84c;--blue:#4f9cf9;--green:#34d399;--red:#f87171;--orange:#fb923c;
+  --purple:#a78bfa;--teal:#2dd4bf;--muted:#4a5270;--sub:#7a849e;--text:#e2e6f3;
+}
+html,body{min-height:100%;font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text)}
+/* Header */
+.hdr{height:54px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 26px;border-bottom:1px solid var(--border);
+  background:rgba(7,9,15,.96);position:sticky;top:0;z-index:100}
+.logo{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:var(--gold);letter-spacing:3px}
+/* Tabs */
+.tabs{display:flex;border-bottom:1px solid var(--border);background:var(--card);
+  padding:0 24px;position:sticky;top:54px;z-index:90}
+.tab{padding:14px 22px;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;
+  border-bottom:2px solid transparent;transition:.15s;margin-bottom:-1px}
+.tab:hover{color:var(--sub)}
+.tab.on{color:var(--gold);border-bottom-color:var(--gold)}
+/* Layout */
+.main{max-width:1100px;margin:0 auto;padding:28px 24px 80px}
+/* Cards */
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;margin-bottom:16px}
+.ch{padding:13px 20px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between}
+.ch-t{font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;
+  display:flex;align-items:center;gap:8px}
+.ch-t::before{content:'';width:3px;height:11px;border-radius:2px;background:var(--gold)}
+.cb{padding:18px 20px}
+/* KPI */
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
+.kv{font-family:'DM Mono',monospace;font-size:24px;font-weight:500;margin-bottom:3px}
+.kl{font-size:10px;color:var(--muted)}
+/* Pills */
+.pill{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;
+  border-radius:6px;font-size:9px;font-weight:700}
+.pg{background:rgba(52,211,153,.13);color:var(--green);border:1px solid rgba(52,211,153,.3)}
+.pb{background:rgba(79,156,249,.12);color:var(--blue);border:1px solid rgba(79,156,249,.25)}
+.pr{background:rgba(248,113,113,.12);color:var(--red);border:1px solid rgba(248,113,113,.3)}
+.pm{background:rgba(74,82,112,.15);color:var(--sub);border:1px solid var(--border2)}
+.pgold{background:rgba(201,168,76,.12);color:var(--gold);border:1px solid rgba(201,168,76,.3)}
+/* Table */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{padding:9px 14px;font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.5px;
+  text-transform:uppercase;border-bottom:1px solid var(--border);background:var(--card2);text-align:left}
+.tbl td{padding:11px 14px;border-bottom:1px solid rgba(30,34,53,.5);font-size:12px;vertical-align:middle}
+.tbl tr:last-child td{border:none}
+.tbl tr:hover td{background:rgba(255,255,255,.013)}
+.mono{font-family:'DM Mono',monospace}
+/* Buttons */
+.btn{padding:9px 18px;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;
+  font-family:'Noto Sans JP',sans-serif;transition:.15s;border:none;
+  display:inline-flex;align-items:center;gap:6px}
+.btn-gold{background:linear-gradient(135deg,var(--gold),#a07830);color:#000}
+.btn-blue{background:linear-gradient(135deg,var(--blue),#3070c0);color:#fff}
+.btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--sub)}
+.btn-ghost:hover{color:var(--text);border-color:var(--sub)}
+.btn-danger{background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.3);color:var(--red)}
+.btn-sm{padding:5px 12px;font-size:10px;border-radius:7px}
+.btn-ok{background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);color:var(--green)}
+/* Input */
+.field{margin-bottom:12px}
+.field label{display:block;font-size:10px;color:var(--sub);margin-bottom:5px;font-weight:600}
+.field input,.field select{width:100%;background:#090b13;border:1px solid var(--border2);
+  border-radius:9px;padding:9px 13px;color:var(--text);font-size:13px;
+  font-family:'Noto Sans JP',sans-serif;outline:none;transition:.15s}
+.field input:focus,.field select:focus{border-color:var(--blue)}
+/* Alert */
+.al{display:flex;align-items:flex-start;gap:10px;padding:12px 16px;border-radius:10px;
+  margin-bottom:14px;font-size:12px;line-height:1.7}
+.al-warn{background:rgba(201,168,76,.07);border:1px solid rgba(201,168,76,.2)}
+.al-info{background:rgba(79,156,249,.07);border:1px solid rgba(79,156,249,.2)}
+.al-ok{background:rgba(52,211,153,.07);border:1px solid rgba(52,211,153,.2)}
+/* Fee input */
+.fee-cell{display:flex;align-items:center;gap:6px}
+.fee-input{width:90px;background:#090b13;border:1px solid var(--border2);border-radius:7px;
+  padding:5px 10px;color:var(--gold);font-family:'DM Mono',monospace;font-size:13px;
+  font-weight:500;outline:none;text-align:right}
+.fee-input:focus{border-color:var(--gold)}
+/* Status dot */
+.dot-live{width:7px;height:7px;border-radius:50%;background:var(--green);
+  display:inline-block;box-shadow:0 0 0 3px rgba(52,211,153,.2)}
+.dot-none{width:7px;height:7px;border-radius:50%;background:var(--muted);display:inline-block}
+/* Modal */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);
+  z-index:200;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:16px;
+  padding:28px;width:460px;max-width:95vw}
+.modal-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;margin-bottom:6px}
+.modal-sub{font-size:12px;color:var(--sub);margin-bottom:20px;line-height:1.7}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
+/* 法令比率ゲージ */
+.ratio-bar-wrap{height:10px;background:var(--border2);border-radius:5px;overflow:hidden;margin:8px 0}
+.ratio-bar{height:10px;border-radius:5px;transition:width .5s}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div style="display:flex;align-items:center;gap:12px">
+    <div class="logo">CORETO</div>
+    <div style="width:1px;height:18px;background:var(--border2)"></div>
+    <span style="font-size:10px;color:var(--muted);letter-spacing:1px">専任宅建士管理</span>
+  </div>
+  <button class="btn btn-ghost btn-sm" onclick="location.href='coreto-hub.html'">🏠 ホーム</button>
+</div>
+
+<div class="tabs">
+  <div class="tab on" onclick="showTab(0,this)">🏛️ 専任宅建士一覧</div>
+  <div class="tab"    onclick="showTab(1,this)">📊 IT重説報酬単価</div>
+  <div class="tab"    onclick="showTab(2,this)">📋 重説実績</div>
+  <div class="tab"    onclick="showTab(3,this)">⚖️ 法令比率チェック</div>
+</div>
+
+<div class="main">
+
+<!-- ════════════════ TAB 0: 専任一覧 ════════════════ -->
+<div id="tab-0">
+
+  <div class="kpi-row">
+    <div class="kpi">
+      <div class="kv" style="color:var(--gold)" id="kpi-sennin">0</div>
+      <div class="kl">専任宅建士（アクティブ）</div>
+    </div>
+    <div class="kpi">
+      <div class="kv" style="color:var(--blue)" id="kpi-nintei">0</div>
+      <div class="kl">本部認定（重説対応可）</div>
+    </div>
+    <div class="kpi">
+      <div class="kv" style="color:var(--muted)" id="kpi-fuakutiv">0</div>
+      <div class="kl">一般（重説対応不可）</div>
+    </div>
+    <div class="kpi">
+      <div class="kv" style="color:var(--green)" id="kpi-jisshi">0</div>
+      <div class="kl">今月重説実施件数</div>
+    </div>
+    <div class="kpi">
+      <div class="kv" style="color:var(--orange)" id="kpi-waiting">0</div>
+      <div class="kl">重説待ち（未割当）</div>
+    </div>
+  </div>
+
+  <div class="al al-warn">
+    ⚖️ <div>
+      <strong style="color:var(--gold)">宅建業法 第31条の3</strong> — 事務所の従業員5名につき1名以上の<strong>専任</strong>の宅地建物取引士の設置が義務付けられています。
+      専任宅建士の解除は必ず法令比率チェックを確認してから行ってください。
+      <strong style="color:var(--red)">解除操作は管理職以上のみ実行可能です。</strong>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch">
+      <div class="ch-t">宅建士登録一覧</div>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="search-takken" placeholder="ID・氏名で検索"
+               oninput="filterTakken()"
+               style="background:#090b13;border:1px solid var(--border2);color:var(--text);
+                      padding:5px 12px;border-radius:7px;font-size:11px;outline:none;width:160px">
+        <button class="btn btn-blue btn-sm" onclick="openAddModal()">＋ 宅建士を追加</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportCSV()">📥 CSV</button>
+      </div>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="tbl" id="takken-table">
+        <thead><tr>
+          <th>エージェントID</th><th>氏名</th><th>種別</th><th>宅建士証番号</th>
+          <th>登録都道府県</th><th>専任ステータス</th><th>重説対応</th>
+          <th>重説単価</th><th>月会費</th><th>今月実施</th><th>専任登録日</th><th>操作</th>
+        </tr></thead>
+        <tbody id="takken-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════ TAB 1: 報酬単価設定 ════════════════ -->
+<div id="tab-1" style="display:none">
+
+  <div class="al al-info">
+    ℹ️ <div>
+      IT重説1件あたりの報酬単価をエージェントごとに設定します。
+      単価は経験・スキル・稼働頻度などを考慮して本部が決定します。変更はリアルタイムで反映されます。
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch">
+      <div class="ch-t">重説報酬単価一覧</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="font-size:11px;color:var(--muted)">デフォルト単価</div>
+        <div style="display:flex;align-items:center;gap:5px">
+          <span style="color:var(--sub);font-size:11px">¥</span>
+          <input type="number" id="default-fee" value="5000" step="500" min="0"
+                 class="fee-input" style="width:80px"
+                 onchange="applyDefaultFee()">
+          <button class="btn btn-ghost btn-sm" onclick="applyDefaultFee()">全員に適用</button>
+        </div>
+      </div>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="tbl">
+        <thead><tr>
+          <th>エージェントID</th><th>氏名</th><th>専任ステータス</th><th>今月実施件数</th>
+          <th>重説報酬単価（1件あたり）</th><th>今月報酬合計（見込）</th><th>変更履歴</th>
+        </tr></thead>
+        <tbody id="fee-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch"><div class="ch-t">単価変更ログ</div><span class="pill pm">直近10件</span></div>
+    <div style="overflow-x:auto">
+      <table class="tbl">
+        <thead><tr><th>変更日時</th><th>対象エージェント</th><th>変更前</th><th>変更後</th><th>変更者</th></tr></thead>
+        <tbody id="fee-log-tbody">
+          <tr>
+            <td class="mono" style="font-size:10px">2026/02/15 14:32</td>
+            <td>山田 誠（10012）</td>
+            <td class="mono" style="color:var(--muted)">¥5,000</td>
+            <td class="mono" style="color:var(--gold)">¥6,000</td>
+            <td style="font-size:10px;color:var(--sub)">本部 管理職 田村</td>
+          </tr>
+          <tr>
+            <td class="mono" style="font-size:10px">2026/02/10 10:15</td>
+            <td>佐藤 花子（10008）</td>
+            <td class="mono" style="color:var(--muted)">¥4,500</td>
+            <td class="mono" style="color:var(--gold)">¥5,000</td>
+            <td style="font-size:10px;color:var(--sub)">本部 管理職 田村</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════ TAB 2: 重説実績 ════════════════ -->
+<div id="tab-2" style="display:none">
+
+  <div style="display:flex;gap:10px;margin-bottom:16px;align-items:center">
+    <select id="rec-month" onchange="renderRecords()"
+      style="background:#090b13;border:1px solid var(--border2);color:var(--text);
+             padding:7px 12px;border-radius:8px;font-size:12px;outline:none">
+      <option value="2026-02">2026年2月</option>
+      <option value="2026-01">2026年1月</option>
+      <option value="2025-12">2025年12月</option>
+    </select>
+    <button class="btn btn-ghost btn-sm" onclick="exportRecCSV()">📥 CSV</button>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
+    <div class="kpi"><div class="kv" style="color:var(--blue)" id="rec-total">0</div><div class="kl">重説実施件数</div></div>
+    <div class="kpi"><div class="kv" style="color:var(--gold)" id="rec-pay">¥0</div><div class="kl">重説報酬合計</div></div>
+    <div class="kpi"><div class="kv" style="color:var(--green)" id="rec-agents">0</div><div class="kl">実施担当者数</div></div>
+    <div class="kpi"><div class="kv" style="color:var(--purple)" id="rec-avg">¥0</div><div class="kl">平均単価</div></div>
+  </div>
+
+  <div class="card">
+    <div class="ch"><div class="ch-t">重説実施記録</div></div>
+    <div style="overflow-x:auto">
+      <table class="tbl">
+        <thead><tr>
+          <th>日時</th><th>案件ID</th><th>顧客名</th><th>物件</th>
+          <th>担当宅建士</th><th>単価</th><th>ステータス</th>
+        </tr></thead>
+        <tbody id="rec-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════ TAB 3: 法令比率 ════════════════ -->
+<div id="tab-3" style="display:none">
+
+  <div class="al al-warn">
+    ⚖️ <div>
+      <strong style="color:var(--gold)">宅建業法第31条の3第1項</strong> — 事務所に置く専任の宅地建物取引士の数は、
+      <strong>業務に従事する者5名につき1名以上</strong>とする。
+      この比率を下回る場合、業務改善指示・業務停止処分の対象となります。
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch"><div class="ch-t">現在の法令比率</div></div>
+    <div class="cb">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+        <div>
+          <div style="font-size:12px;color:var(--sub);margin-bottom:8px">事務所従業員数（業従者）</div>
+          <div style="font-family:'DM Mono',monospace;font-size:40px;font-weight:700;color:var(--text)" id="law-total">24</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:4px">登録エージェント全数</div>
+        </div>
+        <div>
+          <div style="font-size:12px;color:var(--sub);margin-bottom:8px">必要専任宅建士数（÷5 切上）</div>
+          <div style="font-family:'DM Mono',monospace;font-size:40px;font-weight:700;color:var(--orange)" id="law-required">5</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:4px">最低必要人数</div>
+        </div>
+      </div>
+
+      <div style="margin:20px 0 8px">
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+          <span style="color:var(--sub)">現在の専任宅建士数</span>
+          <span id="law-current-label" style="font-weight:700">0名</span>
+        </div>
+        <div class="ratio-bar-wrap">
+          <div class="ratio-bar" id="law-bar" style="width:0%;background:var(--green)"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:3px">
+          <span>0</span>
+          <span id="law-required-label">最低 5名</span>
+        </div>
+      </div>
+
+      <div id="law-status-box" style="padding:12px 16px;border-radius:10px;font-size:13px;font-weight:700;text-align:center;margin-top:16px">
+        <!-- JS で描画 -->
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch">
+      <div class="ch-t">専任解除シミュレーション</div>
+      <span class="pill pm">解除前に必ず確認</span>
+    </div>
+    <div class="cb">
+      <div style="font-size:12px;color:var(--sub);margin-bottom:12px">
+        特定のエージェントを専任から解除した場合の比率を事前確認できます。
+      </div>
+      <div style="display:flex;gap:10px;align-items:flex-end;margin-bottom:14px">
+        <div style="flex:1" class="field" style="margin:0">
+          <label>解除予定エージェント</label>
+          <select id="sim-agent" style="width:100%;background:#090b13;border:1px solid var(--border2);
+                  color:var(--text);padding:8px 12px;border-radius:8px;font-size:12px;outline:none">
+            <option value="">— 選択 —</option>
+          </select>
+        </div>
+        <button class="btn btn-ghost" onclick="runSim()">シミュレーション</button>
+      </div>
+      <div id="sim-result" style="display:none;padding:14px;background:var(--card2);border-radius:10px;font-size:12px;line-height:2"></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /main -->
+
+<!-- ════ 専任解除 Modal ════ -->
+<div class="modal-bg" id="revoke-modal">
+  <div class="modal">
+    <div class="modal-title" style="color:var(--red)">⚠️ 専任ステータスの解除</div>
+    <div class="modal-sub">
+      この操作は<strong>管理職以上のみ</strong>実行できます。解除後は通常月会費（ブロンズ¥980/月）が発生します。<br>
+      業法上の比率を必ず確認してください。
+    </div>
+    <div id="revoke-target-info" style="background:var(--card2);border-radius:10px;padding:14px;font-size:12px;line-height:2;margin-bottom:16px"></div>
+    <div class="field">
+      <label>解除理由 <span style="color:var(--red)">*</span></label>
+      <select id="revoke-reason" style="width:100%;background:#090b13;border:1px solid var(--border2);
+              color:var(--text);padding:8px 12px;border-radius:8px;font-size:12px;outline:none">
+        <option value="">— 選択してください —</option>
+        <option>他社への就職・転職</option>
+        <option>業務委託契約の終了</option>
+        <option>本人申し出による解除</option>
+        <option>規約違反による強制解除</option>
+        <option>その他</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>確認のためエージェントIDを入力</label>
+      <input type="text" id="revoke-confirm-id" placeholder="例：10012"
+             style="font-family:'DM Mono',monospace" oninput="checkRevokeConfirm()">
+    </div>
+    <div id="revoke-law-warn" style="display:none;padding:10px 14px;background:rgba(248,113,113,.1);
+         border:1px solid rgba(248,113,113,.3);border-radius:8px;font-size:11px;color:var(--red);margin-bottom:12px">
+      ⚠️ この解除により法令比率（5名につき1名）を下回ります。<br>
+      代替の専任宅建士を確保してから解除してください。
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeRevokeModal()">キャンセル</button>
+      <button class="btn btn-danger" id="revoke-exec-btn" disabled onclick="execRevoke()">解除を実行する</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ 宅建士追加 Modal ════ -->
+<div class="modal-bg" id="add-modal">
+  <div class="modal">
+    <div class="modal-title">🏛️ 宅建士情報の登録</div>
+    <div class="modal-sub">既存エージェントに宅建士情報と専任ステータスを付与します。</div>
+    <div class="field">
+      <label>エージェントID</label>
+      <input type="text" id="add-agent-id" placeholder="例：10012" style="font-family:'DM Mono',monospace" oninput="lookupAgent()">
+    </div>
+    <div id="add-agent-info" style="display:none;padding:10px 14px;background:var(--card2);border-radius:8px;font-size:12px;margin-bottom:12px;line-height:1.9"></div>
+    <div class="field">
+      <label>宅建士証番号</label>
+      <input type="text" id="add-license-no" placeholder="例：東京(1)第123456号" style="font-family:'DM Mono',monospace">
+    </div>
+    <div class="field">
+      <label>登録都道府県</label>
+      <select id="add-pref" style="width:100%;background:#090b13;border:1px solid var(--border2);
+              color:var(--text);padding:8px 12px;border-radius:8px;font-size:12px;outline:none">
+        <option>東京都</option><option>神奈川県</option><option>大阪府</option>
+        <option>愛知県</option><option>福岡県</option><option>その他</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>ステータス</label>
+      <select id="add-status" style="width:100%;background:#090b13;border:1px solid var(--border2);
+              color:var(--text);padding:8px 12px;border-radius:8px;font-size:12px;outline:none">
+        <option value="sennin">専任宅建士（月会費無料・重説対応可）</option>
+        <option value="nintei">本部認定（重説対応可・月会費あり）</option>
+        <option value="general">一般（重説対応不可）</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>IT重説報酬単価（1件あたり）</label>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="color:var(--sub)">¥</span>
+        <input type="number" id="add-fee" value="5000" step="500" min="0"
+               style="flex:1;font-family:'DM Mono',monospace;color:var(--gold)">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeAddModal()">キャンセル</button>
+      <button class="btn btn-gold" onclick="execAdd()">登録する</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════
+//  データ
+// ════════════════════════════════════════════════════════════
+var TAKKEN = [
+  { id:'10012', name:'山田 誠',   agType:'RE', licNo:'東京(1)第123456号', pref:'東京都',
+    status:'sennin', itOk:true, fee:6000, monthCount:4, registeredAt:'2025/11/01', fee0:false },
+  { id:'10008', name:'佐藤 花子', agType:'RE', licNo:'神奈川(3)第789012号', pref:'神奈川県',
+    status:'sennin', itOk:true, fee:5000, monthCount:6, registeredAt:'2025/10/15', fee0:false },
+  { id:'10023', name:'鈴木 健太', agType:'RE', licNo:'東京(2)第345678号', pref:'東京都',
+    status:'nintei', itOk:true, fee:4500, monthCount:2, registeredAt:'2025/12/01', fee0:false },
+  { id:'10041', name:'渡辺 隆',   agType:'RE', licNo:'東京(1)第901234号', pref:'東京都',
+    status:'sennin', itOk:true, fee:5000, monthCount:1, registeredAt:'2025/09/20', fee0:false },
+  { id:'20005', name:'田中 美穂', agType:'HR', licNo:'大阪(2)第567890号', pref:'大阪府',
+    status:'general', itOk:false, fee:5000, monthCount:0, registeredAt:'2026/01/10', fee0:false },
+];
+
+var RECORDS = [
+  { date:'2026/02/20 14:30', caseId:'R000234', client:'田中 雄介', prop:'新宿区西新宿2LDK', agentId:'10012', agentName:'山田 誠',   fee:6000, status:'完了' },
+  { date:'2026/02/18 10:00', caseId:'R000220', client:'鈴木 一郎', prop:'渋谷区代々木1LDK', agentId:'10008', agentName:'佐藤 花子', fee:5000, status:'完了' },
+  { date:'2026/02/15 15:00', caseId:'R000210', client:'加藤 里奈', prop:'港区芝浦3LDK',     agentId:'10012', agentName:'山田 誠',   fee:6000, status:'完了' },
+  { date:'2026/02/12 13:00', caseId:'R000201', client:'小林 修',   prop:'品川区大崎1K',    agentId:'10023', agentName:'鈴木 健太', fee:4500, status:'完了' },
+  { date:'2026/02/10 11:30', caseId:'R000195', client:'伊藤 麻美', prop:'目黒区中目黒2LDK', agentId:'10008', agentName:'佐藤 花子', fee:5000, status:'完了' },
+  { date:'2026/02/08 16:00', caseId:'R000188', client:'中村 哲也', prop:'杉並区荻窪2K',     agentId:'10041', agentName:'渡辺 隆',   fee:5000, status:'完了' },
+  { date:'2026/02/05 14:00', caseId:'R000177', client:'吉田 幸子', prop:'世田谷区三軒茶屋1LDK', agentId:'10012', agentName:'山田 誠', fee:6000, status:'完了' },
+  { date:'2026/02/22 10:00', caseId:'R000245', client:'松本 義雄', prop:'江東区豊洲2LDK',   agentId:'10008', agentName:'佐藤 花子', fee:5000, status:'予定' },
+];
+
+var TOTAL_AGENTS = 24; // 業従者数（固定デモ値）
+var revokeTargetId = null;
+
+// ════════════════════════════════════════════════════════════
+//  Tab
+// ════════════════════════════════════════════════════════════
+function showTab(n, btn) {
+  for (var i=0;i<4;i++) {
+    document.getElementById('tab-'+i).style.display = i===n?'block':'none';
+  }
+  document.querySelectorAll('.tab').forEach(function(t,i){ t.classList.toggle('on',i===n); });
+  if (n===0) renderTakkenTable();
+  if (n===1) renderFeeTable();
+  if (n===2) renderRecords();
+  if (n===3) renderLawCheck();
+}
+
+// ════════════════════════════════════════════════════════════
+//  Tab 0: 一覧
+// ════════════════════════════════════════════════════════════
+function renderTakkenTable() {
+  var sennin  = TAKKEN.filter(function(t){return t.status==='sennin';}).length;
+  var nintei  = TAKKEN.filter(function(t){return t.status==='nintei';}).length;
+  var general = TAKKEN.filter(function(t){return t.status==='general';}).length;
+  var jisshi  = RECORDS.filter(function(r){return r.status==='完了';}).length;
+  document.getElementById('kpi-sennin').textContent   = sennin + '名';
+  document.getElementById('kpi-nintei').textContent   = nintei + '名';
+  document.getElementById('kpi-fuakutiv').textContent = general + '名';
+  document.getElementById('kpi-jisshi').textContent   = jisshi + '件';
+  document.getElementById('kpi-waiting').textContent  = '1件';
+
+  var tbody = document.getElementById('takken-tbody');
+  tbody.innerHTML = TAKKEN.map(function(t) {
+    var statusPill = t.status === 'sennin'
+      ? '<span class="pill pgold">🏛️ 専任</span>'
+      : t.status === 'nintei'
+      ? '<span class="pill pg">✓ 本部認定</span>'
+      : '<span class="pill pm">一般</span>';
+    var itPill = t.itOk
+      ? '<span class="pill pg">重説対応可</span>'
+      : '<span class="pill pm">対応不可</span>';
+    var feeFree = t.status === 'sennin' ? '<span class="pill pgold">無料</span>' : '<span class="pill pm">¥980〜</span>';
+    return '<tr>' +
+      '<td class="mono" style="color:var(--gold)">' + t.id + '</td>' +
+      '<td style="font-weight:700">' + t.name + '</td>' +
+      '<td><span class="pill pb">' + t.agType + '</span></td>' +
+      '<td class="mono" style="font-size:10px;color:var(--sub)">' + t.licNo + '</td>' +
+      '<td style="font-size:11px">' + t.pref + '</td>' +
+      '<td>' + statusPill + '</td>' +
+      '<td>' + itPill + '</td>' +
+      '<td class="mono" style="color:var(--gold);font-weight:600">¥' + t.fee.toLocaleString() + '</td>' +
+      '<td>' + feeFree + '</td>' +
+      '<td class="mono">' + t.monthCount + '件</td>' +
+      '<td class="mono" style="font-size:10px">' + t.registeredAt + '</td>' +
+      '<td>' +
+        '<div style="display:flex;gap:5px">' +
+          (t.itOk && t.status !== 'nintei'
+            ? '<button class="btn btn-ghost btn-sm" onclick="toggleNintei(\'' + t.id + '\')">' +
+              (t.status==='nintei'?'認定解除':'重説認定') + '</button>'
+            : '') +
+          (t.status === 'sennin'
+            ? '<button class="btn btn-danger btn-sm" onclick="openRevokeModal(\'' + t.id + '\')">専任解除</button>'
+            : '') +
+        '</div>' +
+      '</td>' +
+    '</tr>';
+  }).join('');
+}
+
+function filterTakken() {
+  var q = document.getElementById('search-takken').value.toLowerCase();
+  document.querySelectorAll('#takken-tbody tr').forEach(function(row) {
+    row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+
+function toggleNintei(id) {
+  var t = TAKKEN.find(function(x){ return x.id===id; });
+  if (!t) return;
+  if (t.status === 'nintei') {
+    t.status = 'general'; t.itOk = false;
+    alert('✅ ' + t.name + ' の本部認定を解除しました。');
+  } else {
+    t.status = 'nintei'; t.itOk = true;
+    alert('✅ ' + t.name + ' を本部認定（重説対応可）に設定しました。');
+  }
+  renderTakkenTable();
+}
+
+// ════════════════════════════════════════════════════════════
+//  Tab 1: 単価設定
+// ════════════════════════════════════════════════════════════
+function renderFeeTable() {
+  var tbody = document.getElementById('fee-tbody');
+  tbody.innerHTML = TAKKEN.filter(function(t){ return t.itOk; }).map(function(t) {
+    var total = t.fee * t.monthCount;
+    var statusPill = t.status === 'sennin'
+      ? '<span class="pill pgold">専任</span>'
+      : '<span class="pill pg">認定</span>';
+    return '<tr>' +
+      '<td class="mono" style="color:var(--gold)">' + t.id + '</td>' +
+      '<td style="font-weight:700">' + t.name + '</td>' +
+      '<td>' + statusPill + '</td>' +
+      '<td class="mono">' + t.monthCount + '件</td>' +
+      '<td>' +
+        '<div class="fee-cell">' +
+          '<span style="color:var(--sub);font-size:11px">¥</span>' +
+          '<input class="fee-input" type="number" step="500" min="0" value="' + t.fee + '"' +
+            ' id="fee-input-' + t.id + '"' +
+            ' onchange="updateFee(\'' + t.id + '\',this.value)">' +
+        '</div>' +
+      '</td>' +
+      '<td class="mono" style="color:var(--gold);font-weight:600">¥' + total.toLocaleString() + '</td>' +
+      '<td>' +
+        '<button class="btn btn-ghost btn-sm" onclick="updateFee(\'' + t.id + '\',document.getElementById(\'fee-input-' + t.id + '\').value,true)">' +
+          '✓ 確定' +
+        '</button>' +
+      '</td>' +
+    '</tr>';
+  }).join('');
+}
+
+function updateFee(id, val, confirm_flag) {
+  var t = TAKKEN.find(function(x){ return x.id===id; });
+  if (!t) return;
+  var newFee = parseInt(val) || 0;
+  if (newFee < 0) return;
+  var old = t.fee;
+  t.fee = newFee;
+  if (confirm_flag) {
+    // ログ追加
+    var tbody = document.getElementById('fee-log-tbody');
+    var now = new Date().toLocaleString('ja-JP').slice(0,-3);
+    var newRow = document.createElement('tr');
+    newRow.innerHTML =
+      '<td class="mono" style="font-size:10px">' + now + '</td>' +
+      '<td>' + t.name + '（' + id + '）</td>' +
+      '<td class="mono" style="color:var(--muted)">¥' + old.toLocaleString() + '</td>' +
+      '<td class="mono" style="color:var(--gold)">¥' + newFee.toLocaleString() + '</td>' +
+      '<td style="font-size:10px;color:var(--sub)">本部 管理職 田村</td>';
+    tbody.insertBefore(newRow, tbody.firstChild);
+    alert('✅ ' + t.name + ' の単価を ¥' + newFee.toLocaleString() + ' に更新しました。');
+    renderFeeTable();
+  }
+}
+
+function applyDefaultFee() {
+  var val = parseInt(document.getElementById('default-fee').value) || 5000;
+  if (!confirm('重説対応可の全エージェントの単価を ¥' + val.toLocaleString() + ' に設定しますか？')) return;
+  TAKKEN.forEach(function(t){ if(t.itOk) t.fee = val; });
+  renderFeeTable();
+  alert('✅ 全員の単価を更新しました。');
+}
+
+// ════════════════════════════════════════════════════════════
+//  Tab 2: 実績
+// ════════════════════════════════════════════════════════════
+function renderRecords() {
+  var done = RECORDS.filter(function(r){ return r.status==='完了'; });
+  var totalPay = done.reduce(function(s,r){ return s+r.fee; }, 0);
+  var agents = [...new Set(done.map(function(r){ return r.agentId; }))].length;
+  var avg = done.length ? Math.round(totalPay/done.length) : 0;
+  document.getElementById('rec-total').textContent  = done.length + '件';
+  document.getElementById('rec-pay').textContent    = '¥'+totalPay.toLocaleString();
+  document.getElementById('rec-agents').textContent = agents + '名';
+  document.getElementById('rec-avg').textContent    = '¥'+avg.toLocaleString();
+
+  document.getElementById('rec-tbody').innerHTML = RECORDS.map(function(r) {
+    var t = TAKKEN.find(function(x){ return x.id===r.agentId; });
+    return '<tr>' +
+      '<td class="mono" style="font-size:10px">' + r.date + '</td>' +
+      '<td class="mono" style="font-size:10px;color:var(--blue)">' + r.caseId + '</td>' +
+      '<td style="font-weight:600">' + r.client + '</td>' +
+      '<td style="font-size:11px;color:var(--sub)">' + r.prop + '</td>' +
+      '<td>' + r.agentName + '（' + r.agentId + '）</td>' +
+      '<td class="mono" style="color:var(--gold)">¥' + r.fee.toLocaleString() + '</td>' +
+      '<td><span class="pill ' + (r.status==='完了'?'pg':'pb') + '">' + r.status + '</span></td>' +
+    '</tr>';
+  }).join('');
+}
+
+function exportRecCSV() {
+  var rows = [['日時','案件ID','顧客名','物件','担当宅建士','ID','単価','ステータス']].concat(
+    RECORDS.map(function(r){ return [r.date,r.caseId,r.client,r.prop,r.agentName,r.agentId,r.fee,r.status]; })
+  );
+  var csv = rows.map(function(r){ return r.join(','); }).join('\n');
+  var a = document.createElement('a'); a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
+  a.download='coreto_itsetsu_records.csv'; a.click();
+}
+
+// ════════════════════════════════════════════════════════════
+//  Tab 3: 法令比率
+// ════════════════════════════════════════════════════════════
+function renderLawCheck() {
+  var sennin = TAKKEN.filter(function(t){ return t.status==='sennin'; }).length;
+  var required = Math.ceil(TOTAL_AGENTS / 5);
+  var pct = Math.min(100, Math.round(sennin / required * 100));
+  var ok = sennin >= required;
+
+  document.getElementById('law-total').textContent    = TOTAL_AGENTS + '名';
+  document.getElementById('law-required').textContent = required + '名';
+  document.getElementById('law-current-label').textContent = sennin + '名';
+  document.getElementById('law-required-label').textContent = '最低 ' + required + '名';
+
+  var bar = document.getElementById('law-bar');
+  bar.style.width = pct + '%';
+  bar.style.background = ok ? 'var(--green)' : 'var(--red)';
+
+  var box = document.getElementById('law-status-box');
+  if (ok) {
+    box.style.cssText = 'padding:12px 16px;border-radius:10px;font-size:13px;font-weight:700;text-align:center;margin-top:16px;background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.3);color:var(--green)';
+    box.innerHTML = '✅ 法令比率を満たしています（専任 ' + sennin + '名 / 必要 ' + required + '名）';
+  } else {
+    box.style.cssText = 'padding:12px 16px;border-radius:10px;font-size:13px;font-weight:700;text-align:center;margin-top:16px;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);color:var(--red)';
+    box.innerHTML = '❌ 法令比率を下回っています。専任宅建士をあと ' + (required - sennin) + '名確保してください。';
+  }
+
+  // シミュレーション select
+  var sel = document.getElementById('sim-agent');
+  sel.innerHTML = '<option value="">— 選択 —</option>';
+  TAKKEN.filter(function(t){ return t.status==='sennin'; }).forEach(function(t) {
+    var opt = document.createElement('option');
+    opt.value = t.id; opt.textContent = t.name + '（' + t.id + '）';
+    sel.appendChild(opt);
+  });
+}
+
+function runSim() {
+  var id = document.getElementById('sim-agent').value;
+  if (!id) { alert('対象エージェントを選択してください'); return; }
+  var sennin = TAKKEN.filter(function(t){ return t.status==='sennin'; }).length;
+  var required = Math.ceil(TOTAL_AGENTS / 5);
+  var afterSennin = sennin - 1;
+  var ok = afterSennin >= required;
+  var res = document.getElementById('sim-result');
+  res.style.display = 'block';
+  res.innerHTML =
+    '解除後の専任宅建士数：<strong style="color:' + (ok?'var(--green)':'var(--red)') + '">' + afterSennin + '名</strong>（必要 ' + required + '名）<br>' +
+    '法令比率：<strong style="color:' + (ok?'var(--green)':'var(--red)') + '">' + (ok?'✅ 適合':'❌ 違反') + '</strong><br>' +
+    (ok ? '解除しても法令比率を満たします。' : '<span style="color:var(--red)">⚠️ この解除は業法違反になります。代替の専任宅建士を確保してください。</span>');
+}
+
+// ════════════════════════════════════════════════════════════
+//  専任解除 Modal
+// ════════════════════════════════════════════════════════════
+function openRevokeModal(id) {
+  var t = TAKKEN.find(function(x){ return x.id===id; });
+  if (!t) return;
+  revokeTargetId = id;
+  document.getElementById('revoke-target-info').innerHTML =
+    '対象：<strong>' + t.name + '（' + t.id + '）</strong><br>' +
+    '現ステータス：専任宅建士<br>' +
+    '解除後の月会費：<strong style="color:var(--orange)">¥980/月</strong>（ブロンズ、翌月から発生）<br>' +
+    '宅建士証：' + t.licNo;
+  document.getElementById('revoke-confirm-id').value = '';
+  document.getElementById('revoke-reason').value = '';
+  document.getElementById('revoke-exec-btn').disabled = true;
+
+  // 法令比率チェック
+  var sennin = TAKKEN.filter(function(t){ return t.status==='sennin'; }).length;
+  var required = Math.ceil(TOTAL_AGENTS / 5);
+  var warn = document.getElementById('revoke-law-warn');
+  warn.style.display = (sennin - 1) < required ? 'block' : 'none';
+
+  document.getElementById('revoke-modal').classList.add('open');
+}
+
+function closeRevokeModal() {
+  document.getElementById('revoke-modal').classList.remove('open');
+  revokeTargetId = null;
+}
+
+function checkRevokeConfirm() {
+  var id = document.getElementById('revoke-confirm-id').value.trim();
+  var reason = document.getElementById('revoke-reason').value;
+  var btn = document.getElementById('revoke-exec-btn');
+  btn.disabled = !(id === revokeTargetId && reason);
+}
+
+function execRevoke() {
+  if (!revokeTargetId) return;
+  var t = TAKKEN.find(function(x){ return x.id===revokeTargetId; });
+  if (!t) return;
+  t.status = 'general';
+  t.itOk   = false;
+  closeRevokeModal();
+  renderTakkenTable();
+  alert('✅ ' + t.name + ' の専任ステータスを解除しました。\n翌月より月会費（¥980）が発生します。\nSlackでエージェントに通知が送信されます。');
+}
+
+// ════════════════════════════════════════════════════════════
+//  宅建士追加 Modal
+// ════════════════════════════════════════════════════════════
+var KNOWN_AGENTS = [
+  { id:'10012', name:'山田 誠' },{ id:'10008', name:'佐藤 花子' },
+  { id:'10023', name:'鈴木 健太' },{ id:'10041', name:'渡辺 隆' },
+  { id:'20005', name:'田中 美穂' },{ id:'10055', name:'木村 朋子' },
+];
+
+function openAddModal() {
+  document.getElementById('add-agent-id').value   = '';
+  document.getElementById('add-license-no').value = '';
+  document.getElementById('add-agent-info').style.display = 'none';
+  document.getElementById('add-modal').classList.add('open');
+}
+function closeAddModal() {
+  document.getElementById('add-modal').classList.remove('open');
+}
+function lookupAgent() {
+  var id = document.getElementById('add-agent-id').value.trim();
+  var ag = KNOWN_AGENTS.find(function(a){ return a.id===id; });
+  var box = document.getElementById('add-agent-info');
+  if (ag) {
+    box.style.display = 'block';
+    box.innerHTML = '氏名：<strong>' + ag.name + '</strong>　ID：' + ag.id;
+  } else {
+    box.style.display = id.length>=5 ? 'block' : 'none';
+    box.innerHTML = id.length>=5 ? '<span style="color:var(--muted)">エージェントが見つかりません</span>' : '';
+  }
+}
+function execAdd() {
+  var id      = document.getElementById('add-agent-id').value.trim();
+  var licNo   = document.getElementById('add-license-no').value.trim();
+  var pref    = document.getElementById('add-pref').value;
+  var status  = document.getElementById('add-status').value;
+  var fee     = parseInt(document.getElementById('add-fee').value) || 5000;
+  if (!id || !licNo) { alert('エージェントIDと宅建士証番号は必須です'); return; }
+  var ag = KNOWN_AGENTS.find(function(a){ return a.id===id; });
+  var name = ag ? ag.name : '（ID: '+id+'）';
+  TAKKEN.push({
+    id:id, name:name, agType:'RE', licNo:licNo, pref:pref,
+    status:status, itOk:status!=='general', fee:fee, monthCount:0,
+    registeredAt:new Date().toLocaleDateString('ja-JP'), fee0:false
+  });
+  closeAddModal();
+  renderTakkenTable();
+  alert('✅ ' + name + ' を宅建士として登録しました。');
+}
+
+function exportCSV() {
+  var rows = [['ID','氏名','種別','宅建士証番号','都道府県','専任ステータス','重説対応','単価']].concat(
+    TAKKEN.map(function(t){ return [t.id,t.name,t.agType,t.licNo,t.pref,t.status,t.itOk?'可':'不可',t.fee]; })
+  );
+  var csv = rows.map(function(r){ return r.join(','); }).join('\n');
+  var a = document.createElement('a'); a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
+  a.download='coreto_takken.csv'; a.click();
+}
+
+// ════ Init ════
+renderTakkenTable();
+</script>
+</body>
+</html>

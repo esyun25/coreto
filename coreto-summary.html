@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CORETO — システム全体まとめ（2026年2月時点）</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090f;--card:#0f1119;--card2:#141720;--border:#1e2235;--border2:#252a3d;
+  --gold:#c9a84c;--blue:#4f9cf9;--green:#34d399;--red:#f87171;--orange:#fb923c;
+  --purple:#a78bfa;--muted:#4a5270;--sub:#7a849e;--text:#e2e6f3;
+}
+html,body{min-height:100%;font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);line-height:1.7}
+/* Header */
+.hdr{padding:32px 48px 28px;border-bottom:1px solid var(--border);background:linear-gradient(135deg,#07090f 60%,#0d1020)}
+.logo{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:var(--gold);letter-spacing:4px;margin-bottom:8px}
+.hdr-sub{font-size:13px;color:var(--sub);letter-spacing:1px}
+.hdr-meta{display:flex;gap:24px;margin-top:16px;font-size:11px;color:var(--muted)}
+.hdr-meta span{display:flex;align-items:center;gap:6px}
+/* Layout */
+.main{max-width:1000px;margin:0 auto;padding:40px 32px 80px}
+/* Section */
+.section{margin-bottom:48px}
+.section-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--text);
+  margin-bottom:20px;padding-bottom:10px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:10px}
+.section-title::before{content:'';width:4px;height:22px;border-radius:2px;background:var(--gold)}
+/* Cards */
+.card-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+.card-grid.col2{grid-template-columns:repeat(2,1fr)}
+.card-grid.col4{grid-template-columns:repeat(4,1fr)}
+.fc{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:16px 18px}
+.fc-icon{font-size:22px;margin-bottom:8px}
+.fc-name{font-size:12px;font-weight:700;margin-bottom:4px}
+.fc-desc{font-size:10px;color:var(--sub);line-height:1.7}
+.fc-file{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);margin-top:8px;
+  padding:3px 8px;background:var(--card2);border-radius:5px;display:inline-block}
+.fc-badge{display:inline-block;padding:2px 7px;border-radius:4px;font-size:8px;font-weight:700;margin-bottom:6px}
+.new{background:rgba(52,211,153,.15);color:var(--green);border:1px solid rgba(52,211,153,.3)}
+.upd{background:rgba(79,156,249,.12);color:var(--blue);border:1px solid rgba(79,156,249,.25)}
+.hq{background:rgba(201,168,76,.12);color:var(--gold);border:1px solid rgba(201,168,76,.3)}
+/* Role pills */
+.pill{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;
+  border-radius:5px;font-size:8px;font-weight:700;margin:1px}
+.pr{background:rgba(248,113,113,.12);color:var(--red);border:1px solid rgba(248,113,113,.3)}
+.pb{background:rgba(79,156,249,.12);color:var(--blue);border:1px solid rgba(79,156,249,.25)}
+.pg{background:rgba(52,211,153,.13);color:var(--green);border:1px solid rgba(52,211,153,.3)}
+.pp{background:rgba(167,139,250,.12);color:var(--purple);border:1px solid rgba(167,139,250,.3)}
+/* Info block */
+.info{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:20px 24px;margin-bottom:16px}
+.info-row{display:flex;padding:8px 0;border-bottom:1px solid rgba(30,34,53,.5);font-size:12px;gap:16px}
+.info-row:last-child{border:none}
+.info-label{color:var(--sub);min-width:160px;font-weight:500}
+.info-val{color:var(--text)}
+/* Flow */
+.flow{display:flex;align-items:center;gap:0;margin:12px 0;flex-wrap:wrap}
+.flow-step{background:var(--card2);border:1px solid var(--border2);border-radius:8px;
+  padding:8px 14px;font-size:11px;font-weight:600}
+.flow-arrow{color:var(--muted);padding:0 8px;font-size:16px}
+/* Stats */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px;text-align:center}
+.stat-v{font-family:'DM Mono',monospace;font-size:26px;font-weight:500;margin-bottom:4px}
+.stat-l{font-size:10px;color:var(--muted)}
+/* Table */
+.tbl{width:100%;border-collapse:collapse;font-size:11px}
+.tbl th{padding:8px 12px;background:var(--card2);color:var(--muted);font-size:9px;
+  letter-spacing:.5px;text-transform:uppercase;border-bottom:1px solid var(--border);text-align:left}
+.tbl td{padding:9px 12px;border-bottom:1px solid rgba(30,34,53,.4)}
+.tbl tr:last-child td{border:none}
+.mono{font-family:'DM Mono',monospace}
+/* Notice */
+.notice{padding:12px 16px;border-radius:10px;font-size:11px;line-height:1.8;margin-bottom:12px;
+  display:flex;align-items:flex-start;gap:10px}
+.notice-warn{background:rgba(201,168,76,.07);border:1px solid rgba(201,168,76,.2)}
+.notice-info{background:rgba(79,156,249,.07);border:1px solid rgba(79,156,249,.2)}
+.notice-ok{background:rgba(52,211,153,.07);border:1px solid rgba(52,211,153,.2)}
+/* TOC */
+.toc{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:20px 24px;margin-bottom:40px}
+.toc-title{font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px}
+.toc-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.toc-item{font-size:12px;color:var(--sub);padding:4px 0;display:flex;align-items:center;gap:8px;
+  text-decoration:none;transition:.15s}
+.toc-item:hover{color:var(--gold)}
+.toc-num{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);min-width:20px}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+@media print{body{background:#fff;color:#000}.hdr{background:#fff;border-color:#ccc}}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="logo">CORETO</div>
+  <div class="hdr-sub">業務管理システム — 実装済み機能まとめ</div>
+  <div class="hdr-meta">
+    <span>📅 2026年2月21日時点</span>
+    <span>📁 35ファイル</span>
+    <span>💾 1,454KB</span>
+    <span>⚙️ 約500関数</span>
+    <span>🏗️ HTML / CSS / Vanilla JS（フルオフライン動作）</span>
+  </div>
+</div>
+
+<div class="main">
+
+<!-- 目次 -->
+<div class="toc">
+  <div class="toc-title">目次</div>
+  <div class="toc-grid">
+    <a class="toc-item" href="#s1"><span class="toc-num">1</span>システム概要・アーキテクチャ</a>
+    <a class="toc-item" href="#s2"><span class="toc-num">2</span>ユーザー構成・権限設計</a>
+    <a class="toc-item" href="#s3"><span class="toc-num">3</span>入会・オンボーディング</a>
+    <a class="toc-item" href="#s4"><span class="toc-num">4</span>案件管理・マッチング</a>
+    <a class="toc-item" href="#s5"><span class="toc-num">5</span>IT重説・契約書管理</a>
+    <a class="toc-item" href="#s6"><span class="toc-num">6</span>報酬・支払い管理</a>
+    <a class="toc-item" href="#s7"><span class="toc-num">7</span>専任宅建士管理</a>
+    <a class="toc-item" href="#s8"><span class="toc-num">8</span>即時払いシステム</a>
+    <a class="toc-item" href="#s9"><span class="toc-num">9</span>本人確認・アカウント管理</a>
+    <a class="toc-item" href="#s10"><span class="toc-num">10</span>パートナー管理</a>
+    <a class="toc-item" href="#s11"><span class="toc-num">11</span>ツール・補助機能</a>
+    <a class="toc-item" href="#s12"><span class="toc-num">12</span>全ファイル一覧</a>
+  </div>
+</div>
+
+
+<!-- 1. システム概要 -->
+<div class="section" id="s1">
+  <div class="section-title">1　システム概要・アーキテクチャ</div>
+
+  <div class="notice notice-info">
+    ℹ️ <div>COREBLDGが運営する不動産・人材エージェント向け業務管理SaaS。<strong>100〜1,000名規模</strong>のエージェントが利用。現フェーズはHTMLによるデモ実装。本番はKintone + Zapier + Slack + LINE公式アカウントで構成。</div>
+  </div>
+
+  <div class="info">
+    <div class="info-row"><div class="info-label">フロントエンド</div><div class="info-val">HTML5 / CSS3 / Vanilla JS（フレームワーク不使用・フルオフライン動作）</div></div>
+    <div class="info-row"><div class="info-label">バックエンド（本番）</div><div class="info-val">Kintone（データ本体）+ Zapier（自動化）+ Slack（通知）+ LINE公式（エージェント連絡）</div></div>
+    <div class="info-row"><div class="info-label">2FA認証</div><div class="info-val">SMS一本化（Twilio/AWS SNS）— ¥7〜10/件。LINEは通知・連絡専用</div></div>
+    <div class="info-row"><div class="info-label">書類管理</div><div class="info-val">Google Drive（リンクを知っている人のみ閲覧可・権限自動設定）</div></div>
+    <div class="info-row"><div class="info-label">電子署名</div><div class="info-val">紙署名のまま（契約書はスキャンしてDriveへ保管）</div></div>
+    <div class="info-row"><div class="info-label">統合ハブ</div><div class="info-val">coreto-hub.html — ロールを自動判定してダッシュボードとナビを切替</div></div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-v" style="color:var(--gold)">35</div><div class="stat-l">実装ファイル数</div></div>
+    <div class="stat"><div class="stat-v" style="color:var(--blue)">1,419KB</div><div class="stat-l">総コードサイズ</div></div>
+    <div class="stat"><div class="stat-v" style="color:var(--green)">500+</div><div class="stat-l">実装関数数</div></div>
+    <div class="stat"><div class="stat-v" style="color:var(--purple)">4</div><div class="stat-l">ユーザーロール数</div></div>
+  </div>
+</div>
+
+
+<!-- 2. ユーザー構成 -->
+<div class="section" id="s2">
+  <div class="section-title">2　ユーザー構成・権限設計</div>
+
+  <div class="card-grid col4">
+    <div class="fc">
+      <div class="fc-icon">🏢</div>
+      <div class="fc-name">本部 HQ</div>
+      <div class="fc-desc">全機能にアクセス可。エージェント管理・承認・報酬確定・専任宅建士の解除（管理職のみ）</div>
+    </div>
+    <div class="fc">
+      <div class="fc-icon">🏠</div>
+      <div class="fc-name">不動産エージェント RE</div>
+      <div class="fc-desc">ID: 10001〜19999。宅建士資格保持者は専任登録可。月会費はブロンズ¥980、シルバー¥490、ゴールド以上は無料（専任宅建士も無料）</div>
+    </div>
+    <div class="fc">
+      <div class="fc-icon">👥</div>
+      <div class="fc-name">人材エージェント HR</div>
+      <div class="fc-desc">ID: 20001〜29999。採用マッチング専任。月会費¥980（Bronze）/ ¥490（Silver）/ ¥0（Gold以上）</div>
+    </div>
+    <div class="fc">
+      <div class="fc-icon">🤝</div>
+      <div class="fc-name">パートナー PT</div>
+      <div class="fc-desc">ID: 30001〜39999。外部紹介者。案件フィード閲覧・紹介報酬受取。月会費なし（無料）</div>
+    </div>
+  </div>
+
+  <div class="info">
+    <div class="info-row"><div class="info-label">全エージェント</div><div class="info-val">業務委託契約（雇用関係なし）</div></div>
+    <div class="info-row"><div class="info-label">ランク体系</div><div class="info-val">Bronze → Silver → Gold → Platinum（成約実績ベースで自動判定）</div></div>
+    <div class="info-row"><div class="info-label">月会費免除</div><div class="info-val">専任宅建士として登録したエージェントは月会費・名刺費用が無料</div></div>
+    <div class="info-row"><div class="info-label">専任宅建士解除</div><div class="info-val">管理職以上のみ実行可。宅建業法第31条の3（5名につき1名）の比率自動チェックあり</div></div>
+    <div class="info-row"><div class="info-label">デモアカウント</div><div class="info-val">10012 山田誠（Gold/RE）/ 10008 佐藤花子（Platinum/RE）/ 20005 田中美穂（Gold/HR）/ 30007 佐藤美咲（PT）　パスワード: coreto2026</div></div>
+  </div>
+  <div class="info" style="margin-top:12px">
+    <div class="info-row" style="font-weight:700;font-size:11px;color:var(--gold)">
+      <div class="info-label">📋 月会費早見表（エージェント）</div><div class="info-val"></div>
+    </div>
+    <div class="info-row"><div class="info-label">Bronze（初期）</div><div class="info-val mono" style="color:var(--orange)">¥980 / 月</div></div>
+    <div class="info-row"><div class="info-label">Silver</div><div class="info-val mono" style="color:var(--text)">¥490 / 月</div></div>
+    <div class="info-row"><div class="info-label">Gold / Platinum</div><div class="info-val mono" style="color:var(--green)">¥0（永久無料）</div></div>
+    <div class="info-row"><div class="info-label">創業メンバー</div><div class="info-val mono" style="color:var(--gold)">¥0（永久無料）</div></div>
+    <div class="info-row"><div class="info-label">専任宅建士</div><div class="info-val mono" style="color:var(--green)">¥0（ランク問わず無料）</div></div>
+    <div class="info-row"><div class="info-label">パートナー</div><div class="info-val mono" style="color:var(--green)">¥0（無料）</div></div>
+  </div>
+</div>
+
+
+<!-- 3. 入会・オンボーディング -->
+<div class="section" id="s3">
+  <div class="section-title">3　入会・オンボーディング</div>
+
+  <div class="card-grid">
+    <div class="fc">
+      <div class="fc-badge new">NEW</div>
+      <div class="fc-icon">📝</div>
+      <div class="fc-name">エージェント入会申込</div>
+      <div class="fc-desc">
+        5ステップ：基本情報 → <strong>宅建士確認（分岐）</strong> → SMS認証 → 決済 → 確認送信。
+        宅建士の場合「専任希望か否か」を先に確認。専任を選ぶと月会費・名刺費が¥0に。
+      </div>
+      <div class="fc-file">coreto-agent-signup.html</div>
+    </div>
+    <div class="fc">
+      <div class="fc-icon">🤝</div>
+      <div class="fc-name">パートナー入会申込</div>
+      <div class="fc-desc">5ステップ：基本情報 → SMS認証 → 名刺オプション（¥2,000） → 決済 → 確認。名刺なしでも入会可。</div>
+      <div class="fc-file">coreto-partner-signup.html</div>
+    </div>
+    <div class="fc">
+      <div class="fc-icon">🎓</div>
+      <div class="fc-name">研修・オンボーディング</div>
+      <div class="fc-desc">入会後の必須タスク一覧（eKYC・口座登録・IT重説確認など）。HQ側では進捗確認・リマインド送信が可能。</div>
+      <div class="fc-file">coreto-onboarding.html</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- 4. 案件管理 -->
+<div class="section" id="s4">
+  <div class="section-title">4　案件管理・マッチング</div>
+
+  <div class="card-grid">
+    <div class="fc">
+      <div class="fc-icon">🔗</div>
+      <div class="fc-name">マッチングシステム</div>
+      <div class="fc-desc">顧客とエージェントのマッチング。条件・エリア・担当者スコアでフィルタリング。</div>
+      <div class="fc-file">coreto-matching.html</div>
+    </div>
+    <div class="fc">
+      <div class="fc-icon">📊</div>
+      <div class="fc-name">案件パイプライン</div>
+      <div class="fc-desc">商談ステータスのKanban表示。案件進捗の一覧管理。</div>
+      <div class="fc-file">coreto-pipeline.html</div>
+    </div>
+    <div class="fc">
+      <div class="fc-icon">🏠</div>
+      <div class="fc-name">内見依頼書</div>
+      <div class="fc-desc">内見依頼書の作成・管理。物件・顧客・日時を紐付け。PDF出力対応。</div>
+      <div class="fc-file">coreto-naiken.html</div>
+    </div>
+    <div class="fc">
+      <div class="fc-icon">✅</div>
+      <div class="fc-name">書類審査チェックシート</div>
+      <div class="fc-desc">入居審査に必要な書類の提出状況を管理。必須・任意の分類。HQの承認フロー付き。</div>
+      <div class="fc-file">coreto-screening.html</div>
+    </div>
+    <div class="fc">
+      <div class="fc-icon">🎯</div>
+      <div class="fc-name">成約報告・振込バッチ</div>
+      <div class="fc-desc">成約案件の最終確認・報酬確定・全銀データ生成。一括振込処理。</div>
+      <div class="fc-file">coreto-batch-close.html</div>
+    </div>
+    <div class="fc">
+      <div class="fc-icon">👤</div>
+      <div class="fc-name">顧客ID管理</div>
+      <div class="fc-desc">顧客ID（CL-XXXXX）の発行・管理。重複防止・ステータス追跡。</div>
+      <div class="fc-file">coreto-client-id.html</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- 5. IT重説 -->
+<div class="section" id="s5">
+  <div class="section-title">5　IT重説・契約書管理</div>
+
+  <div class="notice notice-info">
+    ℹ️ <div>IT重説は<strong>専任宅建士（フルリモート）</strong>が実施。宅建士もエージェント（業務委託）。専任登録か本部認定を受けた者のみ対応可。報酬はHQが1件単位で設定。</div>
+  </div>
+
+  <div class="fc" style="margin-bottom:12px">
+    <div class="fc-badge upd">大幅拡張</div>
+    <div class="fc-icon">📋</div>
+    <div class="fc-name">IT重説 & 契約書管理</div>
+    <div class="fc-desc" style="margin-bottom:12px">2ペイン構成：①IT重説チェックリスト ②契約書・書類スキャン管理</div>
+    <div class="flow">
+      <div class="flow-step">案件を選択</div><div class="flow-arrow">→</div>
+      <div class="flow-step">事前チェック完了</div><div class="flow-arrow">→</div>
+      <div class="flow-step">PDFをD&Dでアップロード</div><div class="flow-arrow">→</div>
+      <div class="flow-step">Drive自動登録</div><div class="flow-arrow">→</div>
+      <div class="flow-step">重説中に1クリックで開く</div><div class="flow-arrow">→</div>
+      <div class="flow-step">Slackで担当者に共有</div>
+    </div>
+    <div class="fc-file">coreto-it-setsu.html（66KB / 43関数）</div>
+  </div>
+
+  <div class="info">
+    <div class="info-row"><div class="info-label">スキャン書類（デフォルト）</div><div class="info-val">重要事項説明書（必須）/ 賃貸借契約書（必須）/ 設備確認書（任意）/ カスタム追加可</div></div>
+    <div class="info-row"><div class="info-label">Drive権限</div><div class="info-val">リンクを知っている人のみ閲覧可（自動設定）— 外部公開なし</div></div>
+    <div class="info-row"><div class="info-label">重説ページへの表示</div><div class="info-val">チェックリストタブ上部に「スキャン書類クイックアクセスバー」— アップロード済み書類をボタンで即表示</div></div>
+    <div class="info-row"><div class="info-label">Slack共有</div><div class="info-val">書類ごとの「📢 共有」ボタン、または「全件をSlackで共有」でコピー → そのまま貼り付け</div></div>
+    <div class="info-row"><div class="info-label">省力化ポイント</div><div class="info-val">ファイル名から書類種別を自動判定。URL入力・コピペ・リネーム不要。ヒューマンエラー根絶</div></div>
+  </div>
+</div>
+
+
+<!-- 6. 報酬・支払い -->
+<div class="section" id="s6">
+  <div class="section-title">6　報酬・支払い管理</div>
+
+  <div class="card-grid">
+    <div class="fc">
+      <div class="fc-badge upd">IT重説報酬列追加</div>
+      <div class="fc-icon">📅</div>
+      <div class="fc-name">月次報酬確定・振込</div>
+      <div class="fc-desc">月次の報酬テーブル。成約報酬・月会費・<strong>IT重説報酬</strong>・調整額を集計 → 全銀データ生成 → 一括振込。</div>
+      <div class="fc-file">coreto-payroll.html</div>
+    </div>
+    <div class="fc">
+      <div class="fc-icon">🧮</div>
+      <div class="fc-name">報酬計算シミュレーター</div>
+      <div class="fc-desc">コミッション体系を試算。賃貸（75%固定）/ 売買（段階型）/ HR別。ランク・紹介コード・調整額を反映。</div>
+      <div class="fc-file">coreto-commission-simulator.html</div>
+    </div>
+    <div class="fc">
+      <div class="fc-icon">🧾</div>
+      <div class="fc-name">支払明細書ジェネレーター</div>
+      <div class="fc-desc">個別の支払明細をPDF形式で生成。源泉徴収計算（10.21% / 20.42%）込み。</div>
+      <div class="fc-file">coreto-payment.html</div>
+    </div>
+    <div class="fc">
+      <div class="fc-icon">🧾</div>
+      <div class="fc-name">領収書・請求書発行</div>
+      <div class="fc-desc">エージェントが自分で発行。案件・金額・源泉税の自動計算。PDF出力。</div>
+      <div class="fc-file">coreto-receipt.html</div>
+    </div>
+  </div>
+
+  <div class="notice notice-warn">
+    ⚖️ <div><strong>源泉徴収ルール：</strong>報酬額が100万円以下は10.21%、超過分は20.42%。各コンポーネント（成約報酬・IT重説報酬）に独立して適用。</div>
+  </div>
+</div>
+
+
+<!-- 7. 専任宅建士管理 -->
+<div class="section" id="s7">
+  <div class="section-title">7　専任宅建士管理</div>
+
+  <div class="notice notice-warn">
+    ⚖️ <div><strong>宅建業法第31条の3</strong> — 事務所の従業員5名につき1名以上の専任の宅地建物取引士の設置が義務。専任解除は管理職以上のみ実行可。</div>
+  </div>
+
+  <div class="fc" style="margin-bottom:12px">
+    <div class="fc-badge new">NEW</div>
+    <div class="fc-icon">🏛️</div>
+    <div class="fc-name">専任宅建士管理（HQ専用）</div>
+    <div class="fc-desc">4タブ構成の管理画面</div>
+    <div class="fc-file">coreto-takken.html</div>
+  </div>
+
+  <div class="info">
+    <div class="info-row"><div class="info-label">専任一覧タブ</div><div class="info-val">ステータス（専任/本部認定/一般）・月会費・単価・今月実施件数を一覧管理。専任解除モーダル（理由選択・ID確認入力必須）</div></div>
+    <div class="info-row"><div class="info-label">IT重説報酬単価タブ</div><div class="info-val">エージェントごとに単価を個別設定。全員一括変更も可。変更履歴ログを自動記録（誰がいつ変更したか）</div></div>
+    <div class="info-row"><div class="info-label">重説実績タブ</div><div class="info-val">月次の実施記録・担当者別集計・CSV出力</div></div>
+    <div class="info-row"><div class="info-label">法令比率チェックタブ</div><div class="info-val">現在の比率をリアルタイム表示。専任解除前のシミュレーション機能（解除後に法令違反になるか事前確認）</div></div>
+    <div class="info-row"><div class="info-label">専任特典</div><div class="info-val">月会費¥0（通常¥980（Bronze）/ ¥490（Silver）/ ¥0（Gold以上））/ 名刺費¥0（通常¥2,000）/ IT重説報酬あり（本部が設定）</div></div>
+    <div class="info-row"><div class="info-label">解除後</div><div class="info-val">翌月から月会費¥980（Bronze）/ ¥490（Silver）/ ¥0（Gold以上）が自動発生。Slackでエージェントに通知。解除操作は管理職のみ</div></div>
+  </div>
+</div>
+
+
+<!-- 8. 即時払い -->
+<div class="section" id="s8">
+  <div class="section-title">8　即時払いシステム</div>
+
+  <div class="fc" style="margin-bottom:12px">
+    <div class="fc-badge upd">仕様変更</div>
+    <div class="fc-icon">⚡</div>
+    <div class="fc-name">即時払い申請</div>
+    <div class="fc-desc">確定報酬を月次支払日前に受け取れる仕組み。SMS認証必須。</div>
+    <div class="fc-file">coreto-instant-pay.html</div>
+  </div>
+
+  <div class="info">
+    <div class="info-row"><div class="info-label">申請金額の考え方</div><div class="info-val">入力した金額＝<strong>実際に受け取る金額（出金希望額）</strong>。費用は逆算して表示</div></div>
+    <div class="info-row"><div class="info-label">費用表示</div><div class="info-val">かかる費用の内訳：即時払い手数料（15%）/ 源泉徴収税を個別表示。合計行なし</div></div>
+    <div class="info-row"><div class="info-label">手数料</div><div class="info-val">即時払い手数料 15%（逆算）+ 源泉徴収10.21%（100万超は20.42%）</div></div>
+    <div class="info-row"><div class="info-label">回数制限</div><div class="info-val">月1回制限を撤廃。何回でも申請可（上限：現在の報酬額まで）</div></div>
+    <div class="info-row"><div class="info-label">2FA</div><div class="info-val">SMS一本化（LINE認証を廃止）</div></div>
+    <div class="info-row"><div class="info-label">報酬額カード</div><div class="info-val">計算式・具体的な手数料数値の表示を削除しシンプル化</div></div>
+  </div>
+</div>
+
+
+<!-- 9. 本人確認・アカウント -->
+<div class="section" id="s9">
+  <div class="section-title">9　本人確認・アカウント管理</div>
+
+  <div class="card-grid">
+    <div class="fc">
+      <div class="fc-icon">🪪</div>
+      <div class="fc-name">本人確認・口座管理（KYC）</div>
+      <div class="fc-desc">書類アップロード → HQ手動審査フロー（eKYCから変更）。口座情報登録・変更。</div>
+      <div class="fc-file">coreto-kyc.html</div>
+    </div>
+    <div class="fc">
+      <div class="fc-icon">⚙️</div>
+      <div class="fc-name">アカウント設定</div>
+      <div class="fc-desc">パスワードリセット（SMS認証必須）/ 連絡先変更（認証不要）/ 氏名・旧姓管理（HQ制限）/ 名刺発注（¥2,000・PDF生成）/ LINE連携ページへのリンク</div>
+      <div class="fc-file">coreto-account-settings.html</div>
+    </div>
+    <div class="fc">
+      <div class="fc-icon">💬</div>
+      <div class="fc-name">LINE連携管理</div>
+      <div class="fc-desc">6桁コード発行（30分有効）→ LINEボットに送信 → 自動紐付け。HQ側で手動ペアリングも可。未連携者への一括リマインド。</div>
+      <div class="fc-file">coreto-line-link.html</div>
+    </div>
+    <div class="fc">
+      <div class="fc-icon">🔐</div>
+      <div class="fc-name">権限設計（RBAC）</div>
+      <div class="fc-desc">スタッフ / 主任 / 管理職 / 役員 の4ロール。機能ごとのread/write/deleteを細かく制御。</div>
+      <div class="fc-file">coreto-admin-rbac.html</div>
+    </div>
+    <div class="fc">
+      <div class="fc-icon">🆔</div>
+      <div class="fc-name">ID採番管理</div>
+      <div class="fc-desc">RE（1万台）/ HR（2万台）/ PT（3万台）の採番ルールと現状の発行済み番号管理。</div>
+      <div class="fc-file">coreto-id-manager.html</div>
+    </div>
+    <div class="fc">
+      <div class="fc-icon">📈</div>
+      <div class="fc-name">マイページ / ランクダッシュボード</div>
+      <div class="fc-desc">エージェント個人の実績・ランク進捗・報酬サマリー。次ランクまでの目標表示。</div>
+      <div class="fc-file">coreto-agent-mypage.html / coreto-rank.html</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- 10. パートナー管理 -->
+<div class="section" id="s10">
+  <div class="section-title">10　パートナー管理</div>
+
+  <div class="card-grid">
+    <div class="fc">
+      <div class="fc-icon">🤝</div>
+      <div class="fc-name">パートナーポータル</div>
+      <div class="fc-desc">紹介案件の進捗確認・報酬追跡・請求書発行。案件フィードの閲覧。</div>
+      <div class="fc-file">coreto-partner.html</div>
+    </div>
+    <div class="fc">
+      <div class="fc-icon">📡</div>
+      <div class="fc-name">案件フィード</div>
+      <div class="fc-desc">パートナーが紹介できる案件の一覧。条件・報酬・ステータスを表示。</div>
+      <div class="fc-file">coreto-partner-feed.html</div>
+    </div>
+    <div class="fc">
+      <div class="fc-icon">🎟️</div>
+      <div class="fc-name">特別紹介コード管理</div>
+      <div class="fc-desc">エージェント紹介用コードの発行・管理。使用回数・有効期限・報酬ルール設定。</div>
+      <div class="fc-file">coreto-codes.html</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- 11. ツール・補助機能 -->
+<div class="section" id="s11">
+  <div class="section-title">11　ツール・補助機能</div>
+
+  <div class="card-grid">
+    <div class="fc">
+      <div class="fc-icon">📦</div>
+      <div class="fc-name">バーコードスキャン追跡</div>
+      <div class="fc-desc">レターパック・ゆうパックの追跡番号管理。スキャナーで自動入力。郵送状況をリアルタイム確認。</div>
+      <div class="fc-file">coreto-barcode-scan.html</div>
+    </div>
+    <div class="fc">
+      <div class="fc-icon">🏷️</div>
+      <div class="fc-name">宛名ラベルシート</div>
+      <div class="fc-desc">A4用紙に複数宛名を印刷。宅建士証・契約書の郵送に使用。</div>
+      <div class="fc-file">coreto-label-sheet.html</div>
+    </div>
+    <div class="fc">
+      <div class="fc-icon">🖨️</div>
+      <div class="fc-name">感熱ラベル印刷</div>
+      <div class="fc-desc">感熱プリンター対応の宛名ラベル生成。Honeywell対応。</div>
+      <div class="fc-file">coreto-thermal-label.html</div>
+    </div>
+    <div class="fc">
+      <div class="fc-icon">⚠️</div>
+      <div class="fc-name">早期退職アラート</div>
+      <div class="fc-desc">入会後の離脱リスクが高いエージェントの自動検出。アラート一覧・フォロー対応管理。</div>
+      <div class="fc-file">coreto-early-quit.html</div>
+    </div>
+    <div class="fc">
+      <div class="fc-icon">📋</div>
+      <div class="fc-name">業務委託契約書</div>
+      <div class="fc-desc">電子契約書の閲覧・署名確認。条項・報酬体系・秘密保持の内容を表示。</div>
+      <div class="fc-file">coreto-contract.html</div>
+    </div>
+    <div class="fc">
+      <div class="fc-icon">❓</div>
+      <div class="fc-name">FAQナレッジベース</div>
+      <div class="fc-desc">エージェント向けよくある質問。カテゴリ別・検索対応。用語は「認証コード」に統一済み。</div>
+      <div class="fc-file">coreto-faq.html</div>
+    </div>
+    <div class="fc">
+      <div class="fc-icon">🗺️</div>
+      <div class="fc-name">システム全体像</div>
+      <div class="fc-desc">Kintone + Zapier + Slack + LINE の連携フロー図。アーキテクチャ説明ページ。</div>
+      <div class="fc-file">coreto-system-overview.html</div>
+    </div>
+    <div class="fc">
+      <div class="fc-icon">🏠</div>
+      <div class="fc-name">統合ハブ（ポータル）</div>
+      <div class="fc-desc">ログインIDからロールを自動判定してダッシュボードとナビを切替。全機能への入口。</div>
+      <div class="fc-file">coreto-hub.html（83KB）</div>
+    </div>
+    <div class="fc">
+      <div class="fc-icon">🔑</div>
+      <div class="fc-name">ログイン</div>
+      <div class="fc-desc">ID範囲でロール自動判定。SMS 2FA。デモ用コード表示あり。</div>
+      <div class="fc-file">coreto-login.html</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- 12. 全ファイル一覧 -->
+<div class="section" id="s12">
+  <div class="section-title">12　全ファイル一覧（35ファイル）</div>
+  <div style="overflow-x:auto;background:var(--card);border:1px solid var(--border);border-radius:13px">
+    <table class="tbl">
+      <thead><tr>
+        <th>ファイル名</th><th>機能</th><th>サイズ</th><th>関数数</th><th>対象</th>
+      </tr></thead>
+      <tbody>
+        <tr><td class="mono">coreto-hub.html</td><td>統合ポータル（起点）</td><td class="mono">83KB</td><td>21</td><td><span class="pill pb">全員</span></td></tr>
+        <tr><td class="mono">coreto-login.html</td><td>ログイン・2FA</td><td class="mono">27KB</td><td>16</td><td><span class="pill pb">全員</span></td></tr>
+        <tr><td class="mono">coreto-agent-signup.html</td><td>エージェント入会（宅建士分岐）</td><td class="mono">28KB</td><td>18</td><td><span class="pill pb">新規</span></td></tr>
+        <tr><td class="mono">coreto-partner-signup.html</td><td>パートナー入会</td><td class="mono">24KB</td><td>18</td><td><span class="pill pp">PT</span></td></tr>
+        <tr><td class="mono">coreto-onboarding.html</td><td>研修・オンボーディング</td><td class="mono">18KB</td><td>6</td><td><span class="pill pb">全員</span></td></tr>
+        <tr><td class="mono">coreto-kyc.html</td><td>本人確認・口座管理</td><td class="mono">54KB</td><td>17</td><td><span class="pill pb">全員</span></td></tr>
+        <tr><td class="mono">coreto-account-settings.html</td><td>アカウント設定</td><td class="mono">51KB</td><td>27</td><td><span class="pill pb">全員</span></td></tr>
+        <tr><td class="mono">coreto-line-link.html</td><td>LINE連携</td><td class="mono">31KB</td><td>13</td><td><span class="pill pb">全員</span></td></tr>
+        <tr><td class="mono">coreto-agent-mypage.html</td><td>マイページ</td><td class="mono">45KB</td><td>13</td><td><span class="pill pg">RE</span><span class="pill pg">HR</span></td></tr>
+        <tr><td class="mono">coreto-rank.html</td><td>ランクダッシュボード</td><td class="mono">54KB</td><td>16</td><td><span class="pill pg">RE</span><span class="pill pg">HR</span></td></tr>
+        <tr><td class="mono">coreto-matching.html</td><td>マッチングシステム</td><td class="mono">55KB</td><td>17</td><td><span class="pill pr">HQ</span><span class="pill pg">RE</span></td></tr>
+        <tr><td class="mono">coreto-pipeline.html</td><td>案件パイプライン</td><td class="mono">16KB</td><td>9</td><td><span class="pill pr">HQ</span><span class="pill pg">RE</span></td></tr>
+        <tr><td class="mono">coreto-naiken.html</td><td>内見依頼書</td><td class="mono">42KB</td><td>17</td><td><span class="pill pg">RE</span></td></tr>
+        <tr><td class="mono">coreto-screening.html</td><td>書類審査チェックシート</td><td class="mono">53KB</td><td>19</td><td><span class="pill pr">HQ</span><span class="pill pg">RE</span></td></tr>
+        <tr><td class="mono">coreto-batch-close.html</td><td>成約報告・振込バッチ</td><td class="mono">63KB</td><td>26</td><td><span class="pill pr">HQ</span></td></tr>
+        <tr><td class="mono">coreto-client-id.html</td><td>顧客ID管理</td><td class="mono">58KB</td><td>24</td><td><span class="pill pr">HQ</span></td></tr>
+        <tr><td class="mono">coreto-it-setsu.html</td><td>IT重説＋契約書スキャン管理</td><td class="mono">67KB</td><td>43</td><td><span class="pill pg">RE宅建</span></td></tr>
+        <tr><td class="mono">coreto-takken.html</td><td>専任宅建士管理</td><td class="mono">44KB</td><td>20</td><td><span class="pill pr">HQ</span></td></tr>
+        <tr><td class="mono">coreto-payroll.html</td><td>月次報酬確定・振込</td><td class="mono">23KB</td><td>8</td><td><span class="pill pr">HQ</span></td></tr>
+        <tr><td class="mono">coreto-commission-simulator.html</td><td>報酬計算シミュレーター</td><td class="mono">56KB</td><td>31</td><td><span class="pill pb">全員</span></td></tr>
+        <tr><td class="mono">coreto-payment.html</td><td>支払明細書ジェネレーター</td><td class="mono">32KB</td><td>15</td><td><span class="pill pr">HQ</span></td></tr>
+        <tr><td class="mono">coreto-instant-pay.html</td><td>即時払い申請</td><td class="mono">38KB</td><td>17</td><td><span class="pill pg">RE</span><span class="pill pg">HR</span></td></tr>
+        <tr><td class="mono">coreto-receipt.html</td><td>領収書・請求書発行</td><td class="mono">34KB</td><td>17</td><td><span class="pill pb">全員</span></td></tr>
+        <tr><td class="mono">coreto-partner.html</td><td>パートナーポータル</td><td class="mono">57KB</td><td>17</td><td><span class="pill pp">PT</span></td></tr>
+        <tr><td class="mono">coreto-partner-feed.html</td><td>パートナー案件フィード</td><td class="mono">13KB</td><td>2</td><td><span class="pill pp">PT</span></td></tr>
+        <tr><td class="mono">coreto-codes.html</td><td>特別紹介コード管理</td><td class="mono">33KB</td><td>19</td><td><span class="pill pr">HQ</span></td></tr>
+        <tr><td class="mono">coreto-early-quit.html</td><td>早期退職アラート</td><td class="mono">42KB</td><td>24</td><td><span class="pill pr">HQ</span></td></tr>
+        <tr><td class="mono">coreto-admin-rbac.html</td><td>権限設計（RBAC）</td><td class="mono">72KB</td><td>31</td><td><span class="pill pr">HQ</span></td></tr>
+        <tr><td class="mono">coreto-id-manager.html</td><td>ID採番管理</td><td class="mono">25KB</td><td>8</td><td><span class="pill pr">HQ</span></td></tr>
+        <tr><td class="mono">coreto-barcode-scan.html</td><td>バーコードスキャン追跡</td><td class="mono">48KB</td><td>11</td><td><span class="pill pr">HQ</span></td></tr>
+        <tr><td class="mono">coreto-label-sheet.html</td><td>宛名ラベルシート</td><td class="mono">23KB</td><td>1</td><td><span class="pill pr">HQ</span></td></tr>
+        <tr><td class="mono">coreto-thermal-label.html</td><td>感熱ラベル印刷</td><td class="mono">33KB</td><td>3</td><td><span class="pill pr">HQ</span></td></tr>
+        <tr><td class="mono">coreto-contract.html</td><td>業務委託契約書</td><td class="mono">34KB</td><td>15</td><td><span class="pill pb">全員</span></td></tr>
+        <tr><td class="mono">coreto-faq.html</td><td>FAQナレッジベース</td><td class="mono">18KB</td><td>7</td><td><span class="pill pb">全員</span></td></tr>
+        <tr><td class="mono">coreto-system-overview.html</td><td>システム全体像</td><td class="mono">61KB</td><td>1</td><td><span class="pill pr">HQ</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div style="margin-top:24px;padding:16px 20px;background:var(--card);border:1px solid var(--border);border-radius:12px;font-size:11px;color:var(--muted);line-height:2.2">
+    <strong style="color:var(--sub)">今後の本番化ステップ</strong><br>
+    ① Google Drive API 接続（アップロード・権限自動設定）<br>
+    ② Kintone アプリ設計・API 接続（エージェントマスタ / 即時払い申請 / 報酬計算 / IT重説管理）<br>
+    ③ Zapier フロー構築（Kintone → Slack 通知 / LINE 公式 → Kintone 連携）<br>
+    ④ SMS 2FA 本番接続（Twilio または AWS SNS）<br>
+    ⑤ 全銀データ連携（振込バッチの実行）
+  </div>
+</div>
+
+</div><!-- /main -->
+</body>
+</html>

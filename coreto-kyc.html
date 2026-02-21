@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CORETO — 本人確認・口座管理</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090f;--card:#0f1119;--card2:#141720;--border:#1e2235;--border2:#252a3d;
+  --gold:#c9a84c;--gold-dim:#7a5f22;
+  --blue:#4f9cf9;--green:#34d399;--red:#f87171;--orange:#fb923c;--purple:#a78bfa;
+  --muted:#4a5270;--sub:#7a849e;--text:#e2e6f3;
+}
+html,body{height:100%;font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text)}
+.hdr{height:54px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 26px;border-bottom:1px solid var(--border);background:rgba(7,9,15,.95);
+  position:sticky;top:0;z-index:100}
+.logo{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:var(--gold);letter-spacing:3px}
+.tabs{display:flex;padding:0 26px;border-bottom:1px solid var(--border);background:var(--card2)}
+.tab{padding:12px 20px;font-size:11px;font-weight:700;color:var(--muted);
+  border-bottom:2px solid transparent;cursor:pointer;transition:.15s;display:flex;align-items:center;gap:6px}
+.tab.on{color:var(--blue);border-bottom-color:var(--blue)}
+.body{max-width:1160px;margin:0 auto;padding:26px 28px 80px}
+/* Cards */
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;margin-bottom:16px}
+.ch{padding:13px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.ch-t{font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;
+  display:flex;align-items:center;gap:8px}
+.ch-t::before{content:'';width:3px;height:11px;border-radius:2px;background:var(--gold)}
+.cb{padding:20px}
+/* Pills */
+.pill{display:inline-flex;align-items:center;padding:3px 10px;border-radius:6px;font-size:9px;font-weight:700}
+.pg{background:rgba(52,211,153,.13);color:var(--green);border:1px solid rgba(52,211,153,.3)}
+.pb{background:rgba(79,156,249,.12);color:var(--blue);border:1px solid rgba(79,156,249,.25)}
+.po{background:rgba(251,146,60,.12);color:var(--orange);border:1px solid rgba(251,146,60,.3)}
+.pr{background:rgba(248,113,113,.12);color:var(--red);border:1px solid rgba(248,113,113,.3)}
+.pm{background:rgba(74,82,112,.15);color:var(--sub);border:1px solid var(--border2)}
+.pgd{background:rgba(201,168,76,.13);color:var(--gold);border:1px solid var(--gold-dim)}
+/* Buttons */
+.btn{padding:9px 18px;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;
+  font-family:'Noto Sans JP',sans-serif;transition:.15s;border:none;
+  display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn-blue{background:linear-gradient(135deg,var(--blue),#3070c0);color:#fff}
+.btn-blue:hover{filter:brightness(1.1)}
+.btn-gold{background:linear-gradient(135deg,var(--gold),#a8742a);color:#0a0c10}
+.btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--sub)}
+.btn-ghost:hover{color:var(--text);border-color:var(--sub)}
+.btn-danger{background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.3);color:var(--red)}
+.btn-danger:hover{background:rgba(248,113,113,.22)}
+.btn-ok{background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);color:var(--green)}
+.btn-ok:hover{background:rgba(52,211,153,.22)}
+.btn-sm{padding:5px 12px;font-size:10px;border-radius:7px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+/* Upload zone */
+.uz{border:2px dashed var(--border2);border-radius:13px;padding:26px 18px;text-align:center;
+  cursor:pointer;transition:.2s;background:rgba(255,255,255,.01);position:relative;overflow:hidden}
+.uz:hover,.uz.drag{border-color:var(--blue);background:rgba(79,156,249,.04)}
+.uz.done{border-color:var(--green);border-style:solid;background:rgba(52,211,153,.04)}
+.uz input{display:none}
+.uz-prev{max-width:100%;max-height:170px;border-radius:8px;margin-top:10px;object-fit:cover;border:1px solid var(--border);display:none}
+.uz-chk{position:absolute;top:10px;right:10px;width:26px;height:26px;border-radius:50%;
+  background:var(--green);display:none;align-items:center;justify-content:center;
+  font-size:13px;color:#0a0c10;font-weight:700}
+.uz.done .uz-chk{display:flex}
+/* Stepper */
+.stepper{display:flex;margin-bottom:26px}
+.step{flex:1;display:flex;flex-direction:column;align-items:center;position:relative}
+.step:not(:last-child)::after{content:'';position:absolute;top:14px;
+  left:calc(50% + 15px);right:calc(-50% + 15px);height:2px;background:var(--border2)}
+.step.done:not(:last-child)::after,.step.rev:not(:last-child)::after{background:var(--green)}
+.sdot{width:28px;height:28px;border-radius:50%;border:2px solid var(--border2);
+  display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;
+  z-index:1;position:relative;background:var(--bg)}
+.step.done .sdot{background:var(--green);border-color:var(--green);color:#0a0c10}
+.step.act  .sdot{background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:0 0 14px rgba(79,156,249,.4)}
+.step.rev  .sdot{background:var(--orange);border-color:var(--orange);color:#fff}
+.slabel{font-size:10px;color:var(--muted);margin-top:7px;text-align:center;line-height:1.5}
+.step.done .slabel{color:var(--green)}
+.step.act  .slabel{color:var(--blue);font-weight:700}
+.step.rev  .slabel{color:var(--orange);font-weight:700}
+/* Layout */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+/* Alert */
+.al{display:flex;align-items:flex-start;gap:10px;padding:12px 16px;border-radius:10px;margin-bottom:14px;font-size:12px;line-height:1.7}
+.al-info{background:rgba(79,156,249,.07);border:1px solid rgba(79,156,249,.2)}
+.al-warn{background:rgba(251,146,60,.07);border:1px solid rgba(251,146,60,.22)}
+.al-ok{background:rgba(52,211,153,.07);border:1px solid rgba(52,211,153,.2)}
+/* Field */
+.field{margin-bottom:13px}
+.field label{display:block;font-size:10px;color:var(--sub);margin-bottom:5px;font-weight:600}
+.field input,.field select,.field textarea{width:100%;background:#090b13;border:1px solid var(--border2);
+  border-radius:9px;padding:10px 14px;color:var(--text);font-size:12px;
+  font-family:'Noto Sans JP',sans-serif;outline:none;transition:.15s}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--blue)}
+.req{color:var(--red)}
+/* Doc type btns */
+.dbt{padding:14px 10px;border-radius:10px;border:1px solid var(--border2);background:transparent;
+  cursor:pointer;text-align:center;transition:.15s;color:var(--sub)}
+.dbt:hover{background:rgba(255,255,255,.03)}
+.dbt.on{border-color:var(--blue);background:rgba(79,156,249,.08);color:var(--text)}
+/* Table */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{padding:9px 14px;font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.5px;
+  text-transform:uppercase;border-bottom:1px solid var(--border);background:var(--card2);text-align:left}
+.tbl td{padding:11px 14px;border-bottom:1px solid rgba(30,34,53,.5);font-size:12px;vertical-align:middle}
+.tbl tr:last-child td{border:none}
+.tbl tr:hover td{background:rgba(255,255,255,.012)}
+.mono{font-family:'DM Mono',monospace}
+/* Review card */
+.rc{background:var(--card);border:1px solid var(--border);border-radius:14px;margin-bottom:14px;overflow:hidden}
+.rch{display:flex;align-items:center;justify-content:space-between;
+  padding:14px 18px;border-bottom:1px solid var(--border);background:var(--card2)}
+.rcb{padding:18px}
+/* Photo box */
+.photo-box{border-radius:10px;border:1px solid var(--border);background:var(--card2);
+  aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;
+  flex-direction:column;gap:6px;cursor:pointer;transition:.15s}
+.photo-box:hover{border-color:var(--blue);transform:scale(1.02)}
+/* Overlay/Modal */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.78);backdrop-filter:blur(5px);
+  z-index:400;display:none;align-items:center;justify-content:center}
+.overlay.show{display:flex}
+.modal{background:var(--card);border:1px solid var(--border2);border-radius:16px;
+  width:540px;max-height:90vh;overflow-y:auto}
+.mhdr{display:flex;align-items:center;justify-content:space-between;
+  padding:16px 22px;border-bottom:1px solid var(--border);
+  position:sticky;top:0;background:var(--card);z-index:1}
+.mtitle{font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:var(--gold)}
+.mclose{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer}
+.mbody{padding:20px 22px}
+.mfoot{padding:14px 22px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;
+  position:sticky;bottom:0;background:var(--card)}
+/* Lightbox */
+.lb{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:600;
+  display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px}
+.lb.show{display:flex}
+.lb-close{position:absolute;top:20px;right:24px;background:none;border:none;
+  color:var(--sub);font-size:28px;cursor:pointer}
+/* Name check bar */
+.ncb{display:flex;align-items:center;gap:10px;padding:11px 14px;
+  border-radius:9px;margin-top:10px;font-size:12px;line-height:1.6}
+.ncb-ok{background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.25)}
+.ncb-ng{background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.25)}
+/* Status dots */
+.stl{display:flex;flex-direction:column;gap:0}
+.stl-r{display:flex;gap:12px;padding-bottom:14px}
+.stl-r:last-child{padding-bottom:0}
+.stl-d{width:26px;height:26px;border-radius:50%;flex-shrink:0;display:flex;
+  align-items:center;justify-content:center;font-size:13px;margin-top:2px}
+.stl-ln{width:1px;background:var(--border2);flex:1;min-height:10px;margin:4px 0}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div style="display:flex;align-items:center;gap:12px">
+    <div class="logo">CORETO</div>
+    <div style="width:1px;height:18px;background:var(--border2)"></div>
+    <span style="font-size:10px;color:var(--muted);letter-spacing:1px">本人確認・口座管理</span>
+  </div>
+  <div style="display:flex;gap:10px;align-items:center">
+    <span class="pill pm" id="view-lbl">エージェントビュー</span>
+    <button class="btn btn-ghost btn-sm" onclick="history.back()">← 戻る</button>
+    <button class="btn btn-ghost btn-sm" onclick="window.location.href='coreto-hub.html'">🏠 ホーム</button>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab on" onclick="sv(0,this)">👤 本人確認 提出</div>
+  <div class="tab" onclick="sv(1,this)">🏦 口座管理</div>
+  <div class="tab" onclick="sv(2,this)">
+    🏢 HQ 審査 <span id="hq-cnt" style="background:var(--red);color:#fff;font-size:8px;padding:2px 7px;border-radius:8px;margin-left:4px">4</span>
+  </div>
+</div>
+
+<!-- ═══ VIEW 0: エージェント 書類提出 ═══ -->
+<div id="v0">
+<div class="body">
+  <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;margin-bottom:4px">本人確認（新規入会）</div>
+  <div style="font-size:11px;color:var(--sub);margin-bottom:22px">提出後、本部スタッフが書類を目視確認します（1〜2営業日）。審査結果はSlackでお知らせします。</div>
+
+  <!-- Stepper -->
+  <div class="stepper">
+    <div class="step done"><div class="sdot">✓</div><div class="slabel">情報登録</div></div>
+    <div class="step act" id="s1"><div class="sdot">2</div><div class="slabel">書類<br>アップロード</div></div>
+    <div class="step" id="s2"><div class="sdot">3</div><div class="slabel">本部<br>目視審査</div></div>
+    <div class="step" id="s3"><div class="sdot">4</div><div class="slabel">確認完了</div></div>
+  </div>
+
+  <!-- Policy notice -->
+  <div class="al al-info">
+    ℹ️ <div><strong>手動確認ポリシー</strong><br>
+    本システムはOCR・AI自動判定を一切使用しません。<strong>本部スタッフが書類を1枚ずつ目視確認</strong>します。
+    漢字・カナに関わらず、書類の内容を人が確認するため精度の心配はありません。</div>
+  </div>
+
+  <div class="g2" style="align-items:start">
+    <!-- Left col -->
+    <div>
+      <!-- Doc type -->
+      <div class="card">
+        <div class="ch"><div class="ch-t">① 書類の種類を選択</div><span class="pill pm" id="dtype-pill">未選択</span></div>
+        <div class="cb">
+          <div class="g3">
+            <div class="dbt" id="dbt0" onclick="selDoc(0)">
+              <div style="font-size:26px;margin-bottom:6px">🪪</div>
+              <div style="font-size:11px;font-weight:700">運転免許証</div>
+              <div style="font-size:9px;color:var(--muted);margin-top:3px">表・裏の2枚</div>
+            </div>
+            <div class="dbt" id="dbt1" onclick="selDoc(1)">
+              <div style="font-size:26px;margin-bottom:6px">📘</div>
+              <div style="font-size:11px;font-weight:700">パスポート</div>
+              <div style="font-size:9px;color:var(--muted);margin-top:3px">顔写真ページ1枚</div>
+            </div>
+            <div class="dbt" id="dbt2" onclick="selDoc(2)">
+              <div style="font-size:26px;margin-bottom:6px">🔢</div>
+              <div style="font-size:11px;font-weight:700">マイナンバーカード</div>
+              <div style="font-size:9px;color:var(--muted);margin-top:3px">表面のみ</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Doc upload -->
+      <div class="card">
+        <div class="ch"><div class="ch-t">② 身分証明書をアップロード</div><span class="pill pm" id="doc-pill">未提出</span></div>
+        <div class="cb">
+          <div style="font-size:11px;color:var(--sub);margin-bottom:14px;padding:10px 14px;
+                      background:var(--card2);border-radius:9px;line-height:1.9">
+            📋 <strong style="color:var(--text)">撮影のコツ（本部が読める状態で）</strong><br>
+            ・明るい場所で撮影。光の反射に注意してください<br>
+            ・全体が枠内に収まるように撮影<br>
+            ・手ブレなし・加工なしの原本写真
+          </div>
+
+          <div style="font-size:10px;color:var(--sub);font-weight:600;margin-bottom:6px">表面 <span class="req">*</span></div>
+          <div class="uz" id="uz-f" onclick="trig('uf-f')">
+            <div class="uz-chk">✓</div>
+            <input type="file" id="uf-f" accept="image/*,application/pdf" onchange="up(this,'f')">
+            <div style="font-size:34px;margin-bottom:8px" id="uzi-f">📸</div>
+            <div style="font-size:13px;font-weight:700;margin-bottom:4px" id="uzt-f">タップして撮影・選択</div>
+            <div style="font-size:10px;color:var(--muted)">JPG / PNG / PDF / HEIC　最大20MB</div>
+            <img class="uz-prev" id="uzp-f">
+          </div>
+
+          <div id="back-wrap" style="display:none;margin-top:12px">
+            <div style="font-size:10px;color:var(--sub);font-weight:600;margin:12px 0 6px">裏面 <span class="req">*</span></div>
+            <div class="uz" id="uz-b" onclick="trig('uf-b')">
+              <div class="uz-chk">✓</div>
+              <input type="file" id="uf-b" accept="image/*,application/pdf" onchange="up(this,'b')">
+              <div style="font-size:34px;margin-bottom:8px" id="uzi-b">📸</div>
+              <div style="font-size:13px;font-weight:700;margin-bottom:4px" id="uzt-b">裏面を撮影・選択</div>
+              <div style="font-size:10px;color:var(--muted)">JPG / PNG / PDF / HEIC　最大20MB</div>
+              <img class="uz-prev" id="uzp-b">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Selfie upload -->
+      <div class="card">
+        <div class="ch"><div class="ch-t">③ 本人確認 自撮り写真</div><span class="pill pm" id="selfie-pill">未提出</span></div>
+        <div class="cb">
+          <div style="font-size:11px;color:var(--sub);margin-bottom:14px;padding:10px 14px;
+                      background:rgba(201,168,76,.05);border:1px solid var(--gold-dim);border-radius:9px;line-height:1.9">
+            🤳 <strong style="color:var(--gold)">身分証明書を手に持った状態</strong>での自撮りが必要です<br>
+            ・顔全体と書類が1枚に写ること<br>
+            ・明るい場所で撮影（顔がはっきり見えること）<br>
+            ・マスク・サングラスは外してください<br>
+            ・本部が書類の顔写真と照合します
+          </div>
+          <div class="uz" id="uz-s" onclick="trig('uf-s')">
+            <div class="uz-chk">✓</div>
+            <input type="file" id="uf-s" accept="image/*" onchange="up(this,'s')">
+            <div style="font-size:34px;margin-bottom:8px" id="uzi-s">🤳</div>
+            <div style="font-size:13px;font-weight:700;margin-bottom:4px" id="uzt-s">身分証を手に持って自撮り</div>
+            <div style="font-size:10px;color:var(--muted)">顔と書類が両方写るようにしてください</div>
+            <img class="uz-prev" id="uzp-s">
+          </div>
+        </div>
+      </div>
+
+      <!-- Note -->
+      <div class="card">
+        <div class="ch"><div class="ch-t">本部へのメモ（任意）</div></div>
+        <div class="cb">
+          <textarea id="kyc-note" rows="3" placeholder="例：旧姓での書類です。補足があればご記入ください。"
+            style="width:100%;background:#090b13;border:1px solid var(--border2);border-radius:9px;
+                   padding:10px 14px;color:var(--text);font-size:12px;font-family:'Noto Sans JP',sans-serif;
+                   resize:vertical;outline:none"></textarea>
+        </div>
+      </div>
+
+      <button class="btn btn-blue" id="submit-btn"
+              style="width:100%;justify-content:center;padding:13px;font-size:13px;border-radius:11px"
+              onclick="submitKyc()" disabled>
+        📤 本人確認書類を提出する
+      </button>
+      <div style="font-size:10px;color:var(--muted);text-align:center;margin-top:8px;line-height:1.7">
+        提出後、本部スタッフが目視確認します（1〜2営業日）<br>審査結果はSlackでお知らせします
+      </div>
+    </div>
+
+    <!-- Right col -->
+    <div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="ch"><div class="ch-t">提出状況</div></div>
+        <div class="cb" style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 12px;background:var(--card2);border-radius:9px">
+            <span style="font-size:11px">書類種別</span><span class="pill pm" id="sum-dtype">未選択</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 12px;background:var(--card2);border-radius:9px">
+            <span style="font-size:11px">身分証 表面</span><span class="pill pm" id="sum-f">未提出</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 12px;background:var(--card2);border-radius:9px" id="sum-b-row" style="display:none">
+            <span style="font-size:11px">身分証 裏面</span><span class="pill pm" id="sum-b">未提出</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 12px;background:var(--card2);border-radius:9px">
+            <span style="font-size:11px">自撮り写真</span><span class="pill pm" id="sum-s">未提出</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:14px">
+        <div class="ch"><div class="ch-t">審査の流れ</div></div>
+        <div class="cb">
+          <div class="stl">
+            <div class="stl-r">
+              <div style="display:flex;flex-direction:column;align-items:center">
+                <div class="stl-d" style="background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.25)">✅</div>
+                <div class="stl-ln"></div>
+              </div>
+              <div style="flex:1;padding-top:2px">
+                <div style="font-size:12px;font-weight:700">情報登録完了</div>
+                <div style="font-size:10px;color:var(--muted)">2026/01/15 登録済み</div>
+              </div>
+            </div>
+            <div class="stl-r">
+              <div style="display:flex;flex-direction:column;align-items:center">
+                <div class="stl-d" style="background:rgba(251,146,60,.1);border:1px solid rgba(251,146,60,.25)" id="stld-up">⏳</div>
+                <div class="stl-ln"></div>
+              </div>
+              <div style="flex:1;padding-top:2px">
+                <div style="font-size:12px;font-weight:700" id="stlt-up">書類アップロード待ち</div>
+                <div style="font-size:10px;color:var(--muted)" id="stlsub-up">身分証・自撮りを提出してください</div>
+              </div>
+            </div>
+            <div class="stl-r">
+              <div style="display:flex;flex-direction:column;align-items:center">
+                <div class="stl-d" style="background:var(--card2);border:1px solid var(--border2)" id="stld-rev">3</div>
+                <div class="stl-ln"></div>
+              </div>
+              <div style="flex:1;padding-top:2px">
+                <div style="font-size:12px;font-weight:700">本部スタッフ 目視審査</div>
+                <div style="font-size:10px;color:var(--muted)">提出後 1〜2営業日</div>
+              </div>
+            </div>
+            <div class="stl-r">
+              <div style="display:flex;flex-direction:column;align-items:center">
+                <div class="stl-d" style="background:var(--card2);border:1px solid var(--border2)">4</div>
+              </div>
+              <div style="flex:1;padding-top:2px">
+                <div style="font-size:12px;font-weight:700">確認完了</div>
+                <div style="font-size:10px;color:var(--muted)">報酬振込・口座登録が可能になります</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="ch"><div class="ch-t">FAQ</div></div>
+        <div class="cb" style="font-size:11px;color:var(--sub);line-height:2.1">
+          <strong style="color:var(--text)">Q. 自動判定はしないのですか？</strong><br>
+          はい。本部スタッフが1件ずつ目視確認します。<br><br>
+          <strong style="color:var(--text)">Q. 旧姓の書類でも大丈夫ですか？</strong><br>
+          メモ欄に旧姓の旨を記入してください。本部が対応します。<br><br>
+          <strong style="color:var(--text)">Q. 確認完了前に仕事はできますか？</strong><br>
+          案件対応は可能ですが、<strong style="color:var(--orange)">報酬振込はKYC完了後</strong>です。
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══ VIEW 1: 口座管理 ═══ -->
+<div id="v1" style="display:none">
+<div class="body">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:22px">
+    <div>
+      <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;margin-bottom:4px">口座管理</div>
+      <div style="font-size:11px;color:var(--sub)">登録口座は<strong>本人名義のみ</strong>受け付けます。変更時はHQ承認が必要です。</div>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="openAccModal()">✏️ 口座変更を申請</button>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <div class="ch">
+      <div class="ch-t">登録口座（現在）</div>
+      <div style="display:flex;gap:8px">
+        <span class="pill pg">✓ 本人名義確認済み</span>
+        <span class="pill pg">✓ eKYC連携</span>
+      </div>
+    </div>
+    <div class="cb">
+      <div class="g2">
+        <div>
+          <div style="display:grid;grid-template-columns:auto 1fr;gap:8px 16px;align-items:center;font-size:12px;margin-bottom:14px">
+            <span style="color:var(--muted)">銀行名</span><strong>GMOあおぞらネット銀行</strong>
+            <span style="color:var(--muted)">支店名</span><span class="mono">ビジネス営業部（010）</span>
+            <span style="color:var(--muted)">口座種別</span><span>普通</span>
+            <span style="color:var(--muted)">口座番号</span><span class="mono" style="font-size:16px;color:var(--gold);font-weight:700">1234567</span>
+            <span style="color:var(--muted)">口座名義</span><span class="mono" style="font-weight:700">ヤマダ マコト</span>
+          </div>
+          <div class="ncb ncb-ok">
+            <span style="font-size:18px">✅</span>
+            <div><strong style="color:var(--green)">名義確認済み（手動照合）</strong><br>
+            本部が口座名義とCORETO登録名が一致することを確認済みです</div>
+          </div>
+        </div>
+        <div style="background:var(--card2);border:1px solid var(--border);border-radius:11px;padding:16px;font-size:11px;line-height:2.1">
+          <div style="font-size:9px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px">振込スケジュール</div>
+          毎月25日 自動振込<br>
+          即時払い：申請＋2FA（手数料<strong style="color:var(--orange)">15%</strong>）<br>
+          源泉徴収票：年末発行<br>
+          <div style="margin-top:12px;padding:10px 12px;background:rgba(201,168,76,.06);border:1px solid var(--gold-dim);border-radius:8px">
+            次回振込：2026/03/25<br><strong style="color:var(--gold)">¥957,700</strong>（控除後）
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch"><div class="ch-t">口座変更履歴</div></div>
+    <div style="overflow-x:auto">
+      <table class="tbl">
+        <thead><tr><th>変更日</th><th>変更前口座</th><th>変更後口座</th><th>名義確認方法</th><th>承認者</th><th>状態</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="mono" style="font-size:10px">2025/10/01</td>
+            <td style="font-size:11px">楽天銀行 ···4321</td>
+            <td style="font-size:11px">GMOあおぞら ···4567</td>
+            <td><span class="pill pg">👁 手動確認済</span></td>
+            <td style="font-size:11px">00002</td>
+            <td><span class="pill pg">承認済み</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══ VIEW 2: HQ 審査 ═══ -->
+<div id="v2" style="display:none">
+<div class="body">
+  <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;margin-bottom:4px">本人確認 審査ダッシュボード</div>
+  <div style="font-size:11px;color:var(--sub);margin-bottom:20px">提出書類を1件ずつ目視確認してください。OCR・AI判定は使用しません。</div>
+
+  <!-- Stats -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px">
+      <div style="font-size:18px;margin-bottom:6px">📋</div>
+      <div class="mono" style="font-size:28px;color:var(--orange)" id="stat-pend">4</div>
+      <div style="font-size:10px;color:var(--muted)">書類審査待ち</div>
+    </div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px">
+      <div style="font-size:18px;margin-bottom:6px">🏦</div>
+      <div class="mono" style="font-size:28px;color:var(--orange)">2</div>
+      <div style="font-size:10px;color:var(--muted)">口座変更 承認待ち</div>
+    </div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px">
+      <div style="font-size:18px;margin-bottom:6px">✅</div>
+      <div class="mono" style="font-size:28px;color:var(--green)">28</div>
+      <div style="font-size:10px;color:var(--muted)">今月 承認済み</div>
+    </div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px">
+      <div style="font-size:18px;margin-bottom:6px">⏱</div>
+      <div class="mono" style="font-size:28px;color:var(--blue)">1.4<span style="font-size:14px">日</span></div>
+      <div style="font-size:10px;color:var(--muted)">平均審査時間</div>
+    </div>
+  </div>
+
+  <div class="al al-info" style="margin-bottom:20px">
+    👁 <div><strong>審査方針：完全手動・目視確認</strong><br>
+    書類の氏名・顔写真・有効期限を直接目視確認し、自撮り写真と書類の顔が一致することを確認したうえで承認・否認を行ってください。チェックリストを全て確認してから承認ボタンを押せます。</div>
+  </div>
+
+  <!-- Review cards -->
+  <div id="review-q">
+
+    <!-- Card: 鈴木健太 -->
+    <div class="rc" id="rc-10023">
+      <div class="rch">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:36px;height:36px;border-radius:9px;background:rgba(79,156,249,.1);
+                      border:1px solid rgba(79,156,249,.25);display:flex;align-items:center;
+                      justify-content:center;font-size:16px;font-weight:800;color:var(--blue)">鈴</div>
+          <div>
+            <div style="font-weight:800;font-size:13px">鈴木 健太</div>
+            <div style="font-size:10px;color:var(--muted)">ID: 10023　RE エージェント</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="pill po">審査待ち</span>
+          <span style="font-size:10px;color:var(--muted)">提出：2026/02/19 14:32</span>
+        </div>
+      </div>
+      <div class="rcb">
+        <div style="font-size:9px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px">提出書類（クリックで拡大表示）</div>
+        <div class="g3" style="margin-bottom:16px">
+          <div class="photo-box" onclick="lb('🪪','運転免許証（表面）')">
+            <span style="font-size:32px">🪪</span><span style="font-size:9px;color:var(--muted)">免許証 表面</span>
+          </div>
+          <div class="photo-box" onclick="lb('🪪','運転免許証（裏面）')">
+            <span style="font-size:32px">🪪</span><span style="font-size:9px;color:var(--muted)">免許証 裏面</span>
+          </div>
+          <div class="photo-box" onclick="lb('🤳','本人確認 自撮り')">
+            <span style="font-size:32px">🤳</span><span style="font-size:9px;color:var(--muted)">自撮り</span>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:11px;margin-bottom:14px">
+          <span style="color:var(--muted)">書類種別</span><span>運転免許証</span>
+          <span style="color:var(--muted)">登録名（カナ）</span><span class="mono">スズキ ケンタ</span>
+          <span style="color:var(--muted)">エージェントメモ</span><span style="color:var(--sub)">なし</span>
+        </div>
+        <div style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px">
+          <div style="font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">目視確認チェックリスト（全項目チェックで承認可能）</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px" id="cl-10023">
+            <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer"><input type="checkbox" onchange="chk('10023')"> 有効期限が確認できる</label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer"><input type="checkbox" onchange="chk('10023')"> 氏名が鮮明に読める</label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer"><input type="checkbox" onchange="chk('10023')"> 書類の顔写真が確認できる</label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer"><input type="checkbox" onchange="chk('10023')"> 自撮りと書類の顔が一致する</label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer"><input type="checkbox" onchange="chk('10023')"> 加工・編集の形跡がない</label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer"><input type="checkbox" onchange="chk('10023')"> 登録名と書類の氏名が一致する</label>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button class="btn btn-danger btn-sm" onclick="openRej('10023','鈴木 健太')">✗ 否認・再提出依頼</button>
+          <button class="btn btn-ok btn-sm" id="ab-10023" onclick="approve('10023','鈴木 健太')" disabled>✓ 承認（要全項目チェック）</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card: 渡辺隆 -->
+    <div class="rc" id="rc-10041">
+      <div class="rch">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:36px;height:36px;border-radius:9px;background:rgba(251,146,60,.1);
+                      border:1px solid rgba(251,146,60,.25);display:flex;align-items:center;
+                      justify-content:center;font-size:16px;font-weight:800;color:var(--orange)">渡</div>
+          <div>
+            <div style="font-weight:800;font-size:13px">渡辺 隆</div>
+            <div style="font-size:10px;color:var(--muted)">ID: 10041　RE エージェント</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="pill po">審査待ち</span>
+          <span style="font-size:10px;color:var(--muted)">提出：2026/02/18 09:15</span>
+        </div>
+      </div>
+      <div class="rcb">
+        <div class="g3" style="margin-bottom:16px">
+          <div class="photo-box" onclick="lb('🔢','マイナンバーカード（表面）')">
+            <span style="font-size:32px">🔢</span><span style="font-size:9px;color:var(--muted)">マイナンバーカード</span>
+          </div>
+          <div style="border-radius:10px;border:1px dashed var(--border2);display:flex;
+                      align-items:center;justify-content:center;aspect-ratio:4/3;
+                      font-size:11px;color:var(--muted);flex-direction:column;gap:4px">
+            <span>—</span><span style="font-size:9px">裏面なし</span>
+          </div>
+          <div class="photo-box" onclick="lb('🤳','本人確認 自撮り')">
+            <span style="font-size:32px">🤳</span><span style="font-size:9px;color:var(--muted)">自撮り</span>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:11px;margin-bottom:14px">
+          <span style="color:var(--muted)">書類種別</span><span>マイナンバーカード</span>
+          <span style="color:var(--muted)">登録名（カナ）</span><span class="mono">ワタナベ タカシ</span>
+          <span style="color:var(--muted)">エージェントメモ</span><span style="color:var(--sub)">なし</span>
+        </div>
+        <div style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px">
+          <div style="font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">目視確認チェックリスト</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px" id="cl-10041">
+            <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer"><input type="checkbox" onchange="chk('10041')"> 有効期限が確認できる</label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer"><input type="checkbox" onchange="chk('10041')"> 氏名が鮮明に読める</label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer"><input type="checkbox" onchange="chk('10041')"> 書類の顔写真が確認できる</label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer"><input type="checkbox" onchange="chk('10041')"> 自撮りと書類の顔が一致する</label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer"><input type="checkbox" onchange="chk('10041')"> 加工・編集の形跡がない</label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer"><input type="checkbox" onchange="chk('10041')"> 登録名と書類の氏名が一致する</label>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button class="btn btn-danger btn-sm" onclick="openRej('10041','渡辺 隆')">✗ 否認・再提出依頼</button>
+          <button class="btn btn-ok btn-sm" id="ab-10041" onclick="approve('10041','渡辺 隆')" disabled>✓ 承認（要全項目チェック）</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 口座変更承認 -->
+    <div class="card">
+      <div class="ch"><div class="ch-t">口座変更 承認待ち</div><span class="pill po">2件</span></div>
+      <div style="overflow-x:auto">
+        <table class="tbl">
+          <thead><tr><th>エージェント</th><th>変更前</th><th>変更後・名義</th><th>確認方法</th><th>申請日</th><th>操作</th></tr></thead>
+          <tbody>
+            <tr>
+              <td style="font-weight:700">山田 誠（10012）</td>
+              <td style="font-size:11px">GMOあおぞら ···4567</td>
+              <td style="font-size:11px">三菱UFJ ···6543<br><span class="mono" style="font-size:10px">ヤマダ マコト</span></td>
+              <td style="font-size:11px;color:var(--sub)">👁 担当者が目視照合</td>
+              <td class="mono" style="font-size:10px">2026/02/18</td>
+              <td>
+                <div style="display:flex;gap:5px">
+                  <button class="btn btn-ok btn-sm" onclick="approveAcc('10012')">✓ 承認</button>
+                  <button class="btn btn-danger btn-sm" onclick="rejectAcc('10012')">✗ 却下</button>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td style="font-weight:700">田中 美穂（20005）</td>
+              <td style="font-size:11px">楽天銀行 ···3210</td>
+              <td style="font-size:11px">PayPay銀行 ···7654<br><span class="mono" style="font-size:10px">タナカ ミホ</span></td>
+              <td style="font-size:11px;color:var(--sub)">👁 担当者が目視照合</td>
+              <td class="mono" style="font-size:10px">2026/02/15</td>
+              <td>
+                <div style="display:flex;gap:5px">
+                  <button class="btn btn-ok btn-sm" onclick="approveAcc('20005')">✓ 承認</button>
+                  <button class="btn btn-danger btn-sm" onclick="rejectAcc('20005')">✗ 却下</button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- 否認モーダル -->
+<div class="overlay" id="rej-modal" onclick="if(event.target===this)this.classList.remove('show')">
+<div class="modal">
+  <div class="mhdr"><div class="mtitle">否認・再提出依頼</div><button class="mclose" onclick="document.getElementById('rej-modal').classList.remove('show')">✕</button></div>
+  <div class="mbody">
+    <div class="al al-warn" style="margin-bottom:14px">⚠️ 否認するとエージェントにSlackで通知されます。</div>
+    <div style="font-size:11px;color:var(--sub);margin-bottom:14px">対象者：<strong style="color:var(--text)" id="rej-name">—</strong></div>
+    <div style="font-size:9px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px">否認理由（複数可）</div>
+    <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:14px">
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:8px;background:var(--card2);border-radius:8px"><input type="checkbox" name="rr" value="blur"> 画像がぼやけている・反射がある</label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:8px;background:var(--card2);border-radius:8px"><input type="checkbox" name="rr" value="exp"> 有効期限が切れている</label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:8px;background:var(--card2);border-radius:8px"><input type="checkbox" name="rr" value="name"> 登録名と書類の氏名が一致しない</label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:8px;background:var(--card2);border-radius:8px"><input type="checkbox" name="rr" value="face"> 自撮りの顔と書類の顔が一致しない</label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:8px;background:var(--card2);border-radius:8px"><input type="checkbox" name="rr" value="edit"> 加工・編集の形跡がある</label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:8px;background:var(--card2);border-radius:8px"><input type="checkbox" name="rr" value="cut"> 書類が一部切れている</label>
+    </div>
+    <div class="field" style="margin-bottom:0">
+      <label>追記メモ（エージェントに送信）</label>
+      <textarea id="rej-note" rows="3" placeholder="例：顔が暗くて確認できません。明るい場所で再撮影してください。"></textarea>
+    </div>
+  </div>
+  <div class="mfoot">
+    <button class="btn btn-ghost" onclick="document.getElementById('rej-modal').classList.remove('show')">キャンセル</button>
+    <button class="btn btn-danger" onclick="submitRej()">✗ 否認してSlack通知</button>
+  </div>
+</div>
+</div>
+
+<!-- 口座変更モーダル -->
+<div class="overlay" id="acc-modal" onclick="if(event.target===this)this.classList.remove('show')">
+<div class="modal">
+  <div class="mhdr"><div class="mtitle">口座変更申請</div><button class="mclose" onclick="document.getElementById('acc-modal').classList.remove('show')">✕</button></div>
+  <div class="mbody">
+    <div class="al al-warn" style="margin-bottom:14px">
+      ⚠️ 口座変更はHQの承認が必要です（1〜3営業日）。<br>
+      <strong>本人名義の口座のみ登録可能。</strong>本部が口座名義と登録名を手動で照合します。
+    </div>
+    <div class="g2">
+      <div class="field"><label>銀行名<span class="req">*</span></label><input type="text" id="ab-bank" placeholder="例：三菱UFJ銀行"></div>
+      <div class="field"><label>支店名<span class="req">*</span></label><input type="text" id="ab-branch" placeholder="例：渋谷支店"></div>
+    </div>
+    <div class="g2">
+      <div class="field"><label>口座種別<span class="req">*</span></label><select id="ab-type"><option>普通</option><option>当座</option></select></div>
+      <div class="field"><label>口座番号<span class="req">*</span></label><input type="text" id="ab-num" placeholder="1234567" maxlength="8" style="font-family:'DM Mono',monospace"></div>
+    </div>
+    <div class="field">
+      <label>口座名義（カナ）<span class="req">*</span></label>
+      <input type="text" id="ab-holder" placeholder="例：ヤマダ マコト" style="font-family:'DM Mono',monospace;letter-spacing:1px">
+      <div style="font-size:10px;color:var(--muted);margin-top:5px">通帳に記載の通り（半角カナ）。本部が登録名と目視照合します。</div>
+    </div>
+    <div class="field">
+      <label>変更理由<span class="req">*</span></label>
+      <select id="ab-reason"><option value="">— 選択 —</option><option>口座解約</option><option>手数料最適化</option><option>メインバンク変更</option><option>その他</option></select>
+    </div>
+  </div>
+  <div class="mfoot">
+    <button class="btn btn-ghost" onclick="document.getElementById('acc-modal').classList.remove('show')">キャンセル</button>
+    <button class="btn btn-gold" onclick="submitAcc()">申請を送信する</button>
+  </div>
+</div>
+</div>
+
+<!-- ライトボックス -->
+<div class="lb" id="lb" onclick="closeLb()">
+  <button class="lb-close" onclick="closeLb()">✕</button>
+  <div style="font-size:90px" id="lb-ic">🪪</div>
+  <div style="font-size:14px;color:var(--sub)" id="lb-lbl"></div>
+  <div style="font-size:11px;color:var(--muted);margin-top:4px">（デモ：実際の運用では書類画像が表示されます）</div>
+</div>
+
+<script>
+// ─── View switch ─────────────────────────────────────────────────
+function sv(i,btn){
+  document.querySelectorAll('.tab').forEach((t,j)=>t.classList.toggle('on',j===i));
+  ['v0','v1','v2'].forEach((id,j)=>document.getElementById(id).style.display=j===i?'block':'none');
+}
+
+// ─── Doc type ────────────────────────────────────────────────────
+let docT=-1, ups={f:false,b:false,s:false};
+const docLabels=['運転免許証','パスポート','マイナンバーカード'];
+function selDoc(n){
+  docT=n;
+  [0,1,2].forEach(i=>document.getElementById('dbt'+i).classList.toggle('on',i===n));
+  const lbl=docLabels[n];
+  document.getElementById('dtype-pill').textContent=lbl;
+  document.getElementById('dtype-pill').className='pill pb';
+  document.getElementById('sum-dtype').textContent=lbl;
+  document.getElementById('sum-dtype').className='pill pg';
+  const needBack=n!==1;
+  document.getElementById('back-wrap').style.display=needBack?'block':'none';
+  document.getElementById('sum-b-row').style.display=needBack?'flex':'none';
+  if(!needBack) ups.b=true; else ups.b=false;
+  chkReady();
+}
+
+// ─── Upload ──────────────────────────────────────────────────────
+function trig(id){document.getElementById(id).click();}
+function up(input,side){
+  if(!input.files[0])return;
+  const file=input.files[0];
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const zone=document.getElementById('uz-'+side);
+    const prev=document.getElementById('uzp-'+side);
+    const icon=document.getElementById('uzi-'+side);
+    const title=document.getElementById('uzt-'+side);
+    zone.classList.add('done');
+    title.textContent='✓ '+file.name;
+    icon.style.display='none';
+    if(file.type!=='application/pdf'){
+      prev.src=e.target.result; prev.style.display='block';
+    } else {
+      icon.style.display='block'; icon.textContent='📄';
+    }
+    ups[side]=true;
+    const sumId=side==='s'?'sum-s':'sum-'+side;
+    const sp=document.getElementById(sumId);
+    if(sp){sp.textContent='✓ 済'; sp.className='pill pg';}
+    if(side==='s'){
+      document.getElementById('selfie-pill').textContent='✓ 準備完了';
+      document.getElementById('selfie-pill').className='pill pg';
+    } else {
+      document.getElementById('doc-pill').textContent='✓ アップロード済み';
+      document.getElementById('doc-pill').className='pill pg';
+    }
+    chkReady();
+  };
+  reader.readAsDataURL(file);
+}
+function chkReady(){
+  const needB=docT!==1;
+  const ok=docT>=0&&ups.f&&(!needB||ups.b)&&ups.s;
+  document.getElementById('submit-btn').disabled=!ok;
+}
+
+// ─── Submit KYC ──────────────────────────────────────────────────
+function submitKyc(){
+  const btn=document.getElementById('submit-btn');
+  btn.disabled=true; btn.textContent='⏳ 送信中...';
+  setTimeout(()=>{
+    btn.textContent='✅ 提出完了 — 審査中';
+    document.getElementById('s1').className='step done';
+    document.getElementById('s1').querySelector('.sdot').textContent='✓';
+    document.getElementById('s2').className='step rev';
+    document.getElementById('s2').querySelector('.sdot').textContent='⏳';
+    document.getElementById('stld-up').textContent='✓';
+    document.getElementById('stld-up').style.cssText='background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.25)';
+    document.getElementById('stlt-up').textContent='書類提出完了';
+    document.getElementById('stlsub-up').textContent='本部が審査中です';
+    document.getElementById('stld-rev').textContent='⏳';
+    document.getElementById('stld-rev').style.cssText='background:rgba(251,146,60,.1);border:1px solid rgba(251,146,60,.25)';
+    const b=document.getElementById('hq-cnt');
+    b.textContent=parseInt(b.textContent)+1;
+    alert('✅ 本人確認書類を提出しました。\n本部スタッフが目視確認します（1〜2営業日）。\n結果はSlackでお知らせします。');
+  },1200);
+}
+
+// ─── HQ チェックリスト ────────────────────────────────────────────
+function chk(id){
+  const boxes=document.querySelectorAll('#cl-'+id+' input[type=checkbox]');
+  const all=Array.from(boxes).every(b=>b.checked);
+  const btn=document.getElementById('ab-'+id);
+  btn.disabled=!all;
+  btn.textContent=all?'✓ 承認する':'✓ 承認（要全項目チェック）';
+}
+function approve(id,name){
+  if(!confirm(`${name} の本人確認を承認しますか？\n全項目の目視確認完了後のみ承認可能です。`))return;
+  const card=document.getElementById('rc-'+id);
+  card.style.opacity='.4'; card.style.pointerEvents='none';
+  const rch=card.querySelector('.rch');
+  rch.insertAdjacentHTML('beforeend','<span class="pill pg">✓ 承認済み</span>');
+  decBadge();
+  alert(`✅ ${name}（${id}）を承認しました。\nSlackで本人に通知。口座登録・報酬受取が可能になります。`);
+}
+function decBadge(){
+  const b=document.getElementById('hq-cnt');
+  const sp=document.getElementById('stat-pend');
+  const n=parseInt(b.textContent)-1;
+  b.textContent=n>0?n:'';
+  sp.textContent=parseInt(sp.textContent)-1;
+}
+
+let rejId='';
+function openRej(id,name){
+  rejId=id;
+  document.getElementById('rej-name').textContent=name+'（'+id+'）';
+  document.querySelectorAll('input[name=rr]').forEach(c=>c.checked=false);
+  document.getElementById('rej-note').value='';
+  document.getElementById('rej-modal').classList.add('show');
+}
+function submitRej(){
+  const reasons=Array.from(document.querySelectorAll('input[name=rr]:checked'))
+    .map(c=>c.parentElement.textContent.trim()).join('、');
+  if(!reasons){alert('否認理由を1つ以上選択してください');return;}
+  document.getElementById('rej-modal').classList.remove('show');
+  const card=document.getElementById('rc-'+rejId);
+  if(card){
+    card.style.opacity='.4'; card.style.pointerEvents='none';
+    card.querySelector('.rch').insertAdjacentHTML('beforeend','<span class="pill pr">✗ 否認済み</span>');
+  }
+  decBadge();
+  alert('否認通知をSlackで送信しました。\n理由：'+reasons);
+}
+
+function approveAcc(id){if(!confirm('口座変更を承認しますか？名義と登録名が一致することを確認してください。'))return;alert('✅ 承認しました。次回振込から新口座が有効になります。');}
+function rejectAcc(id){const r=prompt('却下理由:');if(r===null)return;alert('却下しました。理由：'+r);}
+
+// ─── 口座変更モーダル ──────────────────────────────────────────────
+function openAccModal(){document.getElementById('acc-modal').classList.add('show');}
+function submitAcc(){
+  const bank=document.getElementById('ab-bank').value;
+  const holder=document.getElementById('ab-holder').value;
+  const reason=document.getElementById('ab-reason').value;
+  if(!bank||!holder||!reason){alert('必須項目を入力してください');return;}
+  document.getElementById('acc-modal').classList.remove('show');
+  alert(`✅ 口座変更申請を送信しました。\n口座名義「${holder}」を本部が登録名と照合後、1〜3営業日で承認されます。`);
+}
+
+// ─── Lightbox ─────────────────────────────────────────────────────
+function lb(icon,label){
+  document.getElementById('lb-ic').textContent=icon;
+  document.getElementById('lb-lbl').textContent=label;
+  document.getElementById('lb').classList.add('show');
+}
+function closeLb(){document.getElementById('lb').classList.remove('show');}
+</script>
+</body>
+</html>

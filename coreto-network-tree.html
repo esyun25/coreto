@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CORETO — 紹介ネットワーク図【経営陣専用】</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Kaisei+Tokumin:wght@400;700&family=DM+Mono:wght@400;500&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:      #0d0f14;
+  --bg2:     #13161e;
+  --bg3:     #1a1e29;
+  --border:  #252a38;
+  --border2: #2e3447;
+  --text:    #e8eaf0;
+  --sub:     #8b90a8;
+  --muted:   #4a4f68;
+  --gold:    #c9a840;
+  --gold2:   #e8c85a;
+  --gold-bg: rgba(201,168,64,.08);
+  --gold-glow: rgba(201,168,64,.2);
+  --re:      #4fa3c8;
+  --hr:      #52c49a;
+  --pt:      #a78bfa;
+  --danger:  #f87171;
+  --exec:    #f59e0b;
+}
+
+html, body { height: 100%; overflow: hidden; }
+body {
+  font-family: 'Noto Sans JP', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* ─ Access Gate ─ */
+#gate {
+  position: fixed; inset: 0; z-index: 9999;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 24px;
+}
+.gate-logo {
+  font-family: 'Kaisei Tokumin', serif;
+  font-size: 28px; letter-spacing: 6px;
+  color: var(--gold);
+  text-shadow: 0 0 40px var(--gold-glow);
+}
+.gate-title {
+  font-size: 11px; color: var(--muted);
+  letter-spacing: 3px; text-transform: uppercase;
+  font-family: 'DM Mono', monospace;
+}
+.gate-box {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  padding: 28px 32px;
+  width: 320px;
+  text-align: center;
+}
+.gate-label { font-size: 12px; color: var(--sub); margin-bottom: 10px; }
+.gate-input {
+  width: 100%; padding: 11px 14px;
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: 8px; color: var(--text);
+  font-family: 'DM Mono', monospace; font-size: 15px;
+  letter-spacing: 4px; text-align: center;
+  outline: none; transition: border-color .2s;
+}
+.gate-input:focus { border-color: var(--gold); }
+.gate-btn {
+  width: 100%; margin-top: 14px; padding: 12px;
+  background: var(--gold); color: #000;
+  border: none; border-radius: 8px;
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 13px; font-weight: 700; cursor: pointer;
+  transition: all .2s;
+}
+.gate-btn:hover { background: var(--gold2); transform: translateY(-1px); }
+.gate-err { font-size: 11px; color: var(--danger); margin-top: 8px; display: none; }
+.gate-note { font-size: 10px; color: var(--muted); line-height: 1.9; }
+
+/* ─ Layout ─ */
+#app { height: 100vh; display: flex; flex-direction: column; }
+
+/* ─ Header ─ */
+.hdr {
+  height: 52px; flex-shrink: 0;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 20px;
+}
+.hdr-left { display: flex; align-items: center; gap: 12px; }
+.hdr-logo {
+  font-family: 'Kaisei Tokumin', serif;
+  font-size: 18px; letter-spacing: 3px; color: var(--gold);
+}
+.hdr-badge {
+  font-size: 9px; padding: 3px 8px; border-radius: 4px;
+  background: rgba(245,158,11,.15); color: var(--exec);
+  border: 1px solid rgba(245,158,11,.3);
+  font-family: 'DM Mono', monospace; letter-spacing: 1.5px;
+}
+.hdr-right { display: flex; align-items: center; gap: 12px; }
+.hdr-btn {
+  padding: 6px 14px; border-radius: 7px;
+  border: 1px solid var(--border2); background: transparent;
+  color: var(--sub); font-size: 11px; cursor: pointer;
+  transition: all .15s; font-family: 'Noto Sans JP', sans-serif;
+}
+.hdr-btn:hover { border-color: var(--gold); color: var(--gold); }
+.hdr-btn.active { background: var(--gold-bg); border-color: var(--gold); color: var(--gold); }
+
+/* ─ KPI bar ─ */
+.kpi-bar {
+  flex-shrink: 0;
+  background: var(--bg2); border-bottom: 1px solid var(--border);
+  display: flex; gap: 1px;
+  padding: 0;
+  overflow-x: auto;
+}
+.kpi {
+  flex: 1; min-width: 140px;
+  padding: 12px 20px;
+  border-right: 1px solid var(--border);
+}
+.kpi:last-child { border-right: none; }
+.kpi-label {
+  font-size: 9px; color: var(--muted);
+  letter-spacing: 2px; text-transform: uppercase;
+  font-family: 'DM Mono', monospace; margin-bottom: 4px;
+}
+.kpi-val {
+  font-family: 'DM Mono', monospace;
+  font-size: 20px; font-weight: 500;
+  color: var(--text);
+}
+.kpi-val.gold { color: var(--gold2); }
+.kpi-val.re   { color: var(--re); }
+.kpi-val.hr   { color: var(--hr); }
+.kpi-val.pt   { color: var(--pt); }
+.kpi-sub { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+/* ─ Body ─ */
+.body {
+  flex: 1; display: flex; overflow: hidden;
+}
+
+/* ─ Sidebar ─ */
+.sidebar {
+  width: 280px; flex-shrink: 0;
+  background: var(--bg2); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.sb-hdr {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 10px; color: var(--muted);
+  letter-spacing: 2px; font-family: 'DM Mono', monospace;
+}
+.sb-search {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.sb-search input {
+  width: 100%; padding: 8px 12px;
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: 7px; color: var(--text);
+  font-size: 12px; font-family: 'Noto Sans JP', sans-serif;
+  outline: none;
+}
+.sb-search input:focus { border-color: var(--gold); }
+.sb-search input::placeholder { color: var(--muted); }
+.sb-list { flex: 1; overflow-y: auto; padding: 8px 0; }
+.sb-item {
+  padding: 9px 16px;
+  cursor: pointer; transition: background .12s;
+  display: flex; align-items: center; gap: 10px;
+  border-left: 3px solid transparent;
+}
+.sb-item:hover { background: var(--bg3); }
+.sb-item.active {
+  background: var(--gold-bg);
+  border-left-color: var(--gold);
+}
+.sb-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+}
+.sb-name { font-size: 12px; flex: 1; }
+.sb-id { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); }
+.sb-net {
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  color: var(--sub); white-space: nowrap;
+}
+
+/* ─ Tree area ─ */
+.tree-area {
+  flex: 1; overflow: auto;
+  padding: 32px;
+  position: relative;
+}
+
+/* ─ Node ─ */
+.tree-root { display: flex; flex-direction: column; align-items: flex-start; }
+.tree-node-wrap {
+  display: flex; flex-direction: column; align-items: flex-start;
+}
+.tree-row { display: flex; align-items: flex-start; gap: 0; }
+.tree-connector-v {
+  width: 24px; flex-shrink: 0;
+  border-left: 1.5px solid var(--border2);
+  margin-left: 20px;
+}
+.tree-children {
+  display: flex; flex-direction: column; gap: 12px;
+  padding: 12px 0 0 0;
+}
+.tree-child-row {
+  display: flex; align-items: flex-start;
+}
+.tree-elbow {
+  width: 24px; flex-shrink: 0;
+  display: flex; flex-direction: column;
+  align-items: flex-start;
+}
+.tree-elbow-line {
+  width: 24px; border-top: 1.5px solid var(--border2);
+  margin-top: 26px; flex-shrink: 0;
+}
+
+/* Node card */
+.node {
+  position: relative;
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  padding: 14px 16px;
+  min-width: 220px; max-width: 260px;
+  cursor: pointer;
+  transition: all .2s;
+  user-select: none;
+}
+.node:hover {
+  border-color: var(--border);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 20px rgba(0,0,0,.3);
+}
+.node.selected { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold-glow); }
+.node.re { border-top: 2px solid var(--re); }
+.node.hr { border-top: 2px solid var(--hr); }
+.node.pt { border-top: 2px solid var(--pt); }
+.node-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  margin-bottom: 10px;
+}
+.node-name {
+  font-size: 13px; font-weight: 700; line-height: 1.3;
+  color: var(--text);
+}
+.node-id {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px; color: var(--muted);
+  margin-top: 2px;
+}
+.node-pill {
+  font-size: 9px; padding: 2px 7px; border-radius: 4px;
+  font-family: 'DM Mono', monospace; letter-spacing: .5px;
+  white-space: nowrap; flex-shrink: 0;
+}
+.pill-re { background: rgba(79,163,200,.15); color: var(--re); border: 1px solid rgba(79,163,200,.3); }
+.pill-hr { background: rgba(82,196,154,.15); color: var(--hr); border: 1px solid rgba(82,196,154,.3); }
+.pill-pt { background: rgba(167,139,250,.15); color: var(--pt); border: 1px solid rgba(167,139,250,.3); }
+.node-stats {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.ns-item {
+  background: var(--bg3); border-radius: 6px;
+  padding: 6px 8px;
+}
+.ns-label { font-size: 9px; color: var(--muted); margin-bottom: 2px; font-family: 'DM Mono', monospace; }
+.ns-val { font-size: 12px; font-weight: 700; font-family: 'DM Mono', monospace; }
+.ns-val.gold { color: var(--gold2); }
+.ns-val.green { color: var(--hr); }
+.node-toggle {
+  position: absolute; right: -10px; top: 50%;
+  transform: translateY(-50%);
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--bg3); border: 1px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; color: var(--sub); cursor: pointer;
+  z-index: 1; transition: all .15s;
+}
+.node-toggle:hover { background: var(--gold-bg); border-color: var(--gold); color: var(--gold); }
+
+/* ─ Detail panel ─ */
+.detail {
+  width: 320px; flex-shrink: 0;
+  background: var(--bg2); border-left: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.detail-hdr {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.detail-title {
+  font-size: 10px; color: var(--muted);
+  letter-spacing: 2px; font-family: 'DM Mono', monospace;
+}
+.detail-close {
+  font-size: 14px; color: var(--muted); cursor: pointer;
+  background: none; border: none; color: var(--sub);
+}
+.detail-close:hover { color: var(--text); }
+.detail-body { flex: 1; overflow-y: auto; padding: 18px; }
+.detail-name {
+  font-family: 'Kaisei Tokumin', serif;
+  font-size: 22px; font-weight: 700;
+  margin-bottom: 4px;
+}
+.detail-meta { font-size: 11px; color: var(--sub); margin-bottom: 16px; }
+.detail-sec {
+  font-size: 9px; color: var(--muted);
+  letter-spacing: 2px; font-family: 'DM Mono', monospace;
+  margin: 16px 0 8px;
+}
+.detail-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 7px 0; border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+.detail-row:last-child { border-bottom: none; }
+.detail-row-label { color: var(--sub); }
+.detail-row-val { font-family: 'DM Mono', monospace; color: var(--text); }
+.detail-row-val.gold { color: var(--gold2); }
+.detail-row-val.green { color: var(--hr); }
+
+/* Network member list in detail */
+.net-member {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px;
+  background: var(--bg3); border-radius: 7px;
+  margin-bottom: 6px;
+}
+.net-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.nm-name { font-size: 12px; flex: 1; }
+.nm-depth { font-family: 'DM Mono', monospace; font-size: 9px; color: var(--muted); }
+.nm-rev { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--sub); }
+.depth-badge {
+  font-size: 9px; padding: 1px 6px; border-radius: 3px;
+  font-family: 'DM Mono', monospace;
+  background: var(--border); color: var(--muted);
+}
+
+/* ─ Empty state ─ */
+.empty-state {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; height: 100%;
+  gap: 12px; color: var(--muted);
+}
+.empty-icon { font-size: 40px; opacity: .4; }
+.empty-text { font-size: 12px; text-align: center; line-height: 2; }
+
+/* ─ Rank badges ─ */
+.rank-badge {
+  display: inline-block; font-size: 9px; padding: 1px 6px;
+  border-radius: 3px; font-family: 'DM Mono', monospace;
+}
+.rb-platinum { background: rgba(201,168,64,.2); color: var(--gold2); border: 1px solid rgba(201,168,64,.3); }
+.rb-gold     { background: rgba(234,179,8,.15); color: #facc15; border: 1px solid rgba(234,179,8,.25); }
+.rb-silver   { background: rgba(148,163,184,.15); color: #94a3b8; border: 1px solid rgba(148,163,184,.25); }
+.rb-bronze   { background: rgba(180,83,9,.15); color: #fb923c; border: 1px solid rgba(180,83,9,.25); }
+
+/* scrollbar */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- ─ Access Gate ─ -->
+<div id="gate">
+  <div class="gate-logo">CORETO</div>
+  <div class="gate-title">紹介ネットワーク図 — 経営陣専用</div>
+  <div class="gate-box">
+    <div class="gate-label">経営陣アクセスコード</div>
+    <input class="gate-input" type="password" id="gate-input" placeholder="••••••" maxlength="8"
+      onkeydown="if(event.key==='Enter')gateLogin()">
+    <button class="gate-btn" onclick="gateLogin()">アクセス</button>
+    <div class="gate-err" id="gate-err">アクセスコードが正しくありません</div>
+  </div>
+  <div class="gate-note">
+    このページは経営陣のみ閲覧可能です。<br>
+    エージェント・メンター・パートナーには<br>
+    一切表示されません。
+  </div>
+</div>
+
+<!-- ─ Main App ─ -->
+<div id="app" style="display:none">
+
+  <!-- Header -->
+  <div class="hdr">
+    <div class="hdr-left">
+      <div class="hdr-logo">CORETO</div>
+      <div class="hdr-badge">👁 EXEC ONLY</div>
+    </div>
+    <div class="hdr-right">
+      <span style="font-size:11px;color:var(--muted)">紹介ネットワーク分析</span>
+      <button class="hdr-btn" onclick="window.location.href='coreto-hub.html'">← Hub</button>
+    </div>
+  </div>
+
+  <!-- KPI bar -->
+  <div class="kpi-bar" id="kpi-bar"></div>
+
+  <!-- Body -->
+  <div class="body">
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sb-hdr">NETWORK ROOTS — 起点エージェント一覧</div>
+      <div class="sb-search">
+        <input type="text" placeholder="名前・IDで検索..." id="sb-search" oninput="filterSidebar(this.value)">
+      </div>
+      <div class="sb-list" id="sb-list"></div>
+    </div>
+
+    <!-- Tree -->
+    <div class="tree-area" id="tree-area">
+      <div class="empty-state" id="empty-state">
+        <div class="empty-icon">🌐</div>
+        <div class="empty-text">左サイドバーからエージェントを選択すると<br>紹介ネットワークが表示されます</div>
+      </div>
+      <div id="tree-root" style="display:none"></div>
+    </div>
+
+    <!-- Detail panel -->
+    <div class="detail" id="detail-panel">
+      <div class="detail-hdr">
+        <div class="detail-title">AGENT DETAIL</div>
+        <button class="detail-close" onclick="closeDetail()">✕</button>
+      </div>
+      <div class="detail-body" id="detail-body">
+        <div class="empty-state">
+          <div class="empty-icon">👆</div>
+          <div class="empty-text">ノードをクリックすると<br>詳細が表示されます</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+//  DEMO DATA
+//  referredBy: 紹介者のID（nullは外部応募）
+// ═══════════════════════════════════════════
+const AGENTS = [
+  // ─ 山田 誠ライン (10012) ─────────────────
+  { id:'10012', name:'山田 誠',   kana:'ヤマダ マコト',  type:'re', rank:'Gold',     joined:'2024-03',
+    referredBy:null,
+    monthlyRev:[980000,1100000,1200000,1050000,1300000,1150000],
+    totalRev:9800000, cases:52, sennin:true,
+    note:'創業期からの中核エージェント。宅建士専任。メンター実績3名。' },
+
+  { id:'10023', name:'鈴木 健太', kana:'スズキ ケンタ',  type:'re', rank:'Silver',   joined:'2024-07',
+    referredBy:'10012',
+    monthlyRev:[520000,620000,720000,580000,700000,650000],
+    totalRev:3800000, cases:24, sennin:false,
+    note:'山田誠が紹介。渋谷・新宿エリア担当。' },
+
+  { id:'10041', name:'渡辺 隆',   kana:'ワタナベ タカシ', type:'re', rank:'Bronze',  joined:'2025-01',
+    referredBy:'10012',
+    monthlyRev:[180000,210000,240000,160000,200000,190000],
+    totalRev:1200000, cases:8, sennin:true,
+    note:'山田誠が紹介。宅建士専任登録。成長株。' },
+
+  { id:'10055', name:'林 奈緒',   kana:'ハヤシ ナオ',    type:'re', rank:'Bronze',  joined:'2025-04',
+    referredBy:'10023',
+    monthlyRev:[90000,120000,150000,100000,130000,110000],
+    totalRev:700000, cases:4, sennin:false,
+    note:'鈴木健太が紹介。都内賃貸専門。' },
+
+  { id:'30012', name:'伊藤 誠一', kana:'イトウ セイイチ', type:'pt', rank:null,     joined:'2025-03',
+    referredBy:'10023',
+    monthlyRev:[0,0,0,0,0,0],
+    totalRev:480000, cases:6, sennin:false,
+    note:'鈴木健太が紹介のパートナー。不動産オーナーネットワーク保有。' },
+
+  { id:'10062', name:'中村 亮',   kana:'ナカムラ リョウ', type:'re', rank:'Bronze',  joined:'2025-06',
+    referredBy:'10041',
+    monthlyRev:[60000,80000,100000,70000,90000,85000],
+    totalRev:485000, cases:3, sennin:false,
+    note:'渡辺隆が紹介。港区・六本木エリア志望。' },
+
+  // ─ 佐藤 花子ライン (10008) ───────────────
+  { id:'10008', name:'佐藤 花子', kana:'サトウ ハナコ',  type:'re', rank:'Platinum', joined:'2024-01',
+    referredBy:null,
+    monthlyRev:[1400000,1600000,1800000,1500000,1900000,1700000],
+    totalRev:18500000, cases:98, sennin:true,
+    note:'最高ランクエージェント。専任宅建士。メンター実績5名。売上No.1。' },
+
+  { id:'10031', name:'小林 俊介', kana:'コバヤシ シュンスケ', type:'re', rank:'Gold', joined:'2024-05',
+    referredBy:'10008',
+    monthlyRev:[800000,900000,1000000,850000,1100000,950000],
+    totalRev:7200000, cases:41, sennin:false,
+    note:'佐藤花子が紹介。売買専門。高額案件多数。' },
+
+  { id:'20010', name:'松本 由美', kana:'マツモト ユミ',  type:'hr', rank:'Silver',  joined:'2024-08',
+    referredBy:'10008',
+    monthlyRev:[420000,500000,560000,480000,620000,540000],
+    totalRev:3600000, cases:18, sennin:false,
+    note:'佐藤花子が紹介。人材エージェント。IT業界専門。' },
+
+  { id:'10048', name:'吉田 大輔', kana:'ヨシダ ダイスケ', type:'re', rank:'Silver', joined:'2024-09',
+    referredBy:'10031',
+    monthlyRev:[350000,420000,490000,380000,460000,410000],
+    totalRev:2600000, cases:16, sennin:false,
+    note:'小林俊介が紹介。神奈川エリア担当。' },
+
+  { id:'30007', name:'佐藤 美咲', kana:'サトウ ミサキ',  type:'pt', rank:null,     joined:'2024-10',
+    referredBy:'10031',
+    monthlyRev:[0,0,0,0,0,0],
+    totalRev:920000, cases:11, sennin:false,
+    note:'小林俊介が紹介のパートナー。不動産業者コネクション。' },
+
+  { id:'20015', name:'高橋 誠',   kana:'タカハシ マコト', type:'hr', rank:'Bronze', joined:'2025-02',
+    referredBy:'20010',
+    monthlyRev:[200000,240000,280000,220000,260000,240000],
+    totalRev:1440000, cases:8, sennin:false,
+    note:'松本由美が紹介。製造業・医療業界担当。' },
+
+  { id:'30015', name:'田中 健',   kana:'タナカ ケン',    type:'pt', rank:null,     joined:'2025-03',
+    referredBy:'20010',
+    monthlyRev:[0,0,0,0,0,0],
+    totalRev:360000, cases:4, sennin:false,
+    note:'松本由美が紹介のパートナー。中小企業経営者ネットワーク。' },
+
+  // ─ 田中 美穂ライン (20005) ───────────────
+  { id:'20005', name:'田中 美穂', kana:'タナカ ミホ',    type:'hr', rank:'Gold',    joined:'2024-02',
+    referredBy:null,
+    monthlyRev:[700000,780000,860000,740000,900000,820000],
+    totalRev:8400000, cases:44, sennin:false,
+    note:'人材エージェントのトップ。IT・外資系専門。メンター実績2名。' },
+
+  { id:'20022', name:'木村 さくら', kana:'キムラ サクラ', type:'hr', rank:'Silver', joined:'2024-09',
+    referredBy:'20005',
+    monthlyRev:[310000,370000,430000,340000,400000,360000],
+    totalRev:2210000, cases:12, sennin:false,
+    note:'田中美穂が紹介。ベンチャー・スタートアップ専門。' },
+
+  { id:'30022', name:'橋本 光夫', kana:'ハシモト ミツオ', type:'pt', rank:null,     joined:'2025-01',
+    referredBy:'20005',
+    monthlyRev:[0,0,0,0,0,0],
+    totalRev:280000, cases:3, sennin:false,
+    note:'田中美穂が紹介のパートナー。人材会社OBネットワーク。' },
+
+  { id:'20031', name:'福田 雄介', kana:'フクダ ユウスケ', type:'hr', rank:'Bronze', joined:'2025-05',
+    referredBy:'20022',
+    monthlyRev:[140000,170000,200000,160000,190000,180000],
+    totalRev:1040000, cases:6, sennin:false,
+    note:'木村さくらが紹介。金融業界専門。' },
+];
+
+// ─────────────────────────────────────────
+//  Build tree structure
+// ─────────────────────────────────────────
+const byId = {};
+AGENTS.forEach(a => { byId[a.id] = a; });
+
+// Pre-compute: for each agent, find all descendants
+function getDescendants(id) {
+  const children = AGENTS.filter(a => a.referredBy === id);
+  let all = [...children];
+  children.forEach(c => { all = all.concat(getDescendants(c.id)); });
+  return all;
+}
+
+// Pre-compute network stats for every agent
+const stats = {};
+AGENTS.forEach(a => {
+  const desc = getDescendants(a.id);
+  const netRevTotal = desc.reduce((s,d) => s + d.totalRev, 0);
+  stats[a.id] = {
+    directCount: AGENTS.filter(x => x.referredBy === a.id).length,
+    totalNetwork: desc.length,
+    networkRevTotal: netRevTotal,
+    descendants: desc,
+  };
+});
+
+// Root agents
+const roots = AGENTS.filter(a => a.referredBy === null);
+
+const TYPE_COLOR = { re:'var(--re)', hr:'var(--hr)', pt:'var(--pt)' };
+const TYPE_LABEL = { re:'不動産AG', hr:'人材AG', pt:'パートナー' };
+const RANK_CLASS = { Platinum:'rb-platinum', Gold:'rb-gold', Silver:'rb-silver', Bronze:'rb-bronze' };
+const YEN = v => v >= 1000000 ? (v/1000000).toFixed(1)+'M' : (v/1000).toFixed(0)+'K';
+const YEN_FULL = v => '¥' + v.toLocaleString();
+
+function yen(v) { return '¥' + v.toLocaleString(); }
+
+// ─────────────────────────────────────────
+//  Gate
+// ─────────────────────────────────────────
+const EXEC_PASS = 'EXEC2026'; // demo password
+
+function gateLogin() {
+  const val = document.getElementById('gate-input').value.toUpperCase();
+  if (val === EXEC_PASS) {
+    document.getElementById('gate').style.opacity = '0';
+    document.getElementById('gate').style.transition = 'opacity .4s';
+    setTimeout(() => { document.getElementById('gate').style.display = 'none'; }, 400);
+    document.getElementById('app').style.display = 'flex';
+    initApp();
+  } else {
+    document.getElementById('gate-err').style.display = 'block';
+    document.getElementById('gate-input').style.borderColor = 'var(--danger)';
+    setTimeout(() => { document.getElementById('gate-input').style.borderColor = ''; }, 1500);
+  }
+}
+
+// ─────────────────────────────────────────
+//  Init
+// ─────────────────────────────────────────
+function initApp() {
+  buildKPIs();
+  buildSidebar(roots);
+}
+
+function buildKPIs() {
+  const totalAgents = AGENTS.filter(a => a.type !== 'pt').length;
+  const totalPT     = AGENTS.filter(a => a.type === 'pt').length;
+  const totalRev    = AGENTS.reduce((s,a) => s + a.totalRev, 0);
+  const avgNetwork  = roots.length > 0
+    ? Math.round(AGENTS.length / roots.length * 10)/10 : 0;
+
+  document.getElementById('kpi-bar').innerHTML = [
+    ['TOTAL MEMBERS', AGENTS.length + ' 名', 'text', '全エージェント・パートナー'],
+    ['エージェント', totalAgents + ' 名', 're', 'RE + HR'],
+    ['パートナー', totalPT + ' 名', 'pt', '紹介専門'],
+    ['累計売上', '¥' + (totalRev/1000000).toFixed(1) + 'M', 'gold', '全メンバー合計'],
+    ['起点 / 平均傘下', roots.length + ' 名 / ' + avgNetwork + '名', 'text', '外部応募ルート数'],
+  ].map(([l,v,cls,sub]) =>
+    `<div class="kpi">
+      <div class="kpi-label">${l}</div>
+      <div class="kpi-val ${cls}">${v}</div>
+      <div class="kpi-sub">${sub}</div>
+    </div>`
+  ).join('');
+}
+
+function buildSidebar(list) {
+  document.getElementById('sb-list').innerHTML = list.map(a => {
+    const st = stats[a.id];
+    return `<div class="sb-item" id="sb-${a.id}" onclick="selectRoot('${a.id}')">
+      <div class="sb-dot" style="background:${TYPE_COLOR[a.type]}"></div>
+      <div class="sb-name">${a.name}</div>
+      <div class="sb-id">#${a.id}</div>
+      <div class="sb-net">傘下${st.totalNetwork}</div>
+    </div>`;
+  }).join('');
+}
+
+function filterSidebar(q) {
+  const filtered = roots.filter(a =>
+    a.name.includes(q) || a.id.includes(q) || a.kana.includes(q)
+  );
+  buildSidebar(filtered);
+  // Re-bind active
+  if (selectedRoot) {
+    const el = document.getElementById('sb-'+selectedRoot);
+    if (el) el.classList.add('active');
+  }
+}
+
+// ─────────────────────────────────────────
+//  Tree rendering
+// ─────────────────────────────────────────
+let selectedRoot = null;
+let selectedNode = null;
+const collapsed = new Set();
+
+function selectRoot(id) {
+  selectedRoot = id;
+  selectedNode = null;
+  document.querySelectorAll('.sb-item').forEach(el => el.classList.remove('active'));
+  const sb = document.getElementById('sb-'+id);
+  if (sb) sb.classList.add('active');
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('tree-root').style.display = 'block';
+  renderTree(id);
+  closeDetail();
+}
+
+function renderTree(rootId) {
+  const container = document.getElementById('tree-root');
+  container.innerHTML = renderNode(rootId, 0);
+}
+
+function renderNode(id, depth) {
+  const a = byId[id];
+  if (!a) return '';
+  const children = AGENTS.filter(c => c.referredBy === id);
+  const st = stats[id];
+  const isCollapsed = collapsed.has(id);
+  const typePill = `<span class="node-pill pill-${a.type}">${TYPE_LABEL[a.type]}</span>`;
+  const rankHtml = a.rank ? `<span class="rank-badge ${RANK_CLASS[a.rank] || ''}">${a.rank}</span>` : '';
+
+  const nodeHtml = `
+    <div class="node ${a.type} ${selectedNode===id?'selected':''}" id="node-${id}" onclick="selectNode('${id}')">
+      <div class="node-head">
+        <div>
+          <div class="node-name">${a.name} ${rankHtml}</div>
+          <div class="node-id">#${id} · 参加 ${a.joined}</div>
+        </div>
+        ${typePill}
+      </div>
+      <div class="node-stats">
+        <div class="ns-item">
+          <div class="ns-label">自身の売上</div>
+          <div class="ns-val gold">¥${YEN(a.totalRev)}</div>
+        </div>
+        <div class="ns-item">
+          <div class="ns-label">傘下人数</div>
+          <div class="ns-val">${st.totalNetwork} 名</div>
+        </div>
+        <div class="ns-item">
+          <div class="ns-label">傘下売上合計</div>
+          <div class="ns-val green">¥${YEN(st.networkRevTotal)}</div>
+        </div>
+        <div class="ns-item">
+          <div class="ns-label">直接紹介</div>
+          <div class="ns-val">${st.directCount} 名</div>
+        </div>
+      </div>
+      ${children.length > 0 ? `<div class="node-toggle" onclick="event.stopPropagation();toggleNode('${id}')">${isCollapsed?'+':'-'}</div>` : ''}
+    </div>`;
+
+  if (children.length === 0 || isCollapsed) {
+    return `<div class="tree-node-wrap">${nodeHtml}</div>`;
+  }
+
+  const childrenHtml = children.map((c, i) => {
+    const isLast = i === children.length - 1;
+    return `<div class="tree-child-row">
+      <div style="display:flex;flex-direction:column;align-items:flex-start">
+        <div style="width:32px;border-left:1.5px solid var(--border2);border-bottom:1.5px solid var(--border2);height:26px;border-radius:0 0 0 5px;margin-left:12px;flex-shrink:0"></div>
+      </div>
+      ${renderNode(c.id, depth+1)}
+    </div>`;
+  }).join('');
+
+  return `<div class="tree-node-wrap">
+    ${nodeHtml}
+    <div style="padding-left:28px;margin-top:8px;display:flex;flex-direction:column;gap:10px">
+      ${childrenHtml}
+    </div>
+  </div>`;
+}
+
+function toggleNode(id) {
+  if (collapsed.has(id)) collapsed.delete(id);
+  else collapsed.add(id);
+  renderTree(selectedRoot);
+}
+
+// ─────────────────────────────────────────
+//  Detail panel
+// ─────────────────────────────────────────
+function selectNode(id) {
+  selectedNode = id;
+  // Re-render to update selected state
+  renderTree(selectedRoot);
+  showDetail(id);
+}
+
+function showDetail(id) {
+  const a = byId[id];
+  if (!a) return;
+  const st = stats[id];
+  const referrer = a.referredBy ? byId[a.referredBy] : null;
+  const typePill = `<span class="node-pill pill-${a.type}" style="font-size:10px">${TYPE_LABEL[a.type]}</span>`;
+  const rankHtml = a.rank ? `<span class="rank-badge ${RANK_CLASS[a.rank] || ''}">${a.rank}</span>` : '<span style="color:var(--muted);font-size:11px">—</span>';
+
+  // Monthly rev sparkline (text)
+  const months = ['9月','10月','11月','12月','1月','2月'];
+  const recentRevHtml = a.monthlyRev.map((r,i) =>
+    `<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:11px;border-bottom:1px solid var(--border)">
+      <span style="color:var(--muted)">${months[i]}</span>
+      <span style="font-family:'DM Mono',monospace;color:${r>0?'var(--text)':'var(--muted)'}">${r>0?yen(r):'—'}</span>
+    </div>`
+  ).join('');
+
+  // Descendants list (depth-labeled)
+  function listDesc(parentId, depth) {
+    return AGENTS.filter(x => x.referredBy === parentId).map(x => {
+      const color = TYPE_COLOR[x.type];
+      return `<div class="net-member">
+        <div class="net-dot" style="background:${color}"></div>
+        <div class="nm-name">${x.name}</div>
+        <div class="nm-rev">${x.totalRev>0?'¥'+YEN(x.totalRev):'—'}</div>
+        <div class="depth-badge">L${depth}</div>
+      </div>` + listDesc(x.id, depth+1);
+    }).join('');
+  }
+
+  document.getElementById('detail-body').innerHTML = `
+    <div>
+      <div style="margin-bottom:4px">${typePill} ${rankHtml}</div>
+      <div class="detail-name">${a.name}</div>
+      <div class="detail-meta">#${a.id} · 参加 ${a.joined}${a.sennin?' · 専任宅建士':''}</div>
+      ${a.note ? `<div style="font-size:11px;color:var(--sub);background:var(--bg3);padding:8px 10px;border-radius:7px;line-height:1.8;margin-bottom:4px">${a.note}</div>` : ''}
+    </div>
+
+    <div class="detail-sec">REFERRAL INFO</div>
+    <div class="detail-row">
+      <span class="detail-row-label">紹介者</span>
+      <span class="detail-row-val">${referrer ? referrer.name + ' (#'+referrer.id+')' : '外部応募'}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-row-label">直接紹介</span>
+      <span class="detail-row-val">${st.directCount} 名</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-row-label">傘下総数</span>
+      <span class="detail-row-val">${st.totalNetwork} 名</span>
+    </div>
+
+    <div class="detail-sec">REVENUE</div>
+    <div class="detail-row">
+      <span class="detail-row-label">自身の累計売上</span>
+      <span class="detail-row-val gold">${yen(a.totalRev)}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-row-label">傘下売上合計</span>
+      <span class="detail-row-val green">${yen(st.networkRevTotal)}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-row-label">自身 + 傘下合計</span>
+      <span class="detail-row-val gold">${yen(a.totalRev + st.networkRevTotal)}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-row-label">成約件数</span>
+      <span class="detail-row-val">${a.cases} 件</span>
+    </div>
+
+    <div class="detail-sec">月別売上（直近6ヶ月）</div>
+    <div style="background:var(--bg3);border-radius:8px;padding:10px 12px;margin-bottom:4px">
+      ${recentRevHtml}
+    </div>
+
+    ${st.totalNetwork > 0 ? `
+      <div class="detail-sec">紹介ネットワーク（${st.totalNetwork}名）</div>
+      <div>${listDesc(id, 1)}</div>
+    ` : ''}
+  `;
+}
+
+function closeDetail() {
+  selectedNode = null;
+  document.getElementById('detail-body').innerHTML = `
+    <div class="empty-state">
+      <div class="empty-icon">👆</div>
+      <div class="empty-text">ノードをクリックすると<br>詳細が表示されます</div>
+    </div>`;
+  if (selectedRoot) renderTree(selectedRoot);
+}
+</script>
+</body>
+</html>

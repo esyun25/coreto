@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CORETO 報酬計算シミュレーター v3</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#0b0d12;--card:#13161f;--card2:#191c27;--border:#222638;
+  --gold:#c9a84c;--gold-l:#e8c96a;--gold-dim:#7a5f22;
+  --blue:#3b82f6;--green:#22c55e;--red:#ef4444;--orange:#f59e0b;--purple:#a855f7;
+  --muted:#5a6378;--sub:#8892a4;--text:#dde1ed;
+}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+.header{background:linear-gradient(135deg,#0d1020,#141828);border-bottom:1px solid var(--border);padding:14px 28px;display:flex;align-items:center;justify-content:space-between;}
+.logo{font-family:'DM Mono',monospace;font-size:20px;color:var(--gold);letter-spacing:3px;}
+.logo-sub{font-size:10px;color:var(--muted);margin-top:2px;}
+
+/* タブ */
+.tabs{background:#0e1019;border-bottom:1px solid var(--border);display:flex;padding:0 28px;}
+.tab{padding:12px 20px;font-size:12px;cursor:pointer;border-bottom:2px solid transparent;color:var(--muted);transition:all .2s;letter-spacing:.5px;}
+.tab.active{color:var(--gold);border-bottom-color:var(--gold);}
+
+.auto-banner{background:rgba(34,197,94,.05);border-bottom:1px solid rgba(34,197,94,.15);padding:9px 28px;display:flex;align-items:center;gap:18px;flex-wrap:wrap;}
+.auto-item{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--sub);}
+.auto-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 5px var(--green);animation:blink 2s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.auto-label{color:var(--green);font-weight:700;}
+.div{width:1px;height:18px;background:var(--border);}
+
+.page{display:none;}.page.active{display:block;}
+.wrap{display:grid;grid-template-columns:390px 1fr;gap:18px;padding:20px 28px;max-width:1320px;margin:0 auto;}
+@media(max-width:920px){.wrap{grid-template-columns:1fr;}}
+
+.panel{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:14px;}
+.panel-title{font-size:12px;font-weight:700;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.panel-title::before{content:'';width:3px;height:14px;background:var(--gold);border-radius:2px;}
+
+.s-label{font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;padding:10px 0 6px;border-bottom:1px solid rgba(34,38,56,.8);margin-bottom:10px;margin-top:14px;}
+.s-label:first-child{margin-top:0;}
+.fg{margin-bottom:10px;}
+.fg label{font-size:11px;color:var(--sub);display:block;margin-bottom:4px;}
+.fg input,.fg select{width:100%;background:#0d0f18;border:1px solid var(--border);border-radius:7px;padding:8px 11px;color:var(--text);font-size:13px;font-family:'Noto Sans JP',sans-serif;transition:border-color .15s;}
+.fg input:focus,.fg select:focus{outline:none;border-color:var(--gold);}
+.mono{font-family:'DM Mono',monospace;}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+
+.tg-group{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;}
+.tg{padding:5px 11px;border-radius:6px;font-size:11px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--sub);font-family:'Noto Sans JP',sans-serif;transition:all .15s;}
+.tg.on{background:rgba(201,168,76,.15);border-color:var(--gold-dim);color:var(--gold);font-weight:700;}
+.tg.on.green{background:rgba(34,197,94,.15);border-color:rgba(34,197,94,.4);color:var(--green);}
+.tg.on.orange{background:rgba(245,158,11,.15);border-color:rgba(245,158,11,.4);color:var(--orange);}
+.tg.on.red{background:rgba(239,68,68,.15);border-color:rgba(239,68,68,.4);color:var(--red);}
+
+/* 即日払いボックス */
+.instant-box{background:rgba(245,158,11,.05);border:1px solid rgba(245,158,11,.25);border-radius:9px;padding:14px;margin-top:8px;}
+.instant-title{font-size:11px;font-weight:700;color:var(--orange);margin-bottom:10px;}
+.instant-note{font-size:10px;color:var(--muted);line-height:1.8;margin-top:8px;}
+
+/* 解禁状態 */
+.unlock-status{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:7px;font-size:11px;margin-bottom:8px;}
+.unlock-ok{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:var(--green);}
+.unlock-ng{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);color:var(--red);}
+.unlock-pending{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);color:var(--orange);}
+.unlock-icon{font-size:14px;}
+
+/* 返金ページ専用 */
+.refund-hero{border-radius:12px;padding:22px;margin-bottom:16px;text-align:center;}
+.refund-hero.full{background:linear-gradient(135deg,rgba(239,68,68,.12),rgba(239,68,68,.04));border:1px solid rgba(239,68,68,.3);}
+.refund-hero.half{background:linear-gradient(135deg,rgba(245,158,11,.1),rgba(245,158,11,.03));border:1px solid rgba(245,158,11,.3);}
+.refund-hero.none{background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.25);}
+.refund-amt{font-family:'DM Mono',monospace;font-size:40px;font-weight:500;margin:8px 0;}
+.refund-lbl{font-size:11px;letter-spacing:1px;margin-bottom:4px;}
+.refund-note{font-size:11px;line-height:1.8;margin-top:10px;}
+
+/* 請求書プレビュー */
+.invoice-preview{background:#fff;border-radius:10px;padding:24px;color:#1a1a1a;font-size:12px;line-height:1.8;margin-bottom:14px;}
+.inv-hdr{background:#1a2744;color:#fff;padding:12px 16px;border-radius:6px;display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
+.inv-logo{font-family:'DM Mono',monospace;font-size:16px;color:#c9a84c;}
+.inv-title{font-size:14px;}
+.inv-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #eee;}
+.inv-row:last-child{border-bottom:none;}
+.inv-total{background:#1a2744;color:#fff;padding:10px 14px;border-radius:6px;display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-size:14px;font-weight:700;}
+.inv-total .amt{font-family:'DM Mono',monospace;font-size:18px;color:#c9a84c;}
+.inv-urgent{background:#fff3cd;border:1px solid #f59e0b;border-radius:6px;padding:10px;margin-top:10px;font-size:11px;color:#92400e;}
+
+/* タイムライン */
+.tl{display:flex;flex-direction:column;}
+.tl-row{display:flex;gap:12px;padding-bottom:12px;}
+.tl-row:last-child{padding-bottom:0;}
+.tl-left{display:flex;flex-direction:column;align-items:center;width:16px;flex-shrink:0;}
+.tl-dot{width:10px;height:10px;border-radius:50%;border:2px solid var(--gold);background:var(--bg);margin-top:3px;flex-shrink:0;}
+.tl-dot.g{border-color:var(--green);background:var(--green);}
+.tl-dot.o{border-color:var(--orange);background:var(--orange);}
+.tl-dot.b{border-color:var(--blue);background:var(--blue);}
+.tl-dot.r{border-color:var(--red);background:var(--red);}
+.tl-dot.f{background:var(--gold);}
+.tl-dot.dim{border-color:var(--muted);background:transparent;}
+.tl-line{width:1px;background:var(--border);flex:1;margin-top:2px;}
+.tl-row:last-child .tl-line{display:none;}
+.tl-date{font-family:'DM Mono',monospace;font-size:11px;color:var(--gold);}
+.tl-event{font-size:12px;margin-top:1px;}
+.tl-sub{font-size:10px;color:var(--muted);margin-top:2px;line-height:1.6;}
+
+/* 内訳 */
+.bk{background:var(--card2);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:12px;}
+.bkr{display:flex;justify-content:space-between;align-items:center;padding:9px 13px;border-bottom:1px solid rgba(34,38,56,.5);font-size:12px;}
+.bkr:last-child{border-bottom:none;}
+.bkr.ttl{background:rgba(201,168,76,.06);border-top:1px solid rgba(201,168,76,.2);}
+.bkl{color:var(--sub);display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
+.bkv{font-family:'DM Mono',monospace;font-weight:500;}
+.bkr.red .bkv{color:var(--red);}
+.bkr.grn .bkv{color:var(--green);}
+.bkr.orn .bkv{color:var(--orange);}
+.bkr.ppl .bkv{color:var(--purple);}
+.badge{font-size:9px;padding:1px 5px;border-radius:3px;font-weight:700;}
+.bg{background:rgba(34,197,94,.12);color:var(--green);}
+.br{background:rgba(239,68,68,.12);color:var(--red);}
+.bb{background:rgba(59,130,246,.12);color:var(--blue);}
+.bo{background:rgba(245,158,11,.12);color:var(--orange);}
+.bp{background:rgba(168,85,247,.12);color:var(--purple);}
+.bg2{background:rgba(201,168,76,.12);color:var(--gold);}
+
+.sc{background:var(--card2);border:1px solid var(--border);border-radius:9px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+.pc{background:var(--card2);border:1px solid var(--border);border-radius:9px;padding:13px;}
+.pc.inst{border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.04);}
+.pc.locked{border-color:rgba(239,68,68,.2);background:rgba(239,68,68,.03);}
+.pc.unlocked{border-color:rgba(34,197,94,.3);background:rgba(34,197,94,.04);}
+.pc-num{font-size:10px;color:var(--muted);margin-bottom:3px;}
+.pc-amt{font-family:'DM Mono',monospace;font-size:17px;font-weight:600;}
+.pc-when{font-size:10px;color:var(--muted);margin-top:4px;line-height:1.6;}
+
+.tax-note{background:rgba(239,68,68,.05);border:1px solid rgba(239,68,68,.12);border-radius:8px;padding:11px 13px;margin-bottom:12px;font-size:11px;color:var(--sub);line-height:1.8;}
+.tax-note strong{color:var(--text);}
+
+.alert{border-radius:8px;padding:10px 13px;font-size:11px;line-height:1.7;margin-bottom:12px;}
+.ao{background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.22);color:var(--orange);}
+.ag{background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.22);color:var(--green);}
+.ab{background:rgba(59,130,246,.07);border:1px solid rgba(59,130,246,.22);color:var(--blue);}
+.ar{background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.22);color:var(--red);}
+
+.chk-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px;}
+.chk{background:var(--card2);border:1px solid var(--border);border-radius:7px;padding:8px 11px;display:flex;align-items:center;gap:7px;font-size:11px;color:var(--sub);}
+
+.sec{font-size:10px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;margin-top:2px;}
+.empty{text-align:center;padding:60px 20px;color:var(--muted);font-size:13px;line-height:2.2;}
+
+.btn-calc{width:100%;padding:13px;background:var(--gold);color:#0a0c10;font-size:13px;font-weight:700;border:none;border-radius:8px;cursor:pointer;font-family:'Noto Sans JP',sans-serif;letter-spacing:1px;transition:all .15s;margin-top:8px;}
+.btn-calc:hover{background:var(--gold-l);}
+.btn-calc.red-btn{background:var(--red);color:#fff;}
+.btn-calc.red-btn:hover{background:#dc2626;}
+.btn-rst{width:100%;padding:9px;background:transparent;color:var(--muted);font-size:11px;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-family:'Noto Sans JP',sans-serif;margin-top:6px;}
+.btn-rst:hover{color:var(--text);}
+.hidden{display:none!important;}
+::-webkit-scrollbar{width:5px;}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div><div class="logo">CORETO</div><div class="logo-sub">報酬計算シミュレーター v3</div></div>
+  <div style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;">INTERNAL TOOL</div>
+</div>
+
+<!-- タブ -->
+<div class="tabs">
+  <div class="tab active" onclick="switchTab(0)">🧮 報酬計算</div>
+  <div class="tab" onclick="switchTab(1)">⚡ 人材 即日払い管理</div>
+  <div class="tab" onclick="switchTab(2)">🔴 早期退職・返金請求</div>
+</div>
+
+<!-- 自動処理バナー -->
+<div class="auto-banner">
+  <div class="auto-item"><div class="auto-dot"></div><span class="auto-label">自動：</span>全額入金確認 → 報酬計算即時実行</div>
+  <div class="div"></div>
+  <div class="auto-item"><div class="auto-dot"></div><span class="auto-label">自動：</span>翌月1日 8項目チェック → エラーのみ通知</div>
+  <div class="div"></div>
+  <div class="auto-item"><div class="auto-dot"></div><span class="auto-label">自動：</span>翌月15日 支払明細発行 → 翌月25日 振込実行</div>
+  <div class="div"></div>
+  <div class="auto-item" style="color:var(--orange);">⚡ 本部手動：エラー対応 ＋ 最終承認のみ</div>
+</div>
+
+<!-- ══════════════════════════════
+     TAB 0: 報酬計算
+══════════════════════════════ -->
+<div class="page active" id="page-0">
+<div class="wrap">
+<div>
+<div class="panel">
+  <div class="panel-title">案件情報を入力</div>
+
+  <div class="s-label">事業種別</div>
+  <div class="fg">
+    <div class="tg-group" id="g-biz">
+      <button class="tg on" data-v="re" onclick="tog('g-biz',this)">不動産（賃貸・売買）</button>
+      <button class="tg" data-v="hr" onclick="tog('g-biz',this)">人材紹介</button>
+    </div>
+  </div>
+  <div class="fg" id="sec-sanmei">
+    <label>取引形態</label>
+    <div class="tg-group" id="g-deal">
+      <button class="tg on" data-v="normal" onclick="tog('g-deal',this)">通常仲介</button>
+      <button class="tg" data-v="sanmei" onclick="tog('g-deal',this)">三為</button>
+    </div>
+  </div>
+
+  <div class="s-label">手数料・入金情報</div>
+  <div class="fg"><label>総請求額・手数料（税込）</label><input type="number" id="fee" class="mono" placeholder="例：335000" min="0" oninput="calc()"></div>
+  <div class="fg"><label>全額入金確認日 <span style="color:var(--gold);font-size:10px">★ 報酬計算基準日</span></label><input type="date" id="fullpay" class="mono" oninput="calc()"></div>
+
+  <div class="s-label">即日払い</div>
+  <div class="fg">
+    <div class="tg-group" id="g-inst">
+      <button class="tg on green" data-v="no" onclick="tog('g-inst',this);showInst()">なし</button>
+      <button class="tg orange" data-v="yes" onclick="tog('g-inst',this);showInst()">あり（手数料15%）</button>
+    </div>
+  </div>
+  <div class="hidden instant-box" id="sec-inst">
+    <div class="instant-title">⚡ 即日払い設定</div>
+    <div class="fg"><label>即日払い対象金額</label><input type="number" id="inst-amt" class="mono" placeholder="例：200000" min="0" oninput="calc()"></div>
+    <div class="instant-note">・指定金額の85%（手数料15%差引後）を即日振込<br>・即日払い済み金額は翌25日バッチから<strong style="color:var(--orange)">自動除外</strong>されます<br>・人材紹介の場合は「即日払い管理」タブで解禁日を確認してください</div>
+  </div>
+
+  <div class="s-label">担当エージェント</div>
+  <div class="row2">
+    <div class="fg"><label>氏名</label><input type="text" id="ag-name" placeholder="山田 誠"></div>
+    <div class="fg"><label>ID</label><input type="text" id="ag-id" class="mono" placeholder="AG-012"></div>
+  </div>
+  <div class="fg"><label>ランク</label>
+    <div class="tg-group" id="g-rank">
+      <button class="tg on" data-v="bronze" onclick="tog('g-rank',this)">Bronze</button>
+      <button class="tg" data-v="silver" onclick="tog('g-rank',this)">Silver</button>
+      <button class="tg" data-v="gold" onclick="tog('g-rank',this)">Gold</button>
+      <button class="tg" data-v="platinum" onclick="tog('g-rank',this)">Platinum</button>
+      <button class="tg" data-v="founding" onclick="tog('g-rank',this)">創業</button>
+    </div>
+  </div>
+
+  <div class="s-label">案件タイプ</div>
+  <div class="fg">
+    <div class="tg-group" id="g-ct">
+      <button class="tg on" data-v="self" onclick="tog('g-ct',this);showCt()">自己開拓</button>
+      <button class="tg" data-v="partner" onclick="tog('g-ct',this);showCt()">パートナー紹介</button>
+      <button class="tg" data-v="corp" onclick="tog('g-ct',this);showCt()">創業法人構造</button>
+    </div>
+  </div>
+
+  <div class="hidden" id="sec-partner">
+    <div class="row2">
+      <div class="fg"><label>パートナー名</label><input type="text" id="pt-name" placeholder="佐藤 美咲"></div>
+      <div class="fg"><label>ID</label><input type="text" id="pt-id" class="mono" placeholder="PT-007"></div>
+    </div>
+    <div class="fg"><label>種別</label>
+      <div class="tg-group" id="g-pt">
+        <button class="tg on" data-v="ind" onclick="tog('g-pt',this)">個人</button>
+        <button class="tg" data-v="corp" onclick="tog('g-pt',this)">法人</button>
+      </div>
+    </div>
+    <div class="fg"><label>メンター</label>
+      <div class="tg-group" id="g-mt">
+        <button class="tg on" data-v="no" onclick="tog('g-mt',this);showMt()">なし</button>
+        <button class="tg" data-v="yes" onclick="tog('g-mt',this);showMt()">あり</button>
+      </div>
+    </div>
+    <div class="hidden row2" id="sec-mt">
+      <div class="fg"><label>メンター名</label><input type="text" id="mt-name" placeholder="田中 花子"></div>
+      <div class="fg"><label>ID</label><input type="text" id="mt-id" class="mono" placeholder="AG-003"></div>
+    </div>
+  </div>
+
+  <div class="hidden" id="sec-corp">
+    <div class="row2">
+      <div class="fg"><label>法人パートナー名</label><input type="text" id="lp-name" placeholder="株式会社○○"></div>
+      <div class="fg"><label>法人ID</label><input type="text" id="lp-id" class="mono" placeholder="LP-001"></div>
+    </div>
+  </div>
+
+  <div class="hidden" id="sec-hr">
+    <div class="s-label">人材紹介オプション</div>
+    <div class="row2">
+      <div class="fg"><label>返戻期間</label>
+        <div class="tg-group" id="g-ref">
+          <button class="tg on" data-v="3" onclick="tog('g-ref',this)">3ヶ月</button>
+          <button class="tg" data-v="6" onclick="tog('g-ref',this)">6ヶ月</button>
+        </div>
+      </div>
+      <div class="fg"><label>入社日</label><input type="date" id="join-date" class="mono" oninput="calc()"></div>
+    </div>
+  </div>
+
+  <button class="btn-calc" onclick="calc()">計　算　する</button>
+  <button class="btn-rst" onclick="resetCalc()">リセット</button>
+</div>
+</div>
+
+<div id="result">
+  <div class="panel"><div class="empty">⬅️ 案件情報を入力して「計算する」を押してください</div></div>
+</div>
+</div>
+</div>
+
+<!-- ══════════════════════════════
+     TAB 1: 人材 即日払い管理
+══════════════════════════════ -->
+<div class="page" id="page-1">
+<div class="wrap">
+<div>
+<div class="panel">
+  <div class="panel-title">即日払い解禁日チェック</div>
+
+  <div class="s-label">案件情報</div>
+  <div class="row2">
+    <div class="fg"><label>エージェント名</label><input type="text" id="ip-ag-name" placeholder="山田 誠"></div>
+    <div class="fg"><label>エージェントID</label><input type="text" id="ip-ag-id" class="mono" placeholder="AG-012"></div>
+  </div>
+  <div class="fg"><label>企業名</label><input type="text" id="ip-corp" placeholder="株式会社○○"></div>
+  <div class="fg"><label>人材氏名</label><input type="text" id="ip-person" placeholder="田中 一郎"></div>
+  <div class="fg"><label>総報酬額（税込・エージェント手取り）</label><input type="number" id="ip-reward" class="mono" placeholder="例：450000" oninput="ipCalc()"></div>
+
+  <div class="s-label">日程</div>
+  <div class="fg"><label>全額入金確認日</label><input type="date" id="ip-fullpay" class="mono" oninput="ipCalc()"></div>
+  <div class="fg"><label>入社日</label><input type="date" id="ip-join" class="mono" oninput="ipCalc()"></div>
+
+  <div class="s-label">本日の日付</div>
+  <div class="fg"><label>確認日（デフォルト：今日）</label><input type="date" id="ip-today" class="mono" oninput="ipCalc()"></div>
+
+  <button class="btn-calc" onclick="ipCalc()">解禁日を確認する</button>
+</div>
+</div>
+
+<div id="ip-result">
+  <div class="panel"><div class="empty">⬅️ 情報を入力して「解禁日を確認する」を押してください</div></div>
+</div>
+</div>
+</div>
+
+<!-- ══════════════════════════════
+     TAB 2: 早期退職・返金請求
+══════════════════════════════ -->
+<div class="page" id="page-2">
+<div class="wrap">
+<div>
+<div class="panel">
+  <div class="panel-title">早期退職・返金請求</div>
+
+  <div class="alert ao" style="margin-bottom:14px">📩 企業から退職通知・返金額の連絡が来たら、その内容をそのまま入力してください。返金率の計算は不要です。</div>
+
+  <div class="s-label">案件情報</div>
+  <div class="row2">
+    <div class="fg"><label>エージェント名</label><input type="text" id="rf-ag-name" placeholder="山田 誠"></div>
+    <div class="fg"><label>エージェントID</label><input type="text" id="rf-ag-id" class="mono" placeholder="AG-012"></div>
+  </div>
+  <div class="fg"><label>企業名</label><input type="text" id="rf-corp" placeholder="株式会社○○"></div>
+  <div class="fg"><label>人材氏名</label><input type="text" id="rf-person" placeholder="田中 一郎"></div>
+
+  <div class="s-label">企業からの通知内容（そのまま入力）</div>
+  <div class="row2">
+    <div class="fg"><label>入社日</label><input type="date" id="rf-join" class="mono" oninput="rfCalc()"></div>
+    <div class="fg"><label>退職日（企業通知）</label><input type="date" id="rf-resign" class="mono" oninput="rfCalc()"></div>
+  </div>
+  <div class="fg">
+    <label>企業が請求してくる返金額（税込）<span style="color:var(--red);font-size:10px"> ★ 企業からの通知金額をそのまま入力</span></label>
+    <input type="number" id="rf-refund-from-corp" class="mono" placeholder="例：800000" oninput="rfCalc()">
+  </div>
+  <div class="fg">
+    <label>返金理由・備考（企業からの通知内容）</label>
+    <input type="text" id="rf-reason" placeholder="例：入社2ヶ月で自己都合退職のため全額返金請求" oninput="rfCalc()">
+  </div>
+
+  <div class="s-label">エージェントへの支払い状況</div>
+  <div class="fg"><label>支払い済み報酬の総額（手取り・実際に振り込んだ金額）</label>
+    <input type="number" id="rf-ag-received" class="mono" placeholder="例：336712" oninput="rfCalc()">
+  </div>
+  <div class="fg"><label>支払い状況の詳細</label>
+    <div class="tg-group" id="g-rf-paid">
+      <button class="tg on" data-v="pay1only" onclick="tog('g-rf-paid',this)">第1回のみ支払済み</button>
+      <button class="tg" data-v="both" onclick="tog('g-rf-paid',this)">第1・2回両方支払済み</button>
+      <button class="tg" data-v="instant" onclick="tog('g-rf-paid',this)">即日払いあり</button>
+      <button class="tg" data-v="none" onclick="tog('g-rf-paid',this)">未払い</button>
+    </div>
+  </div>
+  <div class="fg hidden" id="sec-rf-instant-detail">
+    <label>うち即日払いで支払った金額（手取り後の実振込額）</label>
+    <input type="number" id="rf-instant-paid" class="mono" placeholder="例：142000" oninput="rfCalc()">
+  </div>
+
+  <button class="btn-calc red-btn" onclick="rfCalc()">返金請求書を生成</button>
+  <button class="btn-rst" onclick="resetRf()">リセット</button>
+</div>
+</div>
+
+<div id="rf-result">
+  <div class="panel"><div class="empty">⬅️ 退職情報を入力して「返金額・請求書を生成」を押してください</div></div>
+</div>
+</div>
+</div>
+
+<script>
+// ── セッション読み込み（マイページから自動入力） ──
+(function() {
+  const _S = JSON.parse(sessionStorage.getItem('coreto_session') || 'null');
+  if (!_S) return;
+  window.addEventListener('DOMContentLoaded', () => {
+    // マイページへ戻るリンクをタブバーに追加
+    const tabs = document.querySelector('.tabs');
+    if (tabs) {
+      const back = document.createElement('div');
+      back.style.cssText = 'margin-left:auto;padding:0 16px;display:flex;align-items:center;gap:10px';
+      back.innerHTML = '<span style="font-size:10px;color:var(--muted)">👤 '+_S.name+'</span>' +
+        '<button onclick="window.location.href='coreto-hub.html'" style="font-size:10px;padding:4px 10px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;font-family:sans-serif">← マイページ</button>';
+      tabs.appendChild(back);
+    }
+  });
+})();
+
+// ═══════════════════════════════════════
+// 共通
+// ═══════════════════════════════════════
+const RATES={re:{bronze:.65,silver:.675,gold:.70,platinum:.75,founding:.90},hr:{bronze:.45,silver:.475,gold:.50,platinum:.55,founding:.90}};
+const MF={bronze:980,silver:490,gold:0,platinum:0,founding:0};
+const RL={bronze:'ブロンズ',silver:'シルバー',gold:'ゴールド',platinum:'プラチナ',founding:'創業メンバー'};
+
+function switchTab(i){
+  document.querySelectorAll('.tab').forEach((t,j)=>t.classList.toggle('active',i===j));
+  document.querySelectorAll('.page').forEach((p,j)=>p.classList.toggle('active',i===j));
+}
+function tog(gid,btn){document.querySelectorAll('#'+gid+' .tg').forEach(b=>b.classList.remove('on'));btn.classList.add('on');calc();rfCalc();ipCalc();}
+function gv(gid){const a=document.querySelector('#'+gid+' .tg.on');return a?a.dataset.v:null;}
+function sh(id,show){document.getElementById(id).classList.toggle('hidden',!show);}
+
+function showInst(){setTimeout(()=>{sh('sec-inst',gv('g-inst')==='yes');calc();},0);}
+function showCt(){setTimeout(()=>{const ct=gv('g-ct');sh('sec-partner',ct==='partner');sh('sec-corp',ct==='corp');calc();},0);}
+function showMt(){setTimeout(()=>{sh('sec-mt',gv('g-mt')==='yes');calc();},0);}
+document.querySelectorAll('#g-biz .tg').forEach(b=>b.addEventListener('click',()=>setTimeout(()=>{
+  const biz=gv('g-biz');sh('sec-sanmei',biz==='re');sh('sec-hr',biz==='hr');calc();
+},0)));
+document.querySelectorAll('#g-rf-paid .tg').forEach(b=>b.addEventListener('click',()=>setTimeout(()=>{
+  sh('sec-rf-instant-detail',gv('g-rf-paid')==='instant');rfCalc();
+},0)));
+
+// ── 今日の日付をデフォルト設定 ──
+document.getElementById('ip-today').value = new Date().toISOString().split('T')[0];
+
+// ── 計算ユーティリティ ──
+function wh(n){if(n<=0)return 0;const M=1e6;return n<=M?Math.floor(n*.1021):Math.floor(M*.1021+(n-M)*.2042);}
+function incentive(fee,rate){
+  const T1=5e6,T2=1e7;
+  if(fee<=T1)return{r:Math.floor(fee*rate),tiers:[{l:'全額',a:fee,r:rate,v:fee*rate}]};
+  if(fee<=T2){const r1=T1*rate,r2=(fee-T1)*(rate+.05);return{r:Math.floor(r1+r2),tiers:[{l:'0〜500万円',a:T1,r:rate,v:r1},{l:'500万円〜',a:fee-T1,r:rate+.05,v:r2}]};}
+  const r1=T1*rate,r2=(T2-T1)*(rate+.05),r3=(fee-T2)*(rate+.10);
+  return{r:Math.floor(r1+r2+r3),tiers:[{l:'0〜500万円',a:T1,r:rate,v:r1},{l:'500万〜1000万円',a:T2-T1,r:rate+.05,v:r2},{l:'1000万円超',a:fee-T2,r:rate+.10,v:r3}]};
+}
+function yen(n){return'¥'+Math.round(n).toLocaleString();}
+function pct(r){return(r*100).toFixed(1)+'%';}
+function fd(d){if(!d)return'―';const dt=d instanceof Date?d:new Date(d);return dt.getFullYear()+'年'+(dt.getMonth()+1)+'月'+dt.getDate()+'日';}
+function pay25from(d){const r=new Date(d);r.setMonth(r.getMonth()+1);r.setDate(25);return r;}
+function addM(d,m){const r=new Date(d);r.setMonth(r.getMonth()+m);return r;}
+function addD(d,days){const r=new Date(d);r.setDate(r.getDate()+days);return r;}
+function diffMonths(a,b){return(b.getFullYear()-a.getFullYear())*12+(b.getMonth()-a.getMonth())+(b.getDate()<a.getDate()?-1:0);}
+
+// ═══════════════════════════════════════
+// TAB 0: 報酬計算
+// ═══════════════════════════════════════
+function calc(){
+  const fee=parseFloat(document.getElementById('fee').value)||0;
+  if(fee<=0){document.getElementById('result').innerHTML='<div class="panel"><div class="empty">手数料を入力してください</div></div>';return;}
+  const biz=gv('g-biz'),deal=gv('g-deal'),rnk=gv('g-rank'),ct=gv('g-ct');
+  const ptCorp=gv('g-pt')==='corp',mentorOn=gv('g-mt')==='yes';
+  const ref=parseInt(gv('g-ref')||'3');
+  const instOn=gv('g-inst')==='yes';
+  const instInput=parseFloat(document.getElementById('inst-amt').value)||0;
+  const fullpayVal=document.getElementById('fullpay').value;
+  const joinVal=document.getElementById('join-date').value;
+  const agName=document.getElementById('ag-name').value||'エージェント';
+  const agId=document.getElementById('ag-id').value||'―';
+  const ptName=document.getElementById('pt-name').value||'パートナー';
+  const ptId=document.getElementById('pt-id').value||'―';
+  const mtName=document.getElementById('mt-name').value||'メンター';
+  const mtId=document.getElementById('mt-id').value||'―';
+  const lpName=document.getElementById('lp-name').value||'法人パートナー';
+  const lpId=document.getElementById('lp-id').value||'―';
+
+  const mf=MF[rnk]||0;
+  const fullpayD=fullpayVal?new Date(fullpayVal):null;
+  const pay25D=fullpayD?pay25from(fullpayD):null;
+  const payStr=pay25D?fd(pay25D):'（全額入金確認日を入力してください）';
+
+  let html='';
+
+  if(ct==='self'){
+    let base=RATES[biz][rnk];
+    const sanmei=biz==='re'&&deal==='sanmei';
+    if(sanmei)base-=.15;
+    const{r:reward,tiers}=incentive(fee,base);
+    const tax=wh(reward);const net=reward-tax;const payout=net-mf;
+    const inst=mkInst(instOn,instInput,payout);
+    html=`<div class="panel">
+      <div class="panel-title">計算結果 ／ 自己開拓</div>
+      ${sanmei?`<div class="alert ao">⚠️ 三為取引：基本報酬率から補正済み</div>`:''}
+      ${heroBox(payout,agName,agId,RL[rnk],pct(base),payStr)}
+      ${schedTl(fullpayD,pay25D)}
+      <div class="sec">報酬内訳</div>
+      <div class="bk">
+        <div class="bkr"><div class="bkl">総手数料<span class="badge bb">全額入金確認基準</span></div><div class="bkv">${yen(fee)}</div></div>
+        ${tiers.length>1?tiers.map(t=>`<div class="bkr"><div class="bkl">└ ${t.l}（${pct(t.r)}）</div><div class="bkv">${yen(t.v)}</div></div>`).join(''):''}
+        <div class="bkr grn"><div class="bkl">報酬額（税抜）<span class="badge bg">${pct(base)}</span></div><div class="bkv">${yen(reward)}</div></div>
+        <div class="bkr red"><div class="bkl">源泉徴収<span class="badge br">${reward<=1e6?'10.21%':'累進'}</span></div><div class="bkv">−${yen(tax)}</div></div>
+        <div class="bkr"><div class="bkl">手取り</div><div class="bkv">${yen(net)}</div></div>
+        ${mf>0?`<div class="bkr red"><div class="bkl">月会費<span class="badge br">${RL[rnk]}</span></div><div class="bkv">−${yen(mf)}</div></div>`:''}
+        <div class="bkr ttl"><div class="bkl" style="font-weight:700;color:var(--text)">振込額</div><div class="bkv" style="color:var(--gold);font-size:15px">${yen(payout)}</div></div>
+      </div>
+      ${taxNote(reward)}
+      ${instHtml(inst,payout,payStr)}
+      ${biz==='hr'?hrSchedSimple(payout,inst,joinVal,ref):''}
+      ${autoCheck()}
+    </div>`;
+  }
+
+  else if(ct==='partner'){
+    const aR=.25,pR=.25,mR=mentorOn?.05:0,hR=1-aR-pR-mR;
+    const aRew=Math.floor(fee*aR),pRew=Math.floor(fee*pR),mRew=Math.floor(fee*mR),hRew=Math.floor(fee*hR);
+    const aTax=wh(aRew),pTax=ptCorp?0:wh(pRew),mTax=mentorOn?wh(mRew):0;
+    const aNet=aRew-aTax-mf,pNet=pRew-pTax,mNet=mentorOn?mRew-mTax:0;
+    const inst=mkInst(instOn,instInput,aNet);
+    html=`<div class="panel">
+      <div class="panel-title">計算結果 ／ パートナー紹介</div>
+      ${heroBox(aNet,agName,agId,'パートナー案件','AG:25%/PT:25%',payStr)}
+      ${schedTl(fullpayD,pay25D)}
+      <div class="sec">配分</div>
+      ${splitCard(agName,agId,'エージェント',aR,aNet,'var(--blue)',`源泉控除後${mf>0?'・月会費'+yen(mf)+'控除':''}`)}
+      ${splitCard(ptName,ptId,`パートナー（${ptCorp?'法人':'個人'}）`,pR,pNet,'var(--green)',ptCorp?'源泉免除（法人）':'源泉控除後')}
+      ${mentorOn?splitCard(mtName,mtId,'メンター',mR,mNet,'var(--orange)','源泉控除後'):''}
+      <div class="sc"><div><div style="font-size:11px;font-weight:600;color:var(--muted)">CORETO 本部</div></div><div style="text-align:right"><div style="font-size:10px;color:var(--muted)">${pct(hR)}</div><div style="font-family:'DM Mono',monospace;font-size:14px;color:var(--muted)">${yen(hRew)}</div></div></div>
+      ${taxNote(aRew)}
+      ${instHtml(inst,aNet,payStr)}
+      ${biz==='hr'?hrSchedSimple(aNet,inst,joinVal,ref):''}
+      ${autoCheck()}
+    </div>`;
+  }
+
+  else if(ct==='corp'){
+    const cR=.85,iR=.05,hR=.10;
+    const cRew=Math.floor(fee*cR),iRew=Math.floor(fee*iR),hRew=Math.floor(fee*hR);
+    const iTax=wh(iRew),iNet=iRew-iTax-mf;
+    const inst=mkInst(instOn,instInput,iNet);
+    html=`<div class="panel">
+      <div class="panel-title">計算結果 ／ 創業メンバー法人構造</div>
+      <div class="alert ab">💡 活動は個人エージェントとして実施し、支払時のみ法人口座に振込する特別構造です。</div>
+      ${heroBox(cRew+iNet,agName,agId,'法人85%＋個人5%','法人源泉免除',payStr)}
+      ${schedTl(fullpayD,pay25D)}
+      <div class="sec">配分</div>
+      ${splitCard(lpName,lpId,'法人パートナー',cR,cRew,'var(--purple)','源泉免除（法人）')}
+      ${splitCard(agName,agId,'個人',iR,iNet,'var(--blue)',`源泉 −${yen(iTax)}・月会費 −${yen(mf)}`)}
+      <div class="sc"><div><div style="font-size:11px;font-weight:600;color:var(--muted)">CORETO 本部</div></div><div style="text-align:right"><div style="font-size:10px;color:var(--muted)">${pct(hR)}</div><div style="font-family:'DM Mono',monospace;font-size:14px;color:var(--muted)">${yen(hRew)}</div></div></div>
+      <div class="sec">振込先（2口座）</div>
+      <div class="bk">
+        <div class="bkr"><div class="bkl">① 法人口座（${lpName}）<span class="badge bp">源泉不要</span></div><div class="bkv ppl" style="color:var(--purple)">${yen(cRew)}</div></div>
+        <div class="bkr"><div class="bkl">② 個人口座（${agName}）</div><div class="bkv" style="color:var(--blue)">${yen(iNet)}</div></div>
+      </div>
+      ${taxNote(iRew)}
+      ${instHtml(inst,iNet,payStr)}
+      ${autoCheck()}
+    </div>`;
+  }
+
+  document.getElementById('result').innerHTML=html;
+}
+
+// ═══════════════════════════════════════
+// TAB 1: 人材 即日払い解禁日チェック
+// ═══════════════════════════════════════
+function ipCalc(){
+  const reward = parseFloat(document.getElementById('ip-reward').value)||0;
+  const fpVal  = document.getElementById('ip-fullpay').value;
+  const joinVal= document.getElementById('ip-join').value;
+  const todayVal=document.getElementById('ip-today').value;
+  const agName = document.getElementById('ip-ag-name').value||'エージェント';
+  const agId   = document.getElementById('ip-ag-id').value||'―';
+  const corp   = document.getElementById('ip-corp').value||'企業名未入力';
+  const person = document.getElementById('ip-person').value||'人材氏名未入力';
+
+  if(reward<=0||!joinVal){document.getElementById('ip-result').innerHTML='<div class="panel"><div class="empty">報酬額と入社日を入力してください</div></div>';return;}
+
+  const joinD  = new Date(joinVal);
+  const today  = todayVal?new Date(todayVal):new Date();
+  const fpD    = fpVal?new Date(fpVal):null;
+
+  // 解禁日計算
+  // 第1回（50%）：全額入金確認 AND 入社1週間後
+  const unlock1_join = addD(joinD, 7);       // 入社から1週間後
+  const unlock1 = fpD ? (fpD>unlock1_join?fpD:unlock1_join) : unlock1_join; // 両方満たした日
+  // 第2回（残り）：入社1ヶ月後
+  const unlock2 = addM(joinD, 1);
+
+  const pay1 = Math.floor(reward * .5);
+  const pay2 = reward - pay1;
+
+  // 即日払い可能額（本日時点）
+  const can1 = today >= unlock1 && fpD; // 全額入金確認済みが前提
+  const can2 = today >= unlock2;
+
+  const instFee1 = Math.floor(pay1 * .15);
+  const instFee2 = Math.floor(pay2 * .15);
+  const instNet1 = pay1 - instFee1;
+  const instNet2 = pay2 - instFee2;
+
+  // 25日振込予定
+  const batch25_1 = fpD ? pay25from(fpD) : null; // 入金確認翌月25日
+  const batch25_2 = (() => {const d=addM(joinD,1);d.setDate(25);d.setMonth(d.getMonth()+1);return d;})();
+
+  function statusBadge(ok, locked_reason){
+    if(ok) return `<div class="unlock-status unlock-ok"><div class="unlock-icon">✅</div><div><strong>即日払い可能</strong></div></div>`;
+    return `<div class="unlock-status unlock-ng"><div class="unlock-icon">🔒</div><div><strong>まだ解禁前</strong>　${locked_reason}</div></div>`;
+  }
+  function pendingBadge(d){
+    return`<div class="unlock-status unlock-pending"><div class="unlock-icon">⏳</div><div>解禁日：<strong>${fd(d)}</strong></div></div>`;
+  }
+
+  const html=`
+  <div class="panel">
+    <div class="panel-title">即日払い解禁状況</div>
+    <div class="bk" style="margin-bottom:14px">
+      <div class="bkr"><div class="bkl">エージェント</div><div class="bkv">${agName}（${agId}）</div></div>
+      <div class="bkr"><div class="bkl">企業</div><div class="bkv">${corp}</div></div>
+      <div class="bkr"><div class="bkl">人材氏名</div><div class="bkv">${person}</div></div>
+      <div class="bkr"><div class="bkl">入社日</div><div class="bkv">${fd(joinD)}</div></div>
+      <div class="bkr"><div class="bkl">全額入金確認日</div><div class="bkv">${fpD?fd(fpD):'<span style="color:var(--red)">未確認</span>'}</div></div>
+      <div class="bkr"><div class="bkl">確認日（本日）</div><div class="bkv">${fd(today)}</div></div>
+    </div>
+
+    <div class="sec">第1回（50%）= ${yen(pay1)}</div>
+    <div style="font-size:10px;color:var(--muted);margin-bottom:8px">解禁条件：全額入金確認 <strong style="color:var(--text)">かつ</strong> 入社から1週間後（${fd(unlock1_join)}）を過ぎていること</div>
+    ${!fpD
+      ? `<div class="unlock-status unlock-ng"><div class="unlock-icon">🔒</div><div><strong>未解禁</strong>　全額入金が確認されていません</div></div>`
+      : can1
+        ? statusBadge(true)
+        : pendingBadge(unlock1)
+    }
+    <div class="two" style="margin-top:10px">
+      <div class="pc ${can1?'unlocked':'locked'}">
+        <div class="pc-num">⚡ 即日払い（手数料15%差引後）</div>
+        <div class="pc-amt" style="color:${can1?'var(--orange)':'var(--muted)'}">${can1?yen(instNet1):'―'}</div>
+        <div class="pc-when">元金：${yen(pay1)}<br>手数料：−${yen(instFee1)}</div>
+      </div>
+      <div class="pc">
+        <div class="pc-num">翌25日バッチ払い（解禁前は通常払い）</div>
+        <div class="pc-amt">${yen(pay1)}</div>
+        <div class="pc-when">通常振込：${batch25_1?fd(batch25_1):'―'}</div>
+      </div>
+    </div>
+
+    <div class="sec">第2回（残り50%）= ${yen(pay2)}</div>
+    <div style="font-size:10px;color:var(--muted);margin-bottom:8px">解禁条件：入社から<strong style="color:var(--text)">1ヶ月後</strong>（${fd(unlock2)}）を過ぎていること</div>
+    ${can2 ? statusBadge(true) : pendingBadge(unlock2)}
+    <div class="two" style="margin-top:10px">
+      <div class="pc ${can2?'unlocked':'locked'}">
+        <div class="pc-num">⚡ 即日払い（手数料15%差引後）</div>
+        <div class="pc-amt" style="color:${can2?'var(--orange)':'var(--muted)'}">${can2?yen(instNet2):'―'}</div>
+        <div class="pc-when">元金：${yen(pay2)}<br>手数料：−${yen(instFee2)}</div>
+      </div>
+      <div class="pc">
+        <div class="pc-num">翌25日バッチ払い（通常）</div>
+        <div class="pc-amt">${yen(pay2)}</div>
+        <div class="pc-when">通常振込：${fd(batch25_2)}</div>
+      </div>
+    </div>
+
+    <div class="sec" style="margin-top:4px">注意事項</div>
+    <div class="alert ao">
+      ・即日払いはエージェントの申請が必要です<br>
+      ・即日払いを実行した金額は翌25日バッチから<strong>自動除外</strong>されます<br>
+      ・早期退職が発生した場合、即日払いした金額も含めて返金請求の対象となります
+    </div>
+  </div>`;
+
+  document.getElementById('ip-result').innerHTML=html;
+}
+
+// ═══════════════════════════════════════
+// TAB 2: 早期退職・返金請求
+// ═══════════════════════════════════════
+function rfCalc(){
+  const refundFromCorp = parseFloat(document.getElementById('rf-refund-from-corp').value)||0;
+  const agReceived     = parseFloat(document.getElementById('rf-ag-received').value)||0;
+  const joinVal        = document.getElementById('rf-join').value;
+  const resignVal      = document.getElementById('rf-resign').value;
+  const reason         = document.getElementById('rf-reason').value||'（企業からの通知内容を入力してください）';
+  const paidStatus     = gv('g-rf-paid');
+  const instPaid       = parseFloat(document.getElementById('rf-instant-paid').value)||0;
+  const agName         = document.getElementById('rf-ag-name').value||'エージェント';
+  const agId           = document.getElementById('rf-ag-id').value||'―';
+  const corp           = document.getElementById('rf-corp').value||'企業名';
+  const person         = document.getElementById('rf-person').value||'人材氏名';
+
+  if(refundFromCorp<=0||!resignVal){
+    document.getElementById('rf-result').innerHTML='<div class="panel"><div class="empty">企業からの返金額と退職日を入力してください</div></div>';return;
+  }
+
+  const resignD = new Date(resignVal);
+  const joinD   = joinVal ? new Date(joinVal) : null;
+  const months  = joinD ? diffMonths(joinD, resignD) : null;
+
+  // 企業が要求する返金額 = エージェントへの請求額（全額回収）
+  const claimToAgent = refundFromCorp;
+
+  const today    = new Date();
+  const deadline = addD(today, 14);
+  const dueStr   = fd(deadline);
+  const unpaid   = paidStatus === 'none';
+
+  let instNote = '';
+  if(paidStatus==='instant' && instPaid>0){
+    instNote = `うち即日払い ${yen(instPaid)} を含む`;
+  }
+
+  const html=`<div class="panel">
+    <div class="panel-title">返金請求書</div>
+
+    <div class="refund-hero full">
+      <div class="refund-lbl" style="color:var(--red)">企業への返金額（通知ベース）</div>
+      <div class="refund-amt" style="color:var(--red)">${yen(refundFromCorp)}</div>
+      <div class="refund-note" style="color:var(--sub)">
+        ${joinD ? `入社日：${fd(joinD)}　→　退職日：${fd(resignD)}　在籍 ${months}ヶ月` : `退職日：${fd(resignD)}`}<br>
+        ${reason}
+      </div>
+    </div>
+
+    <div class="sec">返金内訳</div>
+    <div class="bk">
+      <div class="bkr"><div class="bkl">企業から通知された返金額<span class="badge br">通知ベース</span></div><div class="bkv" style="color:var(--red)">${yen(refundFromCorp)}</div></div>
+      <div class="bkr"><div class="bkl">エージェント支払済み報酬</div><div class="bkv">${agReceived>0?yen(agReceived)+(instNote?'　（'+instNote+'）':''):'未払い'}</div></div>
+      ${unpaid
+        ? `<div class="bkr grn"><div class="bkl">エージェントへの対応<span class="badge bg">振込停止で対応可</span></div><div class="bkv" style="color:var(--green)">振込停止</div></div>`
+        : `<div class="bkr red"><div class="bkl">エージェントへの請求額<span class="badge br">企業通知額を全額回収</span></div><div class="bkv">${yen(claimToAgent)}</div></div>`
+      }
+    </div>
+
+    ${unpaid ? `<div class="alert ag">✅ エージェントへの報酬は未払いのため、<strong>振込を停止</strong>するだけで対応できます。企業への返金 ${yen(refundFromCorp)} は別途手配してください。</div>` : ''}
+
+    <div class="sec">エージェントへの返金請求書</div>
+    <div class="invoice-preview">
+      <div class="inv-hdr">
+        <div class="inv-logo">CORETO</div>
+        <div class="inv-title">返金請求書</div>
+      </div>
+      <div style="margin-bottom:12px;font-size:11px;color:#555">
+        発行日：${fd(today)}<br>
+        返金期限：<strong style="color:#c00">${dueStr}</strong>
+      </div>
+      <strong>${agName}（${agId}）様</strong>
+      <p style="margin:10px 0;font-size:11px;line-height:1.8;color:#444">
+        下記の通り、早期退職に伴う返金請求をいたします。<br>
+        期日までにご返金いただきますようお願い申し上げます。
+      </p>
+      <div class="inv-row"><span>紹介先企業</span><span>${corp}</span></div>
+      <div class="inv-row"><span>紹介人材</span><span>${person}</span></div>
+      ${joinD ? `<div class="inv-row"><span>入社日</span><span>${fd(joinD)}</span></div>` : ''}
+      <div class="inv-row"><span>退職日（企業通知）</span><span>${fd(resignD)}</span></div>
+      ${months !== null ? `<div class="inv-row"><span>在籍期間</span><span>${months}ヶ月</span></div>` : ''}
+      <div class="inv-row"><span>返金理由</span><span>${reason}</span></div>
+      <div class="inv-row"><span>企業への返金額</span><span style="color:#c00;font-weight:700">${yen(refundFromCorp)}</span></div>
+      ${agReceived>0 ? `<div class="inv-row"><span>受取済み報酬</span><span>${yen(agReceived)}</span></div>` : ''}
+      <div class="inv-total">
+        <span>ご返金いただく金額</span>
+        <span class="amt">${yen(claimToAgent)}</span>
+      </div>
+      <div class="inv-urgent">
+        ⚠️ <strong>返金期限：${dueStr}</strong><br>
+        振込先：株式会社CORETO　GMOあおぞらネット銀行<br>
+        期日を過ぎた場合は、別途遅延損害金が発生する場合があります。
+      </div>
+    </div>
+
+    <div class="sec">早期退職後の処理フロー</div>
+    <div class="tl">
+      <div class="tl-row"><div class="tl-left"><div class="tl-dot r"></div><div class="tl-line"></div></div><div><div class="tl-date">${fd(resignD)}</div><div class="tl-event">企業から退職通知・返金額の連絡受領</div><div class="tl-sub">通知内容をKintoneに登録 → 案件ステータスを「早期退職」に更新</div></div></div>
+      <div class="tl-row"><div class="tl-left"><div class="tl-dot f"></div><div class="tl-line"></div></div><div><div class="tl-date">即時</div><div class="tl-event">翌月25日バッチを自動保留</div><div class="tl-sub">エージェントへの振込を自動ストップ → 本部Slackに通知</div></div></div>
+      <div class="tl-row"><div class="tl-left"><div class="tl-dot o"></div><div class="tl-line"></div></div><div><div class="tl-date">${dueStr}まで</div><div class="tl-event">エージェントへ返金請求書送付</div><div class="tl-sub">本請求書をメールで送付 → ${yen(claimToAgent)} の返金を請求</div></div></div>
+      <div class="tl-row"><div class="tl-left"><div class="tl-dot b"></div><div class="tl-line"></div></div><div><div class="tl-date">エージェント返金確認後</div><div class="tl-event">企業へ返金実行</div><div class="tl-sub">企業に ${yen(refundFromCorp)} を返金</div></div></div>
+      <div class="tl-row"><div class="tl-left"><div class="tl-dot g"></div></div><div><div class="tl-date">完了</div><div class="tl-event">案件クローズ</div><div class="tl-sub">Kintoneステータスを「返金完了」に更新</div></div></div>
+    </div>
+  </div>`;
+
+  document.getElementById('rf-result').innerHTML=html;
+}
+
+// ══ 共通HTMLパーツ ══
+function heroBox(payout,agName,agId,rnkLabel,rateLabel,payStr){
+  return`<div style="background:linear-gradient(135deg,rgba(201,168,76,.08),rgba(201,168,76,.02));border:1px solid rgba(201,168,76,.25);border-radius:12px;padding:20px;margin-bottom:14px">
+    <div style="font-size:10px;color:var(--muted);margin-bottom:5px">振込額（手取り）</div>
+    <div style="font-family:'DM Mono',monospace;font-size:36px;font-weight:500"><span style="font-size:22px;color:var(--gold)">¥</span>${Math.round(payout).toLocaleString()}</div>
+    <div style="font-size:11px;color:var(--sub);margin-top:8px;line-height:1.8">${agName}（${agId}）　${rnkLabel}　報酬率 ${rateLabel}<br><span style="color:var(--gold)">★ 基準日：全額入金確認日　翌月25日振込：${payStr}</span></div>
+  </div>`;
+}
+function mkInst(on,input,payout){if(!on||input<=0)return null;const b=Math.min(input,payout);const f=Math.floor(b*.15);return{base:b,fee:f,net:b-f,remain:payout-b};}
+function instHtml(inst,payout,payStr){
+  if(!inst)return'';
+  return`<div class="sec">即日払い内訳</div>
+  <div class="alert ao">⚡ 即日払い済み金額は翌25日バッチから<strong>自動除外</strong>されます</div>
+  <div class="two">
+    <div class="pc inst"><div class="pc-num">⚡ 即日振込（本日）</div><div class="pc-amt" style="color:var(--orange)">${yen(inst.net)}</div><div class="pc-when">元金：${yen(inst.base)}<br>手数料15%：−${yen(inst.fee)}</div></div>
+    <div class="pc"><div class="pc-num">翌25日バッチ払い（残額）</div><div class="pc-amt">${yen(inst.remain)}</div><div class="pc-when">振込予定：${payStr}</div></div>
+  </div>`;
+}
+function hrSchedSimple(payout,inst,joinVal,ref){
+  const p1=Math.floor(payout*.5),p2=payout-p1;
+  let d1='―',d2='―';
+  if(joinVal){const j=new Date(joinVal);const m1=addM(j,1);m1.setDate(25);d1=fd(m1);const m2=addM(j,ref);m2.setDate(25);d2=fd(m2);}
+  let a1=p1,a2=p2;
+  if(inst){a1=Math.max(0,p1-inst.base);a2=p2-Math.max(0,inst.base-p1);}
+  return`<div class="sec">人材 2回払いスケジュール</div>
+  <div class="two">
+    <div class="pc"><div class="pc-num">第1回（入社翌月25日）</div><div class="pc-amt">${yen(a1)}</div><div class="pc-when">${d1}<br>⚡即日払い解禁：入金確認後かつ入社1週間後</div></div>
+    <div class="pc"><div class="pc-num">第2回（返戻${ref}ヶ月後翌月25日）</div><div class="pc-amt">${yen(a2)}</div><div class="pc-when">${d2}<br>⚡即日払い解禁：入社1ヶ月後</div></div>
+  </div>`;
+}
+function schedTl(fpD,p25D){
+  if(!fpD)return`<div class="alert ao">📅 全額入金確認日を入力すると振込スケジュールが表示されます</div>`;
+  const chkD=addM(fpD,1);chkD.setDate(1);
+  const meiD=addM(fpD,1);meiD.setDate(15);
+  return`<div class="sec">支払いスケジュール（${fd(fpD)} 基準）</div>
+  <div class="tl">
+    <div class="tl-row"><div class="tl-left"><div class="tl-dot g"></div><div class="tl-line"></div></div><div><div class="tl-date">${fd(fpD)}</div><div class="tl-event">✅ 全額入金確認 → 報酬計算自動実行</div></div></div>
+    <div class="tl-row"><div class="tl-left"><div class="tl-dot f"></div><div class="tl-line"></div></div><div><div class="tl-date">月末</div><div class="tl-event">月末締め（自動）</div></div></div>
+    <div class="tl-row"><div class="tl-left"><div class="tl-dot b"></div><div class="tl-line"></div></div><div><div class="tl-date">${fd(chkD)}</div><div class="tl-event">8項目自動チェック → エラーのみ通知</div></div></div>
+    <div class="tl-row"><div class="tl-left"><div class="tl-dot f"></div><div class="tl-line"></div></div><div><div class="tl-date">${fd(meiD)}</div><div class="tl-event">支払明細書 自動発行・送付</div></div></div>
+    <div class="tl-row"><div class="tl-left"><div class="tl-dot o"></div></div><div><div class="tl-date" style="color:var(--orange)">${fd(p25D)}</div><div class="tl-event" style="font-weight:700">🏦 銀行振込実行（自動）</div></div></div>
+  </div>`;
+}
+function taxNote(r){
+  const M=1e6;
+  if(r<=M)return`<div class="tax-note">源泉徴収：<strong>${yen(r)} × 10.21% = ${yen(Math.floor(r*.1021))}</strong>（100万円以下）</div>`;
+  const t1=Math.floor(M*.1021),t2=Math.floor((r-M)*.2042);
+  return`<div class="tax-note">源泉徴収（累進）：<strong>100万円以下 ${yen(t1)}</strong> ＋ <strong>超過分 ${yen(r-M)} × 20.42% = ${yen(t2)}</strong>　合計：<strong>${yen(t1+t2)}</strong></div>`;
+}
+function splitCard(name,id,role,rate,net,color,note){
+  return`<div class="sc"><div><div style="font-size:11px;font-weight:600;color:${color}">${name}</div><div style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace">${id} / ${role}</div></div><div style="text-align:right"><div style="font-size:10px;color:var(--muted)">${pct(rate)} / ${note}</div><div style="font-family:'DM Mono',monospace;font-size:15px;font-weight:600;color:${color}">${yen(net)}</div></div></div>`;
+}
+function autoCheck(){
+  const items=[['💰','入金確認'],['📊','報酬率の妥当性'],['⚠️','報酬額の異常値'],['🧮','源泉徴収の正確性'],['🔍','重複成約チェック'],['📅','成約日の妥当性'],['📈','異常な成約数'],['🏦','振込先口座確認']];
+  return`<div class="sec" style="margin-top:4px">翌月1日 承認前自動チェック（8項目）</div>
+  <div class="alert ag">✅ 全項目パス → 本部通知なし・自動進行　　❌ エラー時のみSlack通知 → 手動対応</div>
+  <div class="chk-grid">${items.map(([i,t])=>`<div class="chk"><span>${i}</span>${t}</div>`).join('')}</div>`;
+}
+
+function resetCalc(){
+  ['fee','fullpay','inst-amt','ag-name','ag-id','pt-name','pt-id','mt-name','mt-id','lp-name','lp-id','join-date'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['g-biz','g-deal','g-rank','g-ct','g-pt','g-mt','g-ref','g-inst'].forEach(g=>{const bs=document.querySelectorAll('#'+g+' .tg');bs.forEach(b=>b.classList.remove('on'));if(bs[0])bs[0].classList.add('on');});
+  ['sec-partner','sec-corp','sec-mt','sec-inst','sec-hr'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.add('hidden');});
+  document.getElementById('sec-sanmei').classList.remove('hidden');
+  document.getElementById('result').innerHTML='<div class="panel"><div class="empty">⬅️ 案件情報を入力してください</div></div>';
+}
+function resetRf(){
+  ['rf-refund-from-corp','rf-ag-received','rf-join','rf-resign','rf-ag-name','rf-ag-id','rf-corp','rf-person','rf-reason','rf-instant-paid'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['g-rf-paid'].forEach(g=>{const bs=document.querySelectorAll('#'+g+' .tg');bs.forEach(b=>b.classList.remove('on'));if(bs[0])bs[0].classList.add('on');});
+  sh('sec-rf-instant-detail',false);
+  document.getElementById('rf-result').innerHTML='<div class="panel"><div class="empty">退職情報を入力してください</div></div>';
+}
+</script>
+</body>
+</html>

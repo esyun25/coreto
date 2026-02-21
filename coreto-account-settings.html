@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CORETO — アカウント設定</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090f;--card:#0f1119;--card2:#141720;--border:#1e2235;--border2:#252a3d;
+  --gold:#c9a84c;--gold-dim:#7a5f22;--gold-bg:rgba(201,168,76,.07);
+  --blue:#4f9cf9;--green:#34d399;--red:#f87171;--orange:#fb923c;--purple:#a78bfa;
+  --muted:#4a5270;--sub:#7a849e;--text:#e2e6f3;
+}
+html,body{height:100%;font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text)}
+/* ── Header ── */
+.hdr{height:54px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 26px;border-bottom:1px solid var(--border);background:rgba(7,9,15,.95);
+  position:sticky;top:0;z-index:100}
+.logo{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:var(--gold);letter-spacing:3px}
+/* ── Layout ── */
+.layout{display:flex;height:calc(100vh - 54px)}
+/* ── Sidebar ── */
+.sidebar{width:220px;flex-shrink:0;border-right:1px solid var(--border);
+  background:var(--card);overflow-y:auto;padding:16px 0}
+.sb-section{font-size:8px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;
+  padding:14px 18px 6px}
+.sb-item{display:flex;align-items:center;gap:10px;padding:9px 18px;font-size:12px;
+  cursor:pointer;color:var(--sub);transition:.15s;border-left:2px solid transparent}
+.sb-item:hover{color:var(--text);background:rgba(255,255,255,.025)}
+.sb-item.on{color:var(--blue);background:rgba(79,156,249,.07);border-left-color:var(--blue)}
+.sb-icon{font-size:16px;width:20px;text-align:center}
+/* ── Main ── */
+.main{flex:1;overflow-y:auto;padding:28px 32px 80px}
+.page-title{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;margin-bottom:4px}
+.page-sub{font-size:11px;color:var(--sub);margin-bottom:24px}
+/* ── Cards ── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;margin-bottom:16px}
+.ch{padding:13px 20px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between}
+.ch-t{font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;
+  display:flex;align-items:center;gap:8px}
+.ch-t::before{content:'';width:3px;height:11px;border-radius:2px;background:var(--gold)}
+.cb{padding:20px}
+/* ── Fields ── */
+.field{margin-bottom:14px}
+.field label{display:block;font-size:10px;color:var(--sub);margin-bottom:5px;font-weight:600;
+  display:flex;align-items:center;gap:6px}
+.field input,.field select,.field textarea{
+  width:100%;background:#090b13;border:1px solid var(--border2);border-radius:9px;
+  padding:10px 14px;color:var(--text);font-size:12px;
+  font-family:'Noto Sans JP',sans-serif;outline:none;transition:.15s}
+.field input:focus,.field select:focus{border-color:var(--blue)}
+.field input:read-only{color:var(--muted);cursor:not-allowed;background:rgba(255,255,255,.02)}
+.fhint{font-size:10px;color:var(--muted);margin-top:5px;line-height:1.7}
+.req{color:var(--red)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+/* ── Buttons ── */
+.btn{padding:9px 18px;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;
+  font-family:'Noto Sans JP',sans-serif;transition:.15s;border:none;
+  display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn-blue{background:linear-gradient(135deg,var(--blue),#3070c0);color:#fff}
+.btn-blue:hover{filter:brightness(1.1)}
+.btn-gold{background:linear-gradient(135deg,var(--gold),#a8742a);color:#0a0c10}
+.btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--sub)}
+.btn-ghost:hover{color:var(--text);border-color:var(--sub)}
+.btn-danger{background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.3);color:var(--red)}
+.btn-ok{background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);color:var(--green)}
+.btn-sm{padding:5px 12px;font-size:10px;border-radius:7px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+/* ── Pills ── */
+.pill{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;
+  border-radius:6px;font-size:9px;font-weight:700;white-space:nowrap}
+.pg{background:rgba(52,211,153,.13);color:var(--green);border:1px solid rgba(52,211,153,.3)}
+.pb{background:rgba(79,156,249,.12);color:var(--blue);border:1px solid rgba(79,156,249,.25)}
+.po{background:rgba(251,146,60,.12);color:var(--orange);border:1px solid rgba(251,146,60,.3)}
+.pr{background:rgba(248,113,113,.12);color:var(--red);border:1px solid rgba(248,113,113,.3)}
+.pm{background:rgba(74,82,112,.15);color:var(--sub);border:1px solid var(--border2)}
+.pgd{background:rgba(201,168,76,.13);color:var(--gold);border:1px solid var(--gold-dim)}
+/* ── Alert ── */
+.al{display:flex;align-items:flex-start;gap:10px;padding:12px 16px;border-radius:10px;
+  margin-bottom:14px;font-size:12px;line-height:1.7}
+.al-info{background:rgba(79,156,249,.07);border:1px solid rgba(79,156,249,.2)}
+.al-warn{background:rgba(251,146,60,.07);border:1px solid rgba(251,146,60,.22)}
+.al-ok{background:rgba(52,211,153,.07);border:1px solid rgba(52,211,153,.2)}
+.al-lock{background:rgba(74,82,112,.1);border:1px solid var(--border2)}
+/* ── 認証コード入力 ── */
+.otp-wrap{display:flex;gap:8px;justify-content:center;margin:20px 0}
+.otp-cell{width:50px;height:58px;background:#090b13;border:2px solid var(--border2);
+  border-radius:10px;font-size:24px;font-weight:700;text-align:center;color:var(--text);
+  font-family:'DM Mono',monospace;outline:none;transition:.15s}
+.otp-cell:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(79,156,249,.15)}
+.otp-cell.ok{border-color:var(--green);background:rgba(52,211,153,.05)}
+.otp-cell.err{border-color:var(--red);animation:shake .3s ease}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+/* ── Password strength ── */
+.pw-strength{height:3px;border-radius:2px;margin-top:6px;transition:.3s;background:var(--border2)}
+.pws-1{background:var(--red);width:25%}
+.pws-2{background:var(--orange);width:50%}
+.pws-3{background:var(--gold);width:75%}
+.pws-4{background:var(--green);width:100%}
+.pw-rules{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:8px}
+.pw-rule{font-size:10px;color:var(--muted);display:flex;align-items:center;gap:5px}
+.pw-rule.ok{color:var(--green)}
+.pw-rule.ok::before{content:'✓'}
+.pw-rule:not(.ok)::before{content:'○'}
+/* ── Name badge ── */
+.name-row{display:flex;align-items:center;gap:12px;padding:14px 16px;
+  background:var(--card2);border:1px solid var(--border);border-radius:11px;margin-bottom:12px}
+.name-main{font-size:16px;font-weight:700}
+.name-kana{font-family:'DM Mono',monospace;font-size:11px;color:var(--sub);margin-top:2px}
+.name-badge-alt{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px}
+/* ── Modal overlay ── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.78);backdrop-filter:blur(5px);
+  z-index:400;display:none;align-items:center;justify-content:center}
+.overlay.show{display:flex}
+.modal{background:var(--card);border:1px solid var(--border2);border-radius:16px;
+  width:480px;max-height:90vh;overflow-y:auto}
+.mhdr{display:flex;align-items:center;justify-content:space-between;
+  padding:16px 22px;border-bottom:1px solid var(--border);
+  position:sticky;top:0;background:var(--card);z-index:1}
+.mtitle{font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:var(--gold)}
+.mclose{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1}
+.mbody{padding:20px 22px}
+.mfoot{padding:14px 22px;border-top:1px solid var(--border);
+  display:flex;gap:8px;justify-content:flex-end;
+  position:sticky;bottom:0;background:var(--card)}
+/* ── 2FA screen (full modal) ── */
+.tfa-wrap{text-align:center;padding:10px 0}
+.tfa-icon{width:64px;height:64px;border-radius:50%;margin:0 auto 16px;
+  background:rgba(79,156,249,.1);border:2px solid rgba(79,156,249,.3);
+  display:flex;align-items:center;justify-content:center;font-size:28px;position:relative}
+.tfa-pulse{position:absolute;inset:-6px;border-radius:50%;
+  border:1px solid rgba(79,156,249,.25);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:.6}50%{transform:scale(1.12);opacity:.2}}
+.tfa-timer{font-size:11px;color:var(--muted);margin:8px 0 16px}
+.tfa-timer span{font-family:'DM Mono',monospace;color:var(--orange);font-weight:700}
+/* ── History table ── */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{padding:8px 14px;font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.5px;
+  text-transform:uppercase;border-bottom:1px solid var(--border);background:var(--card2);text-align:left}
+.tbl td{padding:10px 14px;border-bottom:1px solid rgba(30,34,53,.5);font-size:12px;vertical-align:middle}
+.tbl tr:last-child td{border:none}
+.mono{font-family:'DM Mono',monospace}
+/* ── Step flow ── */
+.step-flow{display:flex;align-items:center;gap:0;margin-bottom:20px}
+.sf-step{flex:1;text-align:center;position:relative}
+.sf-step:not(:last-child)::after{content:'→';position:absolute;right:-10px;top:50%;
+  transform:translateY(-50%);color:var(--muted);font-size:14px;z-index:1}
+.sf-dot{width:32px;height:32px;border-radius:50%;margin:0 auto 6px;
+  display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;
+  border:2px solid var(--border2);background:var(--bg);font-family:'DM Mono',monospace}
+.sf-step.on .sf-dot{background:var(--blue);border-color:var(--blue);color:#fff}
+.sf-step.done .sf-dot{background:var(--green);border-color:var(--green);color:#0a0c10}
+.sf-label{font-size:9px;color:var(--muted);line-height:1.4}
+.sf-step.on .sf-label{color:var(--blue);font-weight:700}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+</style>
+</head>
+<body>
+<div class="hdr">
+  <div style="display:flex;align-items:center;gap:12px">
+    <div class="logo">CORETO</div>
+    <div style="width:1px;height:18px;background:var(--border2)"></div>
+    <span style="font-size:10px;color:var(--muted);letter-spacing:1px">アカウント設定</span>
+  </div>
+  <div style="display:flex;gap:10px;align-items:center">
+    <span class="pill pm" id="user-pill">山田 誠 / 10012</span>
+    <button class="btn btn-ghost btn-sm" onclick="window.location.href='coreto-hub.html'">🏠 ホーム</button>
+  </div>
+</div>
+
+<div class="layout">
+  <!-- ─── Sidebar ─── -->
+  <div class="sidebar">
+    <div class="sb-section">セキュリティ</div>
+    <div class="sb-item on" id="sb-pw"   onclick="showPage('pw')"><span class="sb-icon">🔑</span>パスワード変更</div>
+    <div class="sb-item" id="sb-2fa"  onclick="showPage('2fa')"><span class="sb-icon">🛡</span>2FA / 認証設定</div>
+
+    <div class="sb-section" style="margin-top:8px">連絡先情報</div>
+    <div class="sb-item" id="sb-contact" onclick="showPage('contact')"><span class="sb-icon">📱</span>電話・メール・住所</div>
+    <div class="sb-item" id="sb-line"    onclick="showPage('line')"><span class="sb-icon">💬</span>LINEアカウント</div>
+
+    <div class="sb-section" style="margin-top:8px">氏名・表示</div>
+    <div class="sb-item" id="sb-name"    onclick="showPage('name')"><span class="sb-icon">👤</span>氏名・旧姓設定</div>
+  </div>
+
+  <!-- ─── Main ─── -->
+  <div class="main" id="main">
+    <!-- ページごとに表示 -->
+  </div>
+</div>
+
+<!-- ════════ 本人確認コードモーダル ════════ -->
+<div class="overlay" id="otp-modal">
+<div class="modal" style="width:420px">
+  <div class="mhdr">
+    <div class="mtitle" id="otp-modal-title">2段階認証</div>
+    <button class="mclose" onclick="closeOtpModal()">✕</button>
+  </div>
+  <div class="mbody">
+    <div class="tfa-wrap">
+      <div class="tfa-icon">
+        <div class="tfa-pulse"></div>
+        <span id="otp-icon">💬</span>
+      </div>
+      <div style="font-size:13px;font-weight:700;margin-bottom:6px" id="otp-title2">本人確認</div>
+      <div style="font-size:11px;color:var(--sub);line-height:1.8;margin-bottom:0" id="otp-desc">
+        LINEに6桁のワンタイムパスワードを送信しました
+      </div>
+      <div class="otp-wrap">
+        <input class="otp-cell" maxlength="1" type="text" inputmode="numeric"
+               oninput="otpInput(this,0)" onkeydown="otpKey(event,0)" id="o0">
+        <input class="otp-cell" maxlength="1" type="text" inputmode="numeric"
+               oninput="otpInput(this,1)" onkeydown="otpKey(event,1)" id="o1">
+        <input class="otp-cell" maxlength="1" type="text" inputmode="numeric"
+               oninput="otpInput(this,2)" onkeydown="otpKey(event,2)" id="o2">
+        <input class="otp-cell" maxlength="1" type="text" inputmode="numeric"
+               oninput="otpInput(this,3)" onkeydown="otpKey(event,3)" id="o3">
+        <input class="otp-cell" maxlength="1" type="text" inputmode="numeric"
+               oninput="otpInput(this,4)" onkeydown="otpKey(event,4)" id="o4">
+        <input class="otp-cell" maxlength="1" type="text" inputmode="numeric"
+               oninput="otpInput(this,5)" onkeydown="otpKey(event,5)" id="o5">
+      </div>
+      <div class="tfa-timer">有効期限：<span id="otp-countdown">5:00</span></div>
+      <div style="font-size:10px;color:var(--muted);margin-bottom:12px" id="otp-demo-hint"></div>
+      <div style="display:flex;gap:8px;justify-content:center">
+        <button class="btn btn-ghost btn-sm" id="otp-resend" onclick="resendOtp()" disabled>📨 再送信</button>
+        <button class="btn btn-ghost btn-sm" onclick="closeOtpModal()">キャンセル</button>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ════════ 外部リンク送信モーダル（パスワードリセット） ════════ -->
+<div class="overlay" id="reset-send-modal">
+<div class="modal" style="width:440px">
+  <div class="mhdr">
+    <div class="mtitle">パスワード再設定リンクを送信</div>
+    <button class="mclose" onclick="document.getElementById('reset-send-modal').classList.remove('show')">✕</button>
+  </div>
+  <div class="mbody">
+    <div class="al al-info" style="margin-bottom:16px">
+      ℹ️ パスワード再設定リンクを送信します。リンクをクリックすると認証コードによる確認後にパスワードを再設定できます。
+    </div>
+    <div style="font-size:10px;color:var(--sub);margin-bottom:10px;font-weight:600">送信先を選択</div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+      <label style="display:flex;align-items:center;gap:10px;padding:12px;
+                    background:var(--card2);border:1px solid var(--border);
+                    border-radius:10px;cursor:pointer;transition:.15s"
+             id="send-line-label" onclick="selectResetMethod('line')">
+        <input type="radio" name="reset-method" value="line" checked>
+        <span style="font-size:18px">💬</span>
+        <div>
+          <div style="font-size:12px;font-weight:700">LINE</div>
+          <div style="font-size:10px;color:var(--muted)">登録済みLINEアカウント（@yamada_makoto）</div>
+        </div>
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;padding:12px;
+                    background:var(--card2);border:1px solid var(--border);
+                    border-radius:10px;cursor:pointer;transition:.15s"
+             id="send-mail-label" onclick="selectResetMethod('email')">
+        <input type="radio" name="reset-method" value="email">
+        <span style="font-size:18px">📧</span>
+        <div>
+          <div style="font-size:12px;font-weight:700">メール</div>
+          <div style="font-size:10px;color:var(--muted)">yamada***@gmail.com</div>
+        </div>
+      </label>
+    </div>
+    <div style="font-size:10px;color:var(--muted);line-height:1.8;padding:10px;
+                background:rgba(255,255,255,.02);border-radius:8px;border:1px solid var(--border)">
+      📌 リンクの有効期限は<strong style="color:var(--orange)">30分</strong>です。<br>
+      リンクをクリック後に認証コード確認（6桁）が必要です。
+    </div>
+  </div>
+  <div class="mfoot">
+    <button class="btn btn-ghost" onclick="document.getElementById('reset-send-modal').classList.remove('show')">キャンセル</button>
+    <button class="btn btn-blue" onclick="sendResetLink()">📨 リンクを送信する</button>
+  </div>
+</div>
+</div>
+
+<script>
+// ─── Demo user ───────────────────────────────────────────────────
+const ME = {
+  id: '10012', name: '山田 誠', nameKana: 'ヤマダ マコト',
+  nameOld: '', nameOldKana: '', showOldOnCard: false,
+  type: 're', rank: 'gold',
+  phone: '090-1234-5678', email: 'yamada@example.com',
+  line: '@yamada_makoto', lineLinked: true,
+  address: '東京都渋谷区恵比寿1-2-3 コレートマンション101',
+  postalCode: '150-0013',
+};
+
+document.getElementById('user-pill').textContent = `${ME.name} / ${ME.id}`;
+
+// ─── Page routing ────────────────────────────────────────────────
+function showPage(page) {
+  document.querySelectorAll('.sb-item').forEach(el => el.classList.remove('on'));
+  document.getElementById('sb-'+page).classList.add('on');
+  const m = document.getElementById('main');
+  const pages = { pw: pagePw, '2fa': page2fa, contact: pageContact, line: pageLine, name: pageName };
+  m.innerHTML = '';
+  (pages[page] || pagePw)();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// PAGE: パスワード変更
+// ══════════════════════════════════════════════════════════════════
+function pagePw() {
+  document.getElementById('main').innerHTML = `
+    <div class="page-title">パスワード変更</div>
+    <div class="page-sub">現在のパスワードを確認後、新しいパスワードを設定します。変更後にLINEで通知されます。</div>
+
+    <!-- 通常変更 -->
+    <div class="card" style="max-width:560px;margin-bottom:16px">
+      <div class="ch"><div class="ch-t">パスワードを変更する</div></div>
+      <div class="cb">
+        <div class="field">
+          <label>現在のパスワード <span class="req">*</span></label>
+          <input type="password" id="pw-current" placeholder="現在のパスワードを入力">
+        </div>
+        <div class="field">
+          <label>新しいパスワード <span class="req">*</span></label>
+          <input type="password" id="pw-new" placeholder="8文字以上・英数字記号" oninput="checkPwStrength()">
+          <div class="pw-strength" id="pw-bar"></div>
+          <div class="pw-rules">
+            <div class="pw-rule" id="pwr-len">8文字以上</div>
+            <div class="pw-rule" id="pwr-upper">大文字を含む</div>
+            <div class="pw-rule" id="pwr-num">数字を含む</div>
+            <div class="pw-rule" id="pwr-sym">記号を含む</div>
+          </div>
+        </div>
+        <div class="field">
+          <label>新しいパスワード（確認）<span class="req">*</span></label>
+          <input type="password" id="pw-confirm" placeholder="もう一度入力">
+          <div class="fhint" id="pw-match-hint"></div>
+        </div>
+        <div style="padding:10px 14px;background:var(--card2);border-radius:9px;
+                    font-size:11px;color:var(--sub);margin-bottom:14px;line-height:1.8">
+          🔐 変更完了後、<strong style="color:var(--text)">LINE・メールに変更通知</strong>が届きます。
+          身に覚えのない変更の場合はすぐにHQにご連絡ください。
+        </div>
+        <button class="btn btn-blue" onclick="changePassword()" id="pw-submit-btn">
+          🔑 パスワードを変更する
+        </button>
+      </div>
+    </div>
+
+    <!-- パスワード忘れた場合 -->
+    <div class="card" style="max-width:560px">
+      <div class="ch"><div class="ch-t">パスワードをお忘れの場合</div></div>
+      <div class="cb">
+        <div class="al al-info" style="margin-bottom:14px">
+          ℹ️ <div>ログインできない場合は、登録済みの<strong>LINE</strong>またはメールアドレスに
+          再設定リンクを送信できます。リンクをクリック後に<strong>認証コードによる確認</strong>（6桁）が必要です。
+          リンクの有効期限は<strong>30分</strong>です。</div>
+        </div>
+
+        <!-- 送信フロー -->
+        <div class="step-flow">
+          <div class="sf-step on" id="rsf-0">
+            <div class="sf-dot">1</div>
+            <div class="sf-label">送信先<br>選択</div>
+          </div>
+          <div class="sf-step" id="rsf-1">
+            <div class="sf-dot">2</div>
+            <div class="sf-label">LINE/メール<br>でリンク受信</div>
+          </div>
+          <div class="sf-step" id="rsf-2">
+            <div class="sf-dot">3</div>
+            <div class="sf-label">認証<br>コード</div>
+          </div>
+          <div class="sf-step" id="rsf-3">
+            <div class="sf-dot">4</div>
+            <div class="sf-label">新パスワード<br>設定</div>
+          </div>
+        </div>
+
+        <button class="btn btn-ghost" onclick="openResetModal()" style="width:100%;justify-content:center">
+          📨 再設定リンクを送る（LINE / メール）
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function checkPwStrength() {
+  const pw = document.getElementById('pw-new').value;
+  const rules = [
+    {id:'pwr-len',   ok: pw.length >= 8},
+    {id:'pwr-upper', ok: /[A-Z]/.test(pw)},
+    {id:'pwr-num',   ok: /[0-9]/.test(pw)},
+    {id:'pwr-sym',   ok: /[^A-Za-z0-9]/.test(pw)},
+  ];
+  let score = rules.filter(r=>r.ok).length;
+  rules.forEach(r => {
+    const el = document.getElementById(r.id);
+    if (el) el.className = 'pw-rule' + (r.ok ? ' ok' : '');
+  });
+  const bar = document.getElementById('pw-bar');
+  if (bar) bar.className = 'pw-strength' + (score>0 ? ` pws-${score}` : '');
+
+  const c = document.getElementById('pw-confirm');
+  const hint = document.getElementById('pw-match-hint');
+  if (c && hint && c.value) {
+    const match = pw === c.value;
+    hint.textContent = match ? '✓ 一致しています' : '✗ パスワードが一致しません';
+    hint.style.color = match ? 'var(--green)' : 'var(--red)';
+  }
+}
+
+function changePassword() {
+  const cur  = document.getElementById('pw-current').value;
+  const nw   = document.getElementById('pw-new').value;
+  const conf = document.getElementById('pw-confirm').value;
+  if (!cur || !nw || !conf) { alert('全項目を入力してください'); return; }
+  if (nw !== conf) { alert('新しいパスワードが一致しません'); return; }
+  if (nw.length < 8) { alert('パスワードは8文字以上で設定してください'); return; }
+  openOtpModal('pw-change', 'パスワード変更 本人確認', onPwOtpSuccess);
+}
+
+function onPwOtpSuccess() {
+  closeOtpModal();
+  alert('✅ パスワードを変更しました。\nLINEおよびメールに変更通知が届きます。');
+  pagePw();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// PAGE: 2FA設定
+// ══════════════════════════════════════════════════════════════════
+function page2fa() {
+  document.getElementById('main').innerHTML = `
+    <div class="page-title">2FA・認証設定</div>
+    <div class="page-sub">即時払いなどの重要操作で使用する2段階認証の設定です</div>
+
+    <div class="card" style="max-width:560px;margin-bottom:16px">
+      <div class="ch"><div class="ch-t">認証方法</div></div>
+      <div class="cb">
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:center;justify-content:space-between;
+                      padding:14px;background:var(--card2);border-radius:10px;border:1px solid rgba(52,211,153,.2)">
+            <div style="display:flex;align-items:center;gap:12px">
+              <span style="font-size:22px">💬</span>
+              <div>
+                <div style="font-size:12px;font-weight:700">LINE 認証コード</div>
+                <div style="font-size:10px;color:var(--sub)">@yamada_makoto に6桁のコードを送信</div>
+              </div>
+            </div>
+            <span class="pill pg">✓ 有効</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;
+                      padding:14px;background:var(--card2);border-radius:10px">
+            <div style="display:flex;align-items:center;gap:12px">
+              <span style="font-size:22px">📱</span>
+              <div>
+                <div style="font-size:12px;font-weight:700">SMS 認証コード</div>
+                <div style="font-size:10px;color:var(--sub)">090-****-5678 にSMSで送信</div>
+              </div>
+            </div>
+            <span class="pill pg">✓ 有効</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="max-width:560px">
+      <div class="ch"><div class="ch-t">2FAログ</div></div>
+      <table class="tbl">
+        <thead><tr><th>日時</th><th>操作</th><th>方法</th><th>結果</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="mono" style="font-size:10px">2026/02/20 10:32</td>
+            <td style="font-size:11px">即時払い申請</td>
+            <td>💬 LINE</td>
+            <td><span class="pill pg">成功</span></td>
+          </tr>
+          <tr>
+            <td class="mono" style="font-size:10px">2026/01/15 14:05</td>
+            <td style="font-size:11px">パスワード変更</td>
+            <td>💬 LINE</td>
+            <td><span class="pill pg">成功</span></td>
+          </tr>
+          <tr>
+            <td class="mono" style="font-size:10px">2025/12/10 09:18</td>
+            <td style="font-size:11px">即時払い申請</td>
+            <td>📱 SMS</td>
+            <td><span class="pill pr">失敗（タイムアウト）</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+// ══════════════════════════════════════════════════════════════════
+// PAGE: 連絡先変更（2FA不要）
+// ══════════════════════════════════════════════════════════════════
+function pageContact() {
+  document.getElementById('main').innerHTML = `
+    <div class="page-title">電話・メール・住所</div>
+    <div class="page-sub">連絡先情報の変更は2FA不要です。変更後すぐに反映されます。</div>
+
+    <div class="al al-info" style="max-width:660px">
+      ℹ️ 連絡先情報の変更は本人確認不要で行えます。ただし変更履歴は記録されます。
+    </div>
+
+    <div class="card" style="max-width:660px">
+      <div class="ch"><div class="ch-t">連絡先情報</div><span class="pill pm">2FA不要</span></div>
+      <div class="cb">
+        <div class="g2">
+          <div class="field">
+            <label>電話番号</label>
+            <input type="tel" id="ct-phone" value="${ME.phone}" placeholder="090-XXXX-XXXX">
+          </div>
+          <div class="field">
+            <label>メールアドレス</label>
+            <input type="email" id="ct-email" value="${ME.email}" placeholder="example@email.com">
+          </div>
+        </div>
+        <div class="g2">
+          <div class="field">
+            <label>郵便番号</label>
+            <input type="text" id="ct-postal" value="${ME.postalCode}" placeholder="000-0000"
+                   oninput="lookupPostal(this.value)">
+          </div>
+          <div class="field">
+            <label>住所（都道府県〜番地）</label>
+            <input type="text" id="ct-address" value="${ME.address}" placeholder="東京都渋谷区...">
+          </div>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>マンション名・部屋番号（任意）</label>
+          <input type="text" id="ct-address2" placeholder="○○マンション 101">
+        </div>
+      </div>
+      <div style="padding:14px 20px;border-top:1px solid var(--border);
+                  display:flex;justify-content:flex-end;gap:8px">
+        <button class="btn btn-ghost" onclick="pageContact()">リセット</button>
+        <button class="btn btn-blue" onclick="saveContact()">💾 変更を保存</button>
+      </div>
+    </div>
+
+    <div class="card" style="max-width:660px">
+      <div class="ch"><div class="ch-t">変更履歴</div></div>
+      <table class="tbl">
+        <thead><tr><th>変更日時</th><th>変更項目</th><th>変更前</th><th>変更後</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="mono" style="font-size:10px">2026/01/20 11:30</td>
+            <td style="font-size:11px">メールアドレス</td>
+            <td style="font-size:11px;color:var(--sub)">yamada.old@gmail.com</td>
+            <td style="font-size:11px">yamada@example.com</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function lookupPostal(val) {
+  const clean = val.replace(/[^0-9]/g,'');
+  if (clean.length === 7) {
+    // デモ: 郵便番号自動補完
+    setTimeout(() => {
+      const el = document.getElementById('ct-address');
+      if (el && !el.value) el.value = '東京都渋谷区（自動補完デモ）';
+    }, 400);
+  }
+}
+
+function saveContact() {
+  ME.phone   = document.getElementById('ct-phone').value;
+  ME.email   = document.getElementById('ct-email').value;
+  ME.postalCode = document.getElementById('ct-postal').value;
+  ME.address = document.getElementById('ct-address').value;
+  alert('✅ 連絡先情報を更新しました。');
+  pageContact();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// PAGE: LINE変更（2FA不要）
+// ══════════════════════════════════════════════════════════════════
+function pageLine() {
+  document.getElementById('main').innerHTML = `
+    <div class="page-title">LINEアカウント変更</div>
+    <div class="page-sub">LINE IDを変更すると、次回の認証コードによる確認から新しいアカウントに送信されます。2FA不要です。</div>
+
+    <div class="al al-warn" style="max-width:560px">
+      ⚠️ <div>LINE IDを変更する前に、<strong>新しいLINEアカウントがCORETO公式アカウントを友達追加済み</strong>であることを確認してください。
+      未追加の場合、認証コードが届かず即時払いなどの操作ができなくなります。</div>
+    </div>
+
+    <div class="card" style="max-width:560px;margin-bottom:14px">
+      <div class="ch"><div class="ch-t">現在のLINE設定</div><span class="pill pg">✓ 連携済み</span></div>
+      <div class="cb">
+        <div style="display:flex;align-items:center;gap:14px;padding:14px;
+                    background:var(--card2);border-radius:11px;margin-bottom:14px">
+          <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#06C755,#039B45);
+                      display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">💬</div>
+          <div>
+            <div style="font-size:13px;font-weight:700">${ME.line}</div>
+            <div style="font-size:10px;color:var(--sub)">登録済みLINEアカウント ID</div>
+          </div>
+          <span class="pill pg" style="margin-left:auto">✓ 連携中</span>
+        </div>
+
+        <div class="field">
+          <label>新しいLINE ID <span class="req">*</span></label>
+          <input type="text" id="new-line-id" placeholder="@新しいLINEのID"
+                 style="font-family:'DM Mono',monospace">
+          <div class="fhint">
+            📌 LINE ID は「@xxxxxxxx」の形式です（LINEアプリのプロフィール画面で確認できます）<br>
+            📌 CORETO公式アカウント（@coreto_official）を友達追加した後に変更してください
+          </div>
+        </div>
+
+        <div class="field" style="margin-bottom:0">
+          <label>変更理由</label>
+          <select id="line-reason">
+            <option value="">— 任意 —</option>
+            <option>LINEアカウントを変更した</option>
+            <option>携帯電話番号を変更した</option>
+            <option>スマートフォンを機種変更した</option>
+            <option>その他</option>
+          </select>
+        </div>
+      </div>
+      <div style="padding:14px 20px;border-top:1px solid var(--border);
+                  display:flex;justify-content:flex-end;gap:8px">
+        <button class="btn btn-ghost" onclick="pageLine()">キャンセル</button>
+        <button class="btn btn-blue" onclick="saveLineId()">💾 LINE IDを変更する</button>
+      </div>
+    </div>
+
+    <div class="card" style="max-width:560px">
+      <div class="ch"><div class="ch-t">LINE変更履歴</div></div>
+      <table class="tbl">
+        <thead><tr><th>変更日時</th><th>変更前LINE ID</th><th>変更後LINE ID</th><th>理由</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="mono" style="font-size:10px">2025/08/14 16:22</td>
+            <td class="mono" style="font-size:11px;color:var(--sub)">@yamada_old</td>
+            <td class="mono" style="font-size:11px">@yamada_makoto</td>
+            <td style="font-size:11px">スマートフォン機種変更</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function saveLineId() {
+  const newId = document.getElementById('new-line-id').value.trim();
+  if (!newId) { alert('新しいLINE IDを入力してください'); return; }
+  if (!newId.startsWith('@')) { alert('LINE IDは「@」から始まる形式で入力してください'); return; }
+  if (!confirm(`LINE IDを「${newId}」に変更しますか？\n次回の認証コードによる確認から新しいアカウントに送信されます。`)) return;
+  ME.line = newId;
+  alert(`✅ LINE IDを「${newId}」に変更しました。`);
+  pageLine();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// PAGE: 氏名・旧姓設定
+// ══════════════════════════════════════════════════════════════════
+function pageName() {
+  const isHQ = false; // demo: agent view
+  document.getElementById('main').innerHTML = `
+    <div class="page-title">氏名・旧姓設定</div>
+    <div class="page-sub">法的氏名の変更は本部のみ可能です。旧姓の名刺表記は自分で設定できます。</div>
+
+    <!-- 現在の氏名 -->
+    <div class="card" style="max-width:660px;margin-bottom:16px">
+      <div class="ch"><div class="ch-t">登録氏名</div></div>
+      <div class="cb">
+        <div class="name-row">
+          <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,var(--gold-dim),rgba(201,168,76,.3));
+                      display:flex;align-items:center;justify-content:center;font-size:20px">👤</div>
+          <div style="flex:1">
+            <div class="name-main">${ME.name}</div>
+            <div class="name-kana">${ME.nameKana}</div>
+          </div>
+          <span class="pill pm">変更は本部のみ</span>
+        </div>
+        <div class="al al-lock" style="margin-bottom:0">
+          🔒 <div style="font-size:11px">法的氏名の変更（結婚・改名など）は<strong>本部スタッフのみ</strong>が行えます。
+          氏名変更が必要な場合はHQにSlackでご連絡ください。<br>
+          変更時には戸籍謄本・婚姻届受理証明書などの書類が必要です。</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 旧姓・名刺表記 -->
+    <div class="card" style="max-width:660px;margin-bottom:16px">
+      <div class="ch">
+        <div class="ch-t">旧姓・名刺表記設定</div>
+        <span class="pill pb">自分で設定可能</span>
+      </div>
+      <div class="cb">
+        <div class="al al-info" style="margin-bottom:16px">
+          ℹ️ 結婚等で旧姓を名刺に表記したい場合、旧姓を登録しておくと名刺発注時に自動で併記されます。
+        </div>
+        <div class="g2">
+          <div class="field">
+            <label>旧姓（漢字）</label>
+            <input type="text" id="old-name" value="${ME.nameOld || ''}" placeholder="例：鈴木">
+          </div>
+          <div class="field">
+            <label>旧姓（カナ）</label>
+            <input type="text" id="old-kana" value="${ME.nameOldKana || ''}" placeholder="例：スズキ"
+                   style="font-family:'DM Mono',monospace;letter-spacing:1px">
+          </div>
+        </div>
+
+        <div style="padding:14px;background:var(--card2);border-radius:10px;margin-bottom:14px">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:8px">名刺プレビュー</div>
+          <div id="card-preview" style="background:white;border-radius:8px;padding:14px 18px;
+               font-size:13px;color:#1a1a1a;display:inline-block;min-width:220px;
+               box-shadow:0 2px 12px rgba(0,0,0,.2)">
+            <div style="font-size:9px;color:#888;letter-spacing:2px;margin-bottom:6px">CORETO</div>
+            <div style="font-size:17px;font-weight:700" id="card-name-preview">${ME.name}</div>
+            <div style="font-size:11px;color:#666;font-family:monospace" id="card-kana-preview">${ME.nameKana}</div>
+          </div>
+          <button class="btn btn-ghost btn-sm" style="margin-left:12px;vertical-align:top;margin-top:4px"
+                  onclick="updateCardPreview()">👁 プレビュー更新</button>
+        </div>
+
+        <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;margin-bottom:14px">
+          <input type="checkbox" id="show-old-on-card" ${ME.showOldOnCard?'checked':''}
+                 onchange="updateCardPreview()">
+          名刺に旧姓を表記する（「山田（旧姓：鈴木）誠」の形式）
+        </label>
+        <button class="btn btn-blue" onclick="saveOldName()">💾 旧姓設定を保存</button>
+      </div>
+    </div>
+
+    <!-- HQ専用: 氏名変更 -->
+    ${isHQ ? `
+    <div class="card" style="max-width:660px;border-color:rgba(251,146,60,.3)">
+      <div class="ch" style="background:rgba(251,146,60,.05)">
+        <div class="ch-t" style="--c:var(--orange)">HQ専用 — 法的氏名変更</div>
+        <span class="pill po">🏢 HQのみ</span>
+      </div>
+      <div class="cb">
+        <div class="al al-warn" style="margin-bottom:14px">
+          ⚠️ 法的氏名の変更は戸籍書類の確認後のみ実施できます。
+        </div>
+        <div class="g2">
+          <div class="field"><label>変更後 氏名（漢字）<span class="req">*</span></label>
+            <input type="text" id="hq-name-new" placeholder="山田 誠"></div>
+          <div class="field"><label>変更後 カナ<span class="req">*</span></label>
+            <input type="text" id="hq-name-kana" placeholder="ヤマダ マコト"
+                   style="font-family:'DM Mono',monospace;letter-spacing:1px"></div>
+        </div>
+        <div class="field"><label>変更理由<span class="req">*</span></label>
+          <select id="hq-name-reason">
+            <option value="">— 選択 —</option>
+            <option>婚姻</option><option>離婚</option><option>養子縁組</option><option>その他改名</option>
+          </select>
+        </div>
+        <button class="btn btn-danger" onclick="hqChangeName()">⚠️ 氏名を変更する</button>
+      </div>
+    </div>` : ''}
+  `;
+}
+
+function updateCardPreview() {
+  const oldN  = (document.getElementById('old-name') || {}).value || '';
+  const showOld = (document.getElementById('show-old-on-card') || {}).checked;
+  const nameDisplay = showOld && oldN
+    ? `${ME.name.split(' ')[0]}（旧姓：${oldN}）${ME.name.split(' ')[1]||''}`
+    : ME.name;
+  const kanaDisplay = showOld && document.getElementById('old-kana').value
+    ? `${ME.nameKana}（旧姓：${document.getElementById('old-kana').value}）`
+    : ME.nameKana;
+  document.getElementById('card-name-preview').textContent = nameDisplay;
+  document.getElementById('card-kana-preview').textContent = kanaDisplay;
+}
+
+function saveOldName() {
+  ME.nameOld     = document.getElementById('old-name').value;
+  ME.nameOldKana = document.getElementById('old-kana').value;
+  ME.showOldOnCard = document.getElementById('show-old-on-card').checked;
+  alert('✅ 旧姓設定を保存しました。名刺発注時に反映されます。');
+}
+
+// ══════════════════════════════════════════════════════════════════
+// パスワードリセット（外部リンク送信）
+// ══════════════════════════════════════════════════════════════════
+let resetMethod = 'line';
+function openResetModal() {
+  document.getElementById('reset-send-modal').classList.add('show');
+}
+function selectResetMethod(m) {
+  resetMethod = m;
+}
+function sendResetLink() {
+  document.getElementById('reset-send-modal').classList.remove('show');
+  const dest = resetMethod === 'line' ? 'LINE（@yamada_makoto）' : 'メール（yamada***@gmail.com）';
+  // After sending, show code verification step (simulated as clicking link)
+  setTimeout(() => {
+    if (confirm(`✅ 再設定リンクを${dest}に送信しました。\n\n【デモ】リンクをクリックして認証コードによる確認画面を表示しますか？`)) {
+      // Advance step indicators
+      ['rsf-0','rsf-1'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.className='sf-step done'; el.querySelector('.sf-dot').textContent='✓'; }
+      });
+      const s2 = document.getElementById('rsf-2');
+      if (s2) { s2.className='sf-step on'; }
+      openOtpModal('pw-reset', 'パスワード再設定 認証コードによる確認', onResetOtpSuccess);
+    }
+  }, 400);
+}
+function onResetOtpSuccess() {
+  closeOtpModal();
+  ['rsf-2','rsf-3'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.className='sf-step done'; el.querySelector('.sf-dot').textContent='✓'; }
+  });
+  // Show new password form inline
+  setTimeout(() => showNewPasswordForm(), 200);
+}
+function showNewPasswordForm() {
+  const area = document.createElement('div');
+  area.className = 'card';
+  area.style.cssText = 'max-width:560px;border-color:rgba(52,211,153,.3)';
+  area.innerHTML = `
+    <div class="ch" style="background:rgba(52,211,153,.05)">
+      <div class="ch-t">新しいパスワードを設定</div>
+      <span class="pill pg">✓ 認証コードによる確認済み</span>
+    </div>
+    <div class="cb">
+      <div class="al al-ok" style="margin-bottom:14px">✅ 本人確認が完了しました。新しいパスワードを設定してください。</div>
+      <div class="field">
+        <label>新しいパスワード <span class="req">*</span></label>
+        <input type="password" id="reset-pw-new" placeholder="8文字以上">
+      </div>
+      <div class="field" style="margin-bottom:14px">
+        <label>新しいパスワード（確認）<span class="req">*</span></label>
+        <input type="password" id="reset-pw-conf" placeholder="もう一度入力">
+      </div>
+      <button class="btn btn-blue" onclick="submitNewPassword()" style="width:100%;justify-content:center">
+        🔑 パスワードを設定する
+      </button>
+    </div>`;
+  document.getElementById('main').appendChild(area);
+  area.scrollIntoView({ behavior:'smooth' });
+}
+function submitNewPassword() {
+  const nw   = document.getElementById('reset-pw-new').value;
+  const conf = document.getElementById('reset-pw-conf').value;
+  if (!nw || nw.length < 8) { alert('パスワードは8文字以上で入力してください'); return; }
+  if (nw !== conf) { alert('パスワードが一致しません'); return; }
+  alert('✅ パスワードを再設定しました。\n新しいパスワードでログインしてください。');
+  pagePw();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// 認証コードモーダル汎用
+// ══════════════════════════════════════════════════════════════════
+let _otpCode = '', _otpCallback = null, _otpTimer = null, _otpCountdown = 300;
+function openOtpModal(context, title, callback) {
+  _otpCode     = String(Math.floor(100000 + Math.random() * 900000));
+  _otpCallback = callback;
+  clearInterval(_otpTimer);
+  _otpCountdown = 300;
+  for (let i=0;i<6;i++) {
+    const c = document.getElementById('o'+i);
+    if (c) { c.value=''; c.className='otp-cell'; c.disabled=false; }
+  }
+  document.getElementById('otp-modal-title').textContent = title;
+  document.getElementById('otp-desc').textContent =
+    'LINEアカウント（'+ME.line+'）に6桁のコードを送信しました';
+  document.getElementById('otp-demo-hint').textContent = '【デモ用コード: '+_otpCode+'】';
+  document.getElementById('otp-resend').disabled = true;
+  document.getElementById('otp-modal').classList.add('show');
+  _otpTimer = setInterval(() => {
+    _otpCountdown--;
+    const m = Math.floor(_otpCountdown/60), s = _otpCountdown%60;
+    const el = document.getElementById('otp-countdown');
+    if (el) el.textContent = m+':'+String(s).padStart(2,'0');
+    if (_otpCountdown <= 0) {
+      clearInterval(_otpTimer);
+      document.getElementById('otp-resend').disabled = false;
+      for (let i=0;i<6;i++) { const c=document.getElementById('o'+i); if(c) c.disabled=true; }
+    }
+  }, 1000);
+  setTimeout(()=>{ const c=document.getElementById('o0'); if(c)c.focus(); },100);
+}
+function closeOtpModal() {
+  clearInterval(_otpTimer);
+  document.getElementById('otp-modal').classList.remove('show');
+}
+function resendOtp() {
+  _otpCode = String(Math.floor(100000+Math.random()*900000));
+  document.getElementById('otp-demo-hint').textContent = '【デモ用コード: '+_otpCode+'】';
+  _otpCountdown = 300;
+  clearInterval(_otpTimer);
+  document.getElementById('otp-resend').disabled = true;
+  for (let i=0;i<6;i++) {
+    const c=document.getElementById('o'+i);
+    if(c){ c.value=''; c.className='otp-cell'; c.disabled=false; }
+  }
+  document.getElementById('o0').focus();
+  _otpTimer = setInterval(()=>{
+    _otpCountdown--;
+    const m=Math.floor(_otpCountdown/60),s=_otpCountdown%60;
+    const el=document.getElementById('otp-countdown');
+    if(el) el.textContent=m+':'+String(s).padStart(2,'0');
+    if(_otpCountdown<=0){ clearInterval(_otpTimer); document.getElementById('otp-resend').disabled=false; }
+  },1000);
+}
+function otpInput(el,idx) {
+  const v = el.value.replace(/\D/g,'');
+  el.value = v;
+  el.className = 'otp-cell';
+  if (v && idx<5) document.getElementById('o'+(idx+1)).focus();
+  if (idx===5 && v) checkOtp();
+}
+function otpKey(e,idx) {
+  if (e.key==='Backspace' && !e.target.value && idx>0)
+    document.getElementById('o'+(idx-1)).focus();
+}
+function checkOtp() {
+  const entered = Array.from({length:6},(_,i)=>document.getElementById('o'+i).value).join('');
+  if (entered === _otpCode) {
+    for(let i=0;i<6;i++) document.getElementById('o'+i).className='otp-cell ok';
+    clearInterval(_otpTimer);
+    setTimeout(()=>{ if(_otpCallback) _otpCallback(); }, 500);
+  } else {
+    for(let i=0;i<6;i++) document.getElementById('o'+i).className='otp-cell err';
+    setTimeout(()=>{
+      for(let i=0;i<6;i++){
+        const c=document.getElementById('o'+i);
+        c.value=''; c.className='otp-cell';
+      }
+      document.getElementById('o0').focus();
+    }, 800);
+  }
+}
+
+
+function hqChangeName() {
+  const newName  = document.getElementById('hq-name-new').value.trim();
+  const newKana  = document.getElementById('hq-name-kana').value.trim();
+  const reason   = document.getElementById('hq-name-reason').value;
+  if (!newName || !newKana || !reason) { alert('全項目を入力してください'); return; }
+  if (!confirm(`氏名を「${newName}（${newKana}）」に変更しますか？\n理由：${reason}\n\nこの操作は取り消せません。`)) return;
+  ME.name     = newName;
+  ME.nameKana = newKana;
+  alert(`✅ 氏名を「${newName}」に変更しました。\nエージェントにSlackで通知されます。`);
+  pageName();
+}
+
+// ─── Init ────────────────────────────────────────────────────────
+showPage('pw');
+</script>
+</body>
+</html>

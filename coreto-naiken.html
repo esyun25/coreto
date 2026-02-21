@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CORETO 内見依頼書システム</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0b0d12;--card:#13161f;--card2:#191c27;--border:#222638;
+  --gold:#c9a84c;--gold-l:#e8c96a;--gold-dim:#7a5f22;
+  --blue:#3b82f6;--green:#22c55e;--red:#ef4444;--orange:#f59e0b;
+  --muted:#5a6378;--sub:#8892a4;--text:#dde1ed;
+}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* ── ヘッダー ── */
+.header{background:linear-gradient(135deg,#0d1020,#141828);border-bottom:1px solid var(--border);padding:0 28px;display:flex;align-items:center;justify-content:space-between;height:52px}
+.logo{font-family:'DM Mono',monospace;font-size:18px;color:var(--gold);letter-spacing:3px}
+.logo-sub{font-size:9px;color:var(--muted);letter-spacing:1px;margin-top:1px}
+
+/* ── タブ ── */
+.tabs{background:#0e1019;border-bottom:1px solid var(--border);display:flex;padding:0 28px}
+.tab{padding:11px 18px;font-size:11px;cursor:pointer;border-bottom:2px solid transparent;color:var(--muted);transition:all .2s}
+.tab.on{color:var(--gold);border-bottom-color:var(--gold)}
+
+/* ── ページ ── */
+.page{display:none;padding:22px 28px;max-width:1280px;margin:0 auto}.page.on{display:block}
+
+/* ── パネル ── */
+.panel{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:14px}
+.panel-title{font-size:11px;font-weight:700;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.panel-title::before{content:'';width:3px;height:13px;background:var(--gold);border-radius:2px}
+.s-label{font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;padding:9px 0 6px;border-bottom:1px solid rgba(34,38,56,.8);margin-bottom:9px;margin-top:14px}
+.s-label:first-child{margin-top:0}
+.fg{margin-bottom:10px}
+.fg label{font-size:11px;color:var(--sub);display:block;margin-bottom:3px}
+.fg input,.fg select,.fg textarea{width:100%;background:#0d0f18;border:1px solid var(--border);border-radius:7px;padding:8px 11px;color:var(--text);font-size:13px;font-family:'Noto Sans JP',sans-serif;transition:border-color .15s}
+.fg input:focus,.fg select:focus,.fg textarea:focus{outline:none;border-color:var(--gold)}
+.fg input[type=date]{color-scheme:dark}
+.mono{font-family:'DM Mono',monospace}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.row4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px}
+
+/* ── ボタン ── */
+.btn{padding:10px 18px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:none;font-family:'Noto Sans JP',sans-serif;transition:all .15s;letter-spacing:.5px}
+.btn-gold{background:var(--gold);color:#0a0c10}.btn-gold:hover{background:var(--gold-l)}
+.btn-blue{background:rgba(59,130,246,.2);color:var(--blue);border:1px solid rgba(59,130,246,.4)}.btn-blue:hover{background:rgba(59,130,246,.3)}
+.btn-green{background:rgba(34,197,94,.2);color:var(--green);border:1px solid rgba(34,197,94,.4)}.btn-green:hover{background:rgba(34,197,94,.3)}
+.btn-muted{background:transparent;color:var(--muted);border:1px solid var(--border)}.btn-muted:hover{color:var(--text)}
+.btn-full{width:100%;padding:13px;font-size:13px;margin-top:4px}
+.btn-sm{padding:5px 11px;font-size:10px;border-radius:5px}
+
+/* ── アラート ── */
+.alert{border-radius:8px;padding:10px 13px;font-size:11px;line-height:1.7;margin-bottom:12px}
+.ao{background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.22);color:var(--orange)}
+.ag{background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.22);color:var(--green)}
+.ab{background:rgba(59,130,246,.07);border:1px solid rgba(59,130,246,.22);color:var(--blue)}
+
+/* ── バッジ ── */
+.badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:4px;font-size:9px;font-weight:700}
+
+/* ── エージェントカード選択 ── */
+.agent-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-top:6px}
+.agent-card{background:var(--card2);border:2px solid var(--border);border-radius:9px;padding:12px;cursor:pointer;transition:all .15s}
+.agent-card:hover{border-color:rgba(201,168,76,.4)}
+.agent-card.selected{border-color:var(--gold);background:rgba(201,168,76,.06)}
+.ac-name{font-size:13px;font-weight:700;margin-bottom:3px}
+.ac-id{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)}
+.ac-info{font-size:10px;color:var(--sub);margin-top:4px;line-height:1.6}
+.ac-rank{font-size:9px;padding:2px 6px;border-radius:4px;font-weight:700;display:inline-block;margin-top:3px}
+
+/* ── 内見依頼書プレビュー（FAX用）── */
+.preview-container{background:#888;padding:20px;border-radius:8px}
+.fax-doc{background:#fff;color:#000;font-family:'Noto Sans JP','MS Gothic',sans-serif;width:210mm;margin:0 auto;padding:20mm 18mm;position:relative;box-shadow:0 4px 20px rgba(0,0,0,.4);min-height:297mm}
+
+/* 内見依頼書 本体 */
+.naiken-title{font-size:22px;font-weight:700;text-align:center;border:2px solid #000;padding:8px 0;margin-bottom:24px;letter-spacing:4px}
+.naiken-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px}
+.naiken-to{font-size:13px;font-weight:700}
+.naiken-to-company{font-size:18px;font-weight:700;border-bottom:2px solid #000;padding-bottom:4px;margin-bottom:2px;min-width:200px;display:inline-block}
+.naiken-from{font-size:11px;line-height:1.8;text-align:left}
+.naiken-from-company{font-weight:700;font-size:12px}
+.naiken-field-row{display:flex;align-items:center;margin-bottom:20px;border-bottom:1.5px solid #555;padding-bottom:14px}
+.naiken-field-label{font-size:14px;font-weight:700;width:80px;flex-shrink:0}
+.naiken-field-value{font-size:18px;font-weight:700;flex:1;padding-left:16px}
+.naiken-body-text{font-size:13px;margin-bottom:8px;font-weight:500}
+.naiken-note{font-size:13px;font-weight:700;margin-top:16px}
+
+/* 名刺部分 */
+.naiken-card{border:3px solid #1a2744;margin-top:32px;display:flex;align-items:stretch;min-height:110px}
+.naiken-card-left{background:#1a2744;padding:16px 20px;display:flex;flex-direction:column;justify-content:center;flex:1}
+.naiken-card-name{color:#fff;font-size:30px;font-weight:700;letter-spacing:3px;margin-bottom:8px}
+.naiken-card-info{color:#d0d8e8;font-size:11px;line-height:1.9}
+.naiken-card-info .label{color:#c9a84c;font-size:10px}
+.naiken-card-right{padding:16px 20px;display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;min-width:160px}
+.naiken-card-logo{font-family:'DM Mono',monospace;font-size:22px;color:#1a2744;font-weight:700;letter-spacing:2px}
+.naiken-card-license{font-size:10px;color:#666;text-align:right;margin-top:auto}
+.naiken-card-mobile{font-size:13px;font-weight:700;color:#1a2744;font-family:'DM Mono',monospace}
+
+/* ── Slackプレビュー ── */
+.slack-preview{background:#3f0e40;border-radius:10px;padding:16px;margin-top:12px}
+.slack-channel{color:#ccc;font-size:10px;margin-bottom:8px;font-family:'DM Mono',monospace}
+.slack-msg{background:#1a1d21;border-radius:8px;padding:12px;border-left:4px solid #c9a84c}
+.slack-sender{font-size:11px;font-weight:700;color:#c9a84c;margin-bottom:4px}
+.slack-text{font-size:12px;color:#e8e8e8;line-height:1.8;white-space:pre-line}
+.slack-time{font-size:10px;color:#666;margin-top:6px}
+
+/* ── 内見履歴DB ── */
+.naiken-table{width:100%;border-collapse:collapse;font-size:12px}
+.naiken-table th{padding:9px 12px;font-size:10px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
+.naiken-table td{padding:9px 12px;border-bottom:1px solid rgba(34,38,56,.4);vertical-align:top}
+.naiken-table tr:hover td{background:rgba(255,255,255,.02)}
+.naiken-table .cl-id{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)}
+.status-badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600}
+.s-scheduled{background:rgba(59,130,246,.15);color:var(--blue)}
+.s-done{background:rgba(34,197,94,.15);color:var(--green)}
+.s-cancelled{background:rgba(90,99,120,.15);color:var(--muted)}
+
+/* ── 顧客詳細サイドパネル ── */
+.db-layout{display:grid;grid-template-columns:1fr 320px;gap:14px}
+@media(max-width:1000px){.db-layout{grid-template-columns:1fr}}
+.customer-card{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:10px;cursor:pointer;transition:border-color .15s}
+.customer-card:hover{border-color:rgba(201,168,76,.4)}
+.customer-card.selected{border-color:var(--gold)}
+.cc-name{font-size:16px;font-weight:700;margin-bottom:3px}
+.cc-id{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)}
+.cc-history{margin-top:8px}
+.history-item{background:var(--card);border:1px solid var(--border);border-radius:7px;padding:9px 12px;margin-bottom:6px;font-size:11px}
+.hi-prop{font-weight:600;margin-bottom:3px}
+.hi-meta{color:var(--sub);font-size:10px}
+
+.filter-bar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.filter-chip{padding:4px 12px;border-radius:20px;font-size:11px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'Noto Sans JP',sans-serif;transition:all .15s}
+.filter-chip.on{background:rgba(201,168,76,.15);border-color:var(--gold-dim);color:var(--gold);font-weight:700}
+.search-box{flex:1;min-width:160px;max-width:240px;position:relative}
+.search-box input{background:#0d0f18;border:1px solid var(--border);border-radius:20px;padding:5px 12px 5px 30px;color:var(--text);font-size:11px;width:100%;font-family:'Noto Sans JP',sans-serif}
+.search-box::before{content:'🔍';position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:11px}
+
+.empty{text-align:center;padding:48px;color:var(--muted);font-size:13px;line-height:2}
+.hidden{display:none!important}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* ── 印刷スタイル ── */
+@media print{
+  body{background:#fff !important}
+  .header,.tabs,.page > :not(#printable-area){display:none !important}
+  #printable-area{display:block !important}
+  .fax-doc{box-shadow:none;padding:15mm 15mm}
+  .preview-container{background:none;padding:0}
+}
+</style>
+</head>
+<body>
+
+<!-- ── ヘッダー ── -->
+<div class="header">
+  <div>
+    <div class="logo">CORETO</div>
+    <div class="logo-sub">内見依頼書システム</div>
+  </div>
+  <div style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace">内見 / FAX / 顧客DB</div>
+</div>
+
+<!-- ── タブ ── -->
+<div class="tabs">
+  <div class="tab on" onclick="switchTab(0)">📋 内見依頼書 作成・発行</div>
+  <div class="tab" onclick="switchTab(1)">📁 顧客DB・内見履歴</div>
+</div>
+
+<!-- ══════════════════════════
+  TAB 0: 内見依頼書 作成
+══════════════════════════ -->
+<div class="page on" id="page-0">
+<div style="display:grid;grid-template-columns:400px 1fr;gap:18px;align-items:start">
+
+<!-- 左：入力フォーム -->
+<div>
+  <div class="panel">
+    <div class="panel-title">内見依頼書 情報入力</div>
+
+    <div class="s-label">顧客情報</div>
+    <div class="row2">
+      <div class="fg">
+        <label>顧客ID <span style="color:var(--muted);font-size:9px">（Slackリマインドに使用）</span></label>
+        <select id="customer-id" onchange="fillCustomerInfo()">
+          <option value="">-- 顧客を選択 --</option>
+          <option value="CL-00001">CL-00001 / 山田 太郎</option>
+          <option value="CL-00012">CL-00012 / 佐藤 花子</option>
+          <option value="CL-00023">CL-00023 / 鈴木 健一</option>
+          <option value="CL-00047">CL-00047 / 田中 美咲</option>
+          <option value="new">顧客ID未登録（新規）</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>顧客氏名（確認）</label>
+        <input type="text" id="customer-name" placeholder="自動入力 or 手入力" oninput="updatePreview()">
+      </div>
+    </div>
+
+    <div class="s-label">送付先（管理会社）</div>
+    <div class="fg">
+      <label>管理会社名</label>
+      <input type="text" id="mgmt-company" placeholder="例：ソフィアスタッフ株式会社" oninput="updatePreview()">
+    </div>
+
+    <div class="s-label">物件・日程</div>
+    <div class="fg">
+      <label>物件名</label>
+      <input type="text" id="prop-name" placeholder="例：東松本一丁目店舗付き戸建" oninput="updatePreview()">
+    </div>
+    <div class="row2">
+      <div class="fg">
+        <label>内見日</label>
+        <input type="date" id="naiken-date" oninput="updatePreview()">
+      </div>
+      <div class="fg">
+        <label>集合場所（任意）</label>
+        <input type="text" id="meet-place" placeholder="例：物件前、管理会社事務所" oninput="updatePreview()">
+      </div>
+    </div>
+    <div class="row2">
+      <div class="fg">
+        <label>時間（時）</label>
+        <select id="naiken-hour" onchange="updatePreview()">
+          <option value="09">09</option><option value="10">10</option>
+          <option value="11">11</option><option value="12">12</option>
+          <option value="13">13</option><option value="14">14</option>
+          <option value="15" selected>15</option><option value="16">16</option>
+          <option value="17">17</option><option value="18">18</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>時間（分）</label>
+        <select id="naiken-min" onchange="updatePreview()">
+          <option value="00" selected>00</option><option value="15">15</option>
+          <option value="30">30</option><option value="45">45</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="s-label">担当エージェント（名刺部分に反映）</div>
+    <div class="agent-cards" id="agent-cards">
+      <!-- JS生成 -->
+    </div>
+
+    <div class="s-label">Slackリマインド設定</div>
+    <div class="fg">
+      <label>送付チャンネル</label>
+      <select id="slack-channel">
+        <option value="#案件管理">#案件管理（本部）</option>
+        <option value="#エージェント専用">#エージェント専用</option>
+        <option value="DM">担当エージェントへDM</option>
+      </select>
+    </div>
+    <div class="row2">
+      <div class="fg">
+        <label>リマインド（前日）</label>
+        <select>
+          <option>前日 09:00</option>
+          <option>前日 18:00</option>
+          <option>なし</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>リマインド（当日）</label>
+        <select>
+          <option>当日 08:00</option>
+          <option>当日 30分前</option>
+          <option>なし</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+      <button class="btn btn-gold btn-full" onclick="generateDoc()">📄 内見依頼書を生成・FAX出力</button>
+      <button class="btn btn-blue btn-full" onclick="sendSlack()">💬 Slackリマインドを設定</button>
+      <button class="btn btn-muted btn-full" onclick="saveToDb()">💾 顧客DBに内見履歴を保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 右：プレビュー -->
+<div>
+  <!-- Slackプレビュー -->
+  <div class="panel" id="slack-preview-panel">
+    <div class="panel-title">Slack リマインドプレビュー</div>
+    <div class="slack-preview">
+      <div class="slack-channel" id="slack-ch-label">#案件管理</div>
+      <div class="slack-msg">
+        <div class="slack-sender">🏠 CORETO 内見リマインダー</div>
+        <div class="slack-text" id="slack-text">物件名・日時を入力するとリマインドメッセージが表示されます</div>
+        <div class="slack-time">リマインド送信予定：前日 09:00 / 当日 08:00</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FAX書類プレビュー -->
+  <div class="panel">
+    <div class="panel-title" style="justify-content:space-between">
+      <span>内見依頼書プレビュー（FAX用）</span>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-gold btn-sm" onclick="window.print()">🖨️ 印刷・FAX</button>
+        <button class="btn btn-blue btn-sm" onclick="downloadPDF()">⬇️ PDF保存</button>
+      </div>
+    </div>
+    <div class="preview-container">
+      <div class="fax-doc" id="fax-doc">
+        <div class="naiken-title">内　見　依　頼　書</div>
+
+        <!-- ヘッダー部 -->
+        <div class="naiken-header">
+          <div>
+            <div class="naiken-to-company" id="prev-mgmt">管理会社名</div>
+            <div class="naiken-to" style="margin-top:4px">御中</div>
+          </div>
+          <div class="naiken-from">
+            <div class="naiken-from-company">株式会社CORETO</div>
+            〒150-0000<br>
+            東京都○○区○○ 1-1-1<br>
+            <strong>Tel：03-XXXX-XXXX</strong>　<strong>Fax：03-XXXX-XXXX</strong>
+          </div>
+        </div>
+
+        <!-- 物件名 -->
+        <div class="naiken-field-row">
+          <div class="naiken-field-label">物件名</div>
+          <div class="naiken-field-value" id="prev-prop">（物件名）</div>
+        </div>
+
+        <!-- 日時 -->
+        <div class="naiken-field-row">
+          <div class="naiken-field-label">日時</div>
+          <div class="naiken-field-value" id="prev-date" style="font-size:22px">
+            <span id="prev-month">　</span>　月　<span id="prev-day">　</span>　日
+          </div>
+        </div>
+
+        <!-- 時間 -->
+        <div class="naiken-field-row">
+          <div class="naiken-field-label">時間</div>
+          <div class="naiken-field-value" style="font-size:22px">
+            <span id="prev-hour">15</span>　時　<span id="prev-min">00</span>　分
+          </div>
+        </div>
+
+        <div class="naiken-body-text">上記物件を内見させて頂きます。</div>
+        <div class="naiken-body-text">宜しくお願い致します。</div>
+        <div class="naiken-note">※　下記携帯までご連絡下さい</div>
+
+        <!-- 名刺部分 -->
+        <div class="naiken-card">
+          <div class="naiken-card-left">
+            <div class="naiken-card-name" id="prev-ag-name">エージェント名</div>
+            <div class="naiken-card-info">
+              <div>株式会社CORETO</div>
+              <div>〒150-0000　東京都○○区○○ 1-1-1</div>
+              <div><span class="label">Tel：</span><span id="prev-ag-tel">03-XXXX-XXXX</span></div>
+              <div><span class="label">Fax：</span>03-XXXX-XXXX</div>
+              <div><span class="label" style="color:#f59e0b">携帯：</span><span id="prev-ag-mobile" style="color:#f0c040;font-size:13px;font-weight:700">080-XXXX-XXXX</span></div>
+            </div>
+          </div>
+          <div class="naiken-card-right">
+            <div class="naiken-card-logo">CORETO</div>
+            <div>
+              <div class="naiken-card-mobile" id="prev-ag-mobile2">080-XXXX-XXXX</div>
+              <div class="naiken-card-license" id="prev-license">東京都知事(2)第XXXXX号</div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /fax-doc -->
+    </div><!-- /preview-container -->
+  </div>
+</div>
+
+</div><!-- /grid -->
+</div><!-- /page-0 -->
+
+<!-- ══════════════════════════
+  TAB 1: 顧客DB・内見履歴
+══════════════════════════ -->
+<div class="page" id="page-1">
+
+  <div class="alert ab" style="margin-bottom:14px">
+    📋 顧客IDと紐づいた内見履歴。案件が進むにつれて自動更新されます。顧客を選択すると履歴の詳細が表示されます。
+  </div>
+
+  <div class="filter-bar">
+    <div class="search-box"><input type="text" placeholder="顧客名・物件名で検索..." oninput="filterDb(this.value)"></div>
+    <button class="filter-chip on" onclick="dbFilter(this,'all')">すべて</button>
+    <button class="filter-chip" onclick="dbFilter(this,'scheduled')">予定あり</button>
+    <button class="filter-chip" onclick="dbFilter(this,'done')">完了</button>
+    <div style="margin-left:auto;font-size:10px;color:var(--muted)" id="db-count">4名表示中</div>
+  </div>
+
+  <div class="db-layout">
+    <!-- 顧客リスト -->
+    <div id="db-list"><!-- JS生成 --></div>
+
+    <!-- 詳細サイドパネル -->
+    <div id="db-detail">
+      <div class="panel"><div class="empty">← 顧客を選択してください</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── セッション読み込み（マイページから自動入力） ──
+(function() {
+  const _S = JSON.parse(sessionStorage.getItem('coreto_session') || 'null');
+  if (!_S) return;
+  window.addEventListener('DOMContentLoaded', () => {
+    // マイページへ戻るリンクをタブバーに追加
+    const tabs = document.querySelector('.tabs');
+    if (tabs) {
+      const back = document.createElement('div');
+      back.style.cssText = 'margin-left:auto;padding:0 16px;display:flex;align-items:center;gap:10px';
+      back.innerHTML = '<span style="font-size:10px;color:var(--muted)">👤 '+_S.name+'</span>' +
+        '<button onclick="window.location.href='coreto-hub.html'" style="font-size:10px;padding:4px 10px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;font-family:sans-serif">← マイページ</button>';
+      tabs.appendChild(back);
+    }
+  });
+})();
+
+// ── エージェントDB ──
+const AGENTS = [
+  {id:'AG-012',name:'山田 誠',kana:'ヤマダ マコト',tel:'03-XXXX-0012',mobile:'080-1234-5678',license:'東京都知事(2)第88001号',rank:'Gold',rankClass:'rank-gold'},
+  {id:'AG-008',name:'佐藤 花子',kana:'サトウ ハナコ',tel:'03-XXXX-0008',mobile:'080-2345-6789',license:'東京都知事(1)第77002号',rank:'Platinum',rankClass:'rank-platinum'},
+  {id:'AG-023',name:'鈴木 健太',kana:'スズキ ケンタ',tel:'03-XXXX-0023',mobile:'080-3456-7890',license:'東京都知事(2)第99003号',rank:'Silver',rankClass:'rank-silver'},
+  {id:'AG-041',name:'渡辺 隆',kana:'ワタナベ タカシ',tel:'03-XXXX-0041',mobile:'080-4567-8901',license:'東京都知事(1)第66004号',rank:'Bronze',rankClass:'rank-bronze'},
+];
+
+const RANK_COLORS = {
+  Gold:'background:rgba(201,168,76,.15);color:#c9a84c',
+  Platinum:'background:rgba(200,200,255,.12);color:#b0c4de',
+  Silver:'background:rgba(160,160,160,.15);color:#c0c0c0',
+  Bronze:'background:rgba(180,120,60,.15);color:#cd7f32'
+};
+
+// ── 顧客DB（内見履歴つき）──
+const CUSTOMERS_DB = [
+  {id:'CL-00001',name:'山田 太郎',kana:'ヤマダ タロウ',tel:'080-1111-1111',
+   history:[
+     {id:'NK-001',prop:'池袋 1K 仮称ライオンズマンション',date:'2026-02-10',hour:'14',min:'00',mgmt:'株式会社ライオンズ',agent:'山田 誠',status:'done',result:'気に入った　→ 申し込みへ'},
+     {id:'NK-002',prop:'池袋 1LDK アーバンコート',date:'2026-02-18',hour:'11',min:'00',mgmt:'ソフィア管理株式会社',agent:'山田 誠',status:'done',result:'条件合わず'},
+     {id:'NK-003',prop:'東池袋 2LDK グランドパレス',date:'2026-02-25',hour:'15',min:'00',mgmt:'東京管理株式会社',agent:'山田 誠',status:'scheduled',result:'—'},
+   ]},
+  {id:'CL-00012',name:'佐藤 花子',kana:'サトウ ハナコ',tel:'080-2222-2222',
+   history:[
+     {id:'NK-004',prop:'新宿 1LDK オーシャンビュー',date:'2026-02-15',hour:'13',min:'30',mgmt:'新宿不動産管理',agent:'佐藤 花子',status:'done',result:'申し込み検討中'},
+   ]},
+  {id:'CL-00023',name:'鈴木 健一',kana:'スズキ ケンイチ',tel:'090-3333-3333',
+   history:[
+     {id:'NK-005',prop:'渋谷 戸建て 3LDK',date:'2026-02-20',hour:'10',min:'00',mgmt:'渋谷ホームズ株式会社',agent:'佐藤 花子',status:'done',result:'購入意向あり　→ 交渉中'},
+     {id:'NK-006',prop:'代々木 マンション 2LDK',date:'2026-03-01',hour:'14',min:'00',mgmt:'代々木不動産',agent:'佐藤 花子',status:'scheduled',result:'—'},
+   ]},
+  {id:'CL-00047',name:'田中 美咲',kana:'タナカ ミサキ',tel:'080-4444-4444',
+   history:[]},
+];
+
+const CUSTOMER_MAP = {
+  'CL-00001':'山田 太郎','CL-00012':'佐藤 花子',
+  'CL-00023':'鈴木 健一','CL-00047':'田中 美咲'
+};
+
+let selectedAgent = AGENTS[0];
+let dbFilter_current = 'all';
+
+// ── タブ切替 ──
+function switchTab(i){
+  document.querySelectorAll('.tab').forEach((t,j)=>t.classList.toggle('on',i===j));
+  document.querySelectorAll('.page').forEach((p,j)=>p.classList.toggle('on',i===j));
+  if(i===1) renderDb();
+}
+
+// ── エージェントカード生成 ──
+function renderAgentCards(){
+  document.getElementById('agent-cards').innerHTML = AGENTS.map((ag,i)=>`
+    <div class="agent-card${i===0?' selected':''}" onclick="selectAgent(${i},this)" data-i="${i}">
+      <div class="ac-name">${ag.name}</div>
+      <div class="ac-id">${ag.id}</div>
+      <div class="ac-info">
+        📱 ${ag.mobile}<br>
+        🏠 ${ag.license}
+      </div>
+      <div class="ac-rank" style="${RANK_COLORS[ag.rank]}">${ag.rank}</div>
+    </div>
+  `).join('');
+}
+
+function selectAgent(i, el){
+  selectedAgent = AGENTS[i];
+  document.querySelectorAll('.agent-card').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected');
+  updatePreview();
+}
+
+// ── 顧客選択時の自動入力 ──
+function fillCustomerInfo(){
+  const id = document.getElementById('customer-id').value;
+  const nameEl = document.getElementById('customer-name');
+  if(CUSTOMER_MAP[id]){
+    nameEl.value = CUSTOMER_MAP[id];
+  } else if(id==='new'){
+    nameEl.value = '';
+    nameEl.placeholder = '氏名を入力';
+  } else {
+    nameEl.value = '';
+    nameEl.placeholder = '自動入力 or 手入力';
+  }
+  updatePreview();
+}
+
+// ── プレビュー更新 ──
+function updatePreview(){
+  const mgmt  = document.getElementById('mgmt-company').value || '管理会社名';
+  const prop  = document.getElementById('prop-name').value    || '（物件名）';
+  const dateV = document.getElementById('naiken-date').value;
+  const hour  = document.getElementById('naiken-hour').value;
+  const min   = document.getElementById('naiken-min').value;
+  const custName = document.getElementById('customer-name').value;
+  const channel = document.getElementById('slack-channel').value;
+
+  // FAXドキュメント
+  document.getElementById('prev-mgmt').textContent = mgmt;
+  document.getElementById('prev-prop').textContent = prop;
+  document.getElementById('prev-hour').textContent = hour;
+  document.getElementById('prev-min').textContent  = min;
+
+  if(dateV){
+    const d = new Date(dateV);
+    document.getElementById('prev-month').textContent = d.getMonth()+1;
+    document.getElementById('prev-day').textContent   = d.getDate();
+  } else {
+    document.getElementById('prev-month').textContent = '　';
+    document.getElementById('prev-day').textContent   = '　';
+  }
+
+  // エージェント名刺
+  document.getElementById('prev-ag-name').textContent   = selectedAgent.name;
+  document.getElementById('prev-ag-tel').textContent    = selectedAgent.tel;
+  document.getElementById('prev-ag-mobile').textContent = selectedAgent.mobile;
+  document.getElementById('prev-ag-mobile2').textContent= selectedAgent.mobile;
+  document.getElementById('prev-license').textContent   = selectedAgent.license;
+
+  // Slackプレビュー
+  document.getElementById('slack-ch-label').textContent = channel;
+  const dateStr = dateV ? (() => {
+    const d = new Date(dateV);
+    return `${d.getMonth()+1}月${d.getDate()}日（${['日','月','火','水','木','金','土'][d.getDay()]}）`;
+  })() : '（日付未入力）';
+
+  const place = document.getElementById('meet-place').value;
+  document.getElementById('slack-text').textContent =
+`📅 内見リマインド
+
+物件：${prop}
+顧客：${custName||'（未入力）'}　${document.getElementById('customer-id').value||'ID未設定'}
+担当：${selectedAgent.name}（${selectedAgent.id}）
+
+日時：${dateStr} ${hour}:${min}〜${place ? '\n場所：'+place : ''}
+送付先：${mgmt}
+
+✅ 内見依頼書はFAX済み
+📱 担当者携帯：${selectedAgent.mobile}`;
+}
+
+// ── FAX書類生成（アラート→印刷ダイアログ） ──
+function generateDoc(){
+  const prop  = document.getElementById('prop-name').value;
+  const mgmt  = document.getElementById('mgmt-company').value;
+  if(!prop || !mgmt){
+    alert('物件名と管理会社名を入力してください');
+    return;
+  }
+  // 印刷プレビュー（FAX）
+  const w = window.open('','_blank','width=800,height=1100');
+  w.document.write(buildPrintHTML());
+  w.document.close();
+  w.onload = () => w.print();
+}
+
+function buildPrintHTML(){
+  const mgmt = document.getElementById('mgmt-company').value || '管理会社名';
+  const prop = document.getElementById('prop-name').value || '物件名';
+  const dateV = document.getElementById('naiken-date').value;
+  const hour = document.getElementById('naiken-hour').value;
+  const min  = document.getElementById('naiken-min').value;
+  let month='　', day='　';
+  if(dateV){ const d=new Date(dateV); month=d.getMonth()+1; day=d.getDate(); }
+
+  return `<!DOCTYPE html>
+<html lang="ja"><head><meta charset="UTF-8">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&family=DM+Mono&display=swap');
+body{font-family:'Noto Sans JP',sans-serif;background:#fff;color:#000;padding:20mm 18mm}
+.title{font-size:22px;font-weight:700;text-align:center;border:2px solid #000;padding:8px 0;margin-bottom:24px;letter-spacing:4px}
+.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px}
+.to-company{font-size:18px;font-weight:700;border-bottom:2px solid #000;padding-bottom:4px;min-width:220px;display:inline-block}
+.from{font-size:11px;line-height:1.8}
+.field-row{display:flex;align-items:center;margin-bottom:20px;border-bottom:1.5px solid #555;padding-bottom:14px}
+.field-label{font-size:14px;font-weight:700;width:80px}
+.field-value{font-size:20px;font-weight:700;flex:1;padding-left:16px}
+.body-text{font-size:13px;margin-bottom:8px;font-weight:500}
+.note{font-size:13px;font-weight:700;margin-top:16px}
+.card{border:3px solid #1a2744;margin-top:32px;display:flex;min-height:110px}
+.card-left{background:#1a2744;padding:16px 20px;flex:1}
+.card-name{color:#fff;font-size:30px;font-weight:700;letter-spacing:3px;margin-bottom:8px}
+.card-info{color:#d0d8e8;font-size:11px;line-height:1.9}
+.card-info .label{color:#c9a84c;font-size:10px}
+.card-right{padding:16px 20px;display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;min-width:160px}
+.card-logo{font-size:22px;color:#1a2744;font-weight:700;letter-spacing:2px;font-family:monospace}
+.card-mobile{font-size:13px;font-weight:700;color:#1a2744;font-family:monospace}
+.card-license{font-size:10px;color:#666;text-align:right}
+</style></head><body>
+<div class="title">内　見　依　頼　書</div>
+<div class="header">
+  <div>
+    <div class="to-company">${mgmt}</div>
+    <div style="font-size:13px;font-weight:700;margin-top:4px">御中</div>
+  </div>
+  <div class="from">
+    <strong>株式会社CORETO</strong><br>
+    〒150-0000　東京都○○区○○ 1-1-1<br>
+    <strong>Tel：03-XXXX-XXXX</strong>　<strong>Fax：03-XXXX-XXXX</strong>
+  </div>
+</div>
+<div class="field-row">
+  <div class="field-label">物件名</div>
+  <div class="field-value">${prop}</div>
+</div>
+<div class="field-row">
+  <div class="field-label">日時</div>
+  <div class="field-value" style="font-size:22px">${month}　月　${day}　日</div>
+</div>
+<div class="field-row">
+  <div class="field-label">時間</div>
+  <div class="field-value" style="font-size:22px">${hour}　時　${min}　分</div>
+</div>
+<p class="body-text">上記物件を内見させて頂きます。</p>
+<p class="body-text">宜しくお願い致します。</p>
+<p class="note">※　下記携帯までご連絡下さい</p>
+<div class="card">
+  <div class="card-left">
+    <div class="card-name">${selectedAgent.name}</div>
+    <div class="card-info">
+      <div>株式会社CORETO</div>
+      <div>〒150-0000　東京都○○区○○ 1-1-1</div>
+      <div><span class="label">Tel：</span>${selectedAgent.tel}</div>
+      <div><span class="label">Fax：</span>03-XXXX-XXXX</div>
+      <div><span class="label" style="color:#f59e0b">携帯：</span><strong style="color:#f0c040;font-size:13px">${selectedAgent.mobile}</strong></div>
+    </div>
+  </div>
+  <div class="card-right">
+    <div class="card-logo">CORETO</div>
+    <div>
+      <div class="card-mobile">${selectedAgent.mobile}</div>
+      <div class="card-license">${selectedAgent.license}</div>
+    </div>
+  </div>
+</div>
+</body></html>`;
+}
+
+// ── PDF保存（サンプルアクション）──
+function downloadPDF(){
+  generateDoc(); // 印刷ダイアログから「PDFとして保存」を案内
+  setTimeout(()=>alert('印刷ダイアログが開きます。\n送信先で「PDFとして保存」を選択するとPDF保存できます。'),200);
+}
+
+// ── Slackリマインド設定 ──
+function sendSlack(){
+  const prop = document.getElementById('prop-name').value;
+  const dateV = document.getElementById('naiken-date').value;
+  const custId = document.getElementById('customer-id').value;
+  if(!prop || !dateV){alert('物件名と内見日を入力してください');return;}
+  const channel = document.getElementById('slack-channel').value;
+  alert(`✅ Slackリマインドを設定しました！
+
+チャンネル：${channel}
+物件：${prop}
+顧客：${CUSTOMER_MAP[custId]||'未登録'} (${custId||'—'})
+担当：${selectedAgent.name}
+
+📅 送信スケジュール：
+  ・前日 09:00
+  ・当日 08:00
+
+Zapier経由でKintoneに登録されます。`);
+}
+
+// ── 顧客DBに内見履歴保存 ──
+function saveToDb(){
+  const custId = document.getElementById('customer-id').value;
+  const prop   = document.getElementById('prop-name').value;
+  const dateV  = document.getElementById('naiken-date').value;
+  const mgmt   = document.getElementById('mgmt-company').value;
+  if(!custId || custId==='new'){alert('顧客IDを選択してください');return;}
+  if(!prop || !dateV){alert('物件名と内見日を入力してください');return;}
+
+  const customer = CUSTOMERS_DB.find(c=>c.id===custId);
+  if(customer){
+    const hour = document.getElementById('naiken-hour').value;
+    const min  = document.getElementById('naiken-min').value;
+    const newId = 'NK-'+(100+Math.floor(Math.random()*900));
+    customer.history.push({
+      id:newId, prop, date:dateV, hour, min,
+      mgmt:mgmt||'—', agent:selectedAgent.name,
+      status:'scheduled', result:'—'
+    });
+    alert(`✅ 顧客DB（${custId}）に内見履歴を保存しました！\n\n履歴ID：${newId}\n物件：${prop}\n日時：${dateV} ${hour}:${min}\n担当：${selectedAgent.name}\n\n「顧客DB・内見履歴」タブで確認できます。`);
+  }
+}
+
+// ── 顧客DBレンダー ──
+let selectedCustomer = null;
+function renderDb(){
+  const list = document.getElementById('db-list');
+  let filtered = CUSTOMERS_DB.filter(c=>{
+    if(dbFilter_current==='scheduled') return c.history.some(h=>h.status==='scheduled');
+    if(dbFilter_current==='done') return c.history.some(h=>h.status==='done');
+    return true;
+  });
+  document.getElementById('db-count').textContent = filtered.length+'名表示中';
+  list.innerHTML = filtered.map(c=>{
+    const scheduled = c.history.filter(h=>h.status==='scheduled');
+    const done      = c.history.filter(h=>h.status==='done');
+    return `
+    <div class="customer-card${selectedCustomer===c.id?' selected':''}" onclick="selectCustomer('${c.id}')">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div class="cc-name">${c.name}</div>
+          <div class="cc-id">${c.id}</div>
+        </div>
+        <div style="text-align:right">
+          <span class="status-badge s-scheduled" style="margin-right:4px">予定 ${scheduled.length}件</span>
+          <span class="status-badge s-done">完了 ${done.length}件</span>
+        </div>
+      </div>
+      ${c.history.length>0 ? `
+      <div class="cc-history">
+        ${c.history.slice(-2).map(h=>`
+        <div class="history-item">
+          <div class="hi-prop">🏠 ${h.prop}</div>
+          <div class="hi-meta">
+            <span class="${h.status==='scheduled'?'status-badge s-scheduled':'status-badge s-done'}">${h.status==='scheduled'?'予定':'完了'}</span>
+            &nbsp;${h.date} ${h.hour}:${h.min}&nbsp;・&nbsp;担当：${h.agent}
+            ${h.result!=='—'?`<br>結果：${h.result}`:''}
+          </div>
+        </div>`).join('')}
+        ${c.history.length>2?`<div style="font-size:10px;color:var(--muted);text-align:center;padding:4px">他 ${c.history.length-2}件</div>`:''}
+      </div>` : '<div style="font-size:11px;color:var(--muted);margin-top:8px">内見履歴なし</div>'}
+    </div>`;
+  }).join('');
+}
+
+function selectCustomer(id){
+  selectedCustomer = id;
+  const c = CUSTOMERS_DB.find(x=>x.id===id);
+  if(!c) return;
+  renderDb();
+
+  const histHtml = c.history.length===0
+    ? '<div class="empty">内見履歴がありません<br><small>内見依頼書タブから登録できます</small></div>'
+    : c.history.map(h=>`
+      <div class="history-item" style="margin-bottom:8px;background:var(--card2);border:1px solid var(--border);border-radius:9px;padding:12px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+          <span class="badge" style="font-size:9px;background:rgba(59,130,246,.15);color:var(--blue);font-family:'DM Mono',monospace">${h.id}</span>
+          <span class="${h.status==='scheduled'?'status-badge s-scheduled':h.status==='done'?'status-badge s-done':'status-badge s-cancelled'}">${h.status==='scheduled'?'予定':h.status==='done'?'完了':'キャンセル'}</span>
+        </div>
+        <div style="font-size:13px;font-weight:700;margin-bottom:4px">🏠 ${h.prop}</div>
+        <div style="font-size:10px;color:var(--sub);line-height:1.8">
+          📅 ${h.date} ${h.hour}:${h.min}<br>
+          🏢 管理会社：${h.mgmt}<br>
+          👤 担当AG：${h.agent}
+          ${h.result!=='—'?`<br>📝 ${h.result}`:''}
+        </div>
+        ${h.status==='scheduled'?`
+        <div style="margin-top:8px;display:flex;gap:6px">
+          <button class="btn btn-green btn-sm" onclick="markDone('${c.id}','${h.id}')">✅ 完了</button>
+          <button class="btn btn-muted btn-sm" onclick="addResult('${c.id}','${h.id}')">📝 結果を記録</button>
+          <button class="btn btn-sm" style="color:var(--orange);border:1px solid rgba(245,158,11,.3);background:transparent" onclick="reissue('${h}')">📄 依頼書再発行</button>
+        </div>`:``}
+      </div>`).join('');
+
+  document.getElementById('db-detail').innerHTML = `
+  <div class="panel">
+    <div class="panel-title">${c.name} の内見履歴</div>
+    <div style="font-size:11px;color:var(--sub);margin-bottom:14px">
+      ${c.id} ・ ${c.tel}<br>
+      内見合計：${c.history.length}件
+      （予定：${c.history.filter(h=>h.status==='scheduled').length}件 /
+        完了：${c.history.filter(h=>h.status==='done').length}件）
+    </div>
+    <button class="btn btn-gold btn-sm" onclick="switchTab(0);document.getElementById('customer-id').value='${c.id}';fillCustomerInfo()" style="margin-bottom:12px;width:100%">
+      ＋ この顧客の内見依頼書を作成
+    </button>
+    ${histHtml}
+  </div>`;
+}
+
+function dbFilter(btn, filter){
+  document.querySelectorAll('.filter-chip').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  dbFilter_current = filter;
+  renderDb();
+}
+function filterDb(q){
+  // 簡易検索（名前・物件名）
+  renderDb();
+}
+
+function markDone(custId, histId){
+  const c = CUSTOMERS_DB.find(x=>x.id===custId);
+  const h = c.history.find(x=>x.id===histId);
+  if(h){ h.status='done'; selectCustomer(custId); }
+}
+
+function addResult(custId, histId){
+  const result = prompt('内見結果を入力してください：\n例：気に入った→申し込みへ / 条件合わず / 検討中');
+  if(result){
+    const c = CUSTOMERS_DB.find(x=>x.id===custId);
+    const h = c.history.find(x=>x.id===histId);
+    if(h){ h.result=result; h.status='done'; selectCustomer(custId); }
+  }
+}
+
+function reissue(){
+  switchTab(0);
+  setTimeout(()=>alert('担当エージェントと日程を変更して再発行してください'),100);
+}
+
+// ── 初期化 ──
+renderAgentCards();
+updatePreview();
+document.getElementById('naiken-date').value = new Date().toISOString().split('T')[0];
+updatePreview();
+</script>
+</body>
+</html>

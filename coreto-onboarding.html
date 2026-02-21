@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CORETO — 研修・オンボーディング</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090f;--card:#0f1119;--card2:#141720;--border:#1e2235;--border2:#252a3d;
+  --gold:#c9a84c;--gold-dim:#7a5f22;
+  --blue:#4f9cf9;--green:#34d399;--red:#f87171;--orange:#fb923c;--purple:#a78bfa;
+  --muted:#4a5270;--sub:#7a849e;--text:#e2e6f3;
+}
+html,body{height:100%;font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text)}
+.hdr{height:54px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 26px;border-bottom:1px solid var(--border);background:rgba(7,9,15,.95);position:sticky;top:0;z-index:100}
+.logo{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:var(--gold);letter-spacing:3px}
+.layout{display:flex;height:calc(100vh - 54px)}
+.sidebar{width:220px;flex-shrink:0;border-right:1px solid var(--border);background:var(--card);overflow-y:auto;padding:12px 0}
+.sb-sec{font-size:8px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;padding:12px 16px 5px}
+.sb-item{display:flex;align-items:center;gap:9px;padding:9px 16px;font-size:12px;cursor:pointer;
+  color:var(--sub);transition:.15s;border-left:2px solid transparent}
+.sb-item:hover{color:var(--text);background:rgba(255,255,255,.025)}
+.sb-item.on{color:var(--blue);background:rgba(79,156,249,.07);border-left-color:var(--blue)}
+.main{flex:1;overflow-y:auto;padding:26px 30px 80px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;margin-bottom:14px}
+.ch{padding:12px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.ch-t{font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+.ch-t::before{content:'';width:3px;height:11px;border-radius:2px;background:var(--gold)}
+.cb{padding:18px 20px}
+.pill{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:6px;font-size:9px;font-weight:700}
+.pg{background:rgba(52,211,153,.13);color:var(--green);border:1px solid rgba(52,211,153,.3)}
+.pb{background:rgba(79,156,249,.12);color:var(--blue);border:1px solid rgba(79,156,249,.25)}
+.po{background:rgba(251,146,60,.12);color:var(--orange);border:1px solid rgba(251,146,60,.3)}
+.pm{background:rgba(74,82,112,.15);color:var(--sub);border:1px solid var(--border2)}
+.btn{padding:8px 16px;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;
+  font-family:'Noto Sans JP',sans-serif;transition:.15s;border:none;display:inline-flex;align-items:center;gap:6px}
+.btn-blue{background:linear-gradient(135deg,var(--blue),#3070c0);color:#fff}
+.btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--sub)}
+.btn-ghost:hover{color:var(--text)}
+.btn-ok{background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);color:var(--green)}
+.btn-sm{padding:4px 10px;font-size:10px;border-radius:6px}
+/* Progress ring */
+.ring-wrap{position:relative;width:90px;height:90px;flex-shrink:0}
+.ring-wrap svg{transform:rotate(-90deg)}
+.ring-label{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+/* Task item */
+.task{display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
+.task:last-child{border:none;padding-bottom:0}
+.task-check{width:22px;height:22px;border-radius:6px;border:2px solid var(--border2);flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.15s;margin-top:1px}
+.task-check.done{background:var(--green);border-color:var(--green);color:#0a0c10;font-size:12px}
+.task-check.done::after{content:'✓'}
+.task-check:not(.done):hover{border-color:var(--blue)}
+.task-body{flex:1}
+.task-title{font-size:13px;font-weight:600;margin-bottom:3px}
+.task-title.done{text-decoration:line-through;color:var(--muted)}
+.task-sub{font-size:11px;color:var(--sub);line-height:1.6}
+.task-tags{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+.task-tag{font-size:9px;padding:2px 8px;border-radius:5px;font-weight:700;
+  background:rgba(74,82,112,.15);color:var(--muted);border:1px solid var(--border2)}
+/* Phase headers */
+.phase-hdr{display:flex;align-items:center;gap:10px;padding:10px 0;margin-bottom:4px}
+.phase-line{flex:1;height:1px;background:var(--border)}
+.phase-label{font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;white-space:nowrap}
+/* HQ Table */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{padding:8px 14px;font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.5px;text-transform:uppercase;border-bottom:1px solid var(--border);background:var(--card2);text-align:left}
+.tbl td{padding:10px 14px;border-bottom:1px solid rgba(30,34,53,.5);font-size:12px;vertical-align:middle}
+.tbl tr:last-child td{border:none}
+/* Progress bar */
+.pbar{height:6px;background:var(--border);border-radius:3px;overflow:hidden;width:100%}
+.pfill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--blue),var(--green));transition:.5s}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+</style>
+</head>
+<body>
+<div class="hdr">
+  <div style="display:flex;align-items:center;gap:12px">
+    <div class="logo">CORETO</div>
+    <div style="width:1px;height:18px;background:var(--border2)"></div>
+    <span style="font-size:10px;color:var(--muted);letter-spacing:1px">研修・オンボーディング</span>
+  </div>
+  <div style="display:flex;gap:8px">
+    <button class="btn btn-ghost btn-sm" onclick="window.location.href='coreto-hub.html'">🏠 ホーム</button>
+  </div>
+</div>
+<div class="layout">
+  <div class="sidebar">
+    <div class="sb-sec">メニュー</div>
+    <div class="sb-item on" id="sb-my"   onclick="showPage('my')"><span>📋</span>自分の進捗</div>
+    <div class="sb-item"    id="sb-hq"   onclick="showPage('hq')"><span>🏢</span>HQ管理</div>
+  </div>
+  <div class="main" id="main"></div>
+</div>
+<script>
+const SESSION_KEY = 'coreto_session';
+const s = (() => { try { return JSON.parse(sessionStorage.getItem(SESSION_KEY)||'{}'); } catch(e){return {};} })();
+const ME = { id: s.id||'10012', name: s.name||'山田 誠', type: s.type||'re' };
+
+// タスクデータ（RE版）
+const TASKS_RE = [
+  // Phase 1
+  {id:1,phase:'フェーズ1：入会手続き（1週目）',title:'業務委託契約書に電子署名',sub:'最新バージョンの契約書を読み、電子署名で締結してください',tags:['必須'],link:'coreto-contract.html',done:true},
+  {id:2,phase:'フェーズ1：入会手続き（1週目）',title:'eKYC・本人確認を完了',sub:'身分証明書と自撮り写真をアップロードし、HQ審査を完了してください',tags:['必須'],link:'coreto-kyc.html',done:true},
+  {id:3,phase:'フェーズ1：入会手続き（1週目）',title:'口座情報を登録',sub:'報酬振込用の銀行口座を登録してください',tags:['必須'],link:'coreto-kyc.html',done:true},
+  {id:4,phase:'フェーズ1：入会手続き（1週目）',title:'LINEへの認証コード受信を確認',sub:'CORETO公式LINEを友達追加し、認証コードが届くことを確認してください',tags:['必須'],done:true},
+  // Phase 2
+  {id:5,phase:'フェーズ2：システム習得（2週目）',title:'マイページを確認',sub:'ダッシュボード・ツール一覧・支払明細の確認方法を把握してください',tags:['推奨'],link:'coreto-agent-mypage.html',done:true},
+  {id:6,phase:'フェーズ2：システム習得（2週目）',title:'案件ボードの操作を習得',sub:'案件パイプラインで案件の登録・ステータス変更・メモ追加を試してください',tags:['推奨'],link:'coreto-pipeline.html',done:false},
+  {id:7,phase:'フェーズ2：システム習得（2週目）',title:'顧客DBの登録を試す',sub:'顧客情報の登録・検索・履歴管理の方法を確認してください',tags:['推奨'],link:'coreto-client-id.html',done:false},
+  {id:8,phase:'フェーズ2：システム習得（2週目）',title:'報酬規程を読む',sub:'成約報酬・ランク制度・ポイント計算を理解してください。FAQも参照',tags:['必須'],link:'coreto-faq.html',done:false},
+  // Phase 3
+  {id:9,phase:'フェーズ3：業務習得（3〜4週目）',title:'内見依頼書を作成してみる',sub:'物件を選び内見依頼書を作成する流れを練習してください',tags:['実務'],link:'coreto-naiken.html',done:false},
+  {id:10,phase:'フェーズ3：業務習得（3〜4週目）',title:'IT重説チェックリストを確認',sub:'IT重説の実施手順と必要書類を理解してください',tags:['実務'],link:'coreto-it-setsu.html',done:false},
+  {id:11,phase:'フェーズ3：業務習得（3〜4週目）',title:'成約報告の流れを確認',sub:'成約時の報告手順・必要書類を確認してください',tags:['実務'],link:'coreto-batch-close.html',done:false},
+  {id:12,phase:'フェーズ3：業務習得（3〜4週目）',title:'ランクダッシュボードで目標設定',sub:'現在のランクと次のランクまでの目標ポイントを確認してください',tags:['推奨'],link:'coreto-rank.html',done:false},
+  // Phase 4
+  {id:13,phase:'フェーズ4：初案件（1ヶ月目）',title:'初案件を案件ボードに登録',sub:'最初の問い合わせをパイプラインに登録してください',tags:['マイルストーン'],done:false},
+  {id:14,phase:'フェーズ4：初案件（1ヶ月目）',title:'名刺を発注',sub:'マイページから名刺を発注してください（¥2,000）',tags:['推奨'],link:'coreto-agent-mypage.html',done:false},
+];
+
+function showPage(p) {
+  ['my','hq'].forEach(id=>document.getElementById('sb-'+id).classList.toggle('on',id===p));
+  if (p==='my') pageMyProgress();
+  else pageHQ();
+}
+
+function pageMyProgress() {
+  const done = TASKS_RE.filter(t=>t.done).length;
+  const total = TASKS_RE.length;
+  const pct = Math.round(done/total*100);
+  const radius = 36, circ = 2*Math.PI*radius;
+
+  document.getElementById('main').innerHTML = `
+    <div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:800;margin-bottom:4px">研修・オンボーディング</div>
+    <div style="font-size:11px;color:var(--sub);margin-bottom:20px">入会〜初案件までのステップ</div>
+
+    <!-- Progress overview -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="ch"><div class="ch-t">全体進捗</div></div>
+      <div class="cb" style="display:flex;align-items:center;gap:24px">
+        <div class="ring-wrap">
+          <svg width="90" height="90" viewBox="0 0 90 90">
+            <circle cx="45" cy="45" r="${radius}" fill="none" stroke="var(--border2)" stroke-width="8"/>
+            <circle cx="45" cy="45" r="${radius}" fill="none" stroke="url(#rg)" stroke-width="8"
+              stroke-dasharray="${circ}" stroke-dashoffset="${circ*(1-pct/100)}" stroke-linecap="round"/>
+            <defs><linearGradient id="rg" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="var(--blue)"/><stop offset="100%" stop-color="var(--green)"/>
+            </linearGradient></defs>
+          </svg>
+          <div class="ring-label">
+            <div style="font-family:'DM Mono';font-size:20px;font-weight:700;color:var(--green)">${pct}%</div>
+            <div style="font-size:9px;color:var(--muted)">完了</div>
+          </div>
+        </div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700;margin-bottom:6px">${done}/${total} タスク完了</div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            ${['フェーズ1','フェーズ2','フェーズ3','フェーズ4'].map((ph,i)=>{
+              const phTasks = TASKS_RE.filter(t=>t.phase.startsWith(ph));
+              const phDone  = phTasks.filter(t=>t.done).length;
+              const phPct   = phTasks.length ? Math.round(phDone/phTasks.length*100) : 0;
+              return `<div>
+                <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--sub);margin-bottom:3px">
+                  <span>${ph}</span><span>${phDone}/${phTasks.length}</span>
+                </div>
+                <div class="pbar"><div class="pfill" style="width:${phPct}%"></div></div>
+              </div>`;
+            }).join('')}
+          </div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:11px;color:var(--muted)">入会日</div>
+          <div style="font-family:'DM Mono';font-size:12px;margin-bottom:8px">2026/01/15</div>
+          <div style="font-size:11px;color:var(--muted)">経過日数</div>
+          <div style="font-family:'DM Mono';font-size:18px;color:var(--gold);font-weight:700">37日</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Task list -->
+    <div class="card">
+      <div class="ch">
+        <div class="ch-t">タスク一覧</div>
+        <span class="pill pg">${done} / ${total} 完了</span>
+      </div>
+      <div class="cb" id="task-list">${renderTasks()}</div>
+    </div>
+  `;
+}
+
+function renderTasks() {
+  let phases = [...new Set(TASKS_RE.map(t=>t.phase))];
+  return phases.map(ph=>{
+    const tasks = TASKS_RE.filter(t=>t.phase===ph);
+    const allDone = tasks.every(t=>t.done);
+    return `
+      <div class="phase-hdr">
+        <div class="phase-label">${ph}</div>
+        <div class="phase-line"></div>
+        ${allDone ? '<span class="pill pg" style="flex-shrink:0">✓ 完了</span>' : ''}
+      </div>
+      ${tasks.map(t=>`
+        <div class="task" id="task-${t.id}">
+          <div class="task-check ${t.done?'done':''}" onclick="toggleTask(${t.id})"></div>
+          <div class="task-body">
+            <div class="task-title ${t.done?'done':''}">${t.title}</div>
+            <div class="task-sub">${t.sub}</div>
+            <div class="task-tags">
+              ${t.tags.map(tag=>`<span class="task-tag">${tag}</span>`).join('')}
+              ${t.link ? `<a href="${t.link}" style="font-size:9px;color:var(--blue);margin-left:4px">→ 開く</a>` : ''}
+            </div>
+          </div>
+        </div>`).join('')}
+    `;
+  }).join('');
+}
+
+function toggleTask(id) {
+  const t = TASKS_RE.find(t=>t.id===id);
+  if (!t) return;
+  t.done = !t.done;
+  pageMyProgress(); // re-render
+}
+
+// ─── HQ管理ページ ─────────────────────────────────────────────────
+function pageHQ() {
+  const agents = [
+    {id:'10012',name:'山田 誠',type:'re',joined:'2026/01/15',done:6,total:14,days:37},
+    {id:'10023',name:'鈴木 健太',type:'re',joined:'2026/01/20',done:3,total:14,days:32},
+    {id:'10041',name:'渡辺 隆',type:'re',joined:'2026/02/01',done:2,total:14,days:20},
+    {id:'20005',name:'田中 美穂',type:'hr',joined:'2026/01/10',done:10,total:12,days:42},
+  ];
+  document.getElementById('main').innerHTML = `
+    <div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:800;margin-bottom:4px">オンボーディング管理（HQ）</div>
+    <div style="font-size:11px;color:var(--sub);margin-bottom:20px">新規エージェントの研修進捗を管理します</div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px">
+      <div class="card" style="margin:0;padding:16px">
+        <div style="font-size:18px;margin-bottom:6px">👥</div>
+        <div style="font-family:'DM Mono';font-size:26px;color:var(--blue)">${agents.length}</div>
+        <div style="font-size:10px;color:var(--muted)">研修中エージェント</div>
+      </div>
+      <div class="card" style="margin:0;padding:16px">
+        <div style="font-size:18px;margin-bottom:6px">⚠️</div>
+        <div style="font-family:'DM Mono';font-size:26px;color:var(--orange)">${agents.filter(a=>a.days>30&&a.done/a.total<0.5).length}</div>
+        <div style="font-size:10px;color:var(--muted)">進捗遅延（30日超・50%未満）</div>
+      </div>
+      <div class="card" style="margin:0;padding:16px">
+        <div style="font-size:18px;margin-bottom:6px">✅</div>
+        <div style="font-family:'DM Mono';font-size:26px;color:var(--green)">${agents.filter(a=>a.done===a.total).length}</div>
+        <div style="font-size:10px;color:var(--muted)">研修完了</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ch"><div class="ch-t">エージェント別進捗</div></div>
+      <table class="tbl">
+        <thead><tr><th>ID</th><th>氏名</th><th>種別</th><th>入会日</th><th>経過</th><th>進捗</th><th>完了タスク</th><th>アクション</th></tr></thead>
+        <tbody>
+          ${agents.map(a=>{
+            const pct=Math.round(a.done/a.total*100);
+            const warn=a.days>30&&pct<50;
+            return `<tr style="${warn?'background:rgba(251,146,60,.03)':''}">
+              <td class="mono">${a.id}</td>
+              <td style="font-weight:700">${a.name} ${warn?'<span class="pill po">遅延</span>':''}</td>
+              <td><span class="pill ${a.type==='re'?'pb':'pg'}">${a.type.toUpperCase()}</span></td>
+              <td class="mono" style="font-size:10px">${a.joined}</td>
+              <td class="mono" style="font-size:11px">${a.days}日</td>
+              <td style="min-width:100px">
+                <div class="pbar"><div class="pfill" style="width:${pct}%"></div></div>
+                <div style="font-size:9px;color:var(--muted);margin-top:3px">${pct}%</div>
+              </td>
+              <td class="mono">${a.done}/${a.total}</td>
+              <td><button class="btn btn-ghost btn-sm" onclick="remind('${a.id}')">📨 リマインド</button></td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function remind(id) {
+  alert(`ID:${id} のエージェントにリマインドをLINE・Slackで送信しました。`);
+}
+
+showPage('my');
+</script>
+</body>
+</html>

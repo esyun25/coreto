@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CORETO — ID採番管理</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090f;--card:#0f1119;--card2:#141720;--border:#1e2235;--border2:#252a3d;
+  --gold:#c9a84c;--gold-dim:#7a5f22;--gold-bg:rgba(201,168,76,.07);
+  --blue:#4f9cf9;--green:#34d399;--red:#f87171;--orange:#fb923c;--purple:#a78bfa;--teal:#2dd4bf;
+  --muted:#4a5270;--sub:#7a849e;--text:#e2e6f3;
+}
+html,body{height:100%;font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text)}
+.header{display:flex;align-items:center;justify-content:space-between;padding:0 26px;height:54px;
+  border-bottom:1px solid var(--border);background:rgba(7,9,15,.95);position:sticky;top:0;z-index:100}
+.logo{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:var(--gold);letter-spacing:3px}
+.body{max-width:1100px;margin:0 auto;padding:28px 28px 80px}
+.sec-title{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;margin-bottom:4px}
+.sec-sub{font-size:11px;color:var(--sub);margin-bottom:24px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;margin-bottom:16px}
+.card-hdr{padding:14px 20px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between}
+.ch-title{font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;
+  display:flex;align-items:center;gap:8px}
+.ch-title::before{content:'';width:3px;height:11px;border-radius:2px;background:var(--gold)}
+.card-body{padding:20px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+
+/* ID Generator Card */
+.id-gen-card{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:18px;
+  position:relative;overflow:hidden;cursor:pointer;transition:all .18s}
+.id-gen-card:hover{border-color:var(--border2);transform:translateY(-2px)}
+.id-gen-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.igc-hq::before{background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+.igc-re::before{background:linear-gradient(90deg,transparent,var(--blue),transparent)}
+.igc-hr::before{background:linear-gradient(90deg,transparent,var(--green),transparent)}
+.igc-pt::before{background:linear-gradient(90deg,transparent,var(--purple),transparent)}
+.igc-type{font-size:9px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px}
+.igc-range{font-family:'DM Mono',monospace;font-size:11px;color:var(--sub);margin-bottom:14px}
+.igc-preview{font-family:'DM Mono',monospace;font-size:28px;font-weight:700;
+  letter-spacing:4px;margin-bottom:12px;min-height:38px;transition:all .3s}
+.igc-btn{padding:8px 16px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;
+  border:none;font-family:'Noto Sans JP',sans-serif;transition:all .15s;width:100%;
+  display:flex;align-items:center;justify-content:center;gap:6px}
+
+/* Case ID card */
+.case-id-display{font-family:'DM Mono',monospace;font-size:22px;font-weight:700;
+  letter-spacing:3px;padding:16px 20px;background:var(--card2);border:1px solid var(--border);
+  border-radius:10px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
+.cid-copy{font-size:18px;cursor:pointer;opacity:.5;transition:opacity .15s}
+.cid-copy:hover{opacity:1}
+
+/* History table */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{padding:8px 14px;font-size:9px;color:var(--muted);font-weight:700;
+  letter-spacing:.5px;text-transform:uppercase;border-bottom:1px solid var(--border);
+  background:var(--card2);text-align:left}
+.tbl td{padding:10px 14px;border-bottom:1px solid rgba(30,34,53,.5);font-size:12px;vertical-align:middle}
+.tbl tr:last-child td{border:none}
+.mono{font-family:'DM Mono',monospace}
+
+/* Pills */
+.pill{display:inline-flex;align-items:center;padding:3px 9px;border-radius:6px;font-size:9px;font-weight:700}
+.pill-gold{background:rgba(201,168,76,.13);color:var(--gold);border:1px solid var(--gold-dim)}
+.pill-blue{background:rgba(79,156,249,.12);color:var(--blue);border:1px solid rgba(79,156,249,.25)}
+.pill-green{background:rgba(52,211,153,.12);color:var(--green);border:1px solid rgba(52,211,153,.25)}
+.pill-purple{background:rgba(167,139,250,.12);color:var(--purple);border:1px solid rgba(167,139,250,.25)}
+.pill-muted{background:rgba(74,82,112,.15);color:var(--sub);border:1px solid var(--border2)}
+.pill-teal{background:rgba(45,212,191,.1);color:var(--teal);border:1px solid rgba(45,212,191,.25)}
+
+/* Spin animation */
+@keyframes spin-in{0%{transform:scale(.8) translateY(6px);opacity:0}100%{transform:scale(1) translateY(0);opacity:1}}
+.id-spin{animation:spin-in .25s cubic-bezier(.34,1.56,.64,1)}
+
+/* Alert */
+.alert-info{background:rgba(79,156,249,.07);border:1px solid rgba(79,156,249,.2);
+  border-radius:10px;padding:12px 16px;font-size:11px;margin-bottom:16px;line-height:1.8;color:var(--sub)}
+
+/* Btn */
+.btn{padding:8px 16px;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;
+  font-family:'Noto Sans JP',sans-serif;transition:all .15s;border:none;
+  display:inline-flex;align-items:center;gap:6px}
+.btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--sub)}
+.btn-ghost:hover{color:var(--text);border-color:var(--sub)}
+.btn-sm{padding:5px 12px;font-size:10px;border-radius:7px}
+
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div style="display:flex;align-items:center;gap:12px">
+    <div class="logo">CORETO</div>
+    <div style="width:1px;height:18px;background:var(--border2)"></div>
+    <div style="font-size:10px;color:var(--muted);letter-spacing:1px">ID採番管理</div>
+  </div>
+  <button onclick="window.location.href='coreto-hub.html'"
+    style="font-size:10px;padding:5px 12px;border-radius:6px;border:1px solid var(--border2);
+    background:transparent;color:var(--muted);cursor:pointer;font-family:'Noto Sans JP',sans-serif">
+    ← ホームに戻る
+  </button>
+</div>
+
+<div class="body">
+  <div class="sec-title">ID採番管理システム</div>
+  <div class="sec-sub">会員ID・案件IDはすべてランダム採番。連番ではないため推測・スキャンが不可能です。</div>
+
+  <div class="alert-info">
+    🔐 <strong>セキュリティ設計</strong><br>
+    会員IDは範囲内からランダム選択のため外部からの推測が困難です。案件IDは英数字6文字のランダム文字列（36^6 = 約21億通り）を使用します。
+    衝突検知ロジックにより、発行済みIDと重複した場合は自動で再採番します。本番ではKintoneのIDテーブルと照合します。
+  </div>
+
+  <!-- ── 会員ID Generator ── -->
+  <div class="sec-title" style="font-size:14px;margin-bottom:14px">会員ID 採番</div>
+  <div class="g4" style="margin-bottom:24px">
+    <!-- HQ exec (手動指定) -->
+    <div class="id-gen-card igc-hq">
+      <div class="igc-type">🏢 HQ 統括（exec）</div>
+      <div class="igc-range">範囲：00001 〜 00199 <span style="font-size:8px;opacity:.6">手動指定</span></div>
+      <input type="number" id="exec-id-input" min="1" max="199"
+        placeholder="1〜199"
+        style="width:100%;margin:8px 0 6px;padding:8px 10px;background:var(--bg2);border:1px solid var(--gold-dim);border-radius:7px;color:var(--gold);font-family:'DM Mono',monospace;font-size:16px;text-align:center;outline:none"
+        oninput="previewExecId(this.value)">
+      <div class="igc-preview" id="exec-id-preview" style="color:var(--gold);margin-top:0">—</div>
+      <button class="igc-btn" style="background:var(--gold-bg);border:1px solid var(--gold-dim);color:var(--gold)"
+              onclick="confirmExecId()">
+        ✅ このIDを採番
+      </button>
+      <div style="font-size:9px;color:var(--muted);margin-top:8px;text-align:center">
+        exec IDは経営陣が番号を指定して発行します
+      </div>
+    </div>
+    <!-- HQ staff/manager (ランダム) -->
+    <div class="id-gen-card igc-hq" style="border-color:var(--border2)">
+      <div class="igc-type">🏢 HQ スタッフ／マネージャー</div>
+      <div class="igc-range">範囲：00200 〜 09999 <span style="font-size:8px;opacity:.6">ランダム採番</span></div>
+      <div class="igc-preview" id="hq-id-preview" style="color:var(--gold)">—</div>
+      <button class="igc-btn" style="background:var(--gold-bg);border:1px solid var(--gold-dim);color:var(--gold)"
+              onclick="generateMemberId('hq')">
+        🎲 採番する
+      </button>
+      <div style="font-size:9px;color:var(--muted);margin-top:8px;text-align:center">
+        使用済み: <span id="hq-used">3</span> / 9800
+      </div>
+    </div>
+    <!-- RE -->
+    <div class="id-gen-card igc-re">
+      <div class="igc-type">🏠 不動産エージェント</div>
+      <div class="igc-range">範囲：10001 〜 19999</div>
+      <div class="igc-preview" id="re-id-preview" style="color:var(--blue)">—</div>
+      <button class="igc-btn" style="background:rgba(79,156,249,.1);border:1px solid rgba(79,156,249,.25);color:var(--blue)"
+              onclick="generateMemberId('re')">
+        🎲 採番する
+      </button>
+      <div style="font-size:9px;color:var(--muted);margin-top:8px;text-align:center">
+        使用済み: <span id="re-used">4</span> / 9999
+      </div>
+    </div>
+    <!-- HR -->
+    <div class="id-gen-card igc-hr">
+      <div class="igc-type">👥 人材紹介エージェント</div>
+      <div class="igc-range">範囲：20001 〜 29999</div>
+      <div class="igc-preview" id="hr-id-preview" style="color:var(--green)">—</div>
+      <button class="igc-btn" style="background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.2);color:var(--green)"
+              onclick="generateMemberId('hr')">
+        🎲 採番する
+      </button>
+      <div style="font-size:9px;color:var(--muted);margin-top:8px;text-align:center">
+        使用済み: <span id="hr-used">1</span> / 9999
+      </div>
+    </div>
+    <!-- PT -->
+    <div class="id-gen-card igc-pt">
+      <div class="igc-type">🤝 パートナー</div>
+      <div class="igc-range">範囲：30001 〜 39999</div>
+      <div class="igc-preview" id="pt-id-preview" style="color:var(--purple)">—</div>
+      <button class="igc-btn" style="background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.25);color:var(--purple)"
+              onclick="generateMemberId('pt')">
+        🎲 採番する
+      </button>
+      <div style="font-size:9px;color:var(--muted);margin-top:8px;text-align:center">
+        使用済み: <span id="pt-used">1</span> / 9999
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 案件ID Generator ── -->
+  <div class="g2" style="align-items:start;margin-bottom:24px">
+    <div class="card">
+      <div class="card-hdr">
+        <div class="ch-title">案件ID 採番</div>
+        <span style="font-size:10px;color:var(--muted)">形式: {種別1文字}{6桁}　例: R047391</span>
+      </div>
+      <div class="card-body">
+        <div style="font-size:11px;color:var(--sub);margin-bottom:16px;line-height:1.9">
+          英大文字（I・O除く）＋数字（0・1除く）の6文字ランダム文字列。<br>
+          <strong style="color:var(--text)">組み合わせ数：約21億通り</strong>（重複チェック付き）
+        </div>
+
+        <div style="font-size:10px;color:var(--sub);margin-bottom:8px">案件種別 <span style="font-size:9px;color:var(--muted)">（頭文字が変わります）</span></div>
+        <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+          <button class="btn btn-ghost btn-sm ctype-btn" id="ct-rent"
+                  onclick="selCaseType('rent',this)">
+            🏠 賃貸仲介 <span class="mono" style="font-size:10px;margin-left:4px;color:var(--blue)">R-</span>
+          </button>
+          <button class="btn btn-ghost btn-sm ctype-btn" id="ct-sale"
+                  onclick="selCaseType('sale',this)">
+            🏢 売買 <span class="mono" style="font-size:10px;margin-left:4px;color:var(--gold)">S-</span>
+          </button>
+          <button class="btn btn-ghost btn-sm ctype-btn" id="ct-hr"
+                  onclick="selCaseType('hr',this)">
+            👥 人材紹介 <span class="mono" style="font-size:10px;margin-left:4px;color:var(--green)">H-</span>
+          </button>
+        </div>
+        <div style="font-size:9px;color:var(--muted);margin-bottom:14px;line-height:1.8;
+                    padding:8px 10px;background:rgba(255,255,255,.02);border-radius:8px;border:1px solid var(--border)">
+          数字6桁が枯渇したら自動で英数字6桁に切り替わります<br>
+          数字段階：<span class="mono" style="color:var(--text)">R000000</span> 〜 <span class="mono" style="color:var(--text)">R999999</span>（100万通り）<br>
+          英数字段階：<span class="mono" style="color:var(--text)">RA3K7M2</span>…（約10億通り追加）
+        </div>
+
+        <div class="case-id-display" id="case-id-display">
+          <span style="color:var(--muted)">— 種別を選んで採番 —</span>
+          <span class="cid-copy" id="cid-copy-btn" style="display:none" onclick="copyCaseId()">📋</span>
+        </div>
+        <div id="cid-mode-label" style="font-size:9px;color:var(--muted);margin-bottom:12px;display:none">
+          現在：<span id="cid-mode-text"></span>
+        </div>
+
+        <div style="display:flex;gap:8px">
+          <button class="igc-btn" id="gen-case-btn"
+                  style="flex:1;background:var(--gold-bg);border:1px solid var(--gold-dim);
+                  color:var(--gold);padding:11px;border-radius:9px;font-weight:700;font-size:12px"
+                  onclick="genCaseId()" disabled>
+            🎲 案件IDを採番する
+          </button>
+          <button class="btn btn-ghost" onclick="confirmCaseId()" id="confirm-case-btn" style="display:none">
+            ✅ 確定
+          </button>
+        </div>
+        <div style="font-size:10px;color:var(--muted);margin-top:10px;line-height:1.8">
+          採番後「確定」を押すとKintoneに登録されます。<br>
+          確定前はIDは予約されません。
+        </div>
+      </div>
+    </div>
+
+    <!-- Algorithm detail -->
+    <div class="card">
+      <div class="card-hdr"><div class="ch-title">採番アルゴリズム</div></div>
+      <div class="card-body">
+        <div style="font-size:11px;color:var(--sub);line-height:1;margin-bottom:16px">
+          <pre style="background:#090b13;border:1px solid var(--border2);border-radius:9px;
+               padding:14px;font-family:'DM Mono',monospace;font-size:10px;color:var(--text);
+               line-height:1.7;overflow-x:auto">// 会員ID採番
+function generateMemberId(type) {
+  const ranges = {
+    hq: [1, 9999],
+    re: [10001, 19999],
+    hr: [20001, 29999],
+    pt: [30001, 39999],
+  };
+  const [min, max] = ranges[type];
+  let id, attempts = 0;
+  do {
+    id = Math.floor(
+      Math.random() * (max - min + 1) + min
+    );
+    attempts++;
+    // 衝突検知（本番: Kintone APIで確認）
+  } while (issuedIds.has(id) && attempts < 100);
+  issuedIds.add(id);
+  return id.toString().padStart(5, '0');
+}
+
+// 案件ID採番（段階的）
+// 段階1: PREFIX + 数字6桁 (000000-999999, 100万通り)
+// 段階2: PREFIX + 英数字6桁 (枯渇後)
+function genCaseIdInternal(prefix) {
+  const year = new Date().getFullYear();
+  const nums = issuedCaseNums.get(prefix) || new Set();
+  let suffix, attempts = 0;
+  // 段階1: 数字のみ
+  const numExhausted = nums.size >= 1000000;
+  if (!numExhausted) {
+    do {
+      suffix = String(Math.floor(Math.random()*1000000)).padStart(6,'0');
+      attempts++;
+    } while (nums.has(suffix) && attempts < 2000);
+    if (!nums.has(suffix)) {
+      nums.add(suffix);
+      issuedCaseNums.set(prefix, nums);
+      return { id: `${prefix}${suffix}`, mode:'数字段階' };
+    }
+  }
+  // 段階2: 英数字 (I・O・0・1除く)
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const alphas = issuedCaseAlpha.get(prefix) || new Set();
+  do {
+    suffix = Array.from({length:6},
+      ()=>chars[Math.floor(Math.random()*chars.length)]).join('');
+    attempts++;
+  } while (alphas.has(suffix) && attempts < 5000);
+  alphas.add(suffix);
+  issuedCaseAlpha.set(prefix, alphas);
+  return { id: `${prefix}${suffix}`, mode:'英数字段階（数字枯渇後）' };
+}</pre>
+        </div>
+        <div style="font-size:10px;color:var(--muted);line-height:1.9">
+          ✅ 衝突検知：発行済みIDと重複した場合は自動で再採番（最大100回）<br>
+          ✅ 推測不可：連番でないためスキャニング攻撃に耐性<br>
+          ✅ 視認性：紛らわしい文字（I/O/0/1）を除外<br>
+          ✅ 本番連携：Kintone の発行済みIDテーブルと照合
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 発行履歴 ── -->
+  <div class="card">
+    <div class="card-hdr">
+      <div class="ch-title">最近の発行履歴</div>
+      <button class="btn btn-ghost btn-sm">📥 CSVダウンロード</button>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="tbl">
+        <thead><tr>
+          <th>発行ID</th><th>種別</th><th>発行日時</th><th>担当HQ</th><th>対象者</th><th>採番回数</th><th>ステータス</th>
+        </tr></thead>
+        <tbody id="issue-history">
+          <tr>
+            <td class="mono" style="color:var(--blue);font-weight:700">10012</td>
+            <td><span class="pill pill-blue">RE AG</span></td>
+            <td class="mono" style="font-size:10px">2026/01/15 10:32</td>
+            <td style="font-size:11px">HQ 統括（00001）</td>
+            <td style="font-size:11px">山田 誠</td>
+            <td class="mono" style="font-size:11px;color:var(--muted)">1回目</td>
+            <td><span class="pill pill-green">発行済み・KYC完了</span></td>
+          </tr>
+          <tr>
+            <td class="mono" style="color:var(--green);font-weight:700">20005</td>
+            <td><span class="pill pill-green">HR AG</span></td>
+            <td class="mono" style="font-size:10px">2026/01/28 14:05</td>
+            <td style="font-size:11px">HQ 統括（00001）</td>
+            <td style="font-size:11px">田中 美穂</td>
+            <td class="mono" style="font-size:11px;color:var(--muted)">1回目</td>
+            <td><span class="pill pill-green">発行済み・KYC完了</span></td>
+          </tr>
+          <tr>
+            <td class="mono" style="color:var(--purple);font-weight:700">30007</td>
+            <td><span class="pill pill-purple">PT</span></td>
+            <td class="mono" style="font-size:10px">2026/02/03 09:18</td>
+            <td style="font-size:11px">HQ スタッフ（00003）</td>
+            <td style="font-size:11px">佐藤 美咲</td>
+            <td class="mono" style="font-size:11px;color:var(--muted)">1回目</td>
+            <td><span class="pill pill-green">発行済み・KYC完了</span></td>
+          </tr>
+          <tr>
+            <td class="mono" style="color:var(--blue);font-weight:700">R047391</td>
+            <td><span class="pill pill-blue">🏠 賃貸仲介</span></td>
+            <td class="mono" style="font-size:10px">2026/02/12 11:44</td>
+            <td style="font-size:11px">山田 誠（10012）</td>
+            <td style="font-size:11px">田中 雄介（賃貸）</td>
+            <td class="mono" style="font-size:11px;color:var(--muted)">数字段階 1回目</td>
+            <td><span class="pill pill-green">進行中</span></td>
+          </tr>
+          <tr>
+            <td class="mono" style="color:var(--gold);font-weight:700">S819204</td>
+            <td><span class="pill pill-gold">🏢 売買</span></td>
+            <td class="mono" style="font-size:10px">2026/02/14 09:30</td>
+            <td style="font-size:11px">佐藤 花子（10008）</td>
+            <td style="font-size:11px">吉田 大輔（売買）</td>
+            <td class="mono" style="font-size:11px;color:var(--muted)">数字段階 1回目</td>
+            <td><span class="pill pill-green">進行中</span></td>
+          </tr>
+          <tr>
+            <td class="mono" style="color:var(--green);font-weight:700">H334521</td>
+            <td><span class="pill pill-green">👥 人材紹介</span></td>
+            <td class="mono" style="font-size:10px">2026/02/16 15:20</td>
+            <td style="font-size:11px">田中 美穂（20005）</td>
+            <td style="font-size:11px">大手IT企業（HR）</td>
+            <td class="mono" style="font-size:11px;color:var(--muted)">数字段階 1回目</td>
+            <td><span class="pill pill-green">進行中</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Issued ID sets (demo: pre-filled with known IDs) ──────────────
+const issuedMemberIds = new Set([1,2,3, 10008,10012,10023,10041, 20005, 30007]);
+const issuedCaseIds   = new Set(['X7K3M1','P9W4R2','A3R7Z6','K9T2M5']);
+
+const RANGES = { hq:[200,9999], hq_exec:[1,199], re:[10001,19999], hr:[20001,29999], pt:[30001,39999] };
+const COLORS  = { hq:'var(--gold)', re:'var(--blue)', hr:'var(--green)', pt:'var(--purple)' };
+const CHARS   = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const YEAR    = new Date().getFullYear();
+
+let currentCaseId   = null;
+let selectedCaseType = 're';
+let lastGeneratedMemberIds = {};
+
+// ── Member ID generation ──────────────────────────────────────────
+function generateMemberId(type) {
+  const [min, max] = RANGES[type];
+  let id, attempts = 0;
+  do {
+    id = Math.floor(Math.random() * (max - min + 1) + min);
+    attempts++;
+  } while (issuedMemberIds.has(id) && attempts < 200);
+
+  const formatted = id.toString().padStart(5, '0');
+  lastGeneratedMemberIds[type] = id;
+
+  const el = document.getElementById(type+'-id-preview');
+  el.textContent = formatted;
+  el.style.color  = COLORS[type];
+  el.classList.remove('id-spin');
+  void el.offsetWidth; // reflow
+  el.classList.add('id-spin');
+
+  // Update used count display (demo only increments visually)
+  const usedEl = document.getElementById(type+'-used');
+  usedEl.textContent = parseInt(usedEl.textContent)+1;
+
+  // Add to history
+  addToHistory(formatted, type);
+
+  return formatted;
+}
+
+// ── exec ID: 手動指定（00001–00199）────────────────────────────────
+function previewExecId(val) {
+  const n = parseInt(val);
+  const el = document.getElementById('exec-id-preview');
+  if (!val || isNaN(n) || n < 1 || n > 199) {
+    el.textContent = '—';
+    return;
+  }
+  const formatted = n.toString().padStart(5, '0');
+  el.textContent = issuedMemberIds.has(n) ? formatted + '（使用済）' : formatted;
+  el.style.color = issuedMemberIds.has(n) ? 'var(--red)' : 'var(--gold)';
+}
+
+function confirmExecId() {
+  const val = parseInt(document.getElementById('exec-id-input').value);
+  const el = document.getElementById('exec-id-preview');
+  if (isNaN(val) || val < 1 || val > 199) {
+    el.textContent = '1〜199の番号を入力してください';
+    el.style.color = 'var(--red)';
+    return;
+  }
+  if (issuedMemberIds.has(val)) {
+    el.textContent = '番号 ' + val.toString().padStart(5,'0') + ' はすでに使用済みです';
+    el.style.color = 'var(--red)';
+    return;
+  }
+  const formatted = val.toString().padStart(5, '0');
+  issuedMemberIds.add(val);
+  el.textContent = formatted;
+  el.style.color = 'var(--gold)';
+  el.classList.remove('id-spin');
+  void el.offsetWidth;
+  el.classList.add('id-spin');
+  addToHistory(formatted, 'hq_exec');
+  document.getElementById('exec-id-input').value = '';
+}
+
+
+// ── Case ID generation ────────────────────────────────────────────
+let currentCasePrefix = null;
+const prefixMap = {
+  rent: { prefix:'R', color:'var(--blue)',  label:'賃貸仲介' },
+  sale: { prefix:'S', color:'var(--gold)',  label:'売買' },
+  hr:   { prefix:'H', color:'var(--green)', label:'人材紹介' },
+};
+
+function selCaseType(type, btn) {
+  currentCasePrefix = type;
+  document.querySelectorAll('.ctype-btn').forEach(b=>{
+    b.style.borderColor=''; b.style.color=''; b.style.background='';
+  });
+  const {color} = prefixMap[type];
+  btn.style.borderColor = color;
+  btn.style.color        = color;
+  btn.style.background   = color.replace(')',', .08)').replace('var(--','rgba(').replace(')','');
+  // safer approach:
+  const bgMap={rent:'rgba(79,156,249,.08)',sale:'rgba(201,168,76,.08)',hr:'rgba(52,211,153,.08)'};
+  btn.style.background = bgMap[type];
+  document.getElementById('gen-case-btn').disabled = false;
+  currentCaseId = null;
+  document.getElementById('confirm-case-btn').style.display = 'none';
+}
+
+function genCaseId() {
+  if (!currentCasePrefix) return;
+  const {prefix, color, label} = prefixMap[currentCasePrefix];
+  const result = genCaseIdInternal(prefix);
+  currentCaseId = result.id;
+
+  const display = document.getElementById('case-id-display');
+  display.innerHTML = `<span style="color:${color};font-size:18px;font-weight:700;letter-spacing:2px">${currentCaseId}</span>
+    <span class="cid-copy" onclick="copyCaseId()">📋</span>`;
+
+  const modeEl = document.getElementById('cid-mode-label');
+  const modeText = document.getElementById('cid-mode-text');
+  modeEl.style.display = 'block';
+  modeText.textContent = `${label}（${prefix}） / ${result.mode}`;
+  modeText.style.color = color;
+
+  document.getElementById('confirm-case-btn').style.display = 'inline-flex';
+  display.style.animation='none'; void display.offsetWidth;
+  display.style.animation='spin-in .25s ease';
+}
+
+function copyCaseId() {
+  if (!currentCaseId) return;
+  navigator.clipboard.writeText(currentCaseId)
+    .then(()=>{ alert('✅ コピーしました：'+currentCaseId); })
+    .catch(()=>{ prompt('IDをコピーしてください：', currentCaseId); });
+}
+
+function confirmCaseId() {
+  if (!currentCaseId) return;
+  addToHistory(currentCaseId, 'case');
+  document.getElementById('confirm-case-btn').style.display = 'none';
+  alert(`✅ 案件ID「${currentCaseId}」をKintoneに登録しました。\n\n賃貸仲介=R / 売買=S / 人材紹介=H`);
+  currentCaseId = null;
+}
+
+// ── History ──────────────────────────────────────────────────────
+function addToHistory(id, type) {
+  const tbody = document.getElementById('issue-history');
+  const row   = document.createElement('tr');
+  const now   = new Date().toLocaleString('ja-JP',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+  const pillMap = {
+    hq:   ['pill-gold',  'HQ 本部'],
+    re:   ['pill-blue',  'RE AG'],
+    hr:   ['pill-green', 'HR AG'],
+    pt:   ['pill-purple','PT'],
+    case: ['pill-teal',  '案件ID'],
+  };
+  const [pc, label] = pillMap[type] || ['pill-muted','不明'];
+  const col = {hq:'var(--gold)',re:'var(--blue)',hr:'var(--green)',pt:'var(--purple)',case:'var(--teal)'}[type];
+  row.innerHTML = `
+    <td class="mono" style="color:${col};font-weight:700">${id}</td>
+    <td><span class="pill ${pc}">${label}</span></td>
+    <td class="mono" style="font-size:10px">${now}</td>
+    <td style="font-size:11px">HQ 統括（00001）</td>
+    <td style="font-size:11px">—</td>
+    <td class="mono" style="font-size:11px;color:var(--muted)">今回</td>
+    <td><span class="pill pill-blue">発行済み（未確定）</span></td>`;
+  tbody.insertBefore(row, tbody.firstChild);
+}
+</script>
+</body>
+</html>

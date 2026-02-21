@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CORETO 特別紹介コード管理</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090f;--card:#0f1119;--card2:#141720;--border:#1e2235;--border2:#252a3d;
+  --gold:#c9a84c;--gold-l:#e8c96a;--gold-dim:#7a5f22;
+  --blue:#4f9cf9;--green:#34d399;--red:#f87171;--orange:#fb923c;--purple:#a78bfa;
+  --teal:#2dd4bf;--muted:#4a5270;--sub:#7a849e;--text:#e2e6f3;
+}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* ─ Header ─ */
+.header{display:flex;align-items:center;justify-content:space-between;padding:0 28px;height:54px;
+  border-bottom:1px solid var(--border);background:rgba(7,9,15,.9);backdrop-filter:blur(12px);
+  position:sticky;top:0;z-index:200}
+.logo{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--gold);letter-spacing:3px}
+
+/* ─ Layout ─ */
+.body{max-width:1280px;margin:0 auto;padding:24px 28px 60px}
+
+/* ─ Top bar ─ */
+.topbar{display:flex;align-items:center;gap:12px;margin-bottom:22px;flex-wrap:wrap}
+.topbar-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;flex:1}
+.tb-btn{padding:9px 18px;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;
+  border:none;font-family:'Noto Sans JP',sans-serif;transition:all .15s;letter-spacing:.5px}
+.tb-primary{background:linear-gradient(135deg,var(--gold),#a8742a);color:#0a0c10}
+.tb-primary:hover{filter:brightness(1.1);transform:translateY(-1px)}
+.tb-ghost{background:transparent;border:1px solid var(--border2);color:var(--sub)}
+.tb-ghost:hover{color:var(--text)}
+
+/* ─ Stats row ─ */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 18px;
+  display:flex;flex-direction:column;gap:4px}
+.sc-val{font-family:'DM Mono',monospace;font-size:28px;font-weight:500;line-height:1}
+.sc-label{font-size:10px;color:var(--muted)}
+
+/* ─ Table ─ */
+.table-wrap{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:24px}
+.table-header{display:flex;align-items:center;justify-content:space-between;
+  padding:14px 20px;border-bottom:1px solid var(--border)}
+.th-left{display:flex;align-items:center;gap:12px}
+.th-title{font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;
+  display:flex;align-items:center;gap:8px}
+.th-title::before{content:'';width:3px;height:12px;background:var(--gold);border-radius:2px}
+.search-box{background:var(--card2);border:1px solid var(--border2);border-radius:8px;
+  padding:7px 12px;font-size:12px;color:var(--text);font-family:'Noto Sans JP',sans-serif;width:220px}
+.search-box:focus{outline:none;border-color:var(--blue)}
+.search-box::placeholder{color:var(--muted)}
+
+.filter-tabs{display:flex;gap:2px}
+.ft{padding:5px 12px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;
+  color:var(--muted);border:1px solid transparent;transition:all .15s;letter-spacing:.5px}
+.ft.on{background:rgba(201,168,76,.12);border-color:var(--gold-dim);color:var(--gold)}
+.ft:hover:not(.on){color:var(--sub)}
+
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{padding:10px 16px;font-size:9px;color:var(--muted);font-weight:700;
+  border-bottom:1px solid var(--border);text-align:left;letter-spacing:.5px;
+  text-transform:uppercase;white-space:nowrap;background:var(--card2)}
+.tbl td{padding:12px 16px;border-bottom:1px solid rgba(30,34,53,.6);font-size:12px;
+  vertical-align:middle}
+.tbl tr:last-child td{border:none}
+.tbl tr:hover td{background:rgba(255,255,255,.012)}
+.mono{font-family:'DM Mono',monospace}
+
+/* ─ Code cell ─ */
+.code-chip{font-family:'DM Mono',monospace;font-size:13px;font-weight:600;letter-spacing:2px;
+  padding:4px 10px;border-radius:6px;display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+.code-chip:hover{filter:brightness(1.15)}
+.copy-hint{font-size:9px;opacity:.6}
+
+/* ─ Benefit badges ─ */
+.ben-wrap{display:flex;flex-wrap:wrap;gap:4px}
+.ben{font-size:9px;font-weight:700;padding:2px 7px;border-radius:4px;white-space:nowrap}
+.ben-fee{background:rgba(52,211,153,.12);color:var(--green);border:1px solid rgba(52,211,153,.25)}
+.ben-rate{background:rgba(201,168,76,.12);color:var(--gold);border:1px solid rgba(201,168,76,.25)}
+.ben-corp{background:rgba(167,139,250,.12);color:var(--purple);border:1px solid rgba(167,139,250,.25)}
+.ben-rank{background:rgba(79,156,249,.12);color:var(--blue);border:1px solid rgba(79,156,249,.25)}
+.ben-custom{background:rgba(251,146,60,.12);color:var(--orange);border:1px solid rgba(251,146,60,.25)}
+
+/* ─ Status ─ */
+.status-dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:5px}
+.st-active{background:var(--green)}
+.st-inactive{background:var(--muted)}
+.st-expired{background:var(--red)}
+.st-limited{background:var(--orange)}
+
+/* ─ Usage bar ─ */
+.usage-bar{background:var(--border2);border-radius:3px;height:5px;width:100px;overflow:hidden;margin-top:4px}
+.usage-fill{height:100%;border-radius:3px}
+
+/* ─ Action btns ─ */
+.act-btn{padding:4px 10px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;
+  font-family:'Noto Sans JP',sans-serif;border:1px solid var(--border2);
+  background:transparent;color:var(--muted);transition:all .12s}
+.act-btn:hover{color:var(--text);border-color:var(--sub)}
+.act-edit:hover{color:var(--blue);border-color:rgba(79,156,249,.4)}
+.act-del:hover{color:var(--red);border-color:rgba(248,113,113,.4)}
+.act-tog:hover{color:var(--green);border-color:rgba(52,211,153,.4)}
+
+/* ─ Modal ─ */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);
+  z-index:300;display:none;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:var(--card);border:1px solid var(--border2);border-radius:16px;
+  width:560px;max-height:90vh;overflow-y:auto}
+.modal-hdr{display:flex;align-items:center;justify-content:space-between;
+  padding:20px 24px 16px;border-bottom:1px solid var(--border)}
+.modal-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:var(--gold)}
+.modal-close{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:2px 6px}
+.modal-body{padding:20px 24px}
+.modal-footer{padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
+.mf-btn{padding:9px 20px;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;
+  font-family:'Noto Sans JP',sans-serif}
+.mf-save{background:linear-gradient(135deg,var(--gold),#a8742a);border:none;color:#0a0c10}
+.mf-cancel{background:transparent;border:1px solid var(--border2);color:var(--sub)}
+
+/* ─ Form fields ─ */
+.mfield{margin-bottom:14px}
+.mfield label{display:block;font-size:10px;color:var(--sub);margin-bottom:5px}
+.mfield input,.mfield select,.mfield textarea{
+  width:100%;background:#090b13;border:1px solid var(--border2);border-radius:8px;
+  padding:9px 12px;color:var(--text);font-size:12px;font-family:'Noto Sans JP',sans-serif}
+.mfield input:focus,.mfield select:focus,.mfield textarea:focus{outline:none;border-color:var(--blue)}
+.mfield .mono-inp{font-family:'DM Mono',monospace;letter-spacing:2px;font-size:14px}
+.mfield-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mfield-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+
+/* benefit checkboxes */
+.ben-checks{display:flex;flex-direction:column;gap:8px}
+.ben-check-row{display:flex;align-items:center;gap:10px;background:var(--card2);
+  border-radius:8px;padding:10px 12px;border:1px solid var(--border2);cursor:pointer}
+.ben-check-row.selected{border-color:var(--gold-dim);background:rgba(201,168,76,.06)}
+.bcr-icon{font-size:16px}
+.bcr-text{flex:1}
+.bcr-label{font-size:11px;font-weight:700}
+.bcr-sub{font-size:10px;color:var(--sub)}
+.bcr-toggle{width:14px;height:14px;border-radius:3px;border:1px solid var(--border2);
+  display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;
+  background:transparent}
+.bcr-toggle.on{background:var(--gold);border-color:var(--gold);color:#000}
+
+/* usage history */
+.use-list{display:flex;flex-direction:column;gap:6px;max-height:240px;overflow-y:auto}
+.use-item{display:flex;align-items:center;gap:12px;padding:8px 12px;
+  background:var(--card2);border-radius:8px;font-size:11px}
+.use-avatar{width:28px;height:28px;border-radius:50%;background:var(--border2);
+  display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
+
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div style="display:flex;align-items:center;gap:12px">
+    <div class="logo">CORETO</div>
+    <div style="width:1px;height:18px;background:var(--border2)"></div>
+    <div style="font-size:10px;color:var(--muted);letter-spacing:1px">特別紹介コード管理</div>
+  </div>
+  <button onclick="window.location.href='coreto-hub.html'"
+          style="font-size:10px;padding:5px 12px;border-radius:6px;border:1px solid var(--border2);
+          background:transparent;color:var(--muted);cursor:pointer;font-family:'Noto Sans JP',sans-serif">
+    ← 管理ポータル
+  </button>
+</div>
+
+<div class="body">
+
+  <div class="topbar">
+    <div class="topbar-title">特別紹介コード管理</div>
+    <input class="search-box" type="text" placeholder="🔍 コード・メモを検索…" oninput="renderTable()" id="search-box">
+    <button class="tb-btn tb-ghost" onclick="exportCSV()">📥 CSVエクスポート</button>
+    <button class="tb-btn tb-primary" onclick="openModal()">＋ 新規コード作成</button>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row" id="stats-row"></div>
+
+  <!-- Table -->
+  <div class="table-wrap">
+    <div class="table-header">
+      <div class="th-left">
+        <div class="th-title">コード一覧</div>
+        <div class="filter-tabs">
+          <div class="ft on" data-f="all" onclick="setFilter('all',this)">全て</div>
+          <div class="ft" data-f="active" onclick="setFilter('active',this)">有効</div>
+          <div class="ft" data-f="inactive" onclick="setFilter('inactive',this)">無効</div>
+          <div class="ft" data-f="expired" onclick="setFilter('expired',this)">期限切れ</div>
+        </div>
+      </div>
+      <div style="font-size:10px;color:var(--muted)" id="tbl-count">— 件</div>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>コード</th>
+            <th>特典内容</th>
+            <th>使用状況</th>
+            <th>有効期限</th>
+            <th>ステータス</th>
+            <th>メモ</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="tbl-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div><!-- /body -->
+
+<!-- ─ Create/Edit Modal ─ -->
+<div class="modal-overlay" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-hdr">
+      <div class="modal-title" id="modal-title">新規コード作成</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- Code -->
+      <div class="mfield">
+        <label>コード <span style="color:var(--red)">*</span></label>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="m-code" class="mono-inp" placeholder="例：WELCOME2026"
+                 style="flex:1;text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
+          <button onclick="generateCode()"
+                  style="padding:9px 14px;border-radius:8px;border:1px solid var(--border2);
+                  background:var(--card2);color:var(--sub);cursor:pointer;font-size:11px;
+                  font-family:'Noto Sans JP',sans-serif;white-space:nowrap">自動生成</button>
+        </div>
+      </div>
+
+      <!-- Benefits -->
+      <div class="mfield">
+        <label>特典内容（複数選択可）</label>
+        <div class="ben-checks" id="ben-checks">
+          <div class="ben-check-row" id="bc-freefee" onclick="toggleBen('freefee')">
+            <div class="bcr-icon">🏷</div>
+            <div class="bcr-text">
+              <div class="bcr-label">月会費永久無料</div>
+              <div class="bcr-sub">Bronze/Silver の月会費（¥980/¥490）が永久0円に</div>
+            </div>
+            <div class="bcr-toggle" id="bt-freefee">✓</div>
+          </div>
+          <div class="ben-check-row" id="bc-rate" onclick="toggleBen('rate')">
+            <div class="bcr-icon">💰</div>
+            <div class="bcr-text">
+              <div class="bcr-label">報酬率カスタム指定</div>
+              <div class="bcr-sub">ランク報酬率に関わらず指定した率で計算</div>
+            </div>
+            <div class="bcr-toggle" id="bt-rate"></div>
+          </div>
+          <div class="ben-check-row" id="bc-corp" onclick="toggleBen('corp')">
+            <div class="bcr-icon">🏢</div>
+            <div class="bcr-text">
+              <div class="bcr-label">法人パートナー経由払い（源泉なし）</div>
+              <div class="bcr-sub">創業メンバー向け。報酬を法人口座へ振込</div>
+            </div>
+            <div class="bcr-toggle" id="bt-corp"></div>
+          </div>
+          <div class="ben-check-row" id="bc-rank" onclick="toggleBen('rank')">
+            <div class="bcr-icon">⭐</div>
+            <div class="bcr-text">
+              <div class="bcr-label">初期ランク指定</div>
+              <div class="bcr-sub">登録時のランクをBronze以外にスタート</div>
+            </div>
+            <div class="bcr-toggle" id="bt-rank"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Rate (shown if rate is selected) -->
+      <div class="mfield" id="rate-field" style="display:none">
+        <label>カスタム報酬率（不動産 / 人材）</label>
+        <div class="mfield-row">
+          <div>
+            <label style="font-size:9px">不動産エージェント</label>
+            <input type="number" id="m-rate-re" min="0" max="100" step="0.5" value="75"
+                   style="font-family:'DM Mono',monospace">
+          </div>
+          <div>
+            <label style="font-size:9px">人材エージェント</label>
+            <input type="number" id="m-rate-hr" min="0" max="100" step="0.5" value="55"
+                   style="font-family:'DM Mono',monospace">
+          </div>
+        </div>
+        <div style="font-size:10px;color:var(--muted);margin-top:4px">
+          ※ この率はランクに関わらず適用されます（三為・高額インセンティブは通常通り）
+        </div>
+      </div>
+
+      <!-- Rank (shown if rank is selected) -->
+      <div class="mfield" id="rank-field" style="display:none">
+        <label>初期ランク指定</label>
+        <select id="m-rank">
+          <option value="silver">🥈 Silver</option>
+          <option value="gold">🥇 Gold</option>
+          <option value="platinum">💎 Platinum</option>
+          <option value="founder">⭐ 創業メンバー</option>
+        </select>
+      </div>
+
+      <!-- Limits -->
+      <div class="mfield-row" style="margin-bottom:14px">
+        <div class="mfield" style="margin-bottom:0">
+          <label>使用上限 <span style="color:var(--muted);font-size:9px">（空白=無制限）</span></label>
+          <input type="number" id="m-limit" min="1" step="1" placeholder="例：10"
+                 style="font-family:'DM Mono',monospace">
+        </div>
+        <div class="mfield" style="margin-bottom:0">
+          <label>有効期限 <span style="color:var(--muted);font-size:9px">（空白=無期限）</span></label>
+          <input type="date" id="m-expiry">
+        </div>
+      </div>
+
+      <!-- Target -->
+      <div class="mfield">
+        <label>対象タイプ</label>
+        <select id="m-target">
+          <option value="all">全員（パートナー・RE・HR）</option>
+          <option value="re">不動産エージェントのみ</option>
+          <option value="hr">人材エージェントのみ</option>
+          <option value="pt">パートナーのみ</option>
+          <option value="founder">創業メンバーのみ</option>
+        </select>
+      </div>
+
+      <!-- Memo -->
+      <div class="mfield" style="margin-bottom:0">
+        <label>メモ・発行理由</label>
+        <textarea id="m-memo" rows="2" placeholder="例：2026年Q1キャンペーン用。先着10名まで。"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="mf-btn mf-cancel" onclick="closeModal()">キャンセル</button>
+      <button class="mf-btn mf-save" onclick="saveCode()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─ Usage Modal ─ -->
+<div class="modal-overlay" id="usage-modal" onclick="if(event.target===this)closeUsageModal()">
+  <div class="modal">
+    <div class="modal-hdr">
+      <div class="modal-title" id="um-title">使用履歴</div>
+      <button class="modal-close" onclick="closeUsageModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="use-list" id="use-list"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ================================================================
+//  Demo data
+// ================================================================
+let CODES = [
+  {
+    id:1, code:'FOUNDER2026', active:true, expiry:null, limit:null, used:3,
+    benefits:{ freefee:true, rate:false, corp:true, rank:true },
+    rateRE:90, rateHR:90, rank:'founder', target:'founder',
+    memo:'創業メンバー向け。法人払い対応・月会費永久無料・創業メンバーランク付与',
+    users:[
+      { id:'10001', name:'Tim', type:'RE', date:'2025-10-01' },
+      { id:'20001', name:'佐藤 花子', type:'HR', date:'2025-11-15' },
+      { id:'10003', name:'鈴木 一郎', type:'RE', date:'2025-12-03' },
+    ]
+  },
+  {
+    id:2, code:'WELCOME2026', active:true, expiry:'2026-03-31', limit:20, used:7,
+    benefits:{ freefee:true, rate:false, corp:false, rank:false },
+    rateRE:null, rateHR:null, rank:null, target:'all',
+    memo:'2026年Q1キャンペーン用。月会費永久無料特典。先着20名。',
+    users:[
+      { id:'10012', name:'山田 誠',   type:'RE', date:'2026-01-10' },
+      { id:'20005', name:'田中 美穂', type:'HR', date:'2026-01-18' },
+      { id:'30007', name:'佐藤 美咲', type:'PT', date:'2026-01-22' },
+      { id:'10015', name:'木村 大介', type:'RE', date:'2026-02-01' },
+      { id:'20008', name:'中村 香',   type:'HR', date:'2026-02-05' },
+      { id:'10020', name:'渡辺 隆',   type:'RE', date:'2026-02-10' },
+      { id:'30010', name:'高橋 健',   type:'PT', date:'2026-02-14' },
+    ]
+  },
+  {
+    id:3, code:'GOLD_START', active:true, expiry:'2026-06-30', limit:5, used:2,
+    benefits:{ freefee:true, rate:false, corp:false, rank:true },
+    rateRE:null, rateHR:null, rank:'gold', target:'re',
+    memo:'優秀候補者スカウト用。Goldランクスタート＋月会費無料。不動産AG限定。',
+    users:[
+      { id:'10025', name:'長谷川 翔', type:'RE', date:'2026-01-28' },
+      { id:'10030', name:'池田 茜',   type:'RE', date:'2026-02-08' },
+    ]
+  },
+  {
+    id:4, code:'HR_PRO75', active:true, expiry:null, limit:3, used:1,
+    benefits:{ freefee:false, rate:true, corp:false, rank:false },
+    rateRE:null, rateHR:75, rank:null, target:'hr',
+    memo:'人材AG向け高報酬率コード。特別採用候補向け。',
+    users:[
+      { id:'20010', name:'小川 優子', type:'HR', date:'2026-02-01' },
+    ]
+  },
+  {
+    id:5, code:'CAMP_2025', active:false, expiry:'2025-12-31', limit:50, used:23,
+    benefits:{ freefee:true, rate:false, corp:false, rank:false },
+    rateRE:null, rateHR:null, rank:null, target:'all',
+    memo:'2025年末キャンペーン。終了済み。',
+    users:[]
+  },
+];
+
+let currentFilter = 'all';
+let editingId     = null;
+let selectedBens  = { freefee:false, rate:false, corp:false, rank:false };
+
+// ================================================================
+//  Init
+// ================================================================
+window.addEventListener('DOMContentLoaded', () => {
+  renderStats();
+  renderTable();
+});
+
+// ================================================================
+//  Stats
+// ================================================================
+function renderStats() {
+  const total   = CODES.length;
+  const active  = CODES.filter(c=>c.active && !isExpired(c)).length;
+  const totalUsed = CODES.reduce((s,c)=>s+c.used, 0);
+  const withLimit = CODES.filter(c=>c.limit && c.active).length;
+
+  document.getElementById('stats-row').innerHTML = [
+    { val: total,     label:'コード総数',     color:'var(--text)' },
+    { val: active,    label:'有効コード数',    color:'var(--green)' },
+    { val: totalUsed, label:'総使用回数',      color:'var(--blue)' },
+    { val: withLimit, label:'使用上限あり',    color:'var(--orange)' },
+  ].map(s=>`
+    <div class="stat-card">
+      <div class="sc-val" style="color:${s.color}">${s.val}</div>
+      <div class="sc-label">${s.label}</div>
+    </div>`).join('');
+}
+
+function isExpired(c) {
+  if (!c.expiry) return false;
+  return new Date(c.expiry) < new Date();
+}
+function isLimitReached(c) {
+  return c.limit && c.used >= c.limit;
+}
+function getStatus(c) {
+  if (!c.active) return 'inactive';
+  if (isExpired(c)) return 'expired';
+  if (isLimitReached(c)) return 'expired';
+  return 'active';
+}
+
+// ================================================================
+//  Table
+// ================================================================
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.ft').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  renderTable();
+}
+
+function renderTable() {
+  const q = document.getElementById('search-box').value.toLowerCase();
+  const filtered = CODES.filter(c => {
+    const st = getStatus(c);
+    const fOk = currentFilter === 'all' ? true
+      : currentFilter === 'active'   ? st === 'active'
+      : currentFilter === 'inactive' ? st === 'inactive'
+      : currentFilter === 'expired'  ? st === 'expired'
+      : true;
+    const qOk = !q || c.code.toLowerCase().includes(q) || (c.memo||'').toLowerCase().includes(q);
+    return fOk && qOk;
+  });
+
+  document.getElementById('tbl-count').textContent = `${filtered.length} 件`;
+
+  const ST_LABEL = { active:'有効', inactive:'無効', expired:'期限切れ' };
+  const ST_CLS   = { active:'st-active', inactive:'st-inactive', expired:'st-expired' };
+
+  document.getElementById('tbl-body').innerHTML = filtered.map(c => {
+    const st      = getStatus(c);
+    const usePct  = c.limit ? Math.min(100, Math.round(c.used / c.limit * 100)) : null;
+    const bens    = buildBenBadges(c);
+    return `
+      <tr>
+        <td>
+          <div class="code-chip" style="background:rgba(201,168,76,.08);color:var(--gold);
+               border:1px solid var(--gold-dim)" onclick="copyCode('${c.code}')">
+            ${c.code}
+            <span class="copy-hint">📋</span>
+          </div>
+        </td>
+        <td><div class="ben-wrap">${bens}</div></td>
+        <td>
+          <div style="font-family:'DM Mono',monospace;font-size:12px">
+            ${c.used}${c.limit ? ' / '+c.limit : ' / ∞'}
+          </div>
+          ${usePct !== null ? `
+            <div class="usage-bar">
+              <div class="usage-fill" style="width:${usePct}%;background:${usePct>=90?'var(--red)':usePct>=70?'var(--orange)':'var(--green)'}"></div>
+            </div>` : ''}
+          <div style="font-size:10px;color:var(--muted);margin-top:2px;cursor:pointer;color:var(--blue)"
+               onclick="showUsage(${c.id})">履歴を見る</div>
+        </td>
+        <td style="font-size:11px;color:${c.expiry?'var(--sub)':'var(--muted)'}">
+          ${c.expiry || '無期限'}
+        </td>
+        <td>
+          <span class="status-dot ${ST_CLS[st]}"></span>
+          <span style="font-size:11px">${ST_LABEL[st]}</span>
+          ${isLimitReached(c) ? '<div style="font-size:9px;color:var(--red)">上限到達</div>' : ''}
+        </td>
+        <td style="max-width:180px;font-size:11px;color:var(--sub);line-height:1.6">${c.memo||'—'}</td>
+        <td>
+          <div style="display:flex;gap:4px;flex-wrap:wrap">
+            <button class="act-btn act-edit" onclick="openModal(${c.id})">編集</button>
+            <button class="act-btn act-tog" onclick="toggleActive(${c.id})">
+              ${c.active?'無効化':'有効化'}
+            </button>
+            <button class="act-btn act-del" onclick="deleteCode(${c.id})">削除</button>
+          </div>
+        </td>
+      </tr>`;
+  }).join('') || `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:32px;font-size:12px">
+    該当するコードがありません
+  </td></tr>`;
+}
+
+function buildBenBadges(c) {
+  const parts = [];
+  if (c.benefits.freefee) parts.push('<span class="ben ben-fee">🏷 月会費無料</span>');
+  if (c.benefits.rate)    {
+    const rStr = [c.rateRE!=null?`不動産${c.rateRE}%`:'', c.rateHR!=null?`人材${c.rateHR}%`:''].filter(Boolean).join('/');
+    parts.push(`<span class="ben ben-rate">💰 報酬率 ${rStr}</span>`);
+  }
+  if (c.benefits.corp)    parts.push('<span class="ben ben-corp">🏢 法人払い</span>');
+  if (c.benefits.rank)    {
+    const rl = {silver:'Silver',gold:'Gold',platinum:'Platinum',founder:'創業メンバー'};
+    parts.push(`<span class="ben ben-rank">⭐ ${rl[c.rank]||c.rank}スタート</span>`);
+  }
+  if (!parts.length)       parts.push('<span class="ben ben-custom">— 特典なし</span>');
+  return parts.join('');
+}
+
+// ================================================================
+//  Modal: Create / Edit
+// ================================================================
+function openModal(id) {
+  editingId = id || null;
+  const c   = id ? CODES.find(x=>x.id===id) : null;
+
+  document.getElementById('modal-title').textContent = c ? 'コード編集' : '新規コード作成';
+
+  document.getElementById('m-code').value  = c ? c.code : '';
+  document.getElementById('m-limit').value = c && c.limit ? c.limit : '';
+  document.getElementById('m-expiry').value= c && c.expiry ? c.expiry : '';
+  document.getElementById('m-target').value= c ? c.target : 'all';
+  document.getElementById('m-memo').value  = c ? c.memo : '';
+  document.getElementById('m-rate-re').value = c && c.rateRE != null ? c.rateRE : 75;
+  document.getElementById('m-rate-hr').value = c && c.rateHR != null ? c.rateHR : 55;
+  document.getElementById('m-rank').value  = c && c.rank ? c.rank : 'gold';
+
+  // Benefits
+  selectedBens = c ? { ...c.benefits } : { freefee:true, rate:false, corp:false, rank:false };
+  renderBenChecks();
+  document.getElementById('modal').classList.add('show');
+}
+
+function closeModal() { document.getElementById('modal').classList.remove('show'); }
+
+function generateCode() {
+  const chars  = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const prefix = ['WELCOME','SPECIAL','CAMP','PRO','VIP','START','BONUS'][Math.floor(Math.random()*7)];
+  const suffix = Array.from({length:4}, ()=>chars[Math.floor(Math.random()*chars.length)]).join('');
+  document.getElementById('m-code').value = prefix + suffix;
+}
+
+function toggleBen(key) {
+  selectedBens[key] = !selectedBens[key];
+  renderBenChecks();
+  document.getElementById('rate-field').style.display = selectedBens.rate ? 'block' : 'none';
+  document.getElementById('rank-field').style.display = selectedBens.rank ? 'block' : 'none';
+}
+
+function renderBenChecks() {
+  ['freefee','rate','corp','rank'].forEach(k => {
+    const row = document.getElementById(`bc-${k}`);
+    const tog = document.getElementById(`bt-${k}`);
+    if (row) row.classList.toggle('selected', selectedBens[k]);
+    if (tog) { tog.classList.toggle('on', selectedBens[k]); tog.textContent = selectedBens[k] ? '✓' : ''; }
+  });
+  document.getElementById('rate-field').style.display = selectedBens.rate ? 'block' : 'none';
+  document.getElementById('rank-field').style.display = selectedBens.rank ? 'block' : 'none';
+}
+
+function saveCode() {
+  const code = document.getElementById('m-code').value.trim().toUpperCase();
+  if (!code) { alert('コードを入力してください'); return; }
+  if (!editingId && CODES.find(c=>c.code===code)) {
+    alert('このコードはすでに存在します'); return;
+  }
+
+  const limit  = parseInt(document.getElementById('m-limit').value) || null;
+  const expiry = document.getElementById('m-expiry').value || null;
+  const target = document.getElementById('m-target').value;
+  const memo   = document.getElementById('m-memo').value;
+  const rateRE = selectedBens.rate ? parseFloat(document.getElementById('m-rate-re').value)||null : null;
+  const rateHR = selectedBens.rate ? parseFloat(document.getElementById('m-rate-hr').value)||null : null;
+  const rank   = selectedBens.rank ? document.getElementById('m-rank').value : null;
+
+  if (editingId) {
+    const c = CODES.find(x=>x.id===editingId);
+    Object.assign(c, { code, limit, expiry, target, memo, benefits:{...selectedBens}, rateRE, rateHR, rank });
+  } else {
+    CODES.unshift({ id: Date.now(), code, active:true, expiry, limit, used:0,
+      benefits:{...selectedBens}, rateRE, rateHR, rank, target, memo, users:[] });
+  }
+  closeModal();
+  renderStats();
+  renderTable();
+}
+
+// ================================================================
+//  Actions
+// ================================================================
+function copyCode(code) {
+  navigator.clipboard.writeText(code).then(()=>{
+    const cells = document.querySelectorAll('.code-chip');
+    cells.forEach(c=>{ if(c.textContent.includes(code)) {
+      c.style.background='rgba(52,211,153,.15)';
+      setTimeout(()=>c.style.background='',800);
+    }});
+  });
+}
+
+function toggleActive(id) {
+  const c = CODES.find(x=>x.id===id);
+  if (c) c.active = !c.active;
+  renderStats();
+  renderTable();
+}
+
+function deleteCode(id) {
+  const c = CODES.find(x=>x.id===id);
+  if (!c) return;
+  if (!confirm(`「${c.code}」を削除しますか？この操作は取り消せません。`)) return;
+  CODES = CODES.filter(x=>x.id!==id);
+  renderStats();
+  renderTable();
+}
+
+// ================================================================
+//  Usage modal
+// ================================================================
+function showUsage(id) {
+  const c = CODES.find(x=>x.id===id);
+  if (!c) return;
+  document.getElementById('um-title').textContent = `「${c.code}」使用履歴（${c.used}件）`;
+  const TYPE_ICON = { RE:'🏠', HR:'👥', PT:'🤝' };
+  document.getElementById('use-list').innerHTML = c.users.length
+    ? c.users.map(u=>`
+        <div class="use-item">
+          <div class="use-avatar">${TYPE_ICON[u.type]||'👤'}</div>
+          <div style="flex:1">
+            <div style="font-weight:700">${u.name}</div>
+            <div style="color:var(--muted);font-size:10px">${u.id} ／ ${u.type}</div>
+          </div>
+          <div style="font-size:10px;color:var(--sub)">${u.date}</div>
+        </div>`).join('')
+    : '<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px">使用履歴なし</div>';
+  document.getElementById('usage-modal').classList.add('show');
+}
+
+function closeUsageModal() { document.getElementById('usage-modal').classList.remove('show'); }
+
+// ================================================================
+//  CSV export
+// ================================================================
+function exportCSV() {
+  const rows = [['コード','有効','有効期限','使用数','上限','月会費無料','カスタム報酬率','法人払い','ランク指定','対象','メモ']];
+  CODES.forEach(c => {
+    rows.push([
+      c.code, c.active?'○':'✕', c.expiry||'無期限',
+      c.used, c.limit||'∞',
+      c.benefits.freefee?'○':'', c.benefits.rate?`RE:${c.rateRE}%/HR:${c.rateHR}%`:'',
+      c.benefits.corp?'○':'', c.benefits.rank?c.rank:'', c.target, c.memo||''
+    ]);
+  });
+  const csv = rows.map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `coreto_codes_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+</script>
+</body>
+</html>

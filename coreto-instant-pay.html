@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CORETO — 即時払い申請</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090f;--card:#0f1119;--card2:#141720;--border:#1e2235;--border2:#252a3d;
+  --gold:#c9a84c;--gold-dim:#7a5f22;--gold-bg:rgba(201,168,76,.07);
+  --blue:#4f9cf9;--green:#34d399;--red:#f87171;--orange:#fb923c;--purple:#a78bfa;
+  --muted:#4a5270;--sub:#7a849e;--text:#e2e6f3;
+}
+html,body{height:100%;font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text)}
+
+/* ── Header ── */
+.header{display:flex;align-items:center;justify-content:space-between;padding:0 26px;height:54px;
+  border-bottom:1px solid var(--border);background:rgba(7,9,15,.95);
+  backdrop-filter:blur(14px);position:sticky;top:0;z-index:100;flex-shrink:0}
+.logo{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:var(--gold);letter-spacing:3px}
+
+/* ── View tabs ── */
+.view-tabs{display:flex;padding:0 26px;border-bottom:1px solid var(--border);background:var(--card2);flex-shrink:0}
+.vt{padding:12px 20px;font-size:11px;font-weight:700;cursor:pointer;color:var(--muted);
+  border-bottom:2px solid transparent;transition:all .15s;display:flex;align-items:center;gap:7px}
+.vt.on{color:var(--blue);border-bottom-color:var(--blue)}
+
+/* ── Body ── */
+.body{max-width:960px;margin:0 auto;padding:28px 28px 80px}
+
+/* ── Section header ── */
+.sec-title{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;margin-bottom:4px}
+.sec-sub{font-size:11px;color:var(--sub);margin-bottom:22px}
+
+/* ── Cards ── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;margin-bottom:16px}
+.card-hdr{padding:14px 20px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between}
+.ch-title{font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;
+  display:flex;align-items:center;gap:8px}
+.ch-title::before{content:'';width:3px;height:11px;border-radius:2px;background:var(--gold)}
+.card-body{padding:20px}
+
+/* ── Pills ── */
+.pill{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:6px;font-size:9px;font-weight:700;white-space:nowrap}
+.pill-green{background:rgba(52,211,153,.13);color:var(--green);border:1px solid rgba(52,211,153,.3)}
+.pill-blue{background:rgba(79,156,249,.12);color:var(--blue);border:1px solid rgba(79,156,249,.25)}
+.pill-orange{background:rgba(251,146,60,.12);color:var(--orange);border:1px solid rgba(251,146,60,.3)}
+.pill-red{background:rgba(248,113,113,.12);color:var(--red);border:1px solid rgba(248,113,113,.3)}
+.pill-muted{background:rgba(74,82,112,.15);color:var(--sub);border:1px solid var(--border2)}
+.pill-gold{background:rgba(201,168,76,.13);color:var(--gold);border:1px solid var(--gold-dim)}
+
+/* ── Buttons ── */
+.btn{padding:9px 18px;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;
+  font-family:'Noto Sans JP',sans-serif;transition:all .15s;border:none;
+  display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn-gold{background:linear-gradient(135deg,var(--gold),#a8742a);color:#0a0c10}
+.btn-gold:hover{filter:brightness(1.1);transform:translateY(-1px)}
+.btn-blue{background:linear-gradient(135deg,var(--blue),#3070c0);color:#fff}
+.btn-blue:hover{filter:brightness(1.1)}
+.btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--sub)}
+.btn-ghost:hover{color:var(--text);border-color:var(--sub)}
+.btn-danger{background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.3);color:var(--red)}
+.btn-success{background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);color:var(--green)}
+.btn-sm{padding:5px 12px;font-size:10px;border-radius:7px}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none!important}
+.btn-lg{padding:14px 32px;font-size:14px;border-radius:11px}
+
+/* ── Fields ── */
+.field{margin-bottom:14px}
+.field label{display:block;font-size:10px;color:var(--sub);margin-bottom:5px;font-weight:600}
+.field input,.field select{width:100%;background:#090b13;border:1px solid var(--border2);
+  border-radius:9px;padding:10px 14px;color:var(--text);font-size:13px;
+  font-family:'Noto Sans JP',sans-serif;transition:border-color .15s;outline:none}
+.field input:focus,.field select:focus{border-color:var(--blue)}
+.field-hint{font-size:10px;color:var(--muted);margin-top:5px;line-height:1.7}
+.req{color:var(--red)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+
+/* ── Alert ── */
+.alert{display:flex;align-items:flex-start;gap:10px;padding:12px 16px;border-radius:10px;
+  margin-bottom:14px;font-size:12px;line-height:1.7}
+.alert-warn{background:rgba(251,146,60,.07);border:1px solid rgba(251,146,60,.22)}
+.alert-info{background:rgba(79,156,249,.07);border:1px solid rgba(79,156,249,.2)}
+.alert-err{background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.25)}
+.alert-ok{background:rgba(52,211,153,.07);border:1px solid rgba(52,211,153,.22)}
+
+/* ── Table ── */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{padding:9px 14px;font-size:9px;color:var(--muted);font-weight:700;
+  letter-spacing:.5px;text-transform:uppercase;border-bottom:1px solid var(--border);
+  background:var(--card2);text-align:left;white-space:nowrap}
+.tbl td{padding:11px 14px;border-bottom:1px solid rgba(30,34,53,.5);font-size:12px;vertical-align:middle}
+.tbl tr:last-child td{border:none}
+.tbl tr:hover td{background:rgba(255,255,255,.012)}
+.mono{font-family:'DM Mono',monospace}
+
+/* ── 2FA Screen ── */
+#tfa-screen{display:none;position:fixed;inset:0;background:var(--bg);z-index:500;
+  align-items:center;justify-content:center;
+  background-image:radial-gradient(ellipse at 30% 40%,rgba(79,156,249,.05),transparent 50%)}
+.tfa-card{background:var(--card);border:1px solid var(--border2);border-radius:20px;
+  width:420px;padding:40px 36px;text-align:center;position:relative;overflow:hidden}
+.tfa-card::before{content:'';position:absolute;top:-40px;right:-40px;width:160px;height:160px;
+  border-radius:50%;background:radial-gradient(circle,rgba(79,156,249,.07),transparent);
+  pointer-events:none}
+.tfa-logo{font-family:'Syne',sans-serif;font-size:13px;font-weight:800;color:var(--gold);
+  letter-spacing:3px;margin-bottom:28px;opacity:.7}
+.tfa-icon-wrap{width:72px;height:72px;border-radius:50%;margin:0 auto 20px;
+  background:rgba(79,156,249,.1);border:2px solid rgba(79,156,249,.3);
+  display:flex;align-items:center;justify-content:center;font-size:32px;
+  position:relative}
+.tfa-pulse{position:absolute;inset:-6px;border-radius:50%;border:1px solid rgba(79,156,249,.25);
+  animation:tfa-pulse 2s ease-in-out infinite}
+@keyframes tfa-pulse{0%,100%{transform:scale(1);opacity:.6}50%{transform:scale(1.12);opacity:.2}}
+.tfa-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;margin-bottom:6px}
+.tfa-sub{font-size:11px;color:var(--sub);line-height:1.7;margin-bottom:28px}
+.tfa-method-tabs{display:flex;gap:6px;justify-content:center;margin-bottom:22px}
+.tfa-mt{padding:7px 16px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;
+  border:1px solid var(--border2);color:var(--muted);background:transparent;transition:all .15s;
+  font-family:'Noto Sans JP',sans-serif}
+.tfa-mt.on{border-color:var(--blue);color:var(--blue);background:rgba(79,156,249,.08)}
+
+/* ── 認証コード入力 ── */
+.otp-wrap{display:flex;gap:8px;justify-content:center;margin-bottom:20px}
+.otp-cell{width:52px;height:62px;background:#090b13;border:2px solid var(--border2);
+  border-radius:10px;font-size:26px;font-weight:700;text-align:center;color:var(--text);
+  font-family:'DM Mono',monospace;caret-color:var(--blue);transition:all .15s;outline:none}
+.otp-cell:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(79,156,249,.15)}
+.otp-cell.filled{border-color:var(--border2)}
+.otp-cell.error{border-color:var(--red);animation:shake .3s ease;background:rgba(248,113,113,.06)}
+.otp-cell.success{border-color:var(--green);background:rgba(52,211,153,.06)}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+
+.tfa-timer{font-size:11px;color:var(--muted);margin-bottom:16px}
+.tfa-timer span{font-family:'DM Mono',monospace;color:var(--orange);font-weight:700}
+.tfa-attempts{font-size:10px;color:var(--muted);margin-bottom:18px}
+.tfa-attempts .dot{display:inline-block;width:8px;height:8px;border-radius:50%;
+  background:var(--border2);margin:0 2px;transition:all .2s}
+.tfa-attempts .dot.used{background:var(--red)}
+
+/* ── Lock screen ── */
+#lock-screen{display:none;position:fixed;inset:0;background:rgba(7,9,15,.97);z-index:600;
+  align-items:center;justify-content:center;flex-direction:column;gap:20px;text-align:center}
+.lock-icon{font-size:60px;margin-bottom:8px}
+
+/* ── Success overlay ── */
+#success-overlay{display:none;position:fixed;inset:0;background:rgba(7,9,15,.95);z-index:600;
+  align-items:center;justify-content:center;flex-direction:column;gap:16px;text-align:center}
+.success-ring{width:90px;height:90px;border-radius:50%;background:rgba(52,211,153,.12);
+  border:2px solid rgba(52,211,153,.4);display:flex;align-items:center;justify-content:center;
+  font-size:42px;animation:pop .4s cubic-bezier(.34,1.56,.64,1)}
+@keyframes pop{from{transform:scale(0)}to{transform:scale(1)}}
+
+/* ── Breakdown ── */
+.breakdown-row{display:flex;justify-content:space-between;align-items:center;
+  padding:8px 0;border-bottom:1px solid rgba(30,34,53,.5);font-size:12px}
+.breakdown-row:last-child{border:none;padding-top:12px;font-size:14px;font-weight:700}
+
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div style="display:flex;align-items:center;gap:12px">
+    <div class="logo">CORETO</div>
+    <div style="width:1px;height:18px;background:var(--border2)"></div>
+    <div style="font-size:10px;color:var(--muted);letter-spacing:1px">即時払い申請</div>
+  </div>
+  <button onclick="window.location.href='coreto-hub.html'"
+    style="font-size:10px;padding:5px 12px;border-radius:6px;border:1px solid var(--border2);
+    background:transparent;color:var(--muted);cursor:pointer;font-family:'Noto Sans JP',sans-serif">
+    ← ホームに戻る
+  </button>
+</div>
+
+<div class="view-tabs">
+  <div class="vt on" onclick="switchView(0,this)">💸 即時払い申請</div>
+  <div class="vt" onclick="switchView(1,this)">📋 申請履歴</div>
+  <div class="vt" onclick="switchView(2,this)">🏢 HQ処理ビュー</div>
+</div>
+
+<!-- ══════════════════════════════════
+     VIEW 0: 申請フォーム
+     ══════════════════════════════════ -->
+<div id="view-0">
+<div class="body">
+
+  <div class="sec-title">即時払い申請</div>
+  <div class="sec-sub">通常振込（毎月25日）を待たずに即時で報酬を受け取れます。申請後に2段階認証が必要です。</div>
+
+  <!-- Warning banners -->
+  <div class="alert alert-warn">
+    ⚠️ <div>
+      <strong>即時払いについての注意事項</strong><br>
+      即時払いは申請後に<strong>2段階認証（SMSによる認証コード）</strong>が必須です。
+    </div>
+  </div>
+
+  <!-- KYC / Account check -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-hdr">
+      <div class="ch-title">受取条件チェック</div>
+    </div>
+    <div class="card-body">
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;align-items:center;justify-content:space-between;
+                    padding:10px 14px;background:var(--card2);border-radius:9px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:16px">✅</span>
+            <div>
+              <div style="font-size:12px;font-weight:700">eKYC 本人確認</div>
+              <div style="font-size:10px;color:var(--sub)">2025/11/15 承認済み</div>
+            </div>
+          </div>
+          <span class="pill pill-green">確認済み</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;
+                    padding:10px 14px;background:var(--card2);border-radius:9px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:16px">✅</span>
+            <div>
+              <div style="font-size:12px;font-weight:700">口座名義確認</div>
+              <div style="font-size:10px;color:var(--sub)">GMOあおぞら ···4567 ／ ヤマダ マコト</div>
+            </div>
+          </div>
+          <span class="pill pill-green">本人名義確認済み</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;
+                    padding:10px 14px;background:var(--card2);border-radius:9px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:16px">✅</span>
+            <div>
+              <div style="font-size:12px;font-weight:700">SMS認証番号</div>
+              <div style="font-size:10px;color:var(--sub)">認証先：090-****-4321</div>
+            </div>
+          </div>
+          <span class="pill pill-green">確認済み</span>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="g2" style="align-items:start">
+    <!-- Left: Form -->
+    <div>
+      <div class="card">
+        <div class="card-hdr"><div class="ch-title">申請内容</div></div>
+        <div class="card-body">
+
+          <div class="field">
+            <label>出金希望額（実際に受け取る金額）<span class="req">*</span></label>
+            <input type="number" id="req-amount" placeholder="例：100000" min="10000" max="5000000"
+                   style="font-family:'DM Mono',monospace;font-size:18px"
+                   oninput="calcBreakdown()">
+            <div class="field-hint">入力した金額がそのまま振込まれます（最低：¥10,000）</div>
+          </div>
+
+          <!-- Breakdown preview -->
+          <div id="breakdown-wrap" style="display:none;background:var(--card2);border:1px solid var(--border);
+               border-radius:11px;padding:16px;margin-bottom:16px">
+            <div style="font-size:10px;color:var(--muted);margin-bottom:12px;font-weight:600;letter-spacing:.5px">かかる費用の内訳</div>
+            <div class="breakdown-row">
+              <span style="color:var(--sub)">即時払い手数料（15%）</span>
+              <span class="mono" style="color:var(--orange)" id="bd-fee">—</span>
+            </div>
+            <div class="breakdown-row">
+              <span style="color:var(--sub)">源泉徴収税</span>
+              <span class="mono" style="color:var(--red)" id="bd-tax">—</span>
+            </div>
+          
+          </div>
+
+          <!-- 2FA method: SMS only -->
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;
+                      padding:10px 14px;background:rgba(79,156,249,.07);
+                      border:1px solid rgba(79,156,249,.2);border-radius:9px;font-size:12px">
+            📱 <span style="color:var(--blue)">登録の携帯番号にSMSで認証コードを送信します</span>
+          </div>
+
+          <button class="btn btn-gold btn-lg" style="width:100%;justify-content:center"
+                  id="req-submit-btn" onclick="startRequest()" disabled>
+            🔐 申請して2段階認証へ
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Info -->
+    <div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-hdr"><div class="ch-title">現在の報酬額</div></div>
+        <div class="card-body">
+          <div style="font-size:9px;color:var(--muted);margin-bottom:6px;letter-spacing:.3px">
+            2026年2月分の報酬額
+          </div>
+          <div style="font-family:'DM Mono',monospace;font-size:36px;font-weight:700;
+                      color:var(--gold);margin-bottom:4px">¥726,163</div>
+          <div style="font-size:11px;color:var(--sub);margin-bottom:14px">通常振込日：2026/03/25</div>
+          <div style="font-size:10px;color:var(--muted);line-height:1.9;
+                      background:var(--card2);padding:10px 12px;border-radius:8px">
+            通常振込日：2026/03/25<br>
+            ※ 上記金額を上限として何回でも出金できます
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-hdr"><div class="ch-title">振込先口座</div></div>
+        <div class="card-body">
+          <div style="font-size:12px;line-height:2.2">
+            GMOあおぞらネット銀行<br>
+            ビジネス営業部（010）<br>
+            普通　<span class="mono" style="color:var(--gold)">1234567</span><br>
+            <strong>ヤマダ マコト</strong>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;margin-top:10px;
+                      padding:8px 10px;background:rgba(52,211,153,.05);
+                      border:1px solid rgba(52,211,153,.2);border-radius:8px;font-size:10px">
+            ✅ <span style="color:var(--green)">本人名義確認済み</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-hdr"><div class="ch-title">2段階認証について</div></div>
+        <div class="card-body" style="font-size:11px;color:var(--sub);line-height:2">
+          即時払いは不正利用防止のため、申請後に必ず2段階認証が必要です。<br><br>
+          <strong style="color:var(--text)">認証の流れ：</strong><br>
+          ① 申請ボタンを押す<br>
+          ② 登録の携帯番号にSMSで6桁の認証コードが届く（有効期限5分）<br>
+          ③ 認証コード入力で確認完了<br>
+          ④ HQに振込依頼が自動送信される<br><br>
+          <strong style="color:var(--orange)">3回連続失敗でアカウントがロックされます。</strong><br>
+          解除にはHQへの連絡が必要です。
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══════════════════════════════════
+     VIEW 1: 申請履歴
+     ══════════════════════════════════ -->
+<div id="view-1" style="display:none">
+<div class="body">
+  <div class="sec-title">即時払い申請履歴</div>
+  <div class="sec-sub">過去の即時払い申請と認証結果の記録</div>
+
+  <div class="card">
+    <div class="card-hdr"><div class="ch-title">申請履歴</div></div>
+    <div style="overflow-x:auto">
+      <table class="tbl">
+        <thead><tr>
+          <th>申請ID</th><th>申請日時</th><th>申請額</th><th>手数料</th><th>振込額</th>
+          <th>認証</th><th>認証状態</th><th>振込状態</th>
+        </tr></thead>
+        <tbody>
+          <tr>
+            <td class="mono" style="font-size:10px">IPY-2026-K7X3</td>
+            <td class="mono" style="font-size:10px">2026/02/05 14:32</td>
+            <td class="mono">¥300,000</td>
+            <td class="mono" style="color:var(--orange)">¥6,000</td>
+            <td class="mono" style="color:var(--green);font-weight:700">¥263,367</td>
+            <td>📱 SMS</td>
+            <td><span class="pill pill-green">✓ 認証済み</span></td>
+            <td><span class="pill pill-green">振込完了</span></td>
+          </tr>
+          <tr>
+            <td class="mono" style="font-size:10px">IPY-2025-M2N8</td>
+            <td class="mono" style="font-size:10px">2025/12/18 09:15</td>
+            <td class="mono">¥200,000</td>
+            <td class="mono" style="color:var(--orange)">¥4,000</td>
+            <td class="mono" style="color:var(--green);font-weight:700">¥175,578</td>
+            <td>📱 SMS</td>
+            <td><span class="pill pill-green">✓ 認証済み</span></td>
+            <td><span class="pill pill-green">振込完了</span></td>
+          </tr>
+          <tr>
+            <td class="mono" style="font-size:10px">IPY-2025-R5Q1</td>
+            <td class="mono" style="font-size:10px">2025/11/02 17:44</td>
+            <td class="mono">¥500,000</td>
+            <td class="mono" style="color:var(--orange)">¥10,000</td>
+            <td class="mono" style="color:var(--muted)">—</td>
+            <td>📱 SMS</td>
+            <td><span class="pill pill-red">✗ タイムアウト</span></td>
+            <td><span class="pill pill-muted">キャンセル</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══════════════════════════════════
+     VIEW 2: HQ処理
+     ══════════════════════════════════ -->
+<div id="view-2" style="display:none">
+<div class="body">
+  <div class="sec-title">HQ 即時払い処理ダッシュボード</div>
+  <div class="sec-sub">2FA認証済みの即時払い申請を処理してください</div>
+
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px">
+      <div style="font-size:16px;margin-bottom:6px">⏳</div>
+      <div style="font-family:'DM Mono',monospace;font-size:26px;color:var(--orange)">3</div>
+      <div style="font-size:10px;color:var(--muted)">振込待ち（2FA済み）</div>
+    </div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px">
+      <div style="font-size:16px;margin-bottom:6px">🔒</div>
+      <div style="font-family:'DM Mono',monospace;font-size:26px;color:var(--red)">1</div>
+      <div style="font-size:10px;color:var(--muted)">アカウントロック中</div>
+    </div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px">
+      <div style="font-size:16px;margin-bottom:6px">✅</div>
+      <div style="font-family:'DM Mono',monospace;font-size:26px;color:var(--green)">12</div>
+      <div style="font-size:10px;color:var(--muted)">今月振込完了</div>
+    </div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px">
+      <div style="font-size:16px;margin-bottom:6px">💰</div>
+      <div style="font-family:'DM Mono',monospace;font-size:20px;color:var(--gold)">¥3.2M</div>
+      <div style="font-size:10px;color:var(--muted)">今月即時払い総額</div>
+    </div>
+  </div>
+
+  <!-- Lock alert -->
+  <div class="alert alert-err" style="margin-bottom:16px">
+    🔒 <div>
+      <strong>アカウントロックアラート</strong><br>
+      鈴木 健太（10023）が3回認証コードによる確認に失敗し、即時払い機能がロックされています。
+      本人確認後、解除ボタンを押してください。
+      <div style="margin-top:8px">
+        <button class="btn btn-danger btn-sm" onclick="unlockAccount('10023')">🔓 ロックを解除する</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pending transfers -->
+  <div class="card">
+    <div class="card-hdr">
+      <div class="ch-title">振込待ちキュー（2FA認証済み）</div>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="tbl">
+        <thead><tr>
+          <th>申請ID</th><th>エージェント</th><th>申請額</th><th>振込額</th>
+          <th>口座（名義確認）</th><th>2FA認証</th><th>申請日時</th><th>操作</th>
+        </tr></thead>
+        <tbody>
+          <tr>
+            <td class="mono" style="font-size:10px">IPY-2026-P9W4</td>
+            <td style="font-weight:700">山田 誠（10012）</td>
+            <td class="mono">¥300,000</td>
+            <td class="mono" style="color:var(--green);font-weight:700">¥263,367</td>
+            <td style="font-size:11px">GMOあおぞら ···4567<br>
+              <span class="pill pill-green" style="margin-top:3px">✓ 本人名義</span></td>
+            <td><span class="pill pill-blue">📱 SMS 認証済み</span></td>
+            <td class="mono" style="font-size:10px">2026/02/20 10:32</td>
+            <td>
+              <button class="btn btn-success btn-sm" onclick="processTransfer('IPY-2026-P9W4')">
+                🏦 振込実行
+              </button>
+            </td>
+          </tr>
+          <tr>
+            <td class="mono" style="font-size:10px">IPY-2026-A3R7</td>
+            <td style="font-weight:700">佐藤 花子（10008）</td>
+            <td class="mono">¥500,000</td>
+            <td class="mono" style="color:var(--green);font-weight:700">¥438,945</td>
+            <td style="font-size:11px">三菱UFJ ···9012<br>
+              <span class="pill pill-green" style="margin-top:3px">✓ 本人名義</span></td>
+            <td><span class="pill pill-blue">📱 SMS 認証済み</span></td>
+            <td class="mono" style="font-size:10px">2026/02/20 09:18</td>
+            <td>
+              <button class="btn btn-success btn-sm" onclick="processTransfer('IPY-2026-A3R7')">
+                🏦 振込実行
+              </button>
+            </td>
+          </tr>
+          <tr>
+            <td class="mono" style="font-size:10px">IPY-2026-Z6T2</td>
+            <td style="font-weight:700">田中 美穂（20005）</td>
+            <td class="mono">¥150,000</td>
+            <td class="mono" style="color:var(--green);font-weight:700">¥131,186</td>
+            <td style="font-size:11px">PayPay銀行 ···7654<br>
+              <span class="pill pill-green" style="margin-top:3px">✓ 本人名義</span></td>
+            <td><span class="pill pill-blue">📱 SMS 認証済み</span></td>
+            <td class="mono" style="font-size:10px">2026/02/19 16:55</td>
+            <td>
+              <button class="btn btn-success btn-sm" onclick="processTransfer('IPY-2026-Z6T2')">
+                🏦 振込実行
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══════════════════════════════════
+     2FA SCREEN (full-screen overlay)
+     ══════════════════════════════════ -->
+<div id="tfa-screen">
+  <div class="tfa-card">
+    <div class="tfa-logo">CORETO</div>
+    <div class="tfa-icon-wrap">
+      <div class="tfa-pulse"></div>
+      <span id="tfa-icon">💬</span>
+    </div>
+    <div class="tfa-title">2段階認証</div>
+    <div class="tfa-sub" id="tfa-sub">
+      登録の携帯番号（090-****-4321）に<br>
+      SMSで6桁の認証コードを送信しました。<br>
+      <strong style="color:var(--orange)">有効期限：5分</strong>
+    </div>
+
+
+
+    <!-- 認証コード入力 -->
+    <div class="otp-wrap" id="otp-wrap">
+      <input class="otp-cell" maxlength="1" type="text" inputmode="numeric"
+             oninput="otpInput(this,0)" onkeydown="otpKey(event,0)" id="otp-0">
+      <input class="otp-cell" maxlength="1" type="text" inputmode="numeric"
+             oninput="otpInput(this,1)" onkeydown="otpKey(event,1)" id="otp-1">
+      <input class="otp-cell" maxlength="1" type="text" inputmode="numeric"
+             oninput="otpInput(this,2)" onkeydown="otpKey(event,2)" id="otp-2">
+      <input class="otp-cell" maxlength="1" type="text" inputmode="numeric"
+             oninput="otpInput(this,3)" onkeydown="otpKey(event,3)" id="otp-3">
+      <input class="otp-cell" maxlength="1" type="text" inputmode="numeric"
+             oninput="otpInput(this,4)" onkeydown="otpKey(event,4)" id="otp-4">
+      <input class="otp-cell" maxlength="1" type="text" inputmode="numeric"
+             oninput="otpInput(this,5)" onkeydown="otpKey(event,5)" id="otp-5">
+    </div>
+
+    <div class="tfa-timer">有効期限まで <span id="tfa-countdown">5:00</span></div>
+
+    <div class="tfa-attempts">
+      残り試行回数：
+      <span class="dot" id="dot-0"></span>
+      <span class="dot" id="dot-1"></span>
+      <span class="dot" id="dot-2"></span>
+    </div>
+
+    <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;margin-bottom:10px"
+            onclick="resendOtp()" id="resend-btn" disabled>
+      📨 認証コードを再送する
+    </button>
+    <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center"
+            onclick="cancelTfa()">キャンセル</button>
+  </div>
+</div>
+
+<!-- ══ Lock Screen ══ -->
+<div id="lock-screen">
+  <div class="lock-icon">🔒</div>
+  <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--red)">
+    アカウントがロックされました
+  </div>
+  <div style="font-size:13px;color:var(--sub);max-width:340px;line-height:1.8">
+    認証コードによる確認に3回失敗したため、即時払い機能がロックされました。<br>
+    解除するにはHQ本部にSlackまたはメールでご連絡ください。
+  </div>
+  <div style="display:flex;gap:10px;margin-top:16px">
+    <button class="btn btn-ghost" onclick="window.location.href='coreto-hub.html'">ホームに戻る</button>
+    <button class="btn btn-danger" onclick="alert('HQにSlackで連絡を送りました。')">HQに連絡する</button>
+  </div>
+</div>
+
+<!-- ══ Success Overlay ══ -->
+<div id="success-overlay">
+  <div class="success-ring">✓</div>
+  <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--green)">
+    認証完了・申請受理
+  </div>
+  <div style="font-size:13px;color:var(--sub);max-width:340px;line-height:1.8;text-align:center">
+    2段階認証が完了しました。<br>
+    HQが振込処理を行います（通常30分〜2時間以内）。<br>
+    <strong style="color:var(--gold)" id="success-amount"></strong>
+  </div>
+  <div style="font-size:11px;color:var(--muted);margin-top:8px">
+    申請ID：<span class="mono" id="success-id"></span>
+  </div>
+  <button class="btn btn-gold" style="margin-top:20px" onclick="window.location.href='coreto-hub.html'">
+    ホームに戻る
+  </button>
+</div>
+
+<script>
+// ── View switch ──────────────────────────────────────────
+function switchView(i, btn) {
+  document.querySelectorAll('.vt').forEach((t,j)=>t.classList.toggle('on',j===i));
+  [0,1,2].forEach(j=>document.getElementById('view-'+j).style.display=j===i?'block':'none');
+}
+
+// SMS一本化 - method固定
+let selectedMethod = 'sms';
+
+// ── Breakdown calc ────────────────────────────────────────
+function calcBreakdown() {
+  // 入力値 = 実際に受け取る金額（出金希望額）
+  const net = parseFloat(document.getElementById('req-amount').value)||0;
+  const wrap = document.getElementById('breakdown-wrap');
+  const btn  = document.getElementById('req-submit-btn');
+  if (net < 10000) { wrap.style.display='none'; btn.disabled=true; return; }
+  // 逆算: gross = net / (1 - 0.15 - 0.1021) = net / 0.7479
+  const gross = net / 0.7479;
+  const fee   = Math.round(gross * 0.15);
+  const tax   = gross <= 1e6
+    ? Math.round(gross * 0.1021)
+    : Math.round(1e6 * 0.1021 + (gross - 1e6) * 0.2042);
+  const yen  = v => '¥' + Math.round(v).toLocaleString();
+  document.getElementById('bd-fee').textContent = yen(fee);
+  document.getElementById('bd-tax').textContent = yen(tax);
+  wrap.style.display = 'block';
+  btn.disabled = false;
+}
+
+// ── Start request → open 2FA ──────────────────────────────
+let tfaOtp = '';
+let tfaAttempts = 0;
+let tfaTimer = null;
+let tfaCountdown = 300;
+let currentReqId = '';
+let currentNetAmount = 0;
+
+function startRequest() {
+  const net = parseFloat(document.getElementById('req-amount').value)||0;
+  if (net < 10000) return;
+  currentNetAmount = net; // 入力値がそのまま振込額
+  // Generate random request ID
+  currentReqId = 'IPY-'+new Date().getFullYear()+'-'+randomId(4);
+  // Generate dummy auth code (demo)
+  tfaOtp = String(Math.floor(100000+Math.random()*900000));
+  tfaAttempts = 0;
+  openTfa();
+}
+
+function randomId(len) {
+  const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  return Array.from({length:len},()=>chars[Math.floor(Math.random()*chars.length)]).join('');
+}
+
+function openTfa() {
+  clearOtp();
+  updateDots();
+  document.getElementById('tfa-screen').style.display='flex';
+  // Set method display
+  document.getElementById('tfa-icon').textContent = '📱';
+  document.getElementById('tfa-sub').innerHTML = `登録の携帯番号（090-****-4321）に<br>SMSで6桁の認証コードを送信しました。<br><strong style="color:var(--orange)">有効期限：5分</strong><br><br><em style="font-size:10px;color:var(--muted)">[デモ用コード: ${tfaOtp}]</em>`;
+  // Start countdown
+  tfaCountdown = 300;
+  clearInterval(tfaTimer);
+  tfaTimer = setInterval(tickCountdown, 1000);
+  document.getElementById('resend-btn').disabled = true;
+  setTimeout(()=>document.getElementById('otp-0').focus(), 100);
+}
+
+function tickCountdown() {
+  tfaCountdown--;
+  const m = Math.floor(tfaCountdown/60);
+  const s = tfaCountdown%60;
+  document.getElementById('tfa-countdown').textContent = `${m}:${s.toString().padStart(2,'0')}`;
+  if (tfaCountdown <= 60) document.getElementById('tfa-countdown').style.color='var(--red)';
+  if (tfaCountdown <= 0) {
+    clearInterval(tfaTimer);
+    document.getElementById('tfa-countdown').textContent='0:00';
+    document.getElementById('resend-btn').disabled = false;
+    document.querySelectorAll('.otp-cell').forEach(c=>c.disabled=true);
+  }
+}
+
+function resendOtp() {
+  tfaOtp = String(Math.floor(100000+Math.random()*900000));
+  clearOtp();
+  tfaCountdown = 300;
+  document.getElementById('tfa-countdown').style.color='var(--orange)';
+  clearInterval(tfaTimer);
+  tfaTimer = setInterval(tickCountdown, 1000);
+  document.getElementById('resend-btn').disabled = true;
+  document.querySelectorAll('.otp-cell').forEach(c=>c.disabled=false);
+  const sub = document.getElementById('tfa-sub');
+  sub.innerHTML = sub.innerHTML.replace(/\[デモ用コード: \d+\]/, `[デモ用コード: ${tfaOtp}]`);
+  document.getElementById('otp-0').focus();
+}
+
+// LINE認証廃止 - SMS一本化
+
+function cancelTfa() {
+  clearInterval(tfaTimer);
+  document.getElementById('tfa-screen').style.display='none';
+}
+
+// ── 認証コード入力 handling ────────────────────────────────────
+function otpInput(el, idx) {
+  const v = el.value.replace(/\D/g,'');
+  el.value = v;
+  el.classList.remove('error','success');
+  if (v && idx < 5) document.getElementById('otp-'+(idx+1)).focus();
+  if (idx===5 && v) checkOtp();
+}
+function otpKey(e, idx) {
+  if (e.key==='Backspace' && !e.target.value && idx>0) {
+    document.getElementById('otp-'+(idx-1)).focus();
+  }
+}
+function clearOtp() {
+  for(let i=0;i<6;i++){
+    const c=document.getElementById('otp-'+i);
+    c.value=''; c.classList.remove('error','success'); c.disabled=false;
+  }
+}
+function checkOtp() {
+  const entered = Array.from({length:6},(_,i)=>document.getElementById('otp-'+i).value).join('');
+  if (entered === tfaOtp) {
+    // Success
+    for(let i=0;i<6;i++) document.getElementById('otp-'+i).classList.add('success');
+    clearInterval(tfaTimer);
+    setTimeout(showSuccess, 600);
+  } else {
+    // Fail
+    for(let i=0;i<6;i++) document.getElementById('otp-'+i).classList.add('error');
+    tfaAttempts++;
+    updateDots();
+    if (tfaAttempts >= 3) {
+      clearInterval(tfaTimer);
+      setTimeout(showLock, 800);
+    } else {
+      setTimeout(()=>{ clearOtp(); document.getElementById('otp-0').focus(); }, 900);
+    }
+  }
+}
+function updateDots() {
+  for(let i=0;i<3;i++){
+    document.getElementById('dot-'+i).classList.toggle('used', i<tfaAttempts);
+  }
+}
+
+function showSuccess() {
+  document.getElementById('tfa-screen').style.display='none';
+  const ov = document.getElementById('success-overlay');
+  ov.style.display='flex';
+  document.getElementById('success-amount').textContent =
+    '振込予定額：¥'+currentNetAmount.toLocaleString();
+  document.getElementById('success-id').textContent = currentReqId;
+}
+function showLock() {
+  document.getElementById('tfa-screen').style.display='none';
+  document.getElementById('lock-screen').style.display='flex';
+}
+
+// ── HQ actions ───────────────────────────────────────────
+function processTransfer(id) {
+  if (!confirm(`申請ID ${id} の振込を実行しますか？`)) return;
+  alert(`✅ 振込を実行しました。\n申請ID：${id}\nGMOバーチャル口座から送金処理が開始されます。`);
+}
+function unlockAccount(id) {
+  if (!confirm(`${id} の即時払いロックを解除しますか？\n本人確認が完了していることを確認してください。`)) return;
+  alert(`🔓 ${id} のロックを解除しました。エージェントにSlackで通知されます。`);
+}
+</script>
+</body>
+</html>

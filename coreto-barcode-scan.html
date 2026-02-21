@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CORETO バーコードスキャン追跡システム</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap');
+
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#0d0f14;--card:#161921;--hover:#1e2230;--border:#252a38;
+  --gold:#c9a84c;--gold-l:#e8c96a;--muted:#6b7280;--sub:#9ca3af;
+  --green:#22c55e;--blue:#3b82f6;--orange:#f59e0b;--red:#ef4444;--purple:#a855f7;
+}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:#e8eaf0;min-height:100vh;}
+
+.header{background:#0a0c10;border-bottom:1px solid var(--border);padding:16px 28px;display:flex;align-items:center;justify-content:space-between;}
+.logo{font-family:'DM Mono',monospace;font-size:20px;color:var(--gold);letter-spacing:3px;}
+.header-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+
+.tabs{background:#0a0c10;border-bottom:1px solid var(--border);padding:0 28px;display:flex;}
+.tab{padding:11px 18px;font-size:12px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap;background:none;border-top:none;border-left:none;border-right:none;font-family:'Noto Sans JP',sans-serif;}
+.tab:hover{color:#e8eaf0;}
+.tab.active{color:var(--gold);border-bottom-color:var(--gold);}
+
+.page{display:none;padding:28px;max-width:1300px;margin:0 auto;}
+.page.active{display:block;}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
+
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:16px;}
+.card-title{font-size:14px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.s-label{font-size:11px;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:12px;margin-top:24px;}
+
+/* ===== SCAN DESK ===== */
+.scan-desk{
+  background:linear-gradient(135deg,#0f1520 0%,#161921 100%);
+  border:2px solid var(--border);
+  border-radius:14px;
+  padding:28px;
+  position:relative;
+  overflow:hidden;
+}
+.scan-desk::before{
+  content:'';position:absolute;top:-40px;right:-40px;
+  width:200px;height:200px;
+  background:radial-gradient(circle,rgba(201,168,76,0.06) 0%,transparent 70%);
+  border-radius:50%;
+}
+
+.status-selector{display:flex;gap:10px;margin-bottom:24px;flex-wrap:wrap;}
+.status-btn{
+  padding:10px 18px;border-radius:8px;font-size:13px;font-weight:600;
+  cursor:pointer;border:2px solid var(--border);background:var(--hover);
+  color:var(--sub);transition:all .15s;font-family:'Noto Sans JP',sans-serif;
+  display:flex;align-items:center;gap:7px;
+}
+.status-btn:hover{border-color:rgba(201,168,76,0.4);color:#e8eaf0;}
+.status-btn.active-shipped{border-color:var(--blue);background:rgba(59,130,246,0.12);color:var(--blue);}
+.status-btn.active-received{border-color:var(--green);background:rgba(34,197,94,0.12);color:var(--green);}
+.status-btn.active-stored{border-color:var(--purple);background:rgba(168,85,247,0.12);color:var(--purple);}
+.status-btn.active-rejected{border-color:var(--red);background:rgba(239,68,68,0.12);color:var(--red);}
+
+.scan-input-area{
+  background:#0a0c10;
+  border:2px dashed var(--border);
+  border-radius:10px;
+  padding:20px;
+  display:flex;
+  align-items:center;
+  gap:16px;
+  transition:border-color .2s;
+  margin-bottom:20px;
+  cursor:text;
+}
+.scan-input-area.focused{border-color:var(--gold);border-style:solid;}
+.scan-input-area.success{border-color:var(--green);border-style:solid;}
+.scan-input-area.error{border-color:var(--red);border-style:solid;}
+
+.scan-icon{font-size:36px;flex-shrink:0;}
+.scan-input-inner{flex:1;}
+.scan-hint{font-size:12px;color:var(--muted);margin-bottom:6px;}
+.scan-input{
+  width:100%;background:transparent;border:none;outline:none;
+  font-family:'DM Mono',monospace;font-size:16px;color:#e8eaf0;
+  caret-color:var(--gold);
+}
+.scan-input::placeholder{color:#374151;}
+
+/* スキャン結果 */
+.scan-result{
+  background:var(--hover);border:1px solid var(--border);
+  border-radius:10px;padding:16px;
+  display:none;
+}
+.scan-result.visible{display:block;animation:slideIn .2s ease;}
+@keyframes slideIn{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:none;}}
+
+.result-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.result-case{font-family:'DM Mono',monospace;font-size:12px;color:var(--gold);}
+.result-status-badge{padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;}
+
+.result-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+.result-field{}
+.result-key{font-size:10px;color:var(--muted);margin-bottom:2px;}
+.result-val{font-size:13px;font-weight:500;}
+
+.confirm-btn{
+  width:100%;margin-top:14px;padding:12px;
+  background:var(--gold);color:#0a0c10;
+  border:none;border-radius:8px;font-size:13px;font-weight:700;
+  cursor:pointer;font-family:'Noto Sans JP',sans-serif;
+  transition:background .15s;
+}
+.confirm-btn:hover{background:var(--gold-l);}
+
+/* スキャン履歴 */
+.history-row{
+  display:flex;align-items:center;gap:12px;
+  padding:10px 0;border-bottom:1px solid rgba(37,42,56,0.5);
+  font-size:12px;
+}
+.history-row:last-child{border-bottom:none;}
+.h-time{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);min-width:50px;}
+.h-code{font-family:'DM Mono',monospace;color:var(--gold);min-width:160px;}
+.h-case{color:var(--sub);flex:1;}
+.h-badge{padding:3px 10px;border-radius:20px;font-size:10px;font-weight:600;white-space:nowrap;}
+
+/* ===== LABEL PREVIEW ===== */
+/* 感熱ラベル（102mm×62mm を画面表示: 1mm=3px） */
+.thermal-label{
+  width:306px;min-height:200px;
+  background:white;border-radius:4px;
+  padding:9px 11px;
+  font-family:'Noto Sans JP',sans-serif;
+  color:#111;
+  margin:0 auto;
+  box-shadow:0 4px 20px rgba(0,0,0,0.5);
+  display:flex;flex-direction:column;
+  position:relative;
+}
+.tl-type-bar{font-size:7px;font-weight:700;letter-spacing:0.5px;padding:2px 7px;border-radius:2px;display:inline-block;margin-bottom:5px;width:fit-content;}
+.tl-bar-blue{background:#dbeafe;color:#1d4ed8;}
+.tl-bar-purple{background:#ede9fe;color:#6d28d9;}
+.tl-bar-amber{background:#fef3c7;color:#b45309;}
+.tl-to-label{font-size:6px;color:#9ca3af;letter-spacing:0.5px;margin-bottom:1px;}
+.tl-postal{font-size:10px;color:#374151;letter-spacing:2px;margin-bottom:1px;}
+.tl-address{font-size:7px;color:#374151;line-height:1.5;margin-bottom:1px;}
+.tl-name{font-size:13px;font-weight:700;color:#111827;line-height:1.2;}
+.tl-honorific{font-size:9px;font-weight:400;}
+.tl-divider{border:none;border-top:0.5px solid #e5e7eb;margin:4px 0;}
+.tl-from-label{font-size:6px;color:#9ca3af;letter-spacing:0.5px;margin-bottom:1px;}
+.tl-from-name{font-size:7.5px;font-weight:700;color:#374151;line-height:1.4;}
+.tl-from-addr{font-size:6.5px;color:#6b7280;line-height:1.4;}
+.tl-from-tel{font-size:6.5px;color:#6b7280;}
+
+/* バーコードエリア */
+.tl-barcode-area{
+  margin-top:5px;
+  border-top:0.5px solid #f0f0f0;
+  padding-top:4px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:6px;
+}
+.tl-barcode-svg{flex:1;}
+.tl-barcode-meta{text-align:right;flex-shrink:0;}
+.tl-barcode-id{font-family:'DM Mono',monospace;font-size:6.5px;color:#374151;font-weight:600;}
+.tl-barcode-type{font-size:6px;color:#9ca3af;}
+
+/* ラベル選択ボタン */
+.label-select-row{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+.label-select-btn{
+  padding:7px 14px;border-radius:6px;font-size:12px;font-weight:500;
+  cursor:pointer;border:1px solid var(--border);background:var(--hover);
+  color:var(--sub);transition:all .15s;font-family:'Noto Sans JP',sans-serif;
+}
+.label-select-btn:hover{border-color:rgba(201,168,76,0.4);color:#e8eaf0;}
+.label-select-btn.active{border-color:var(--gold);background:rgba(201,168,76,0.1);color:var(--gold);}
+
+/* ===== KINTONE SETUP ===== */
+.step{display:flex;gap:14px;align-items:flex-start;padding:14px 0;border-bottom:1px solid rgba(37,42,56,0.5);}
+.step:last-child{border-bottom:none;}
+.step-num{width:26px;height:26px;background:var(--gold);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#0a0c10;flex-shrink:0;margin-top:1px;}
+.step-title{font-size:13px;font-weight:600;margin-bottom:4px;}
+.step-desc{font-size:12px;color:var(--sub);line-height:1.8;}
+code{background:var(--hover);padding:1px 6px;border-radius:3px;font-size:11px;color:var(--gold);font-family:'DM Mono',monospace;}
+.hint{background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.2);border-radius:6px;padding:12px;font-size:12px;color:var(--sub);line-height:1.7;margin-top:12px;}
+
+/* ステータスバッジ */
+.badge-shipped{background:rgba(59,130,246,0.15);color:var(--blue);}
+.badge-received{background:rgba(34,197,94,0.15);color:var(--green);}
+.badge-stored{background:rgba(168,85,247,0.15);color:var(--purple);}
+.badge-rejected{background:rgba(239,68,68,0.15);color:var(--red);}
+
+/* タイムライン */
+.tl-item{display:flex;gap:12px;padding-bottom:14px;position:relative;}
+.tl-item::before{content:'';position:absolute;left:6px;top:14px;width:1px;height:100%;background:var(--border);}
+.tl-item:last-child::before{display:none;}
+.tl-dot{width:13px;height:13px;border-radius:50%;flex-shrink:0;margin-top:2px;}
+.tl-dot-done{background:var(--green);}
+.tl-dot-active{background:var(--gold);box-shadow:0 0 8px rgba(201,168,76,0.5);}
+.tl-dot-pending{background:var(--border);}
+.tl-text{font-size:12px;font-weight:500;}
+.tl-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+
+/* 流れ図 */
+.flow-row{display:flex;align-items:center;gap:0;flex-wrap:wrap;margin-bottom:16px;}
+.flow-box{background:var(--hover);border:1px solid var(--border);border-radius:6px;padding:9px 14px;font-size:12px;text-align:center;min-width:100px;}
+.flow-box.hl{border-color:var(--gold);background:rgba(201,168,76,0.08);color:var(--gold);}
+.flow-box.hl-blue{border-color:var(--blue);background:rgba(59,130,246,0.08);color:var(--blue);}
+.flow-box.hl-green{border-color:var(--green);background:rgba(34,197,94,0.08);color:var(--green);}
+.flow-arr{color:var(--muted);font-size:16px;padding:0 8px;}
+
+/* トースト */
+.toast{
+  position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:rgba(34,197,94,0.15);border:1px solid var(--green);
+  color:var(--green);padding:12px 24px;border-radius:8px;
+  font-size:13px;font-weight:600;
+  opacity:0;transition:all .3s;pointer-events:none;z-index:100;
+  white-space:nowrap;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.toast.error-toast{background:rgba(239,68,68,0.15);border-color:var(--red);color:var(--red);}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="logo">CORETO
+  <button onclick="window.location.href='coreto-admin-rbac.html'"
+            style="font-size:10px;padding:5px 12px;border-radius:6px;border:1px solid var(--border2);
+            background:transparent;color:var(--muted);cursor:pointer;font-family:'Noto Sans JP',sans-serif">
+    ← 管理ポータル
+  </button>
+</div>
+    <div class="header-sub">バーコードスキャン追跡システム ／ Honeywell Voyager 1200g 対応</div>
+  </div>
+  <div style="font-size:11px;color:var(--muted)">Kintone 連携</div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="showTab('scan')">📡 スキャンデスク</button>
+  <button class="tab" onclick="showTab('label')">🏷 ラベルプレビュー</button>
+  <button class="tab" onclick="showTab('tracking')">📦 追跡一覧</button>
+  <button class="tab" onclick="showTab('setup')">⚙️ 導入手順</button>
+</div>
+
+<!-- ================================================================ -->
+<!-- TAB: SCAN DESK -->
+<!-- ================================================================ -->
+<div id="tab-scan" class="page active">
+
+  <div class="grid2">
+
+    <!-- 左：スキャンデスク -->
+    <div>
+      <div class="s-label">ステップ1 ― ステータスを選択</div>
+      <div class="status-selector">
+        <button class="status-btn active-shipped" id="btn-shipped" onclick="selectStatus('shipped')">📤 発送</button>
+        <button class="status-btn" id="btn-received" onclick="selectStatus('received')">📥 受取</button>
+        <button class="status-btn" id="btn-stored" onclick="selectStatus('stored')">📦 保管中</button>
+        <button class="status-btn" id="btn-rejected" onclick="selectStatus('rejected')">🚫 受取拒否・不在</button>
+      </div>
+
+      <div class="s-label">ステップ2 ― バーコードをスキャン</div>
+      <div class="scan-desk">
+        <div class="scan-input-area" id="scan-area" onclick="document.getElementById('scan-input').focus()">
+          <div class="scan-icon">📷</div>
+          <div class="scan-input-inner">
+            <div class="scan-hint" id="scan-hint">スキャナーをここに向けてバーコードを読み取るか、クリックして手入力</div>
+            <input
+              type="text"
+              id="scan-input"
+              class="scan-input"
+              placeholder="スキャン待機中..."
+              autocomplete="off"
+              onkeydown="handleScanInput(event)"
+              onfocus="onScanFocus()"
+              onblur="onScanBlur()"
+            >
+          </div>
+          <div id="scan-spinner" style="display:none;color:var(--gold);font-size:20px">⟳</div>
+        </div>
+
+        <!-- スキャン結果 -->
+        <div class="scan-result" id="scan-result">
+          <div class="result-header">
+            <div>
+              <div class="result-case" id="result-case-id">—</div>
+              <div style="font-size:13px;font-weight:600;margin-top:2px" id="result-case-name">—</div>
+            </div>
+            <div class="result-status-badge" id="result-badge">—</div>
+          </div>
+          <div class="result-grid">
+            <div class="result-field">
+              <div class="result-key">ラベル種別</div>
+              <div class="result-val" id="result-label-type">—</div>
+            </div>
+            <div class="result-field">
+              <div class="result-key">宛先</div>
+              <div class="result-val" id="result-dest">—</div>
+            </div>
+            <div class="result-field">
+              <div class="result-key">スキャン時刻</div>
+              <div class="result-val" style="font-family:'DM Mono',monospace" id="result-time">—</div>
+            </div>
+          </div>
+          <button class="confirm-btn" id="confirm-btn" onclick="confirmScan()">✅ Kintoneに記録する</button>
+        </div>
+
+        <!-- スキャン履歴 -->
+        <div style="margin-top:20px">
+          <div style="font-size:11px;color:var(--muted);letter-spacing:1px;margin-bottom:10px">本日のスキャン履歴</div>
+          <div id="history-list">
+            <div class="history-row">
+              <span class="h-time">09:12</span>
+              <span class="h-code">C001-CONTRACT</span>
+              <span class="h-case">池袋マンション 101 / 田中様</span>
+              <span class="h-badge badge-shipped">📤 発送</span>
+            </div>
+            <div class="history-row">
+              <span class="h-time">10:34</span>
+              <span class="h-code">C001-KEY</span>
+              <span class="h-case">池袋マンション 101 / 田中様</span>
+              <span class="h-badge badge-shipped">📤 発送</span>
+            </div>
+            <div class="history-row">
+              <span class="h-time">11:20</span>
+              <span class="h-code">C002-RETURN</span>
+              <span class="h-case">新宿アパート 201 / 山田様</span>
+              <span class="h-badge badge-received">📥 受取</span>
+            </div>
+            <div class="history-row">
+              <span class="h-time">14:05</span>
+              <span class="h-code">C002-RETURN</span>
+              <span class="h-case">新宿アパート 201 / 山田様</span>
+              <span class="h-badge badge-stored">📦 保管中</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右：案件追跡タイムライン -->
+    <div>
+      <div class="s-label">案件 C-003 ― 追跡タイムライン</div>
+      <div class="card">
+        <div style="margin-bottom:14px">
+          <div style="font-family:'DM Mono',monospace;font-size:12px;color:var(--gold)">C-003</div>
+          <div style="font-size:14px;font-weight:600;margin-top:2px">渋谷区代々木 / 鈴木 一郎 様</div>
+        </div>
+
+        <!-- 契約書 -->
+        <div style="margin-bottom:16px">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:8px;letter-spacing:0.5px">📄 契約書 ― C003-CONTRACT</div>
+          <div>
+            <div class="tl-item">
+              <div class="tl-dot tl-dot-done"></div>
+              <div><div class="tl-text">📤 発送</div><div class="tl-sub">2/19 14:22 ― 山田スキャン</div></div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-dot tl-dot-pending"></div>
+              <div><div class="tl-text" style="color:var(--muted)">📥 受取（顧客署名後返送）</div><div class="tl-sub">待機中</div></div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-dot tl-dot-pending"></div>
+              <div><div class="tl-text" style="color:var(--muted)">📦 保管中</div><div class="tl-sub">待機中</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 鍵 -->
+        <div style="margin-bottom:16px">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:8px;letter-spacing:0.5px">🔑 鍵 ― C003-KEY</div>
+          <div>
+            <div class="tl-item">
+              <div class="tl-dot tl-dot-active"></div>
+              <div><div class="tl-text" style="color:var(--gold)">📤 発送（本日予定）</div><div class="tl-sub">未スキャン</div></div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-dot tl-dot-pending"></div>
+              <div><div class="tl-text" style="color:var(--muted)">📥 顧客受取確認</div><div class="tl-sub">待機中</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 返信用 -->
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:8px;letter-spacing:0.5px">↩️ 返信用（返送確認） ― C003-RETURN</div>
+          <div>
+            <div class="tl-item">
+              <div class="tl-dot tl-dot-pending"></div>
+              <div><div class="tl-text" style="color:var(--muted)">📥 受取（事務所に届いた）</div><div class="tl-sub">待機中</div></div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-dot tl-dot-pending"></div>
+              <div><div class="tl-text" style="color:var(--muted)">📦 保管中（棚に格納）</div><div class="tl-sub">待機中</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:14px;padding:10px;background:rgba(59,130,246,0.08);border-radius:6px;font-size:11px;color:var(--blue);line-height:1.7">
+          💡 スキャンするとこのタイムラインがKintoneで自動更新されます。<br>
+          日本郵便API（自動追跡）のステータスとも合算して表示されます。
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📊 今月の発送状況</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+          <div style="text-align:center;background:var(--hover);border-radius:8px;padding:12px">
+            <div style="font-family:'DM Mono',monospace;font-size:22px;font-weight:700;color:var(--blue)">23</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:3px">発送済み</div>
+          </div>
+          <div style="text-align:center;background:var(--hover);border-radius:8px;padding:12px">
+            <div style="font-family:'DM Mono',monospace;font-size:22px;font-weight:700;color:var(--green)">18</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:3px">受取完了</div>
+          </div>
+          <div style="text-align:center;background:var(--hover);border-radius:8px;padding:12px">
+            <div style="font-family:'DM Mono',monospace;font-size:22px;font-weight:700;color:var(--purple)">12</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:3px">保管中</div>
+          </div>
+          <div style="text-align:center;background:var(--hover);border-radius:8px;padding:12px">
+            <div style="font-family:'DM Mono',monospace;font-size:22px;font-weight:700;color:var(--red)">2</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:3px">不在持戻り</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ================================================================ -->
+<!-- TAB: LABEL PREVIEW -->
+<!-- ================================================================ -->
+<div id="tab-label" class="page">
+
+  <div class="s-label" style="margin-top:0">プレビューするラベルを選択</div>
+  <div class="label-select-row">
+    <button class="label-select-btn active" onclick="showLabelPreview('contract',this)">📄 契約書送付</button>
+    <button class="label-select-btn" onclick="showLabelPreview('key',this)">🔑 鍵送付</button>
+    <button class="label-select-btn" onclick="showLabelPreview('return',this)">↩️ 返信用</button>
+    <button class="label-select-btn" onclick="showLabelPreview('mgmt',this)">🏢 管理会社宛</button>
+  </div>
+
+  <div class="grid2">
+    <div>
+      <div class="card">
+        <div class="card-title">感熱ラベル印刷イメージ（102mm × 62mm）</div>
+
+        <!-- CONTRACT -->
+        <div id="lp-contract">
+          <div class="thermal-label">
+            <span class="tl-type-bar tl-bar-blue">📄 契約書送付</span>
+            <div class="tl-to-label">お届け先</div>
+            <div class="tl-postal">〒150-0001</div>
+            <div class="tl-address">東京都渋谷区神宮前1-1-1　○○マンション 201号室</div>
+            <div class="tl-name">鈴木 一郎 <span class="tl-honorific">様</span></div>
+            <hr class="tl-divider">
+            <div class="tl-from-label">差出人</div>
+            <div class="tl-from-name">CORETO ／ 担当：山田 誠</div>
+            <div class="tl-from-addr">〒171-0021 東京都豊島区西池袋1-1-1</div>
+            <div class="tl-from-tel">TEL: 090-1234-5678</div>
+            <div class="tl-barcode-area">
+              <svg id="bc-contract" class="tl-barcode-svg"></svg>
+              <div class="tl-barcode-meta">
+                <div class="tl-barcode-id">C003-CONTRACT</div>
+                <div class="tl-barcode-type">追跡バーコード</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- KEY -->
+        <div id="lp-key" style="display:none">
+          <div class="thermal-label">
+            <span class="tl-type-bar tl-bar-blue">🔑 鍵送付</span>
+            <div class="tl-to-label">お届け先</div>
+            <div class="tl-postal">〒150-0001</div>
+            <div class="tl-address">東京都渋谷区神宮前1-1-1　○○マンション 201号室</div>
+            <div class="tl-name">鈴木 一郎 <span class="tl-honorific">様</span></div>
+            <hr class="tl-divider">
+            <div class="tl-from-label">差出人</div>
+            <div class="tl-from-name">CORETO ／ 担当：山田 誠</div>
+            <div class="tl-from-addr">〒171-0021 東京都豊島区西池袋1-1-1</div>
+            <div class="tl-from-tel">TEL: 090-1234-5678</div>
+            <div class="tl-barcode-area">
+              <svg id="bc-key" class="tl-barcode-svg"></svg>
+              <div class="tl-barcode-meta">
+                <div class="tl-barcode-id">C003-KEY</div>
+                <div class="tl-barcode-type">追跡バーコード</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RETURN -->
+        <div id="lp-return" style="display:none">
+          <div class="thermal-label">
+            <span class="tl-type-bar tl-bar-purple">↩️ 返信用（契約書返送）</span>
+            <div class="tl-to-label">お届け先</div>
+            <div class="tl-postal">〒171-0021</div>
+            <div class="tl-address">東京都豊島区西池袋1-1-1</div>
+            <div class="tl-name" style="font-size:11px;line-height:1.4">合同会社帝国開発<br><span style="font-size:9px;font-weight:600">CORETO 契約書受付 係</span></div>
+            <hr class="tl-divider">
+            <div class="tl-from-label">差出人（お客様のお名前をご記入ください）</div>
+            <div class="tl-from-name">鈴木 一郎 様</div>
+            <div class="tl-from-addr">〒150-0001 東京都渋谷区神宮前1-1-1</div>
+            <div class="tl-barcode-area">
+              <svg id="bc-return" class="tl-barcode-svg"></svg>
+              <div class="tl-barcode-meta">
+                <div class="tl-barcode-id">C003-RETURN</div>
+                <div class="tl-barcode-type">追跡バーコード</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- MGMT -->
+        <div id="lp-mgmt" style="display:none">
+          <div class="thermal-label">
+            <span class="tl-type-bar tl-bar-amber">🏢 管理会社送付</span>
+            <div class="tl-to-label">お届け先</div>
+            <div class="tl-postal">〒160-0022</div>
+            <div class="tl-address">東京都新宿区新宿2-3-4　○○ビル 5階</div>
+            <div class="tl-name" style="font-size:12px">株式会社渋谷管理 <span class="tl-honorific">御中</span></div>
+            <div style="font-size:7px;color:#374151;margin-top:1px">管理部 ご担当者様</div>
+            <hr class="tl-divider">
+            <div class="tl-from-label">差出人</div>
+            <div class="tl-from-name">CORETO ／ 担当：山田 誠</div>
+            <div class="tl-from-addr">〒171-0021 東京都豊島区西池袋1-1-1</div>
+            <div class="tl-from-tel">TEL: 090-1234-5678</div>
+            <div class="tl-barcode-area">
+              <svg id="bc-mgmt" class="tl-barcode-svg"></svg>
+              <div class="tl-barcode-meta">
+                <div class="tl-barcode-id">C003-MGMT</div>
+                <div class="tl-barcode-type">追跡バーコード</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="text-align:center;margin-top:12px;font-size:11px;color:var(--muted)">
+          ↑ バーコードはラベル下部に自動生成・印刷されます
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <div class="card-title">バーコード設計</div>
+        <div style="font-size:12px;color:var(--sub);line-height:1.9">
+          <strong style="color:#e8eaf0">フォーマット：</strong> <code>{案件ID}-{種別}</code><br>
+          <strong style="color:#e8eaf0">種別コード：</strong><br>
+          &emsp;<code>CONTRACT</code> ― 契約書送付<br>
+          &emsp;<code>KEY</code> ― 鍵送付<br>
+          &emsp;<code>RETURN</code> ― 返信用（契約書返送）<br>
+          &emsp;<code>MGMT</code> ― 管理会社宛<br><br>
+          <strong style="color:#e8eaf0">バーコード形式：</strong> Code 128<br>
+          &emsp;英数字・記号すべて対応。Honeywell 1200g で確実に読取可能。<br><br>
+          <strong style="color:#e8eaf0">例：</strong> 案件C-003の契約書ラベル<br>
+          &emsp;→ <code>C003-CONTRACT</code>
+        </div>
+        <div class="hint" style="margin-top:16px">
+          💡 <strong style="color:#e8eaf0">同一案件のラベルを複数枚発行した場合</strong>、バーコード末尾に連番を付けます：<code>C003-CONTRACT-2</code>。再発行・差し替えも追跡できます。
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">ステータス遷移ルール</div>
+        <div style="display:flex;flex-direction:column;gap:10px;font-size:12px">
+          <div style="background:var(--hover);border-radius:6px;padding:10px">
+            <div style="color:var(--blue);font-weight:600;margin-bottom:4px">📄 契約書 / 🔑 鍵 / 🏢 管理会社宛</div>
+            <div style="color:var(--sub)">発送 → 受取拒否・不在（任意） → ―</div>
+          </div>
+          <div style="background:var(--hover);border-radius:6px;padding:10px">
+            <div style="color:var(--purple);font-weight:600;margin-bottom:4px">↩️ 返信用（顧客→事務所）</div>
+            <div style="color:var(--sub)">受取（事務所に届いた）→ 保管中（棚に格納）</div>
+          </div>
+          <div style="background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.2);border-radius:6px;padding:10px">
+            <div style="color:var(--red);font-weight:600;margin-bottom:4px">🚫 受取拒否・不在持ち戻り</div>
+            <div style="color:var(--sub)">いずれのラベル種別にも記録可能。<br>スキャン後にKintoneで担当エージェントに自動通知。</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================ -->
+<!-- TAB: TRACKING -->
+<!-- ================================================================ -->
+<div id="tab-tracking" class="page">
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div class="card-title" style="margin:0">📦 全レターパック追跡一覧</div>
+      <div style="display:flex;gap:8px">
+        <select style="background:var(--hover);border:1px solid var(--border);color:#e8eaf0;padding:6px 10px;border-radius:5px;font-size:12px;font-family:'Noto Sans JP',sans-serif">
+          <option>全ステータス</option>
+          <option>📤 発送済み</option>
+          <option>📥 受取待ち</option>
+          <option>📦 保管中</option>
+          <option>🚫 不在・拒否</option>
+        </select>
+        <select style="background:var(--hover);border:1px solid var(--border);color:#e8eaf0;padding:6px 10px;border-radius:5px;font-size:12px;font-family:'Noto Sans JP',sans-serif">
+          <option>全種別</option>
+          <option>契約書</option>
+          <option>鍵</option>
+          <option>返信用</option>
+          <option>管理会社</option>
+        </select>
+      </div>
+    </div>
+    <table style="width:100%;border-collapse:collapse">
+      <thead>
+        <tr>
+          <th style="text-align:left;font-size:11px;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--border)">バーコード</th>
+          <th style="text-align:left;font-size:11px;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--border)">案件 / 顧客</th>
+          <th style="text-align:left;font-size:11px;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--border)">種別</th>
+          <th style="text-align:left;font-size:11px;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--border)">現在のステータス</th>
+          <th style="text-align:left;font-size:11px;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--border)">最終スキャン</th>
+          <th style="text-align:left;font-size:11px;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--border)">担当AG</th>
+          <th style="text-align:left;font-size:11px;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--border)">日本郵便</th>
+        </tr>
+      </thead>
+      <tbody id="tracking-table-body">
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ================================================================ -->
+<!-- TAB: SETUP -->
+<!-- ================================================================ -->
+<div id="tab-setup" class="page">
+
+  <div class="card">
+    <div class="card-title">⚡ システム全体フロー</div>
+    <div class="flow-row">
+      <div class="flow-box hl">ラベル印刷時<br>バーコード自動生成</div>
+      <div class="flow-arr">→</div>
+      <div class="flow-box">発送前に<br>スキャン</div>
+      <div class="flow-arr">→</div>
+      <div class="flow-box hl-blue">Kintone に<br>ステータス記録</div>
+      <div class="flow-arr">→</div>
+      <div class="flow-box">エージェントに<br>Slack通知</div>
+      <div class="flow-arr">→</div>
+      <div class="flow-box">返送受取時<br>再スキャン</div>
+      <div class="flow-arr">→</div>
+      <div class="flow-box hl-blue">Kintone 自動更新<br>タイムライン完成</div>
+    </div>
+    <div style="font-size:12px;color:var(--sub)">Honeywell 1200g はUSBキーボードとして認識されるため、スキャン画面にフォーカスを当てるだけで自動入力されます。エンターキー押下も不要です（自動送信）。</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🔧 導入手順</div>
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div>
+        <div class="step-title">Kintone「レターパック追跡」アプリにフィールドを追加</div>
+        <div class="step-desc">
+          既存の追跡番号フィールドに加えて以下を追加：<br>
+          <code>バーコードID</code>（テキスト）　<code>ラベル種別</code>（ドロップダウン）<br>
+          <code>スキャンステータス</code>（ドロップダウン）　<code>スキャン日時</code>（日時）<br>
+          <code>スキャン担当者</code>（ユーザー選択）
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div>
+        <div class="step-title">バーコードIDの自動採番をKintoneに設定</div>
+        <div class="step-desc">
+          契約レコード作成時にZapierで自動生成：<br>
+          <code>{{案件ID}}-CONTRACT</code>　<code>{{案件ID}}-KEY</code>　<code>{{案件ID}}-RETURN</code>　<code>{{案件ID}}-MGMT</code><br>
+          これをラベル印刷テンプレート（P-touch Editor）に差し込むことでバーコードが自動生成されます。
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div>
+        <div class="step-title">P-touch Editor でバーコードフィールドを追加</div>
+        <div class="step-desc">
+          既存ラベルテンプレート（.lbx）を開き、下部に「バーコードオブジェクト」を追加。<br>
+          バーコード種別：<code>Code 128</code>（英数字・記号対応・Honeywell確実読取）<br>
+          データソース：Kintoneの<code>バーコードID</code>フィールドを差し込み<br>
+          サイズ：高さ 8mm 程度（ラベル下部に収まるサイズ）
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">4</div>
+      <div>
+        <div class="step-title">スキャン専用画面をKintoneに作成</div>
+        <div class="step-desc">
+          Kintone カスタムビューで「スキャンデスク」画面を作成（このデモのような画面）。<br>
+          ステータスを選択 → スキャンするとバーコードIDを検索 → 対応レコードに自動書き込み。<br>
+          JavaScriptコードはClaudeに依頼すれば生成できます。所要時間 30分程度。
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">5</div>
+      <div>
+        <div class="step-title">受取拒否・不在時のSlack自動通知を設定</div>
+        <div class="step-desc">
+          Zapier：Kintoneの<code>スキャンステータス</code>が「受取拒否・不在」になったら → Slackで担当エージェントに通知。<br>
+          通知内容：案件ID・顧客名・レターパック種別・日時を自動含める。<br>
+          エージェントが即座に顧客に連絡できる体制になります。
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">6</div>
+      <div>
+        <div class="step-title">日本郵便APIの自動追跡と統合（既存機能）</div>
+        <div class="step-desc">
+          マスタープランにある日本郵便API追跡と、今回のバーコードスキャンを同一タイムラインに表示。<br>
+          → 「事務所から発送（スキャン記録）」＋「郵便局の配達状況（API取得）」＋「事務所で受取（スキャン記録）」が1画面で確認できます。
+        </div>
+      </div>
+    </div>
+
+    <div class="hint">
+      💡 <strong style="color:#e8eaf0">追加費用：ゼロ</strong>。Honeywell 1200gはすでにマスタープランに含まれており、P-touch EditorのCode 128生成も無料です。Kintoneのカスタマイズとしてフィールド追加・JavaScript実装のみ必要です。<br><br>
+      💡 <strong style="color:#e8eaf0">Kintone連携コード</strong>は「スキャン画面のJavaScriptをKintone向けに書いて」と依頼すればすぐ生成できます。
+    </div>
+  </div>
+</div>
+
+<!-- トースト -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== データ =====
+const caseDB = {
+  'C001-CONTRACT': { caseId:'C-001', caseName:'池袋マンション 101号室', dest:'田中 花子 様', type:'📄 契約書送付' },
+  'C001-KEY':      { caseId:'C-001', caseName:'池袋マンション 101号室', dest:'田中 花子 様', type:'🔑 鍵送付' },
+  'C001-RETURN':   { caseId:'C-001', caseName:'池袋マンション 101号室', dest:'CORETO事務所', type:'↩️ 返信用' },
+  'C001-MGMT':     { caseId:'C-001', caseName:'池袋マンション 101号室', dest:'株式会社池袋管理', type:'🏢 管理会社宛' },
+  'C002-CONTRACT': { caseId:'C-002', caseName:'新宿アパート 201号室', dest:'山田 太郎 様', type:'📄 契約書送付' },
+  'C002-KEY':      { caseId:'C-002', caseName:'新宿アパート 201号室', dest:'山田 太郎 様', type:'🔑 鍵送付' },
+  'C002-RETURN':   { caseId:'C-002', caseName:'新宿アパート 201号室', dest:'CORETO事務所', type:'↩️ 返信用' },
+  'C002-MGMT':     { caseId:'C-002', caseName:'新宿アパート 201号室', dest:'株式会社新宿管理', type:'🏢 管理会社宛' },
+  'C003-CONTRACT': { caseId:'C-003', caseName:'渋谷区代々木 2LDK', dest:'鈴木 一郎 様', type:'📄 契約書送付' },
+  'C003-KEY':      { caseId:'C-003', caseName:'渋谷区代々木 2LDK', dest:'鈴木 一郎 様', type:'🔑 鍵送付' },
+  'C003-RETURN':   { caseId:'C-003', caseName:'渋谷区代々木 2LDK', dest:'CORETO事務所', type:'↩️ 返信用' },
+  'C003-MGMT':     { caseId:'C-003', caseName:'渋谷区代々木 2LDK', dest:'株式会社渋谷管理', type:'🏢 管理会社宛' },
+};
+
+const statusMap = {
+  shipped:  { label:'📤 発送', cls:'badge-shipped', btnCls:'active-shipped' },
+  received: { label:'📥 受取', cls:'badge-received', btnCls:'active-received' },
+  stored:   { label:'📦 保管中', cls:'badge-stored', btnCls:'active-stored' },
+  rejected: { label:'🚫 受取拒否・不在', cls:'badge-rejected', btnCls:'active-rejected' },
+};
+
+let currentStatus = 'shipped';
+let pendingScan = null;
+
+// ===== ステータス選択 =====
+function selectStatus(s) {
+  currentStatus = s;
+  document.querySelectorAll('.status-btn').forEach(b => {
+    b.className = 'status-btn';
+  });
+  const btn = document.getElementById('btn-'+s);
+  btn.className = 'status-btn ' + statusMap[s].btnCls;
+  document.getElementById('scan-input').focus();
+}
+
+// ===== スキャン入力 =====
+function onScanFocus() {
+  const area = document.getElementById('scan-area');
+  area.classList.add('focused');
+  document.getElementById('scan-hint').textContent = '✅ スキャン準備完了 ― バーコードを読み取ってください';
+}
+function onScanBlur() {
+  const area = document.getElementById('scan-area');
+  if (!area.classList.contains('success')) {
+    area.classList.remove('focused');
+    document.getElementById('scan-hint').textContent = 'スキャナーをここに向けてバーコードを読み取るか、クリックして手入力';
+  }
+}
+
+function handleScanInput(e) {
+  // Honeywell は Enter を自動送信するのでEnterで確定
+  if (e.key === 'Enter') {
+    const val = e.target.value.trim().toUpperCase();
+    if (val) processScan(val);
+    e.preventDefault();
+  }
+}
+
+function processScan(code) {
+  const area = document.getElementById('scan-area');
+  const result = document.getElementById('scan-result');
+  const input = document.getElementById('scan-input');
+
+  const found = caseDB[code];
+  if (!found) {
+    area.classList.add('error');
+    area.classList.remove('focused');
+    showToast('❌ バーコードが見つかりません: ' + code, true);
+    input.value = '';
+    setTimeout(() => { area.classList.remove('error'); area.classList.add('focused'); input.focus(); }, 1500);
+    return;
+  }
+
+  pendingScan = { code, data: found, status: currentStatus };
+
+  const st = statusMap[currentStatus];
+  const now = new Date();
+  const timeStr = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+
+  document.getElementById('result-case-id').textContent = found.caseId + ' ― ' + code;
+  document.getElementById('result-case-name').textContent = found.caseName;
+  document.getElementById('result-label-type').textContent = found.type;
+  document.getElementById('result-dest').textContent = found.dest;
+  document.getElementById('result-time').textContent = timeStr;
+
+  const badge = document.getElementById('result-badge');
+  badge.textContent = st.label;
+  badge.className = 'result-status-badge ' + st.cls;
+
+  area.classList.remove('focused','error');
+  area.classList.add('success');
+  result.classList.add('visible');
+  input.value = '';
+}
+
+function confirmScan() {
+  if (!pendingScan) return;
+  const { code, data, status } = pendingScan;
+  const st = statusMap[status];
+  const now = new Date();
+  const timeStr = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+
+  // 履歴に追加
+  const list = document.getElementById('history-list');
+  const row = document.createElement('div');
+  row.className = 'history-row';
+  row.innerHTML = `
+    <span class="h-time">${timeStr}</span>
+    <span class="h-code">${code}</span>
+    <span class="h-case">${data.caseName} / ${data.dest}</span>
+    <span class="h-badge ${st.cls}">${st.label}</span>
+  `;
+  list.insertBefore(row, list.firstChild);
+
+  showToast('✅ Kintoneに記録しました: ' + code + ' → ' + st.label);
+
+  // リセット
+  document.getElementById('scan-result').classList.remove('visible');
+  const area = document.getElementById('scan-area');
+  area.classList.remove('success');
+  area.classList.add('focused');
+  document.getElementById('scan-hint').textContent = '✅ スキャン準備完了 ― バーコードを読み取ってください';
+  pendingScan = null;
+  document.getElementById('scan-input').focus();
+}
+
+// ===== ラベルプレビュー =====
+function showLabelPreview(type, btn) {
+  ['contract','key','return','mgmt'].forEach(t => {
+    document.getElementById('lp-'+t).style.display = t===type ? 'block' : 'none';
+  });
+  document.querySelectorAll('.label-select-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ===== タブ =====
+function showTab(t) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-'+t).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// ===== トースト =====
+function showToast(msg, isError=false) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.className = 'toast' + (isError ? ' error-toast' : '');
+  setTimeout(() => toast.classList.add('show'), 10);
+  setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+// ===== バーコード生成 =====
+function generateBarcodes() {
+  const barcodes = {
+    'bc-contract': 'C003-CONTRACT',
+    'bc-key':      'C003-KEY',
+    'bc-return':   'C003-RETURN',
+    'bc-mgmt':     'C003-MGMT',
+  };
+  Object.entries(barcodes).forEach(([id, val]) => {
+    const el = document.getElementById(id);
+    if (el) {
+      JsBarcode(el, val, {
+        format: 'CODE128',
+        width: 1.2,
+        height: 22,
+        displayValue: false,
+        margin: 0,
+        background: 'transparent',
+        lineColor: '#111',
+      });
+    }
+  });
+}
+
+// ===== 追跡テーブル生成 =====
+function buildTrackingTable() {
+  const rows = [
+    { code:'C003-CONTRACT', caseName:'渋谷代々木 2LDK', dest:'鈴木 一郎 様', type:'📄 契約書', status:'shipped', time:'2/19 14:22', agent:'山田 誠', postal:'配送中' },
+    { code:'C003-KEY',      caseName:'渋谷代々木 2LDK', dest:'鈴木 一郎 様', type:'🔑 鍵',    status:'',        time:'未発送',       agent:'山田 誠', postal:'―' },
+    { code:'C003-RETURN',   caseName:'渋谷代々木 2LDK', dest:'CORETO事務所', type:'↩️ 返信用', status:'',        time:'未受取',       agent:'山田 誠', postal:'―' },
+    { code:'C001-CONTRACT', caseName:'池袋マンション 101', dest:'田中 花子 様', type:'📄 契約書', status:'received', time:'2/19 09:12', agent:'高橋 明', postal:'配達完了' },
+    { code:'C001-RETURN',   caseName:'池袋マンション 101', dest:'CORETO事務所', type:'↩️ 返信用', status:'stored', time:'2/18 16:30', agent:'高橋 明', postal:'配達完了' },
+    { code:'C002-KEY',      caseName:'新宿アパート 201', dest:'山田 太郎 様', type:'🔑 鍵',    status:'rejected', time:'2/18 11:05', agent:'中村 リカ', postal:'不在持戻り' },
+  ];
+
+  const tbody = document.getElementById('tracking-table-body');
+  rows.forEach(r => {
+    const st = r.status ? statusMap[r.status] : null;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="font-family:'DM Mono',monospace;font-size:12px;color:var(--gold);padding:10px">${r.code}</td>
+      <td style="font-size:12px;padding:10px">${r.caseName}<br><span style="font-size:11px;color:var(--muted)">${r.dest}</span></td>
+      <td style="font-size:12px;padding:10px">${r.type}</td>
+      <td style="padding:10px">${st ? `<span class="h-badge ${st.cls}" style="padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600">${st.label}</span>` : '<span style="font-size:12px;color:var(--muted)">―</span>'}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);padding:10px">${r.time}</td>
+      <td style="font-size:12px;padding:10px">${r.agent}</td>
+      <td style="font-size:11px;padding:10px;color:var(--sub)">${r.postal}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// 初期化
+window.addEventListener('load', () => {
+  generateBarcodes();
+  buildTrackingTable();
+  // スキャン入力にフォーカス
+  document.getElementById('scan-input').focus();
+});
+</script>
+</body>
+</html>

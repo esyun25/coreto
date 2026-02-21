@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CORETO 成約報告・振込バッチ管理</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090f;--card:#0f1119;--card2:#141720;--border:#1e2235;--border2:#252a3d;
+  --gold:#c9a84c;--gold-l:#e8c96a;--gold-dim:#7a5f22;--gold-glow:rgba(201,168,76,.12);
+  --blue:#4f9cf9;--green:#34d399;--red:#f87171;--orange:#fb923c;--purple:#a78bfa;
+  --muted:#4a5270;--sub:#7a849e;--text:#e2e6f3;
+}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;
+  background-image:radial-gradient(ellipse 60% 40% at 80% 10%,rgba(201,168,76,.05) 0%,transparent 60%)}
+
+/* ── ヘッダー ── */
+.header{display:flex;align-items:center;justify-content:space-between;padding:0 32px;height:56px;
+  border-bottom:1px solid var(--border);background:rgba(7,9,15,.8);backdrop-filter:blur(12px);
+  position:sticky;top:0;z-index:100}
+.logo{font-family:'Syne',sans-serif;font-size:19px;font-weight:800;color:var(--gold);letter-spacing:3px}
+.header-right{display:flex;align-items:center;gap:12px}
+.hdr-agent{font-size:12px;font-weight:600}
+.hdr-id{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)}
+
+/* ── タブ ── */
+.tabs{display:flex;padding:0 32px;background:rgba(7,9,15,.6);border-bottom:1px solid var(--border);gap:2px}
+.tab{padding:12px 20px;font-size:11px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;
+  color:var(--muted);transition:all .2s;letter-spacing:.5px;white-space:nowrap}
+.tab.on{color:var(--gold);border-bottom-color:var(--gold)}
+.tab:hover:not(.on){color:var(--sub)}
+.tab-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--red);
+  margin-left:6px;vertical-align:middle;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ── ページ ── */
+.page{display:none;padding:24px 32px;max-width:1400px;margin:0 auto}.page.on{display:block}
+
+/* ── グリッド ── */
+.two-col{display:grid;grid-template-columns:460px 1fr;gap:20px;align-items:start}
+.two-col-eq{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+
+/* ── パネル ── */
+.panel{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:16px}
+.panel-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.panel-title{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--gold);
+  letter-spacing:2px;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+.panel-title::before{content:'';width:3px;height:14px;background:var(--gold);border-radius:2px;flex-shrink:0}
+.panel-sub{font-size:10px;color:var(--muted)}
+
+/* ── フォーム ── */
+.s-label{font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;
+  padding:10px 0 7px;border-bottom:1px solid var(--border);margin-bottom:10px;margin-top:18px;
+  display:flex;align-items:center;gap:8px}
+.s-label:first-child{margin-top:0}
+.auto-tag{font-size:8px;color:var(--blue);background:rgba(79,156,249,.1);
+  border:1px solid rgba(79,156,249,.2);border-radius:3px;padding:1px 5px;
+  letter-spacing:.5px;font-weight:700;white-space:nowrap}
+.fg{margin-bottom:10px}
+.fg label{font-size:11px;color:var(--sub);display:block;margin-bottom:4px}
+.req{color:var(--red);margin-left:2px;font-size:9px}
+.hint{color:var(--muted);font-size:9px;margin-left:6px}
+input,select,textarea{width:100%;background:#0a0c14;border:1px solid var(--border2);border-radius:8px;
+  padding:9px 12px;color:var(--text);font-size:13px;font-family:'Noto Sans JP',sans-serif;
+  transition:border-color .15s,box-shadow .15s;-webkit-appearance:none}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gold);
+  box-shadow:0 0 0 3px rgba(201,168,76,.08)}
+input[type=date]{color-scheme:dark}
+/* 自動入力フィールドのスタイル */
+.auto-filled{background:#0c0e18;border-color:rgba(79,156,249,.25);color:var(--text)}
+.auto-filled:focus{border-color:var(--gold)}
+textarea{resize:vertical;min-height:72px}
+.mono{font-family:'DM Mono',monospace!important}
+.err-msg{font-size:10px;color:var(--red);margin-top:3px;display:none}
+.err-msg.show{display:block}
+
+/* ── トグルボタン ── */
+.tg-group{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.tg{padding:6px 13px;border-radius:7px;font-size:11px;cursor:pointer;border:1px solid var(--border2);
+  background:transparent;color:var(--muted);font-family:'Noto Sans JP',sans-serif;
+  transition:all .15s;white-space:nowrap}
+.tg.on{background:rgba(201,168,76,.12);border-color:var(--gold-dim);color:var(--gold);font-weight:700}
+.tg.on.bl{background:rgba(79,156,249,.12);border-color:rgba(79,156,249,.4);color:var(--blue)}
+.tg.on.gr{background:rgba(52,211,153,.12);border-color:rgba(52,211,153,.4);color:var(--green)}
+
+/* ── ボタン ── */
+.btn{padding:10px 18px;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;border:none;
+  font-family:'Noto Sans JP',sans-serif;transition:all .2s;letter-spacing:.5px}
+.btn-gold{background:linear-gradient(135deg,var(--gold),#a8872f);color:#0a0c10}
+.btn-gold:hover{background:linear-gradient(135deg,var(--gold-l),var(--gold));transform:translateY(-1px)}
+.btn-blue{background:rgba(79,156,249,.15);color:var(--blue);border:1px solid rgba(79,156,249,.3)}
+.btn-blue:hover{background:rgba(79,156,249,.25)}
+.btn-green{background:rgba(52,211,153,.15);color:var(--green);border:1px solid rgba(52,211,153,.3)}
+.btn-green:hover{background:rgba(52,211,153,.25)}
+.btn-muted{background:transparent;color:var(--muted);border:1px solid var(--border2)}
+.btn-muted:hover{color:var(--text)}
+.btn-full{width:100%;padding:13px;font-size:13px;margin-top:8px}
+.btn-sm{padding:5px 10px;font-size:10px;border-radius:6px}
+
+/* ── 案件IDエリア ── */
+.case-id-wrap{display:flex;gap:8px;align-items:stretch}
+.case-id-wrap input{flex:1;font-size:15px;font-family:'DM Mono',monospace;letter-spacing:2px}
+.case-id-wrap .btn{flex-shrink:0;align-self:center}
+
+/* ── 案件プレビューカード ── */
+.case-preview{background:rgba(79,156,249,.04);border:1px solid rgba(79,156,249,.2);
+  border-radius:10px;padding:14px;margin-top:10px;display:none}
+.cp-prop{font-size:14px;font-weight:700;margin-bottom:6px}
+.cp-row{display:flex;justify-content:space-between;font-size:11px;padding:3px 0;
+  border-bottom:1px solid rgba(30,34,53,.6)}
+.cp-row:last-child{border:none}
+.cp-key{color:var(--muted)}
+.cp-val{color:var(--text);font-weight:600;font-family:'DM Mono',monospace;font-size:11px}
+
+/* ── プレースホルダー ── */
+.placeholder-box{text-align:center;padding:40px 24px;color:var(--muted)}
+.placeholder-box .ph-icon{font-size:36px;margin-bottom:14px}
+.placeholder-box .ph-title{font-size:13px;font-weight:700;color:var(--sub);margin-bottom:6px}
+.placeholder-box .ph-desc{font-size:11px;line-height:1.9}
+
+/* ── 請求カード ── */
+.billing-card{background:var(--card2);border:1px solid var(--border2);border-radius:10px;
+  padding:14px;margin-bottom:10px;position:relative}
+.billing-card-num{position:absolute;top:-8px;left:14px;background:var(--gold);color:#0a0c10;
+  font-size:9px;font-weight:800;padding:1px 7px;border-radius:4px;font-family:'DM Mono',monospace}
+.billing-card.optional .billing-card-num{background:var(--muted)}
+.remove-btn{position:absolute;top:10px;right:10px;width:22px;height:22px;border-radius:50%;
+  background:rgba(248,113,113,.15);border:1px solid rgba(248,113,113,.25);color:var(--red);
+  cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center}
+
+/* ── バリデーション ── */
+.validation-box{background:var(--card2);border-radius:10px;padding:14px;margin-top:12px}
+.val-row{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:11px}
+.val-icon{width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0}
+.vi-ok{background:rgba(52,211,153,.2);color:var(--green)}
+.vi-err{background:rgba(248,113,113,.2);color:var(--red)}
+.vi-warn{background:rgba(251,146,60,.2);color:var(--orange)}
+.vi-wait{background:var(--border2);color:var(--muted)}
+
+/* ── 報酬プレビュー ── */
+.reward-hero{background:linear-gradient(135deg,rgba(201,168,76,.08),rgba(201,168,76,.02));
+  border:1px solid rgba(201,168,76,.2);border-radius:12px;padding:18px;margin:12px 0}
+.rh-label{font-size:10px;color:var(--muted);margin-bottom:4px}
+.rh-val{font-family:'DM Mono',monospace;font-size:32px;font-weight:500;color:var(--gold)}
+.rh-note{font-size:10px;color:var(--sub);margin-top:6px;line-height:1.7}
+.bk-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;
+  border-bottom:1px solid rgba(30,34,53,.8);font-size:12px}
+.bk-row:last-child{border-bottom:none}
+.bk-val{font-family:'DM Mono',monospace;font-size:12px}
+.bk-total{font-weight:700;font-size:13px;padding-top:8px!important}
+.bk-total .bk-val{color:var(--gold);font-size:15px}
+.minus{color:var(--red)}
+
+/* ── 月次バッチ ── */
+.timeline-bar{display:flex;align-items:stretch;gap:0;margin-bottom:20px;overflow:hidden;border-radius:10px;border:1px solid var(--border)}
+.tl-step{flex:1;padding:10px 8px;text-align:center}
+.tl-step.done{background:rgba(52,211,153,.08)}
+.tl-step.active{background:rgba(201,168,76,.1);border-left:2px solid var(--gold);border-right:2px solid var(--gold)}
+.tl-step.future{background:rgba(30,34,53,.3)}
+.tl-day{font-family:'DM Mono',monospace;font-size:16px;font-weight:700;margin-bottom:2px}
+.tl-label{font-size:9px;color:var(--muted)}
+.tl-step.done .tl-day{color:var(--green)}
+.tl-step.active .tl-day{color:var(--gold)}
+.tl-step.future .tl-day{color:var(--muted)}
+
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px}
+.stat-num{font-family:'DM Mono',monospace;font-size:26px;font-weight:500;line-height:1}
+.stat-lbl{font-size:10px;color:var(--muted);margin-top:5px}
+.stat-sub{font-size:11px;color:var(--sub);margin-top:4px;font-family:'DM Mono',monospace}
+
+.check-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+.check-item{background:var(--card2);border-radius:9px;padding:10px 13px;display:flex;align-items:center;gap:10px;font-size:11px}
+.chk-icon{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0}
+.chk-ok{background:rgba(52,211,153,.15);color:var(--green)}
+.chk-ng{background:rgba(248,113,113,.15);color:var(--red)}
+.chk-name{font-weight:600}
+.chk-note{font-size:10px;color:var(--muted);margin-top:1px}
+
+.payout-table{width:100%;border-collapse:collapse;font-size:12px}
+.payout-table th{padding:9px 12px;font-size:10px;color:var(--muted);font-weight:600;
+  border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
+.payout-table td{padding:9px 12px;border-bottom:1px solid rgba(30,34,53,.6);vertical-align:middle}
+.payout-table tr:hover td{background:rgba(255,255,255,.015)}
+.payout-table tr.has-error td{background:rgba(248,113,113,.04)}
+.payout-table tr.is-instant td{background:rgba(251,146,60,.04)}
+
+.ag-info{display:flex;flex-direction:column}
+.ag-name{font-weight:700;font-size:13px}
+.ag-id{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)}
+.ag-rank{display:inline-block;font-size:9px;padding:1px 6px;border-radius:3px;font-weight:700;margin-top:2px}
+.rank-g{background:rgba(201,168,76,.15);color:var(--gold)}
+.rank-p{background:rgba(167,139,250,.15);color:var(--purple)}
+.rank-s{background:rgba(160,160,160,.15);color:#c0c0c0}
+.rank-b{background:rgba(180,120,60,.15);color:#cd7f32}
+
+.amount-col{font-family:'DM Mono',monospace;font-size:13px;font-weight:600}
+.amount-col.main{color:var(--gold);font-size:14px}
+
+.flag{display:inline-flex;padding:2px 6px;border-radius:4px;font-size:9px;font-weight:700}
+.flag-instant{background:rgba(251,146,60,.15);color:var(--orange)}
+.flag-hold{background:rgba(248,113,113,.15);color:var(--red)}
+.flag-ok{background:rgba(52,211,153,.1);color:var(--green)}
+.flag-hr{background:rgba(79,156,249,.15);color:var(--blue)}
+
+.ap-step{background:var(--card2);border:1px solid var(--border2);border-radius:10px;padding:14px;
+  display:flex;align-items:center;gap:14px;margin-bottom:10px}
+.ap-step.done{border-color:rgba(52,211,153,.3);background:rgba(52,211,153,.04)}
+.ap-step.active{border-color:rgba(201,168,76,.3);background:rgba(201,168,76,.04)}
+.ap-step.future{opacity:.5}
+.ap-num{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-family:'DM Mono',monospace;font-size:11px;font-weight:700;flex-shrink:0}
+.ap-num-done{background:var(--green);color:#0a0c14}
+.ap-num-active{background:var(--gold);color:#0a0c14}
+.ap-num-future{background:var(--border2);color:var(--muted)}
+.ap-content{flex:1}
+.ap-title{font-size:12px;font-weight:700;margin-bottom:2px}
+.ap-note{font-size:10px;color:var(--muted)}
+.ap-date{font-family:'DM Mono',monospace;font-size:10px;color:var(--sub)}
+
+.alert{border-radius:10px;padding:11px 14px;font-size:11px;line-height:1.8;margin-bottom:14px}
+.ao{background:rgba(251,146,60,.06);border:1px solid rgba(251,146,60,.2);color:var(--orange)}
+.ag{background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.2);color:var(--green)}
+.ab{background:rgba(79,156,249,.06);border:1px solid rgba(79,156,249,.2);color:var(--blue)}
+.ar{background:rgba(248,113,113,.06);border:1px solid rgba(248,113,113,.2);color:var(--red)}
+
+.badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:4px;font-size:9px;font-weight:700}
+.month-badge{background:rgba(201,168,76,.12);border:1px solid var(--gold-dim);color:var(--gold);
+  font-family:'DM Mono',monospace;font-size:11px;padding:4px 12px;border-radius:4px;font-weight:700}
+.deadline-chip{font-size:10px;color:var(--orange);display:flex;align-items:center;gap:5px}
+.hidden{display:none!important}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div style="display:flex;align-items:center;gap:12px">
+    <div class="logo">CORETO</div>
+    <div style="width:1px;height:20px;background:var(--border2)"></div>
+    <div style="font-size:10px;color:var(--muted);letter-spacing:1px">成約報告 &amp; 振込バッチ管理</div>
+  </div>
+  <div class="header-right">
+    <div class="month-badge">2026年2月分</div>
+    <div class="deadline-chip">⏰ 承認期限：2月10日</div>
+    <div style="margin-left:8px">
+      <div class="hdr-agent" id="hdr-name">—</div>
+      <div class="hdr-id" id="hdr-id">—</div>
+    </div>
+    <button onclick="window.location.href='coreto-hub.html'"
+            style="font-size:10px;padding:4px 10px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;font-family:'Noto Sans JP',sans-serif">
+      ← マイページ
+    </button>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab on" id="tab-0" onclick="switchTab(0)">🎯 成約報告（/close）</div>
+  <div class="tab" id="tab-1" onclick="switchTab(1)">📊 月次バッチ管理 <span class="tab-dot"></span></div>
+</div>
+
+<!-- ══ TAB 0: 成約報告 ══ -->
+<div class="page on" id="page-0">
+<div class="two-col">
+
+<!-- 左：フォーム -->
+<div>
+<div class="panel">
+  <div class="panel-hd">
+    <div class="panel-title">成約報告フォーム</div>
+    <div class="panel-sub">全額入金確認後に送信</div>
+  </div>
+
+  <!-- エージェント（セッション自動） -->
+  <div class="s-label">担当エージェント</div>
+  <div id="agent-session-card" style="background:linear-gradient(135deg,rgba(201,168,76,.08),rgba(201,168,76,.02));border:1px solid rgba(201,168,76,.25);border-radius:12px;padding:14px;margin-bottom:4px">
+    <div style="display:flex;align-items:center;gap:14px">
+      <div id="ase-avatar" style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--gold-dim),rgba(201,168,76,.2));display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;border:1.5px solid rgba(201,168,76,.3)">👤</div>
+      <div style="flex:1">
+        <div id="ase-name" style="font-size:16px;font-weight:700">読み込み中...</div>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
+          <span id="ase-id" style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">—</span>
+          <span id="ase-rank" style="font-size:10px;padding:2px 8px;border-radius:4px;font-weight:700"></span>
+        </div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:10px;color:var(--muted)">報酬率</div>
+        <div id="ase-rate" style="font-family:'DM Mono',monospace;font-size:20px;color:var(--gold);font-weight:700">—</div>
+      </div>
+    </div>
+  </div>
+  <input type="hidden" id="ag-select" value="">
+
+  <!-- 案件ID -->
+  <div class="s-label" style="margin-top:16px">案件ID <span style="font-size:9px;color:var(--gold);margin-left:4px;font-weight:700">入力すると全項目を自動引用</span></div>
+  <div class="case-id-wrap">
+    <input type="text" id="case-id" class="mono" placeholder="0234"
+           style="font-size:15px;letter-spacing:1px"
+           oninput="onCaseIdChange(this.value)"
+           onkeydown="if(event.key==='Enter')loadCase()">
+    <button class="btn btn-blue" onclick="loadCase()">🔍 読み込む</button>
+  </div>
+
+  <!-- 案件プレビュー -->
+  <div class="case-preview" id="case-preview"></div>
+
+  <!-- フォーム本体（案件読み込み後に表示） -->
+  <div id="case-form" class="hidden">
+
+    <!-- 事業種別・取引形態 -->
+    <div class="s-label">事業種別・取引形態 <span class="auto-tag">案件から自動入力</span></div>
+    <div class="fg">
+      <div class="tg-group" id="g-biz">
+        <button class="tg on bl" data-v="re-rent" onclick="tog('g-biz',this);updateFields()">🏠 賃貸仲介</button>
+        <button class="tg" data-v="re-sale" onclick="tog('g-biz',this);updateFields()">🏢 売買仲介</button>
+        <button class="tg" data-v="hr" onclick="tog('g-biz',this);updateFields()">👥 人材紹介</button>
+      </div>
+    </div>
+    <div id="sec-sanmei" class="fg" style="margin-top:0">
+      <div class="tg-group" id="g-deal">
+        <button class="tg on" data-v="normal" onclick="tog('g-deal',this);calcReward()">通常仲介</button>
+        <button class="tg" data-v="sanmei" onclick="tog('g-deal',this);calcReward()">三為</button>
+      </div>
+    </div>
+
+    <!-- 案件タイプ -->
+    <div class="s-label">案件タイプ <span class="auto-tag">案件から自動入力</span></div>
+    <div class="fg">
+      <div class="tg-group" id="g-case-type">
+        <button class="tg on" data-v="self" onclick="tog('g-case-type',this);togglePartner();calcReward()">自己開拓</button>
+        <button class="tg" data-v="pt" onclick="tog('g-case-type',this);togglePartner();calcReward()">パートナー紹介</button>
+      </div>
+    </div>
+    <div id="sec-partner" class="hidden two-col-eq">
+      <div class="fg"><label>パートナー名</label><input type="text" id="pt-name" class="auto-filled" oninput="calcReward()"></div>
+      <div class="fg"><label>パートナーID</label><input type="text" id="pt-id" class="mono auto-filled" oninput="calcReward()"></div>
+    </div>
+
+    <!-- 請求項目（請求書から自動引用） -->
+    <div id="sec-re-billing">
+      <div class="s-label">請求項目 <span class="auto-tag">請求書から自動引用</span></div>
+      <div id="billing-items"></div>
+      <button class="btn btn-muted btn-sm" id="add-bill-btn" onclick="addBillingItem()" style="margin-top:4px">＋ 項目を追加</button>
+      <div class="validation-box" id="val-box" style="margin-top:10px">
+        <div class="val-row"><div class="val-icon vi-wait" id="vi-1">—</div><span id="val-1">請求額を確認中</span></div>
+        <div class="val-row"><div class="val-icon vi-wait" id="vi-2">—</div><span id="val-2">仲介手数料 ≤ 家賃×1.1</span></div>
+        <div class="val-row"><div class="val-icon vi-wait" id="vi-3">—</div><span id="val-3">合計 ≥ 家賃×1.0</span></div>
+      </div>
+      <div id="sec-low-reason" class="fg hidden">
+        <label>手数料が低い理由<span class="req">*</span><span class="hint">20文字以上</span></label>
+        <textarea id="low-reason" oninput="checkReason()"></textarea>
+        <div class="err-msg" id="reason-err">20文字以上入力してください</div>
+      </div>
+    </div>
+    <input type="hidden" id="rent-amount" value="0">
+
+    <!-- 人材紹介 -->
+    <div id="sec-hr-billing" class="hidden">
+      <div class="s-label">人材紹介 詳細 <span class="auto-tag">案件から自動入力</span></div>
+      <div class="two-col-eq">
+        <div class="fg"><label>紹介先企業名</label><input type="text" id="hr-company" class="auto-filled" oninput="calcReward()"></div>
+        <div class="fg"><label>入社予定日</label><input type="date" id="hr-join" class="mono auto-filled" onchange="calcReward()"></div>
+      </div>
+      <div class="two-col-eq">
+        <div class="fg"><label>総手数料（税込）</label><input type="number" id="hr-fee" class="mono auto-filled" oninput="calcReward()"></div>
+        <div class="fg"><label>返戻期間</label>
+          <select id="hr-ref" onchange="calcReward()">
+            <option value="3">3ヶ月</option><option value="6">6ヶ月</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- 全額入金確認日 -->
+    <div class="s-label">全額入金確認日<span class="req" style="margin-left:4px">*</span></div>
+    <div class="two-col-eq">
+      <div class="fg">
+        <label>入金確認日 <span class="hint">振込日の基準</span></label>
+        <input type="date" id="fullpay-date" class="mono auto-filled" onchange="calcReward()">
+      </div>
+      <div class="fg">
+        <label>振込予定日（自動計算）</label>
+        <input type="text" id="pay25-display" class="mono" readonly
+               style="background:#060810;color:var(--gold);border-color:var(--gold-dim)">
+      </div>
+    </div>
+
+    <!-- 受け渡し方法 -->
+    <div id="sec-re-delivery">
+      <div class="s-label">受渡方法 <span class="auto-tag">案件から自動入力</span></div>
+      <div class="two-col-eq">
+        <div class="fg"><label>契約書の受渡</label>
+          <select id="contract-delivery" class="auto-filled">
+            <option>郵送（エージェントの住所へ）</option>
+            <option>郵送（顧客の住所へ）</option>
+            <option>エージェントが取りに来る</option>
+            <option>顧客が取りに来る</option>
+          </select>
+        </div>
+        <div class="fg"><label>鍵の受渡</label>
+          <select id="key-delivery" class="auto-filled">
+            <option>郵送（エージェントの住所へ）</option>
+            <option>郵送（顧客の住所へ）</option>
+            <option>エージェントが取りに来る</option>
+            <option>顧客が取りに来る</option>
+            <option>契約書と同時</option>
+          </select>
+        </div>
+      </div>
+      <div class="two-col-eq">
+        <div class="fg">
+          <label>入居予定日 <span class="auto-tag" style="margin-left:4px">自動入力</span></label>
+          <input type="date" id="move-in-date" class="mono auto-filled">
+        </div>
+        <div class="fg"><label>IT重説の予約</label>
+          <div class="tg-group" id="g-itsuju">
+            <button class="tg on" data-v="later" onclick="tog('g-itsuju',this)">到着後に予約</button>
+            <button class="tg" data-v="skip" onclick="tog('g-itsuju',this)">今は予約しない</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 管理会社 -->
+    <div class="s-label">管理会社 <span class="auto-tag">自動入力</span></div>
+    <div class="fg"><input type="text" id="mgmt-co" class="auto-filled" placeholder="管理会社名"></div>
+
+    <!-- 備考 -->
+    <div class="s-label">備考 <span style="color:var(--muted);font-size:9px;font-weight:400">自由記入</span></div>
+    <div class="fg"><textarea id="memo" placeholder="特記事項・確認事項など" style="min-height:80px"></textarea></div>
+
+    <button class="btn btn-gold btn-full" onclick="submitClose()">🎯 成約報告を送信</button>
+  </div><!-- /case-form -->
+
+  <!-- 未入力プレースホルダー -->
+  <div id="no-case-placeholder" class="placeholder-box">
+    <div class="ph-icon">📋</div>
+    <div class="ph-title">案件IDを入力してください</div>
+    <div class="ph-desc">
+      案件IDを入力すると、<br>
+      事業種別・請求項目・受渡方法・<br>
+      入居予定日などが自動で引用されます
+    </div>
+  </div>
+</div><!-- /panel -->
+</div><!-- /左 -->
+
+<!-- 右：報酬プレビュー -->
+<div>
+  <div class="panel">
+    <div class="panel-hd">
+      <div class="panel-title">報酬計算プレビュー</div>
+      <div id="ag-rank-badge" class="badge" style="background:rgba(201,168,76,.15);color:var(--gold)">—</div>
+    </div>
+    <div class="reward-hero">
+      <div class="rh-label">振込額（手取り）</div>
+      <div class="rh-val" id="rh-val">¥0</div>
+      <div class="rh-note" id="rh-note">案件IDを入力すると計算されます</div>
+    </div>
+    <div id="reward-breakdown">
+      <div class="bk-row"><div>総請求額</div><div class="bk-val" id="bk-fee">—</div></div>
+      <div class="bk-row"><div>報酬率 <span id="bk-rate-label" style="font-size:10px;color:var(--muted)"></span></div><div class="bk-val" id="bk-rate">—</div></div>
+      <div class="bk-row"><div>報酬額（税抜）</div><div class="bk-val" id="bk-gross">—</div></div>
+      <div class="bk-row"><div class="minus">源泉徴収</div><div class="bk-val minus" id="bk-tax">—</div></div>
+      <div class="bk-row"><div class="minus">月会費</div><div class="bk-val minus" id="bk-fee2">—</div></div>
+      <div class="bk-row bk-total"><div>振込額</div><div class="bk-val" id="bk-total">—</div></div>
+    </div>
+    <div id="sec-hr-sched" class="hidden" style="margin-top:14px">
+      <div style="font-size:10px;color:var(--muted);margin-bottom:8px">人材紹介 2回払いスケジュール</div>
+      <div class="two-col-eq" id="hr-sched-cards"></div>
+    </div>
+    <div id="pay-timeline" style="margin-top:14px;display:none">
+      <div style="font-size:10px;color:var(--muted);margin-bottom:8px">▶ 振込スケジュール</div>
+      <div id="timeline-content"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title" style="margin-bottom:14px">送信後の自動処理フロー</div>
+    <div>
+      <div class="ap-step done"><div class="ap-num ap-num-done">✓</div><div class="ap-content"><div class="ap-title">入金確認 → 受付</div><div class="ap-note">全額入金確認後のみ送信可</div></div></div>
+      <div class="ap-step done"><div class="ap-num ap-num-done">✓</div><div class="ap-content"><div class="ap-title">報酬計算・Kintone登録</div><div class="ap-note">即時自動処理</div></div></div>
+      <div class="ap-step active"><div class="ap-num ap-num-active">3</div><div class="ap-content"><div class="ap-title">月末締め → 8項目自動チェック</div><div class="ap-note">翌月1日に自動実行</div></div><div class="ap-date">翌月1日</div></div>
+      <div class="ap-step future"><div class="ap-num ap-num-future">4</div><div class="ap-content"><div class="ap-title">本部最終承認</div></div><div class="ap-date">〜10日</div></div>
+      <div class="ap-step future"><div class="ap-num ap-num-future">5</div><div class="ap-content"><div class="ap-title">支払明細書 自動発行</div></div><div class="ap-date">15日</div></div>
+      <div class="ap-step future"><div class="ap-num ap-num-future">6</div><div class="ap-content"><div class="ap-title">GMO銀行 自動振込</div></div><div class="ap-date">25日</div></div>
+    </div>
+  </div>
+</div><!-- /右 -->
+
+</div><!-- /two-col -->
+</div><!-- /page-0 -->
+
+<!-- ══ TAB 1: 月次バッチ管理 ══ -->
+<div class="page" id="page-1">
+  <div class="timeline-bar">
+    <div class="tl-step done"><div class="tl-day">月末</div><div class="tl-label">月末締め</div></div>
+    <div class="tl-step active"><div class="tl-day">1〜10日</div><div class="tl-label">▶ 承認フェーズ</div></div>
+    <div class="tl-step future"><div class="tl-day">15日</div><div class="tl-label">明細発行</div></div>
+    <div class="tl-step future"><div class="tl-day">20日</div><div class="tl-label">振込データ</div></div>
+    <div class="tl-step future"><div class="tl-day">25日</div><div class="tl-label">振込実行</div></div>
+  </div>
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-num" style="color:var(--blue)">12</div><div class="stat-lbl">今月の成約件数</div><div class="stat-sub">RE:9 / HR:3</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--gold)">¥4.2M</div><div class="stat-lbl">振込総額（手取り）</div><div class="stat-sub">源泉前：¥4.68M</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--red)">2</div><div class="stat-lbl">チェックエラー</div><div class="stat-sub">要対応あり</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--green)">8</div><div class="stat-lbl">承認済みエージェント</div><div class="stat-sub">残り：4名</div></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-hd"><div class="panel-title">承認前 8項目自動チェック結果</div><div style="font-size:10px;color:var(--muted)">実行日：2026-02-01 00:00</div></div>
+    <div class="alert ar">⚠️ 2項目でエラーを検出しました。下記を確認してください。</div>
+    <div class="check-grid">
+      <div class="check-item"><div class="chk-icon chk-ok">✓</div><div><div class="chk-name">① 全額入金確認</div><div class="chk-note">全12件 入金確認済み</div></div></div>
+      <div class="check-item"><div class="chk-icon chk-ng">✗</div><div><div class="chk-name">② 報酬率の妥当性</div><div class="chk-note" style="color:var(--red)">10041：ランクと報酬率が不一致</div></div></div>
+      <div class="check-item"><div class="chk-icon chk-ok">✓</div><div><div class="chk-name">③ 報酬額の異常値</div><div class="chk-note">全件 正常範囲内</div></div></div>
+      <div class="check-item"><div class="chk-icon chk-ok">✓</div><div><div class="chk-name">④ 源泉徴収の正確性</div><div class="chk-note">全件 計算正確</div></div></div>
+      <div class="check-item"><div class="chk-icon chk-ok">✓</div><div><div class="chk-name">⑤ 重複成約チェック</div><div class="chk-note">重複なし</div></div></div>
+      <div class="check-item"><div class="chk-icon chk-ok">✓</div><div><div class="chk-name">⑥ 成約日の妥当性</div><div class="chk-note">全件 正常日付</div></div></div>
+      <div class="check-item"><div class="chk-icon chk-ng">✗</div><div><div class="chk-name">⑦ 異常な成約数</div><div class="chk-note" style="color:var(--red)">10012：今月7件（通常の2倍超）</div></div></div>
+      <div class="check-item"><div class="chk-icon chk-ok">✓</div><div><div class="chk-name">⑧ 振込先口座確認</div><div class="chk-note">全口座 登録済み・有効</div></div></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-hd">
+      <div class="panel-title">エージェント別 振込一覧</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-green btn-sm" onclick="approveAll()">✅ エラーなし全員を承認</button>
+        <button class="btn btn-blue btn-sm" onclick="exportCSV()">⬇️ GMO振込CSVエクスポート</button>
+      </div>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="payout-table">
+        <thead><tr>
+          <th>エージェント</th><th>成約件数</th><th>報酬額（税抜）</th>
+          <th>源泉徴収</th><th>月会費</th><th>振込額</th>
+          <th>フラグ</th><th>ステータス</th><th>操作</th>
+        </tr></thead>
+        <tbody id="payout-tbody"></tbody>
+      </table>
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
+      <div style="text-align:right">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:4px">振込総額</div>
+        <div style="font-family:'DM Mono',monospace;font-size:24px;color:var(--gold);font-weight:700">¥4,187,450</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px">源泉徴収納付額：¥492,550　会費収入：¥4,900</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title" style="margin-bottom:14px">振込実行（翌月25日）</div>
+    <div class="alert ao">⚠️ 全員承認完了後に振込実行が可能になります。エラー2件が残っています。</div>
+    <div>
+      <div class="ap-step done"><div class="ap-num ap-num-done">✓</div><div class="ap-content"><div class="ap-title">月末締め完了</div></div><div class="ap-date">1/31</div></div>
+      <div class="ap-step active"><div class="ap-num ap-num-active">▶</div><div class="ap-content"><div class="ap-title">エラー対応 → 全員承認</div><div class="ap-note">②10041 報酬率修正　⑦10012 確認</div></div><div class="ap-date">〜2/10</div></div>
+      <div class="ap-step future"><div class="ap-num ap-num-future">3</div><div class="ap-content"><div class="ap-title">支払明細書 自動発行</div></div><div class="ap-date">2/15</div></div>
+      <div class="ap-step future"><div class="ap-num ap-num-future">4</div><div class="ap-content"><div class="ap-title">GMO振込データ 作成</div></div><div class="ap-date">2/20</div></div>
+      <div class="ap-step future"><div class="ap-num ap-num-future">5</div><div class="ap-content"><div class="ap-title">振込実行 → 完了通知</div></div><div class="ap-date">2/25</div></div>
+    </div>
+    <button class="btn btn-muted btn-full" disabled style="margin-top:14px;opacity:.5;cursor:not-allowed">
+      🔒 振込実行（全員承認後に解除）
+    </button>
+  </div>
+</div><!-- /page-1 -->
+
+<script>
+// ================================================================
+//  セッション
+// ================================================================
+const _S = (function(){
+  try{ return JSON.parse(sessionStorage.getItem('coreto_session')||'null'); }catch(e){return null;}
+})();
+
+const RANK_RATE = {
+  re:{ gold:.70, platinum:.75, silver:.675, bronze:.65 },
+  hr:{ gold:.50, platinum:.55, silver:.475, bronze:.45 },
+};
+const RANK_CSS = {
+  gold:'background:rgba(201,168,76,.2);color:#c9a84c',
+  platinum:'background:rgba(167,139,250,.2);color:#a78bfa',
+  silver:'background:rgba(160,160,160,.15);color:#c0c0c0',
+  bronze:'background:rgba(180,120,60,.15);color:#cd7f32',
+  pt:'background:rgba(52,211,153,.15);color:#34d399',
+};
+const AVATAR = {re:'🏠',hr:'👥',pt:'🤝'};
+
+// ── セッションUI初期化 ──
+function initSessionUI() {
+  if (!_S) return;
+  const agType = _S.type || 're';
+  document.getElementById('ag-select').value = _S.agId;
+  document.getElementById('ase-name').textContent  = _S.name;
+  document.getElementById('ase-id').textContent    = _S.agId;
+  document.getElementById('ase-avatar').textContent = AVATAR[agType] || '👤';
+  document.getElementById('hdr-name').textContent  = _S.name;
+  document.getElementById('hdr-id').textContent    = _S.agId;
+
+  const rb = document.getElementById('ase-rank');
+  rb.textContent = _S.rank;
+  rb.setAttribute('style', (RANK_CSS[_S.rankKey]||'') + ';padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700');
+
+  const rateMap = RANK_RATE[agType] || RANK_RATE.re;
+  const rate = rateMap[_S.rankKey] || 0;
+  document.getElementById('ase-rate').textContent = rate ? Math.round(rate*100)+'%' : '—';
+  document.getElementById('ag-rank-badge').textContent = _S.rank + (rate ? ' '+Math.round(rate*100)+'%' : '');
+}
+
+// ================================================================
+//  案件マスタデータ（本番はKintone APIから取得）
+// ================================================================
+const CASE_DB = {
+  // assignedTo: ログインエージェントIDと照合してアクセス制御
+  '0234': {
+    assignedTo:'10012',  // 山田 誠
+    prop:'池袋マンション 101号室', customer:'山田太郎',
+    biz:'re-rent', deal:'normal', caseType:'self',
+    mgmt:'ソフィアスタッフ株式会社', rent:100000,
+    moveIn:'2026-03-01',
+    contractDelivery:0,
+    keyDelivery:4,
+    billing:[
+      { name:'仲介手数料', amount:110000, target:'顧客',   deadline:'2026-02-28' },
+      { name:'広告料（AD）', amount:55000, target:'管理会社', deadline:'2026-02-28' },
+    ],
+    fullpayDate:'2026-02-14',
+    invNo:'0234-INV-001',
+  },
+  '0228': {
+    assignedTo:'10012',  // 山田 誠（デモ：同エージェント）
+    prop:'新宿アパート 201号室', customer:'佐藤花子',
+    biz:'re-rent', deal:'normal', caseType:'pt',
+    mgmt:'三菱地所リアルエステートサービス', rent:85000,
+    moveIn:'2026-03-15',
+    contractDelivery:1,
+    keyDelivery:1,
+    ptName:'田中 誠', ptId:'30003',
+    billing:[
+      { name:'仲介手数料', amount:93500, target:'顧客',   deadline:'2026-02-20' },
+    ],
+    fullpayDate:'2026-02-12',
+    invNo:'0228-INV-001',
+  },
+  '0220': {
+    assignedTo:'10012',
+    prop:'渋谷区マンション 3LDK', customer:'鈴木一郎',
+    biz:'re-sale', deal:'sanmei', caseType:'self',
+    mgmt:'東急リバブル株式会社', rent:0,
+    moveIn:'2026-04-01',
+    contractDelivery:2,
+    keyDelivery:2,
+    billing:[
+      { name:'仲介手数料', amount:2178000, target:'顧客',   deadline:'2026-03-01' },
+      { name:'業務委託料', amount:500000,  target:'管理会社', deadline:'2026-03-01' },
+    ],
+    fullpayDate:'2026-02-18',
+    invNo:'0220-INV-001',
+  },
+  '0231': {
+    assignedTo:'20005',  // 田中 美穂
+    prop:'ITエンジニア 転職支援', customer:'高橋健二',
+    biz:'hr', deal:'normal', caseType:'self',
+    mgmt:'', rent:0,
+    moveIn:'',
+    hrCompany:'株式会社テクノソリューション',
+    hrJoin:'2026-03-01', hrFee:1500000, hrRef:3,
+    billing:[], fullpayDate:'2026-02-15',
+    invNo:'0231-INV-001',
+  },
+};
+
+// ================================================================
+//  案件ID入力 → 読み込み
+// ================================================================
+function onCaseIdChange(val) {
+  // エンターで読み込みできるようにスタイルヒント
+  const btn = document.querySelector('.case-id-wrap .btn');
+  btn.style.opacity = val.length >= 8 ? '1' : '0.5';
+}
+
+function loadCase() {
+  const caseId  = document.getElementById('case-id').value.trim().toUpperCase();
+  const myAgId  = (_S && _S.agId) || '';
+  if (!caseId) { alert('案件IDを入力してください'); return; }
+
+  const data = CASE_DB[caseId];
+  const ph   = document.getElementById('no-case-placeholder');
+
+  // ── セキュリティチェック：本人案件のみ許可 ──
+  // 存在しない案件と他エージェントの案件は同一メッセージで返す
+  // （どちらかを区別するとIDの存在確認に悪用されるため）
+  const authorized = data && (data.assignedTo === myAgId);
+  if (!authorized) {
+    document.getElementById('case-preview').style.display = 'none';
+    document.getElementById('case-form').classList.add('hidden');
+    ph.classList.remove('hidden');
+    ph.innerHTML = `
+      <div class="ph-icon">🔒</div>
+      <div class="ph-title">案件が見つかりません</div>
+      <div class="ph-desc">「${caseId}」は存在しないか、<br>担当案件ではありません</div>`;
+    // セキュリティログ（本番はサーバーサイドへ送信）
+    console.warn('[CORETO Security] Unauthorized case access attempt:', { caseId, myAgId, ts: new Date().toISOString() });
+    return;
+  }
+
+  // プレビューカード表示
+  const isHR = data.biz === 'hr';
+  const preview = document.getElementById('case-preview');
+  preview.style.display = 'block';
+  const bizLabel = {
+    're-rent':'🏠 賃貸仲介', 're-sale':'🏢 売買仲介', 'hr':'👥 人材紹介'
+  }[data.biz] || data.biz;
+  const totalBilling = isHR
+    ? (data.hrFee || 0)
+    : data.billing.reduce((s,b) => s+b.amount, 0);
+
+  preview.innerHTML = `
+    <div style="font-size:14px;font-weight:700;margin-bottom:8px;color:var(--text)">
+      📋 ${data.prop}
+    </div>
+    <div class="cp-row"><span class="cp-key">顧客</span><span class="cp-val" style="font-family:'Noto Sans JP',sans-serif">${data.customer}</span></div>
+    <div class="cp-row"><span class="cp-key">事業種別</span><span class="cp-val" style="font-family:'Noto Sans JP',sans-serif">${bizLabel}${data.deal==='sanmei'?' / 三為':''}</span></div>
+    <div class="cp-row"><span class="cp-key">管理会社</span><span class="cp-val" style="font-family:'Noto Sans JP',sans-serif">${data.mgmt||'—'}</span></div>
+    <div class="cp-row"><span class="cp-key">請求総額</span><span class="cp-val">¥${totalBilling.toLocaleString()}</span></div>
+    <div class="cp-row"><span class="cp-key">請求書番号</span><span class="cp-val">${data.invNo}</span></div>
+    ${data.moveIn ? `<div class="cp-row"><span class="cp-key">入居予定日</span><span class="cp-val">${data.moveIn}</span></div>` : ''}`;
+
+  // フォームに自動入力
+  fillCaseForm(caseId, data);
+}
+
+// ================================================================
+//  フォーム自動入力
+// ================================================================
+const CONTRACT_DELIVERY_OPTIONS = [
+  '郵送（エージェントの住所へ）','郵送（顧客の住所へ）',
+  'エージェントが取りに来る','顧客が取りに来る'
+];
+const KEY_DELIVERY_OPTIONS = [
+  '郵送（エージェントの住所へ）','郵送（顧客の住所へ）',
+  'エージェントが取りに来る','顧客が取りに来る','契約書と同時'
+];
+
+function fillCaseForm(caseId, data) {
+  const isHR = data.biz === 'hr';
+
+  // 1. 事業種別
+  document.querySelectorAll('#g-biz .tg').forEach(b => {
+    b.classList.toggle('on', b.dataset.v === data.biz);
+    b.classList.toggle('bl', b.dataset.v === data.biz);
+  });
+  updateFields();
+
+  // 2. 取引形態
+  document.querySelectorAll('#g-deal .tg').forEach(b => {
+    b.classList.toggle('on', b.dataset.v === data.deal);
+  });
+
+  // 3. 案件タイプ
+  document.querySelectorAll('#g-case-type .tg').forEach(b => {
+    b.classList.toggle('on', b.dataset.v === data.caseType);
+  });
+  togglePartner();
+
+  // 4. パートナー情報
+  if (data.caseType === 'pt') {
+    setVal('pt-name', data.ptName || '');
+    setVal('pt-id', data.ptId || '');
+  }
+
+  // 5. 請求項目（請求書から引用）
+  if (!isHR) {
+    buildBillingItems(data.billing);
+    setHiddenVal('rent-amount', data.rent || 0);
+    validateBilling();
+  }
+
+  // 6. 管理会社
+  setVal('mgmt-co', data.mgmt || '');
+
+  // 7. 全額入金確認日
+  setVal('fullpay-date', data.fullpayDate || '');
+  calcReward();
+
+  // 8. 受け渡し方法・入居日（不動産のみ）
+  if (!isHR) {
+    setSelectIdx('contract-delivery', data.contractDelivery || 0);
+    setSelectIdx('key-delivery', data.keyDelivery || 0);
+    setVal('move-in-date', data.moveIn || '');
+  }
+
+  // 9. 人材紹介フィールド
+  if (isHR) {
+    setVal('hr-company', data.hrCompany || '');
+    setVal('hr-join', data.hrJoin || '');
+    setVal('hr-fee', data.hrFee || '');
+    if (data.hrRef) {
+      document.getElementById('hr-ref').value = String(data.hrRef);
+    }
+  }
+
+  // フォームを表示
+  document.getElementById('case-form').classList.remove('hidden');
+  document.getElementById('no-case-placeholder').classList.add('hidden');
+}
+
+function setVal(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.value = val;
+}
+function setHiddenVal(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.value = val;
+}
+function setSelectIdx(id, idx) {
+  const el = document.getElementById(id);
+  if (el) el.selectedIndex = idx;
+}
+
+// ── 請求項目カードを動的に生成 ──
+function buildBillingItems(billing) {
+  const container = document.getElementById('billing-items');
+  container.innerHTML = '';
+  billCount = billing.length;
+
+  billing.forEach((b, i) => {
+    const card = document.createElement('div');
+    card.className = 'billing-card' + (i > 0 ? ' optional' : '');
+    card.id = 'bill-' + i;
+    card.innerHTML = `
+      <div class="billing-card-num">${i === 0 ? '必須' : '任意'} #${i+1}</div>
+      ${i > 0 ? '<button class="remove-btn" onclick="removeBill(this)">×</button>' : ''}
+      <div class="three-col" style="margin-top:6px">
+        <div class="fg"><label>項目名</label>
+          <select class="auto-filled" onchange="calcReward()">
+            <option ${b.name==='仲介手数料'?'selected':''}>仲介手数料</option>
+            <option ${b.name==='業務委託料'?'selected':''}>業務委託料</option>
+            <option ${b.name.includes('広告')?'selected':''}>広告料（AD）</option>
+            <option ${b.name==='その他'?'selected':''}>その他</option>
+          </select>
+        </div>
+        <div class="fg"><label>金額（税込）</label>
+          <input type="number" class="mono auto-filled bill-amount" value="${b.amount}" oninput="calcReward();validateBilling()">
+        </div>
+        <div class="fg"><label>請求先</label>
+          <select class="bill-target auto-filled">
+            <option ${b.target==='顧客'?'selected':''}>顧客</option>
+            <option ${b.target==='管理会社'?'selected':''}>管理会社</option>
+          </select>
+        </div>
+      </div>
+      <div class="fg"><label>入金期限</label>
+        <input type="date" class="mono auto-filled bill-deadline" value="${b.deadline||''}">
+      </div>`;
+    container.appendChild(card);
+  });
+}
+
+let billCount = 1;
+function addBillingItem() {
+  if (billCount >= 5) return;
+  billCount++;
+  const div = document.createElement('div');
+  div.className = 'billing-card optional';
+  div.innerHTML = `
+    <div class="billing-card-num">任意 #${billCount}</div>
+    <button class="remove-btn" onclick="removeBill(this)">×</button>
+    <div class="three-col" style="margin-top:6px">
+      <div class="fg"><label>項目名</label>
+        <select onchange="calcReward()">
+          <option>広告料（AD）</option><option>仲介手数料</option>
+          <option>業務委託料</option><option>その他</option>
+        </select>
+      </div>
+      <div class="fg"><label>金額（税込）</label>
+        <input type="number" class="mono bill-amount" placeholder="0" oninput="calcReward();validateBilling()">
+      </div>
+      <div class="fg"><label>請求先</label>
+        <select class="bill-target"><option>顧客</option><option>管理会社</option></select>
+      </div>
+    </div>
+    <div class="fg"><label>入金期限</label>
+      <input type="date" class="mono bill-deadline">
+    </div>`;
+  document.getElementById('billing-items').appendChild(div);
+}
+function removeBill(btn) {
+  btn.closest('.billing-card').remove();
+  billCount--;
+  calcReward();
+  validateBilling();
+}
+
+// ================================================================
+//  ヘルパー
+// ================================================================
+function switchTab(i) {
+  document.querySelectorAll('.tab').forEach((t,j) => t.classList.toggle('on', i===j));
+  document.querySelectorAll('.page').forEach((p,j) => p.classList.toggle('on', i===j));
+  if (i===1) renderPayoutTable();
+}
+function tog(gid, btn) {
+  document.querySelectorAll('#'+gid+' .tg').forEach(b => b.classList.remove('on','bl','gr'));
+  btn.classList.add('on');
+  calcReward();
+}
+function gv(gid) {
+  const a = document.querySelector('#'+gid+' .tg.on');
+  return a ? a.dataset.v : null;
+}
+function updateFields() {
+  const biz  = gv('g-biz') || 're-rent';
+  const isHR = biz === 'hr';
+  document.getElementById('sec-sanmei').classList.toggle('hidden', isHR);
+  document.getElementById('sec-re-billing').classList.toggle('hidden', isHR);
+  document.getElementById('sec-hr-billing').classList.toggle('hidden', !isHR);
+  document.getElementById('sec-re-delivery').classList.toggle('hidden', isHR);
+  document.getElementById('sec-hr-sched').classList.toggle('hidden', !isHR);
+  calcReward();
+}
+function togglePartner() {
+  const t = gv('g-case-type');
+  document.getElementById('sec-partner').classList.toggle('hidden', t !== 'pt');
+}
+function checkReason() {
+  const r = document.getElementById('low-reason').value;
+  document.getElementById('reason-err').classList.toggle('show', r.length < 20);
+}
+
+// ── バリデーション ──
+function validateBilling() {
+  const rent = parseFloat(document.getElementById('rent-amount').value) || 0;
+  if (rent <= 0) return;
+  const fees = Array.from(document.querySelectorAll('.bill-amount')).map(a => parseFloat(a.value)||0);
+  const chukai = fees[0] || 0;
+  const total  = fees.reduce((a,b) => a+b, 0);
+  const v1 = document.getElementById('vi-1'), t1 = document.getElementById('val-1');
+  const v2 = document.getElementById('vi-2'), t2 = document.getElementById('val-2');
+  const v3 = document.getElementById('vi-3'), t3 = document.getElementById('val-3');
+  v1.className='val-icon vi-ok'; t1.textContent=`家賃：¥${rent.toLocaleString()}　総請求：¥${total.toLocaleString()}`;
+  if (chukai > rent*1.1) { v2.className='val-icon vi-err'; t2.textContent=`⚠️ 仲介手数料 ¥${chukai.toLocaleString()} > 家賃×1.1 ¥${Math.round(rent*1.1).toLocaleString()}（エラー）`; }
+  else { v2.className='val-icon vi-ok'; t2.textContent=`仲介手数料 ¥${chukai.toLocaleString()} ≤ 家賃×1.1 OK`; }
+  if (total > 0 && total < rent*1.0) {
+    v3.className='val-icon vi-warn'; t3.textContent=`⚠️ 合計 ¥${total.toLocaleString()} < 家賃×1.0（理由入力必須）`;
+    document.getElementById('sec-low-reason').classList.remove('hidden');
+  } else {
+    v3.className='val-icon vi-ok'; t3.textContent=`合計 ¥${total.toLocaleString()} ≥ 家賃×1.0 OK`;
+    document.getElementById('sec-low-reason').classList.add('hidden');
+  }
+}
+
+// ── 日付ユーティリティ ──
+function addMonth(d) { const r=new Date(d); r.setMonth(r.getMonth()+1); r.setDate(25); return r; }
+function fmtDate(d) { return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日`; }
+
+// ── 報酬計算 ──
+function calcReward() {
+  const agId    = document.getElementById('ag-select').value || (_S&&_S.agId) || '';
+  const agType  = (_S&&_S.type) || 're';
+  const biz     = gv('g-biz')       || 're-rent';
+  const deal    = gv('g-deal')      || 'normal';
+  const caseType = gv('g-case-type') || 'self';
+  const isHR    = biz === 'hr';
+  const isSanmei = deal === 'sanmei';
+  const isPT    = caseType === 'pt';
+
+  let fee = 0;
+  if (isHR) {
+    fee = parseFloat(document.getElementById('hr-fee').value) || 0;
+  } else {
+    document.querySelectorAll('.bill-amount').forEach(a => { fee += parseFloat(a.value)||0; });
+  }
+
+  const fullpay = document.getElementById('fullpay-date').value;
+  if (fullpay) {
+    const d = new Date(fullpay);
+    const pay25 = addMonth(d);
+    document.getElementById('pay25-display').value = fmtDate(pay25);
+    document.getElementById('pay-timeline').style.display = '';
+    renderTimeline(d, pay25);
+  }
+
+  if (!agId || fee <= 0) {
+    document.getElementById('rh-val').textContent  = '¥0';
+    document.getElementById('rh-note').textContent = '案件IDを入力すると計算されます';
+    return;
+  }
+
+  const rateTable = RANK_RATE[isHR?'hr':'re'] || RANK_RATE.re;
+  let baseRate = rateTable[(_S&&_S.rankKey)||'gold'] || 0;
+  if (isPT)    baseRate = 0.25;
+  if (isSanmei && !isHR) baseRate -= 0.15;
+
+  let gross = 0;
+  const T1=5e6, T2=10e6;
+  if (fee<=T1)      gross = fee*baseRate;
+  else if (fee<=T2) gross = T1*baseRate + (fee-T1)*(baseRate+.05);
+  else              gross = T1*baseRate + (T2-T1)*(baseRate+.05) + (fee-T2)*(baseRate+.10);
+  gross = Math.floor(gross);
+
+  const M=1e6;
+  const tax = isPT ? 0 : gross<=M ? Math.floor(gross*.1021) : Math.floor(M*.1021+(gross-M)*.2042);
+
+  const feeMap = { gold:0, platinum:0, silver:490, bronze:980, pt:0 };
+  const monthFee = isPT ? 0 : (feeMap[(_S&&_S.rankKey)||'gold'] || 0);
+  const net = gross - tax - monthFee;
+
+  const yen = v => v==null ? '—' : '¥'+Math.round(v).toLocaleString();
+  const rankLabel = (_S&&_S.rank)||'—';
+
+  document.getElementById('rh-val').textContent  = yen(net);
+  document.getElementById('rh-note').textContent = `${_S?_S.name:agId}（${rankLabel}）　請求：${yen(fee)}　報酬率：${Math.round(baseRate*100)}%${isSanmei?'（三為）':''}`;
+  document.getElementById('bk-fee').textContent   = yen(fee);
+  document.getElementById('bk-rate').textContent  = Math.round(baseRate*100)+'%';
+  document.getElementById('bk-rate-label').textContent = isSanmei ? '三為補正後' : '';
+  document.getElementById('bk-gross').textContent = yen(gross);
+  document.getElementById('bk-tax').textContent   = '−'+yen(tax);
+  document.getElementById('bk-fee2').textContent  = monthFee ? '−'+yen(monthFee) : '¥0';
+  document.getElementById('bk-total').textContent = yen(net);
+
+  if (isHR) {
+    const joinV = document.getElementById('hr-join').value;
+    const ref   = parseInt(document.getElementById('hr-ref').value)||3;
+    const p1=Math.floor(net*.5), p2=net-p1;
+    let d1='入社翌月25日', d2=`入社${ref}ヶ月後翌月25日`;
+    if (joinV) {
+      const j=new Date(joinV);
+      const m1=new Date(j); m1.setMonth(m1.getMonth()+1); m1.setDate(25);
+      const m2=new Date(j); m2.setMonth(m2.getMonth()+ref); m2.setDate(25);
+      d1=fmtDate(m1); d2=fmtDate(m2);
+    }
+    document.getElementById('hr-sched-cards').innerHTML = `
+      <div style="background:var(--card2);border:1px solid var(--border2);border-radius:10px;padding:14px">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:4px">第1回（50%）</div>
+        <div style="font-family:'DM Mono',monospace;font-size:18px;color:var(--gold)">${yen(p1)}</div>
+        <div style="font-size:10px;color:var(--sub);margin-top:4px">${d1}</div>
+      </div>
+      <div style="background:var(--card2);border:1px solid var(--border2);border-radius:10px;padding:14px">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:4px">第2回（50%）</div>
+        <div style="font-family:'DM Mono',monospace;font-size:18px;color:var(--gold)">${yen(p2)}</div>
+        <div style="font-size:10px;color:var(--sub);margin-top:4px">${d2}</div>
+      </div>`;
+  }
+}
+
+function renderTimeline(fpDate, pay25) {
+  const chk=new Date(fpDate); chk.setMonth(chk.getMonth()+1); chk.setDate(1);
+  const mei=new Date(fpDate); mei.setMonth(mei.getMonth()+1); mei.setDate(15);
+  const dat=new Date(fpDate); dat.setMonth(dat.getMonth()+1); dat.setDate(20);
+  document.getElementById('timeline-content').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:6px;font-size:11px">
+      <div style="display:flex;justify-content:space-between;color:var(--green)"><span>✅ 全額入金確認</span><span style="font-family:'DM Mono',monospace">${fmtDate(fpDate)}</span></div>
+      <div style="display:flex;justify-content:space-between;color:var(--sub)"><span>🔍 8項目自動チェック</span><span style="font-family:'DM Mono',monospace">${fmtDate(chk)}</span></div>
+      <div style="display:flex;justify-content:space-between;color:var(--sub)"><span>📄 支払明細書発行</span><span style="font-family:'DM Mono',monospace">${fmtDate(mei)}</span></div>
+      <div style="display:flex;justify-content:space-between;color:var(--sub)"><span>📊 振込データ作成</span><span style="font-family:'DM Mono',monospace">${fmtDate(dat)}</span></div>
+      <div style="display:flex;justify-content:space-between;color:var(--gold);font-weight:700"><span>🏦 GMO銀行振込</span><span style="font-family:'DM Mono',monospace">${fmtDate(pay25)}</span></div>
+    </div>`;
+}
+
+// ── 送信 ──
+function submitClose() {
+  const agId    = (_S&&_S.agId) || document.getElementById('ag-select').value || '';
+  const agName  = (_S&&_S.name) || agId;
+  const caseId  = document.getElementById('case-id').value.trim();
+  const fullpay = document.getElementById('fullpay-date').value;
+
+  if (!agId)    { alert('ログイン情報を取得できません。マイページからログインし直してください'); return; }
+  if (!caseId)  { alert('案件IDを入力してください'); return; }
+  if (!fullpay) { alert('全額入金確認日を入力してください'); return; }
+
+  const biz = gv('g-biz')||'re-rent';
+  if (biz !== 'hr') {
+    const fees = Array.from(document.querySelectorAll('.bill-amount')).map(a=>parseFloat(a.value)||0);
+    if (!fees[0]) { alert('請求金額を入力してください'); return; }
+  }
+  if (biz !== 'hr') {
+    const lr = document.getElementById('sec-low-reason');
+    if (lr && !lr.classList.contains('hidden')) {
+      if ((document.getElementById('low-reason').value||'').length < 20) {
+        alert('手数料が低い理由を20文字以上入力してください'); return;
+      }
+    }
+  }
+
+  alert('✅ 成約報告を受付けました！\n\n担当：'+agName+'（'+agId+'）\n案件ID：'+caseId+'\n入金確認日：'+fullpay+'\n\n▶ 自動処理：\n  ・Kintone登録\n  ・#成約報告 に通知\n  ・翌月25日に自動振込\n\nお疲れ様でした！🎉');
+}
+
+// ── 振込バッチ ──
+const PAYOUT_DATA = [
+  {agId:'10012',name:'山田 誠',  rank:'gold',    cases:7,gross:1850000,tax:Math.floor(1000000*.1021+850000*.2042),fee:0,  instant:0,      flags:['warn'],    status:'pending', error:'⑦ 成約数を確認'},
+  {agId:'10008',name:'佐藤 花子',rank:'platinum', cases:2,gross:980000, tax:Math.floor(980000*.1021),             fee:0,  instant:200000, flags:['instant'], status:'approved',error:''},
+  {agId:'20005',name:'田中 美穂',rank:'gold',    cases:1,gross:750000, tax:Math.floor(750000*.1021),             fee:0,  instant:0,      flags:['hr'],      status:'approved',error:''},
+  {agId:'10023',name:'鈴木 健太',rank:'silver',  cases:1,gross:335000, tax:Math.floor(335000*.1021),             fee:490,instant:0,      flags:[],          status:'approved',error:''},
+  {agId:'10041',name:'渡辺 隆',  rank:'bronze',  cases:1,gross:211750, tax:Math.floor(211750*.1021),             fee:980,instant:0,      flags:['error'],   status:'pending', error:'② 報酬率を修正'},
+];
+const RANK_CLS = {gold:'rank-g',platinum:'rank-p',silver:'rank-s',bronze:'rank-b'};
+const yen = v => '¥'+Math.round(v).toLocaleString();
+
+function renderPayoutTable() {
+  const tbody = document.getElementById('payout-tbody');
+  tbody.innerHTML = PAYOUT_DATA.map(row => {
+    const net = row.gross - row.tax - row.fee - row.instant;
+    const isErr  = row.flags.includes('error');
+    const isWarn = row.flags.includes('warn');
+    const isInst = row.flags.includes('instant');
+    const rowCls = isErr ? 'has-error' : isInst ? 'is-instant' : '';
+    const statusHtml = row.status==='approved'
+      ? '<span class="flag flag-ok">✅ 承認済み</span>'
+      : `<button class="btn btn-${isErr?'muted':'green'} btn-sm" onclick="approveRow('${row.agId}')" ${isErr?'disabled':''}>承認</button>`;
+    const flagHtml = row.flags.map(f =>
+      f==='warn'    ? '<span class="flag flag-hold">⚠️ 確認中</span>' :
+      f==='error'   ? '<span class="flag flag-hold">🔴 エラー</span>' :
+      f==='instant' ? '<span class="flag flag-instant">⚡ 即日払込済</span>' :
+      f==='hr'      ? '<span class="flag flag-hr">👥 HR 2回払い</span>' : ''
+    ).join('');
+    return `<tr class="${rowCls}">
+      <td><div class="ag-info">
+        <div class="ag-name">${row.name}</div>
+        <div class="ag-id">${row.agId}</div>
+        <div class="ag-rank ${RANK_CLS[row.rank]||''}">${row.rank.charAt(0).toUpperCase()+row.rank.slice(1)}</div>
+      </div></td>
+      <td style="text-align:center">${row.cases}</td>
+      <td><div class="amount-col">${yen(row.gross)}</div></td>
+      <td><div class="amount-col" style="color:var(--muted)">−${yen(row.tax)}</div></td>
+      <td><div class="amount-col" style="color:var(--muted)">${row.fee?'−'+yen(row.fee):'¥0'}</div></td>
+      <td><div class="amount-col main">${yen(net)}</div>${isInst?`<div style="font-size:10px;color:var(--muted)">即日払済 −${yen(row.instant)}</div>`:''}</td>
+      <td><div style="display:flex;gap:4px;flex-direction:column">${flagHtml||'<span style="font-size:10px;color:var(--muted)">なし</span>'}${row.error?`<div style="font-size:10px;color:var(--red);margin-top:2px">${row.error}</div>`:''}</div></td>
+      <td>${statusHtml}</td>
+      <td><button class="btn btn-muted btn-sm">詳細</button></td>
+    </tr>`;
+  }).join('');
+}
+function approveRow(agId) {
+  const row = PAYOUT_DATA.find(r => r.agId===agId);
+  if (row) { row.status='approved'; renderPayoutTable(); }
+}
+function approveAll() {
+  if (confirm('エラーのないエージェントを全員承認しますか？')) {
+    PAYOUT_DATA.filter(r => !r.flags.includes('error') && !r.flags.includes('warn'))
+               .forEach(r => r.status='approved');
+    renderPayoutTable();
+  }
+}
+function exportCSV() {
+  const rows=[['口座名義','銀行コード','支店コード','口座番号','振込額']];
+  PAYOUT_DATA.forEach(r => rows.push([r.name,'0310','001','XXXXXXX', r.gross-r.tax-r.fee-r.instant]));
+  const csv = rows.map(r=>r.join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv'}));
+  a.download = 'CORETO_振込データ_2026年02月.csv';
+  a.click();
+}
+
+// ── 初期化 ──
+window.addEventListener('DOMContentLoaded', () => {
+  initSessionUI();
+  renderPayoutTable();
+});
+</script>
+</body>
+</html>

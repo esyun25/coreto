@@ -1,0 +1,1360 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CORETO IT重説 &amp; 契約書管理</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090f;--card:#0f1119;--card2:#141720;--border:#1e2235;--border2:#252a3d;
+  --gold:#c9a84c;--gold-l:#e8c96a;--gold-dim:#7a5f22;
+  --blue:#4f9cf9;--green:#34d399;--red:#f87171;--orange:#fb923c;--purple:#a78bfa;
+  --teal:#2dd4bf;--muted:#4a5270;--sub:#7a849e;--text:#e2e6f3;
+}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;
+  background-image:radial-gradient(ellipse 50% 40% at 70% 5%,rgba(79,156,249,.04),transparent 60%)}
+
+/* ─ Header ─ */
+.header{display:flex;align-items:center;justify-content:space-between;padding:0 28px;height:54px;
+  border-bottom:1px solid var(--border);background:rgba(7,9,15,.9);backdrop-filter:blur(12px);
+  position:sticky;top:0;z-index:200}
+.logo{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--gold);letter-spacing:3px}
+.hdr-mid{display:flex;align-items:center;gap:10px}
+.hdr-badge{font-size:9px;font-weight:700;padding:3px 9px;border-radius:4px;letter-spacing:1px}
+.badge-it{background:rgba(79,156,249,.15);border:1px solid rgba(79,156,249,.3);color:var(--blue)}
+.badge-scan{background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.25);color:var(--green)}
+
+/* ─ Layout: 2-pane ─ */
+.layout{display:grid;grid-template-columns:300px 1fr;height:calc(100vh - 54px)}
+
+/* ─ Left: Case list ─ */
+.caselist{background:var(--card2);border-right:1px solid var(--border);overflow-y:auto}
+.cl-header{padding:14px 16px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.cl-title{font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase}
+.cl-count{font-family:'DM Mono',monospace;font-size:11px;color:var(--sub)}
+.cl-filter{display:flex;gap:4px;padding:8px 10px;border-bottom:1px solid var(--border)}
+.clf{flex:1;padding:5px 0;font-size:9px;font-weight:700;border-radius:5px;letter-spacing:.5px;
+  border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;
+  font-family:'Noto Sans JP',sans-serif;transition:all .15s;text-align:center}
+.clf.on{background:rgba(79,156,249,.12);border-color:rgba(79,156,249,.35);color:var(--blue)}
+.case-item{padding:12px 14px;cursor:pointer;border-bottom:1px solid rgba(30,34,53,.7);
+  transition:background .1s;position:relative}
+.case-item:hover{background:rgba(255,255,255,.02)}
+.case-item.active{background:rgba(79,156,249,.05);border-left:2px solid var(--blue);padding-left:12px}
+.ci-id{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:3px}
+.ci-name{font-size:12px;font-weight:700;margin-bottom:3px}
+.ci-meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.ci-status{position:absolute;top:12px;right:12px;width:8px;height:8px;border-radius:50%}
+.st-waiting{background:var(--orange)}
+.st-it-done{background:var(--blue)}
+.st-scan-pending{background:var(--purple)}
+.st-complete{background:var(--green)}
+.ci-badge{font-size:8px;font-weight:700;padding:1px 5px;border-radius:3px}
+
+/* ─ Main ─ */
+.main{display:flex;flex-direction:column;overflow:hidden}
+
+/* ─ Case header ─ */
+.case-hdr{padding:18px 26px 0;border-bottom:1px solid var(--border);background:rgba(7,9,15,.5)}
+.case-hdr-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding-bottom:14px}
+.case-title-area{}
+.case-id{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:4px}
+.case-name{font-size:20px;font-weight:700;margin-bottom:5px}
+.case-meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.prop-tag{font-size:10px;font-weight:600;padding:3px 9px;border-radius:5px;
+  background:rgba(79,156,249,.12);border:1px solid rgba(79,156,249,.25);color:var(--blue)}
+.case-detail-row{font-size:11px;color:var(--sub)}
+/* Overall progress */
+.case-progress{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0}
+.cp-pct{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;line-height:1}
+.cp-label{font-size:9px;color:var(--muted);letter-spacing:1px}
+.cp-bar-wrap{width:120px;height:5px;background:var(--border2);border-radius:3px;overflow:hidden}
+.cp-bar{height:100%;border-radius:3px;transition:width .5s}
+
+/* Timeline tabs */
+.timeline-tabs{display:flex;gap:0;border-top:1px solid var(--border)}
+.tt{padding:10px 16px;font-size:10px;font-weight:700;cursor:pointer;color:var(--muted);
+  border-bottom:2px solid transparent;transition:all .15s;letter-spacing:.5px;white-space:nowrap;
+  display:flex;align-items:center;gap:6px}
+.tt.on{color:var(--blue);border-bottom-color:var(--blue)}
+.tt-dot{width:7px;height:7px;border-radius:50%}
+
+/* ─ Scroll area ─ */
+.main-scroll{flex:1;overflow-y:auto;padding:22px 26px 80px}
+
+/* ─ Section card ─ */
+.sec-card{background:var(--card);border:1px solid var(--border);border-radius:13px;
+  margin-bottom:14px;overflow:hidden}
+.sec-hdr{display:flex;align-items:center;justify-content:space-between;padding:13px 18px;
+  cursor:pointer;user-select:none;transition:background .15s}
+.sec-hdr:hover{background:rgba(255,255,255,.02)}
+.sec-hdr-left{display:flex;align-items:center;gap:10px}
+.sec-icon{font-size:17px;width:26px;text-align:center}
+.sec-title-text{font-size:12px;font-weight:700}
+.sec-timing{font-size:10px;color:var(--muted);margin-left:4px;font-weight:400}
+.sec-right{display:flex;align-items:center;gap:10px}
+.sec-prog{font-size:10px;font-family:'DM Mono',monospace;color:var(--sub)}
+.sec-chev{color:var(--muted);font-size:12px;transition:transform .2s}
+.sec-chev.open{transform:rotate(90deg)}
+.sec-body{border-top:1px solid var(--border)}
+.sec-body.collapsed{display:none}
+
+/* ─ Check items ─ */
+.chk{display:grid;grid-template-columns:22px 1fr auto;gap:10px;align-items:start;
+  padding:12px 18px;border-bottom:1px solid rgba(30,34,53,.5);transition:background .1s}
+.chk:last-child{border-bottom:none}
+.chk.ok-row{background:rgba(52,211,153,.02)}
+.chk.ng-row{background:rgba(248,113,113,.04)}
+.chk-num{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);padding-top:2px}
+.chk-body{}
+.chk-label{font-size:12px;font-weight:600;margin-bottom:2px;line-height:1.5}
+.chk-desc{font-size:10px;color:var(--sub);line-height:1.7}
+.chk-tag{display:inline-block;font-size:8px;font-weight:700;padding:1px 5px;border-radius:3px;
+  margin-left:5px;vertical-align:middle}
+.tag-req{background:rgba(248,113,113,.15);color:var(--red)}
+.tag-takken{background:rgba(167,139,250,.15);color:var(--purple)}
+.tag-record{background:rgba(79,156,249,.12);color:var(--blue)}
+.chk-alert{font-size:10px;color:var(--red);margin-top:4px;display:none}
+.chk-alert.show{display:block}
+.chk-input{margin-top:6px;display:none}
+.chk-input.show{display:block}
+.chk-input input,.chk-input select,.chk-input textarea{
+  width:100%;background:#090b13;border:1px solid var(--border2);border-radius:6px;
+  padding:7px 10px;color:var(--text);font-size:11px;font-family:'Noto Sans JP',sans-serif}
+.chk-input textarea{resize:vertical;min-height:56px}
+.chk-input input:focus,.chk-input select:focus,.chk-input textarea:focus{
+  outline:none;border-color:var(--blue)}
+
+/* ─ Status buttons ─ */
+.sbg{display:flex;gap:4px;flex-shrink:0;margin-top:1px}
+.sb{width:30px;height:27px;border-radius:6px;border:1px solid var(--border2);background:transparent;
+  cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;transition:all .1s}
+.sb:hover{background:rgba(255,255,255,.03)}
+.sb.ok{background:rgba(52,211,153,.15);border-color:rgba(52,211,153,.4)}
+.sb.ng{background:rgba(248,113,113,.15);border-color:rgba(248,113,113,.4)}
+.sb.na{background:rgba(74,82,112,.15);border-color:var(--border2)}
+
+/* ─ Scan panel ─ */
+.scan-panel{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:20px;margin-bottom:14px}
+.scan-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px}
+.scan-item{background:var(--card2);border:1px solid var(--border2);border-radius:10px;padding:14px}
+.scan-item.filled{border-color:rgba(52,211,153,.3);background:rgba(52,211,153,.03)}
+.scan-item.missing{border-color:rgba(251,146,60,.3)}
+.si-label{font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px}
+.si-num{font-family:'DM Mono',monospace;font-size:14px;font-weight:600;
+  letter-spacing:2px;margin-bottom:8px;min-height:24px;color:var(--text)}
+.si-num.empty{color:var(--border2);font-style:italic;font-size:11px}
+.si-type-badge{font-size:9px;font-weight:700;padding:2px 7px;border-radius:3px;margin-bottom:8px;display:inline-block}
+.scan-input-row{display:flex;gap:6px}
+.scan-input-row input{flex:1;background:#090b13;border:1px solid var(--border2);border-radius:6px;
+  padding:7px 10px;color:var(--text);font-size:12px;font-family:'DM Mono',monospace;letter-spacing:1px}
+.scan-input-row input:focus{outline:none;border-color:var(--green)}
+.scan-input-row input::placeholder{font-family:'Noto Sans JP',sans-serif;font-size:11px;letter-spacing:0}
+.scan-btn{padding:6px 10px;border-radius:6px;border:1px solid var(--border2);background:var(--card);
+  color:var(--sub);font-size:11px;cursor:pointer;font-family:'Noto Sans JP',sans-serif;transition:all .15s;white-space:nowrap}
+.scan-btn:hover{color:var(--text);border-color:var(--sub)}
+.scan-btn.scan-go{background:rgba(52,211,153,.12);border-color:rgba(52,211,153,.3);color:var(--green)}
+.si-status{font-size:10px;margin-top:6px;display:flex;align-items:center;gap:5px}
+.si-date{font-size:9px;color:var(--muted);margin-top:3px}
+
+
+
+/* ─ Bottom action bar ─ */
+.action-bar{position:sticky;bottom:0;background:rgba(7,9,15,.95);backdrop-filter:blur(12px);
+  border-top:1px solid var(--border);padding:13px 26px;display:flex;align-items:center;gap:12px}
+.ab-progress{flex:1;font-size:11px;color:var(--sub)}
+.ab-btn{padding:9px 20px;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;
+  border:none;font-family:'Noto Sans JP',sans-serif;transition:all .2s;letter-spacing:.5px}
+.ab-primary{background:linear-gradient(135deg,var(--green),#22a876);color:#0a0c10}
+.ab-primary:hover{filter:brightness(1.08);transform:translateY(-1px)}
+.ab-secondary{background:rgba(201,168,76,.12);border:1px solid var(--gold-dim);color:var(--gold)}
+.ab-ghost{background:transparent;border:1px solid var(--border2);color:var(--sub)}
+.ab-ghost:hover{color:var(--text)}
+
+/* ─ Note ─ */
+.note-area{background:var(--card2);border-radius:10px;padding:14px;margin-bottom:14px}
+.note-label{font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px}
+.note-area textarea{width:100%;background:#090b13;border:1px solid var(--border2);border-radius:7px;
+  padding:10px 12px;color:var(--text);font-size:12px;font-family:'Noto Sans JP',sans-serif;
+  resize:vertical;min-height:72px;line-height:1.7}
+.note-area textarea:focus{outline:none;border-color:var(--blue)}
+
+/* ─ Empty state ─ */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  height:100%;gap:12px;color:var(--muted)}
+.empty-icon{font-size:48px;opacity:.35}
+
+/* ─ Result modal ─ */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);
+  z-index:300;display:none;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:16px;
+  width:500px;padding:28px}
+.modal-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:var(--gold);margin-bottom:4px}
+.modal-sub{font-size:11px;color:var(--sub);margin-bottom:20px}
+.modal-row{display:flex;justify-content:space-between;padding:7px 0;
+  border-bottom:1px solid rgba(30,34,53,.6);font-size:12px}
+.modal-row:last-of-type{border:none}
+.mr-key{color:var(--sub)}
+.mr-val{font-weight:600;font-family:'DM Mono',monospace}
+.modal-actions{display:flex;gap:8px;margin-top:20px;justify-content:flex-end}
+.ma-btn{padding:9px 18px;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;
+  font-family:'Noto Sans JP',sans-serif}
+.ma-confirm{background:linear-gradient(135deg,var(--green),#22a876);border:none;color:#0a0c10}
+.ma-cancel{background:transparent;border:1px solid var(--border2);color:var(--sub)}
+
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+/* ─ Drive doc items ─ */
+.drive-doc{background:var(--card2);border:1px solid var(--border2);border-radius:11px;padding:14px 16px;transition:.15s}
+.drive-doc.ready{border-color:rgba(0,185,0,.35);background:rgba(0,185,0,.04)}
+.drive-doc.missing{border-color:rgba(251,146,60,.3)}
+.dd-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.dd-icon{font-size:18px;flex-shrink:0}
+.dd-name{font-size:12px;font-weight:700;flex:1}
+.dd-status{font-size:9px;font-weight:700;padding:2px 9px;border-radius:5px}
+.dd-status.ok{background:rgba(0,185,0,.12);color:#00b900;border:1px solid rgba(0,185,0,.3)}
+.dd-status.ng{background:rgba(251,146,60,.12);color:var(--orange);border:1px solid rgba(251,146,60,.3)}
+.dd-url-row{display:flex;gap:7px;align-items:center}
+.dd-url-input{flex:1;background:#090b13;border:1px solid var(--border2);border-radius:8px;
+  padding:8px 12px;color:var(--text);font-size:11px;font-family:'DM Mono',monospace;
+  outline:none;transition:.15s}
+.dd-url-input:focus{border-color:#00b900}
+.dd-url-input.has-url{border-color:rgba(0,185,0,.4);color:#00d900}
+.dd-open-btn{padding:7px 13px;background:#00b900;color:#fff;border:none;border-radius:8px;
+  font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;transition:.15s;
+  font-family:'Noto Sans JP',sans-serif}
+.dd-open-btn:hover{filter:brightness(1.1)}
+.dd-open-btn:disabled{background:var(--border2);cursor:not-allowed}
+.dd-remove{padding:5px 8px;background:transparent;border:1px solid var(--border2);
+  border-radius:7px;color:var(--muted);font-size:10px;cursor:pointer;transition:.15s;
+  font-family:'Noto Sans JP',sans-serif}
+.dd-remove:hover{border-color:var(--red);color:var(--red)}
+/* ─ Drop zone ─ */
+.drop-zone{border:2px dashed var(--border2);border-radius:12px;padding:28px 20px;text-align:center;
+  cursor:pointer;transition:.2s;background:rgba(255,255,255,.01)}
+.drop-zone:hover,.drop-zone.over{border-color:var(--blue);background:rgba(79,156,249,.04)}
+.dz-icon{font-size:32px;margin-bottom:10px}
+.dz-main{font-size:13px;font-weight:700;color:var(--text);margin-bottom:5px}
+.dz-sub{font-size:11px;color:var(--muted);margin-bottom:10px}
+.dz-badge{display:inline-block;padding:3px 10px;border-radius:6px;font-size:9px;font-weight:700;
+  background:rgba(79,156,249,.1);color:var(--blue);border:1px solid rgba(79,156,249,.25)}
+/* ─ Upload progress ─ */
+.upl-row{display:flex;align-items:center;gap:10px;padding:10px 14px;
+  background:var(--card2);border:1px solid var(--border2);border-radius:10px}
+.upl-name{flex:1;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.upl-bar-wrap{width:100px;height:5px;background:var(--border2);border-radius:3px;flex-shrink:0}
+.upl-bar{height:5px;border-radius:3px;background:var(--blue);width:0;transition:width .3s}
+.upl-pct{font-size:10px;color:var(--muted);width:30px;text-align:right;font-family:'DM Mono',monospace}
+.upl-ok{font-size:14px;width:20px;text-align:center}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div style="display:flex;align-items:center;gap:12px">
+    <div class="logo">CORETO</div>
+    <div style="width:1px;height:18px;background:var(--border2)"></div>
+    <div class="hdr-mid">
+      <span class="hdr-badge badge-it">📋 IT重説チェックリスト</span>
+      <span style="color:var(--border2)">+</span>
+      <span class="hdr-badge badge-scan">📦 契約書スキャン管理</span>
+    </div>
+  </div>
+  <button onclick="window.location.href='coreto-hub.html'"
+          style="font-size:10px;padding:5px 12px;border-radius:6px;border:1px solid var(--border2);
+          background:transparent;color:var(--muted);cursor:pointer;font-family:'Noto Sans JP',sans-serif">
+    ← マイページ
+  </button>
+</div>
+
+<div class="layout">
+
+<!-- ─ Left: Case list ─ -->
+<div class="caselist">
+  <div class="cl-header">
+    <div class="cl-title">案件一覧</div>
+    <div class="cl-count" id="cl-count">— 件</div>
+  </div>
+  <div class="cl-filter">
+    <div class="clf on" data-f="all" onclick="filterCases('all',this)">全て</div>
+    <div class="clf" data-f="it" onclick="filterCases('it',this)">IT重説待</div>
+    <div class="clf" data-f="scan" onclick="filterCases('scan',this)">書類管理</div>
+    <div class="clf" data-f="done" onclick="filterCases('done',this)">完了</div>
+  </div>
+  <div id="case-list"></div>
+</div>
+
+<!-- ─ Right: Main ─ -->
+<div class="main" id="main-pane">
+  <div class="empty" id="empty-state">
+    <div class="empty-icon">📋</div>
+    <div style="font-size:13px">案件を選択してください</div>
+  </div>
+
+  <!-- Case content (hidden until selected) -->
+  <div id="case-content" style="display:none;flex-direction:column;height:100%">
+
+    <!-- Header -->
+    <div class="case-hdr">
+      <div class="case-hdr-top">
+        <div class="case-title-area">
+          <div class="case-id" id="c-id">—</div>
+          <div class="case-name" id="c-name">—</div>
+          <div class="case-meta" id="c-meta"></div>
+        </div>
+        <div class="case-progress">
+          <div class="cp-pct" id="c-pct" style="color:var(--gold)">0%</div>
+          <div class="cp-label">完了</div>
+          <div class="cp-bar-wrap">
+            <div class="cp-bar" id="c-bar" style="background:var(--gold)"></div>
+          </div>
+        </div>
+      </div>
+      <!-- Tab -->
+      <div class="timeline-tabs" id="timeline-tabs">
+        <div class="tt on" onclick="switchPane(0,this)" data-p="0">
+          <div class="tt-dot" style="background:var(--blue)"></div>IT重説チェックリスト
+        </div>
+        <div class="tt" onclick="switchPane(1,this)" data-p="1">
+          <div class="tt-dot" style="background:var(--green)"></div>契約書・書類スキャン
+        </div>
+      </div>
+    </div>
+
+    <!-- ─ PANE 0: IT重説 ─ -->
+    <div class="main-scroll" id="pane-0">
+      <!-- ══ 書類クイックアクセス（重説中用） ══ -->
+      <div id="docs-quickbar" style="display:none;margin-bottom:14px;
+           background:rgba(0,185,0,.05);border:1px solid rgba(0,185,0,.25);border-radius:12px;padding:12px 16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;
+                      display:flex;align-items:center;gap:7px">
+            <div style="width:3px;height:10px;background:#00b900;border-radius:2px"></div>
+            スキャン書類（重説中に開く）
+          </div>
+          <button onclick="switchPane(1,null)"
+            style="font-size:9px;color:var(--muted);background:transparent;border:none;cursor:pointer;
+                   font-family:'Noto Sans JP',sans-serif;padding:2px 6px">
+            書類管理 →
+          </button>
+        </div>
+        <div id="docs-quickbar-list" style="display:flex;flex-wrap:wrap;gap:7px"></div>
+      </div>
+
+      <!-- Checklist body -->
+      <div id="it-checklist-body"></div>
+
+      <!-- 所見メモ -->
+      <div class="note-area">
+        <div class="note-label">重説 所見・メモ</div>
+        <textarea id="it-memo" placeholder="実施中の特記事項、顧客の質問内容、懸念点などを記入"></textarea>
+      </div>
+    </div>
+
+    <!-- ─ PANE 1: スキャン ─ -->
+    <div class="main-scroll" id="pane-1" style="display:none">
+
+      <!-- ══ IT重説用スキャン書類（Google Drive） ══ -->
+      <div class="scan-panel" id="drive-docs-panel" style="margin-bottom:16px;border-color:rgba(0,185,0,.25)">
+
+        <!-- ヘッダー -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <div class="card-title" style="font-size:9px;color:var(--muted);letter-spacing:2px;
+               text-transform:uppercase;display:flex;align-items:center;gap:8px;margin:0">
+            <div style="width:3px;height:12px;background:#00b900;border-radius:2px"></div>
+            IT重説用スキャン書類
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div id="drive-overall-badge" style="font-size:10px;padding:3px 10px;border-radius:6px;
+                 background:rgba(74,82,112,.15);color:var(--sub);border:1px solid var(--border2)">
+              未アップロード
+            </div>
+            <button onclick="slackShareAll()" id="slack-all-btn"
+              style="padding:5px 12px;background:rgba(79,156,249,.1);border:1px solid rgba(79,156,249,.25);
+                     color:var(--blue);border-radius:7px;font-size:10px;font-weight:700;cursor:pointer;
+                     font-family:'Noto Sans JP',sans-serif;display:none">
+              📢 全件をSlackで共有
+            </button>
+          </div>
+        </div>
+
+        <!-- 権限バナー -->
+        <div style="display:flex;align-items:center;gap:10px;padding:9px 14px;
+                    background:rgba(201,168,76,.07);border:1px solid rgba(201,168,76,.2);
+                    border-radius:9px;margin-bottom:14px;font-size:11px">
+          🔒 <div>
+            <strong style="color:var(--gold)">アクセス権限：リンクを知っている人のみ閲覧可</strong>
+            <span style="color:var(--muted)">（自動設定）— 外部公開なし・社外流出対策済み</span>
+          </div>
+        </div>
+
+        <!-- ドロップゾーン -->
+        <div id="drop-zone" class="drop-zone"
+          ondragover="dzOver(event)" ondragleave="dzLeave(event)" ondrop="dzDrop(event)"
+          onclick="document.getElementById('file-input').click()">
+          <div class="dz-icon">📂</div>
+          <div class="dz-main">PDFをここにドラッグ＆ドロップ</div>
+          <div class="dz-sub">またはクリックしてファイルを選択</div>
+          <div class="dz-badge">PDF / 複数ファイル対応</div>
+        </div>
+        <input type="file" id="file-input" accept=".pdf,application/pdf" multiple
+               style="display:none" onchange="handleFileSelect(this.files)">
+
+        <!-- アップロード中リスト -->
+        <div id="upload-progress-list" style="display:none;flex-direction:column;gap:8px;margin:12px 0"></div>
+
+        <!-- 書類リスト（完了済み） -->
+        <div id="drive-doc-list" style="display:flex;flex-direction:column;gap:10px;margin-top:12px">
+          <!-- JS で描画 -->
+        </div>
+
+        <!-- 追加書類ボタン -->
+        <button onclick="addDriveDoc()" style="width:100%;margin-top:10px;padding:8px;background:transparent;
+          border:1px dashed var(--border2);border-radius:9px;color:var(--muted);font-size:11px;
+          cursor:pointer;font-family:'Noto Sans JP',sans-serif;transition:.15s"
+          onmouseover="this.style.borderColor='var(--blue)';this.style.color='var(--blue)'"
+          onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--muted)'">
+          ＋ ファイル名のみで手動登録する
+        </button>
+
+        <!-- 担当者メタ -->
+        <div id="scan-meta" style="display:none;margin-top:12px;padding:8px 14px;
+             background:var(--card2);border-radius:9px;font-size:10px;color:var(--muted)">
+          最終アップロード：<span id="scan-meta-who" style="color:var(--text)"></span>　
+          <span id="scan-meta-when" style="color:var(--text)"></span>
+        </div>
+      </div>
+
+      <!-- Tracking numbers -->
+      <div class="scan-panel">
+        <div class="card-title" style="font-size:9px;color:var(--muted);letter-spacing:2px;
+             text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:8px">
+          <div style="width:3px;height:12px;background:var(--green);border-radius:2px"></div>
+          追跡番号管理（レターパック）
+        </div>
+        <div class="scan-grid" id="scan-grid"></div>
+        <div style="padding:10px 14px;background:rgba(52,211,153,.05);border:1px solid rgba(52,211,153,.12);
+                    border-radius:9px;font-size:11px;color:var(--sub);line-height:1.8">
+          💡 <strong style="color:var(--text)">バーコードスキャナー対応：</strong>
+          追跡番号フィールドをクリック → バーコードスキャン → 自動入力（所要10秒）<br>
+          Honeywell Voyager 1200g（USB接続、ドライバ不要）推奨
+        </div>
+      </div>
+
+      <!-- Document scan status -->
+      <div class="sec-card">
+        <div class="sec-hdr" onclick="toggleSec('doc-scan',this)">
+          <div class="sec-hdr-left">
+            <div class="sec-icon">📄</div>
+            <div class="sec-title-text">書類スキャン・確認チェックリスト</div>
+          </div>
+          <div class="sec-right">
+            <div class="sec-prog" id="doc-prog">0/—</div>
+            <div class="sec-chev open">›</div>
+          </div>
+        </div>
+        <div class="sec-body" id="sec-doc-scan"></div>
+      </div>
+
+      <!-- Scan note -->
+      <div class="note-area">
+        <div class="note-label">書類管理 メモ</div>
+        <textarea id="scan-memo" placeholder="書類の状態、返送予定日、管理会社への連絡事項など"></textarea>
+      </div>
+    </div>
+
+    <!-- Action bar -->
+    <div class="action-bar">
+      <div class="ab-progress" id="ab-progress">—</div>
+      <button class="ab-btn ab-ghost" onclick="saveToKintone()">💾 Kintoneに保存</button>
+      <button class="ab-btn ab-secondary" onclick="notifySlack()">📢 Slack通知</button>
+      <button class="ab-btn ab-primary" id="ab-complete-btn" onclick="showCompleteModal()">
+        ✅ IT重説完了報告
+      </button>
+    </div>
+
+  </div>
+</div>
+
+</div><!-- /layout -->
+
+<!-- ─ Complete Modal ─ -->
+<div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)closeModal()">
+<div class="modal">
+  <div class="modal-title">IT重説 完了報告</div>
+  <div class="modal-sub">Kintoneに記録し、エージェントへSlack通知します</div>
+  <div id="modal-body"></div>
+  <div class="modal-actions">
+    <button class="ma-btn ma-cancel" onclick="closeModal()">キャンセル</button>
+    <button class="ma-btn ma-confirm" onclick="submitComplete()">送信してKintoneに保存</button>
+  </div>
+</div>
+</div>
+
+<script>
+// ================================================================
+//  Demo Cases
+// ================================================================
+
+// ════════════════════════════════════════════════════════════════
+//  IT重説用スキャン書類 — Google Drive アップロード＆共有
+// ════════════════════════════════════════════════════════════════
+
+// デフォルト書類テンプレート
+var DRIVE_DOCS_DEFAULT = [
+  { key:'jyusetsu', label:'重要事項説明書', required:true  },
+  { key:'keiyaku',  label:'賃貸借契約書',   required:true  },
+  { key:'setsubi',  label:'設備確認書',      required:false },
+];
+
+// ケースごとの書類データ
+var caseDriveDocs = {};
+
+function getDriveDocs(caseId) {
+  if (!caseDriveDocs[caseId]) {
+    caseDriveDocs[caseId] = DRIVE_DOCS_DEFAULT.map(function(d) {
+      return { key:d.key, label:d.label, required:d.required,
+               url:'', fileName:'', uploadedAt:'', uploadedBy:'' };
+    });
+  }
+  return caseDriveDocs[caseId];
+}
+
+// ── Drag & Drop ──────────────────────────────────────────────────
+function dzOver(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.add('over');
+}
+function dzLeave(e) {
+  document.getElementById('drop-zone').classList.remove('over');
+}
+function dzDrop(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('over');
+  handleFileSelect(e.dataTransfer.files);
+}
+
+function handleFileSelect(files) {
+  if (!files || !files.length) return;
+  var arr = Array.from(files).filter(function(f) {
+    return f.name.toLowerCase().endsWith('.pdf') || f.type === 'application/pdf';
+  });
+  if (!arr.length) { alert('PDFファイルのみ対応しています'); return; }
+  arr.forEach(function(file) { simulateUpload(file); });
+}
+
+// ── アップロードシミュレーション ────────────────────────────────
+function simulateUpload(file) {
+  var caseId = currentCase.id;
+  var docs = getDriveDocs(caseId);
+
+  // ファイル名から書類種別を推定
+  var matched = autoMatchDoc(file.name, docs);
+
+  // プログレスバーを表示
+  var progList = document.getElementById('upload-progress-list');
+  progList.style.display = 'flex';
+  var rowId = 'upl-' + Date.now() + '-' + Math.random().toString(36).slice(2,6);
+  var row = document.createElement('div');
+  row.className = 'upl-row';
+  row.id = rowId;
+  row.innerHTML =
+    '<div class="upl-ok" id="' + rowId + '-ok">📄</div>' +
+    '<div class="upl-name">' + file.name + '</div>' +
+    '<div class="upl-bar-wrap"><div class="upl-bar" id="' + rowId + '-bar"></div></div>' +
+    '<div class="upl-pct" id="' + rowId + '-pct">0%</div>';
+  progList.appendChild(row);
+
+  // アップロード進行アニメーション
+  var pct = 0;
+  var interval = setInterval(function() {
+    pct += Math.floor(Math.random() * 18 + 8);
+    if (pct >= 100) pct = 100;
+    var bar = document.getElementById(rowId + '-bar');
+    var pctEl = document.getElementById(rowId + '-pct');
+    if (bar) bar.style.width = pct + '%';
+    if (pctEl) pctEl.textContent = pct + '%';
+    if (pct >= 100) {
+      clearInterval(interval);
+      // 完了
+      var okEl = document.getElementById(rowId + '-ok');
+      if (okEl) okEl.textContent = '✅';
+      if (bar) bar.style.background = 'var(--green)';
+
+      // 偽のDrive URLを生成
+      var fakeId = 'CORETO_' + caseId + '_' + randomStr(12);
+      var fakeUrl = 'https://drive.google.com/file/d/' + fakeId + '/view?usp=sharing';
+      var now = new Date().toLocaleString('ja-JP').slice(0,-3);
+      var who = '山田 誠';
+
+      // 書類リストに登録
+      if (matched !== null) {
+        docs[matched].url        = fakeUrl;
+        docs[matched].fileName   = file.name;
+        docs[matched].uploadedAt = now;
+        docs[matched].uploadedBy = who;
+      } else {
+        // マッチしなかった場合は新規追加
+        docs.push({
+          key: 'custom-' + Date.now(),
+          label: file.name.replace(/\.pdf$/i,''),
+          required: false,
+          url: fakeUrl,
+          fileName: file.name,
+          uploadedAt: now,
+          uploadedBy: who
+        });
+      }
+
+      // 3秒後にプログレス行を消去してドキュメントリストを更新
+      setTimeout(function() {
+        var r = document.getElementById(rowId);
+        if (r) r.remove();
+        if (!progList.children.length) progList.style.display = 'none';
+        renderDriveDocs();
+        updateScanMeta(who, now);
+      }, 1200);
+    }
+  }, 120);
+}
+
+function autoMatchDoc(fileName, docs) {
+  var fn = fileName.toLowerCase();
+  var keywords = [
+    ['jyusetsu', ['重説','重要事項','jusetsu','jyusetsu']],
+    ['keiyaku',  ['契約','keiyaku']],
+    ['setsubi',  ['設備','setsubi']],
+  ];
+  for (var ki = 0; ki < keywords.length; ki++) {
+    var key = keywords[ki][0];
+    var kws = keywords[ki][1];
+    for (var wi = 0; wi < kws.length; wi++) {
+      if (fn.indexOf(kws[wi]) >= 0) {
+        var docIdx = docs.findIndex(function(d){ return d.key === key; });
+        if (docIdx >= 0 && !docs[docIdx].url) return docIdx;
+      }
+    }
+  }
+  // 未登録のrequiredを優先埋め
+  for (var di = 0; di < docs.length; di++) {
+    if (!docs[di].url) return di;
+  }
+  return null;
+}
+
+function randomStr(len) {
+  var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  var out = '';
+  for (var i = 0; i < len; i++) out += chars[Math.floor(Math.random()*chars.length)];
+  return out;
+}
+
+function updateScanMeta(who, when) {
+  var meta = document.getElementById('scan-meta');
+  if (meta) {
+    meta.style.display = 'block';
+    document.getElementById('scan-meta-who').textContent  = who;
+    document.getElementById('scan-meta-when').textContent = when;
+  }
+}
+
+// ── 書類リスト描画 ────────────────────────────────────────────────
+function renderDriveDocs() {
+  var caseId = currentCase ? currentCase.id : null;
+  if (!caseId) return;
+  var docs = getDriveDocs(caseId);
+  var list = document.getElementById('drive-doc-list');
+  if (!list) return;
+
+  list.innerHTML = docs.map(function(doc, idx) {
+    var hasUrl = !!doc.url;
+    return '<div class="drive-doc ' + (hasUrl ? 'ready' : doc.required ? 'missing' : '') + '">' +
+      '<div class="dd-head">' +
+        '<div class="dd-icon">' + (hasUrl ? '📄' : '🔲') + '</div>' +
+        '<div>' +
+          '<div class="dd-name">' + doc.label +
+            (doc.required ? '' : ' <span style="font-size:9px;color:var(--muted);font-weight:400">任意</span>') +
+          '</div>' +
+          (hasUrl ? '<div style="font-size:10px;color:var(--muted);margin-top:2px">' +
+            doc.fileName + '　アップロード：' + doc.uploadedBy + '　' + doc.uploadedAt + '</div>' : '') +
+        '</div>' +
+        '<div class="dd-status ' + (hasUrl ? 'ok' : 'ng') + '">' + (hasUrl ? '✓ 済み' : '未') + '</div>' +
+        '<button class="dd-remove" onclick="removeDriveDoc(' + idx + ')">✕</button>' +
+      '</div>' +
+      '<div class="dd-url-row">' +
+        '<div style="flex:1;padding:7px 12px;background:#090b13;border:1px solid ' +
+          (hasUrl ? 'rgba(0,185,0,.3)' : 'var(--border2)') + ';border-radius:8px;' +
+          'font-size:10px;font-family:\'DM Mono\',monospace;color:' +
+          (hasUrl ? '#00d900' : 'var(--muted)') + ';overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' +
+          (hasUrl ? doc.url : '— まだアップロードされていません —') +
+        '</div>' +
+        '<button class="dd-open-btn" onclick="openDrive(' + idx + ')"' + (hasUrl ? '' : ' disabled') + '>' +
+          '🔗 開く' +
+        '</button>' +
+        '<button onclick="slackShareOne(' + idx + ')"' +
+          ' style="padding:6px 10px;background:rgba(79,156,249,.1);border:1px solid rgba(79,156,249,.25);' +
+          'color:var(--blue);border-radius:7px;font-size:10px;font-weight:700;cursor:pointer;' +
+          'font-family:\'Noto Sans JP\',sans-serif;white-space:nowrap;' +
+          (hasUrl ? '' : 'opacity:.35;cursor:not-allowed;') + '"' +
+          (hasUrl ? '' : ' disabled') + '>' +
+          '📢 共有' +
+        '</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  updateDriveOverallBadge(docs);
+  renderDocsQuickbar(docs);
+}
+
+function renderDocsQuickbar(docs) {
+  var bar  = document.getElementById('docs-quickbar');
+  var list = document.getElementById('docs-quickbar-list');
+  if (!bar || !list) return;
+  var ready = docs.filter(function(d){ return !!d.url; });
+  if (!ready.length) { bar.style.display = 'none'; return; }
+  bar.style.display = 'block';
+  list.innerHTML = ready.map(function(doc, i) {
+    return '<button onclick="window.open(\'' + doc.url + '\',\'_blank\')"' +
+      ' style="display:inline-flex;align-items:center;gap:6px;padding:7px 13px;' +
+      'background:rgba(0,185,0,.1);border:1px solid rgba(0,185,0,.3);' +
+      'border-radius:8px;color:#00c900;font-size:11px;font-weight:700;cursor:pointer;' +
+      'font-family:\'Noto Sans JP\',sans-serif;transition:.15s"' +
+      ' onmouseover="this.style.background=\'rgba(0,185,0,.2)\'"' +
+      ' onmouseout="this.style.background=\'rgba(0,185,0,.1)\'">' +
+      '📄 ' + doc.label +
+      '</button>';
+  }).join('');
+}
+
+function openDrive(idx) {
+  var docs = getDriveDocs(currentCase.id);
+  if (docs[idx] && docs[idx].url) window.open(docs[idx].url, '_blank');
+}
+
+function removeDriveDoc(idx) {
+  var docs = getDriveDocs(currentCase.id);
+  if (docs[idx].required) { alert('必須書類は削除できません'); return; }
+  if (!confirm(docs[idx].label + ' を削除しますか？')) return;
+  docs.splice(idx, 1);
+  renderDriveDocs();
+}
+
+function addDriveDoc() {
+  var label = window.prompt('書類名を入力してください（例：間取り図、鍵引渡確認書）');
+  if (!label || !label.trim()) return;
+  var docs = getDriveDocs(currentCase.id);
+  docs.push({ key:'custom-'+Date.now(), label:label.trim(), required:false,
+               url:'', fileName:'', uploadedAt:'', uploadedBy:'' });
+  renderDriveDocs();
+}
+
+function updateDriveOverallBadge(docs) {
+  var badge = document.getElementById('drive-overall-badge');
+  var slackBtn = document.getElementById('slack-all-btn');
+  if (!badge) return;
+  var required  = docs.filter(function(d){ return d.required; });
+  var allReady  = required.every(function(d){ return !!d.url; });
+  var anyReady  = docs.some(function(d){ return !!d.url; });
+  var readyCnt  = docs.filter(function(d){ return !!d.url; }).length;
+
+  if (allReady && required.length > 0) {
+    badge.style.cssText = 'font-size:10px;padding:3px 10px;border-radius:6px;' +
+      'background:rgba(0,185,0,.12);color:#00b900;border:1px solid rgba(0,185,0,.3)';
+    badge.textContent = '✓ 準備完了（' + readyCnt + '/' + docs.length + '件）';
+  } else if (anyReady) {
+    badge.style.cssText = 'font-size:10px;padding:3px 10px;border-radius:6px;' +
+      'background:rgba(251,146,60,.1);color:var(--orange);border:1px solid rgba(251,146,60,.3)';
+    badge.textContent = '準備中（' + readyCnt + '/' + docs.length + '件）';
+  } else {
+    badge.style.cssText = 'font-size:10px;padding:3px 10px;border-radius:6px;' +
+      'background:rgba(74,82,112,.15);color:var(--sub);border:1px solid var(--border2)';
+    badge.textContent = '未アップロード';
+  }
+  if (slackBtn) slackBtn.style.display = anyReady ? 'inline-flex' : 'none';
+}
+
+// ── Slack共有 ────────────────────────────────────────────────────
+function slackShareOne(idx) {
+  var docs = getDriveDocs(currentCase.id);
+  var doc  = docs[idx];
+  if (!doc || !doc.url) return;
+  var c = currentCase;
+  var msg =
+    '📄 *IT重説スキャン書類（' + doc.label + '）*\n' +
+    '案件：' + c.name + ' 様　' + c.prop + '\n' +
+    '重説日：' + c.itDate + '\n' +
+    '🔗 ' + doc.url + '\n' +
+    '🔒 リンクを知っている人のみ閲覧可　アップロード：' + doc.uploadedBy;
+  navigator.clipboard.writeText(msg).then(function(){}, function(){});
+  showSlackToast('📢 ' + doc.label + ' のリンクをSlack用にコピーしました');
+}
+
+function slackShareAll() {
+  var docs = getDriveDocs(currentCase.id);
+  var ready = docs.filter(function(d){ return !!d.url; });
+  if (!ready.length) return;
+  var c = currentCase;
+  var lines = [
+    '📋 *IT重説スキャン書類一式*',
+    '案件：' + c.name + ' 様　' + c.prop,
+    '重説日：' + c.itDate,
+    '担当：' + c.agent,
+    '─────────────────',
+  ];
+  ready.forEach(function(d) {
+    lines.push((d.required ? '📄' : '📎') + ' ' + d.label + '　' + d.url);
+  });
+  lines.push('─────────────────');
+  lines.push('🔒 全ファイル「リンクを知っている人のみ閲覧可」設定済み');
+  var msg = lines.join('\n');
+  navigator.clipboard.writeText(msg).then(function(){}, function(){});
+  showSlackToast('📢 全' + ready.length + '件のリンクをSlack用にコピーしました\nそのままSlackに貼り付けてください');
+}
+
+function showSlackToast(msg) {
+  var t = document.getElementById('slack-toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'slack-toast';
+    t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999;' +
+      'background:#0f1119;border:1px solid rgba(79,156,249,.4);border-radius:12px;' +
+      'padding:14px 20px;font-size:12px;color:var(--text);max-width:320px;' +
+      'box-shadow:0 8px 32px rgba(0,0,0,.5);line-height:1.7;white-space:pre-line';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(function(){ t.style.opacity='0'; }, 3500);
+}
+
+
+const CASES = [
+  {
+    id:'0234', name:'田中 雄介', prop:'渋谷区東2丁目マンション 302号室',
+    agent:'10012 山田誠', mgmt:'株式会社エイブル渋谷', rent:120000,
+    itDate:'2026-02-22 14:00', itStatus:'scheduled',
+    trackNos:{ send:'', reply:'', key:'' },
+    status:'it-pending', checkState:{},
+    docCheckState:{},
+  },
+  {
+    id:'0228', name:'佐藤 明日香', prop:'港区南青山4丁目1LDK',
+    agent:'10012 山田誠', mgmt:'株式会社ハウスメイト', rent:185000,
+    itDate:'2026-02-20 10:00', itStatus:'done',
+    itDoneAt:'2026-02-20 11:02', itDuration:62,
+    trackNos:{ send:'123456789012', reply:'987654321098', key:'' },
+    status:'scan-pending', checkState:{ 'pre-1':'ok','pre-2':'ok','pre-3':'ok','pre-4':'ok',
+      'ice-1':'ok','exp-1':'ok','exp-2':'ok','exp-3':'ok','exp-4':'ok','exp-5':'ok',
+      'cnt-1':'ok','cnt-2':'ok','cnt-3':'ok','end-1':'ok','end-2':'ok','end-3':'ok' },
+    docCheckState:{},
+  },
+  {
+    id:'0220', name:'鈴木 健一', prop:'新宿区西新宿2LDK',
+    agent:'10012 山田誠', mgmt:'積和不動産', rent:155000,
+    itDate:'2026-02-15 15:00', itStatus:'done',
+    itDoneAt:'2026-02-15 16:05', itDuration:65,
+    trackNos:{ send:'111222333444', reply:'555666777888', key:'999000111222' },
+    status:'complete', checkState:{ 'pre-1':'ok','pre-2':'ok','pre-3':'ok','pre-4':'ok',
+      'ice-1':'ok','exp-1':'ok','exp-2':'ok','exp-3':'ok','exp-4':'ok','exp-5':'ok',
+      'cnt-1':'ok','cnt-2':'ok','cnt-3':'ok','end-1':'ok','end-2':'ok','end-3':'ok' },
+    docCheckState:{ 'doc-1':'ok','doc-2':'ok','doc-3':'ok','doc-4':'ok','doc-5':'ok','doc-6':'ok' },
+  },
+];
+
+// ================================================================
+//  IT重説チェックリスト定義
+// ================================================================
+const IT_CHECKLIST = [
+  {
+    id:'prep', icon:'📋', title:'事前準備', timing:'重説前に完了',
+    items:[
+      { id:'pre-1', label:'Calendly予約の確認',
+        desc:'予約日時・顧客名・Google Meet URLを確認。リマインドメール送付済みか確認' },
+      { id:'pre-2', label:'Google Meet URLの動作確認',
+        desc:'実際にURLを開き接続テスト。音声・ビデオが正常か確認。画面共有の準備' },
+      { id:'pre-3', label:'重説書・契約書の準備',
+        desc:'該当物件の重説書・契約書PDFを開いておく。画面共有で表示できる状態に',
+        tag:'required', tagLabel:'必須' },
+      { id:'pre-4', label:'宅建士証の準備',
+        desc:'宅建士証を手元に用意。画面表示できる状態（カードまたは証明書PDF）',
+        tag:'takken', tagLabel:'宅建士必須' },
+    ]
+  },
+  {
+    id:'ice', icon:'👋', title:'アイスブレイク（0〜5分）', timing:'開始〜5分',
+    items:[
+      { id:'ice-1', label:'自己紹介・宅建士証の提示',
+        desc:'氏名・宅建士登録番号を口頭で説明し、宅建士証を画面に表示して提示',
+        tag:'takken', tagLabel:'宅建士証提示' },
+      { id:'ice-2', label:'本日の流れの説明',
+        desc:'「本日は重要事項説明→契約書説明→今後の流れの3部構成で約60分です」' },
+    ]
+  },
+  {
+    id:'jyusetsu', icon:'📜', title:'重要事項説明（5〜40分）', timing:'5〜40分',
+    items:[
+      { id:'exp-1', label:'重説書の画面共有開始',
+        desc:'PDFを画面共有。「共有されていますか？」と顧客に確認を取ってから開始',
+        tag:'record', tagLabel:'記録' },
+      { id:'exp-2', label:'各項目の読み上げと説明',
+        desc:'物件概要・登記事項・都市計画・設備状況・管理規約・特約事項を順に説明' },
+      { id:'exp-3', label:'質疑応答・顧客の理解確認',
+        desc:'「ご不明な点はありますか？」を各セクション後に必ず確認。記録を残す' },
+      { id:'exp-4', label:'顧客の同意確認（口頭）',
+        desc:'「重要事項についてご理解いただけましたか？」→「はい」の確認を取る',
+        tag:'required', tagLabel:'必須' },
+      { id:'exp-5', label:'電磁的方法による重説の同意確認',
+        desc:'「IT重説による電磁的方法での説明に同意いただけますか？」の確認',
+        tag:'required', tagLabel:'法定必須' },
+    ]
+  },
+  {
+    id:'contract', icon:'✍️', title:'契約書説明（40〜55分）', timing:'40〜55分',
+    items:[
+      { id:'cnt-1', label:'契約書の画面共有（切り替え）',
+        desc:'重説書から契約書PDFに切り替えて共有。正常に表示されているか確認' },
+      { id:'cnt-2', label:'契約内容の説明',
+        desc:'契約期間・更新条件（自動更新の有無）・解約条件・特約事項を説明' },
+      { id:'cnt-3', label:'署名・捺印方法の説明',
+        desc:'「届いた契約書に署名と捺印をお願いします。認印で可」と案内' },
+    ]
+  },
+  {
+    id:'closing', icon:'🔑', title:'今後の流れ説明（55〜60分）', timing:'55〜60分',
+    items:[
+      { id:'end-1', label:'返送方法の案内',
+        desc:'「署名後はレターパックライトで返送してください。送付先は同封の封筒に記載しています」' },
+      { id:'end-2', label:'鍵の受け渡し方法の確認',
+        desc:'入居日・鍵の受取方法（郵送 or 直接受取）を再確認してKintoneに記録' },
+      { id:'end-3', label:'入居日・今後のスケジュール確認',
+        desc:'入居予定日・ライフライン手続き（電気・ガス・水道）の案内' },
+      { id:'end-4', label:'重説実施の完了記録',
+        desc:'宅建士名・実施日時・所要時間をKintoneに記録（本フォーム送信で自動記録）',
+        tag:'record', tagLabel:'Kintone記録' },
+    ]
+  },
+];
+
+// ================================================================
+//  Document scan checklist
+// ================================================================
+const DOC_CHECKLIST = [
+  { id:'doc-1', label:'契約書（往路）発送 — 追跡番号登録',
+    desc:'管理会社から届いた契約書を顧客へ発送。追跡番号をスキャン入力', required:true },
+  { id:'doc-2', label:'返信用レターパック封入確認',
+    desc:'返送用レターパックライト（送付先印字済み）を契約書に同封', required:true },
+  { id:'doc-3', label:'契約書（往路）顧客着確認',
+    desc:'追跡サイトで配達完了を確認。または顧客から着荷連絡を受ける' },
+  { id:'doc-4', label:'IT重説実施確認',
+    desc:'IT重説が完了しているか確認（本ページのIT重説タブを参照）', required:true },
+  { id:'doc-5', label:'契約書（復路）返送確認 — 追跡番号登録',
+    desc:'顧客が署名捺印して返送。追跡番号をスキャン入力、着荷を確認', required:true },
+  { id:'doc-6', label:'契約書内容の最終確認（署名・捺印）',
+    desc:'返送された契約書の署名・捺印漏れがないか確認。不備があれば顧客に連絡' },
+];
+
+// ================================================================
+//  State
+// ================================================================
+let currentCase  = null;
+let currentFilter = 'all';
+let timerInterval = null;
+let timerStart_ts = null;
+let timerElapsed  = 0;
+let timerRunning  = false;
+let currentPane   = 0;
+
+// ================================================================
+//  Init
+// ================================================================
+window.addEventListener('DOMContentLoaded', () => {
+  renderCaseList();
+});
+
+// ================================================================
+//  Case list
+// ================================================================
+function renderCaseList() {
+  const STATUS_CLS = {
+    'it-pending':   'st-waiting',
+    'scan-pending': 'st-scan-pending',
+    'it-done':      'st-it-done',
+    'complete':     'st-complete',
+  };
+  const STATUS_LABEL = {
+    'it-pending':   'IT重説待ち',
+    'scan-pending': '書類管理中',
+    'complete':     '完了',
+  };
+  const filtered = CASES.filter(c => {
+    if (currentFilter === 'all') return true;
+    if (currentFilter === 'it')   return c.status === 'it-pending';
+    if (currentFilter === 'scan') return c.status === 'scan-pending';
+    if (currentFilter === 'done') return c.status === 'complete';
+    return true;
+  });
+  document.getElementById('cl-count').textContent = filtered.length + ' 件';
+
+  document.getElementById('case-list').innerHTML = filtered.map(c => {
+    const active = currentCase && currentCase.id === c.id;
+    const lbl    = STATUS_LABEL[c.status] || c.status;
+    const clr    = c.status==='complete'?'var(--green)':c.status==='scan-pending'?'var(--purple)':'var(--orange)';
+    return `
+      <div class="case-item ${active?'active':''}" onclick="selectCase('${c.id}')">
+        <div class="ci-status ${STATUS_CLS[c.status]||'st-waiting'}"></div>
+        <div class="ci-id">${c.id}</div>
+        <div class="ci-name">${c.name}</div>
+        <div class="ci-meta">
+          <span style="font-size:10px;color:var(--sub)">${c.prop.slice(0,18)}…</span>
+          <span class="ci-badge" style="background:${clr}22;color:${clr};border:1px solid ${clr}44">${lbl}</span>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function filterCases(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.clf').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  renderCaseList();
+}
+
+// ================================================================
+//  Select case
+// ================================================================
+function selectCase(id) {
+  currentCase = CASES.find(c=>c.id===id);
+  if (!currentCase) return;
+  renderCaseList();
+  renderCaseHeader();
+  renderITChecklist();
+  renderScanPanel();
+  renderDocChecklist();
+  renderDriveDocs();
+  updateProgress();
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('case-content').style.display = 'flex';
+  document.getElementById('pane-0').style.display = 'block';
+  document.getElementById('pane-1').style.display = 'none';
+  document.querySelectorAll('.tt').forEach((t,i)=>t.classList.toggle('on',i===0));
+  currentPane = 0;
+
+  // Complete btn label
+  const isItDone = currentCase.status !== 'it-pending';
+  document.getElementById('ab-complete-btn').textContent = isItDone ? '📦 書類管理へ' : '✅ IT重説完了報告';
+}
+
+// ================================================================
+//  Case header
+// ================================================================
+function renderCaseHeader() {
+  const c = currentCase;
+  document.getElementById('c-id').textContent   = c.id;
+  document.getElementById('c-name').textContent = c.name + ' 様';
+  document.getElementById('c-meta').innerHTML   = `
+    <span class="prop-tag">🏠 ${c.prop}</span>
+    <span class="case-detail-row">担当：${c.agent}</span>
+    <span class="case-detail-row">管理会社：${c.mgmt}</span>
+    <span class="case-detail-row">家賃：¥${c.rent.toLocaleString()}</span>
+    <span class="case-detail-row">IT重説予定：${c.itDate}</span>`;
+}
+
+// ================================================================
+//  IT Checklist render
+// ================================================================
+function renderITChecklist() {
+  const body = document.getElementById('it-checklist-body');
+  body.innerHTML = IT_CHECKLIST.map(sec => `
+    <div class="sec-card" id="sec-${sec.id}">
+      <div class="sec-hdr" onclick="toggleSec('${sec.id}',this)">
+        <div class="sec-hdr-left">
+          <div class="sec-icon">${sec.icon}</div>
+          <div class="sec-title-text">${sec.title}<span class="sec-timing">${sec.timing}</span></div>
+        </div>
+        <div class="sec-right">
+          <div class="sec-prog" id="sp-${sec.id}">0/${sec.items.length}</div>
+          <div class="sec-chev open">›</div>
+        </div>
+      </div>
+      <div class="sec-body" id="sb-${sec.id}">
+        ${sec.items.map((it,i) => renderChkItem(it,i)).join('')}
+      </div>
+    </div>`).join('');
+
+  // Restore saved state
+  Object.entries(currentCase.checkState).forEach(([id, state]) => applyCheck(id, state));
+}
+
+function renderChkItem(it, i) {
+  let tagHTML = '';
+  if (it.tag==='required') tagHTML = `<span class="chk-tag tag-req">${it.tagLabel}</span>`;
+  if (it.tag==='takken')   tagHTML = `<span class="chk-tag tag-takken">${it.tagLabel}</span>`;
+  if (it.tag==='record')   tagHTML = `<span class="chk-tag tag-record">${it.tagLabel}</span>`;
+  return `
+    <div class="chk" id="row-${it.id}">
+      <div class="chk-num">${String(i+1).padStart(2,'0')}</div>
+      <div class="chk-body">
+        <div class="chk-label">${it.label}${tagHTML}</div>
+        ${it.desc ? `<div class="chk-desc">${it.desc}</div>` : ''}
+        <div class="chk-input" id="inp-${it.id}">
+          <input type="text" placeholder="メモ（任意）" oninput="saveMemo('${it.id}',this.value)">
+        </div>
+      </div>
+      <div class="sbg">
+        <button class="sb" id="sb-ok-${it.id}"  title="完了" onclick="setCheck('${it.id}','ok')">✓</button>
+        <button class="sb" id="sb-ng-${it.id}"  title="問題あり" onclick="setCheck('${it.id}','ng')">✗</button>
+        <button class="sb" id="sb-na-${it.id}"  title="非該当" onclick="setCheck('${it.id}','na')">—</button>
+      </div>
+    </div>`;
+}
+
+// ================================================================
+//  Scan panel
+// ================================================================
+function renderScanPanel() {
+  const c = currentCase;
+  const items = [
+    { key:'send',  label:'往路（事務所→顧客）', icon:'📤', color:'var(--blue)',  placeholder:'追跡番号 12桁' },
+    { key:'reply', label:'復路（顧客→事務所）', icon:'📥', color:'var(--green)', placeholder:'追跡番号 12桁' },
+    { key:'key',   label:'鍵送付',               icon:'🔑', color:'var(--gold)',  placeholder:'追跡番号 12桁（任意）' },
+  ];
+  document.getElementById('scan-grid').innerHTML = items.map(item => {
+    const val     = c.trackNos[item.key] || '';
+    const filled  = !!val;
+    const missing = !filled && (item.key !== 'key');
+    return `
+      <div class="scan-item ${filled?'filled':missing?'missing':''}" id="scan-${item.key}">
+        <div class="si-label">${item.icon} ${item.label}</div>
+        <div class="si-type-badge" style="background:${item.color}22;color:${item.color};border:1px solid ${item.color}44">
+          ${item.key==='key'?'任意':'必須'}
+        </div>
+        <div class="si-num ${filled?'':'empty'}" id="sn-${item.key}">
+          ${filled ? val : '未入力'}
+        </div>
+        <div class="scan-input-row">
+          <input type="text" id="si-${item.key}" maxlength="12" placeholder="${item.placeholder}"
+                 value="${val}" oninput="updateTrackNo('${item.key}',this.value)"
+                 onfocus="this.select()">
+          <button class="scan-btn scan-go" onclick="lookupTrack('${item.key}')">🔍 追跡</button>
+        </div>
+        <div class="si-status" id="ss-${item.key}">
+          ${filled
+            ? `<span style="color:var(--green)">✓</span><span style="color:var(--green)">登録済み</span>`
+            : `<span style="color:var(--orange)">○</span><span style="color:var(--muted)">未登録</span>`}
+        </div>
+        ${filled ? `<div class="si-date" id="sd-${item.key}">登録済み</div>` : ''}
+      </div>`;
+  }).join('');
+}
+
+function updateTrackNo(key, val) {
+  val = val.replace(/\D/g,'').slice(0,12);
+  document.getElementById(`si-${key}`).value = val;
+  currentCase.trackNos[key] = val;
+  const filled = val.length === 12;
+  const numEl  = document.getElementById(`sn-${key}`);
+  const statEl = document.getElementById(`ss-${key}`);
+  if (numEl) {
+    numEl.className = 'si-num' + (filled?'':' empty');
+    numEl.textContent = filled ? val : '未入力';
+  }
+  if (statEl) statEl.innerHTML = filled
+    ? `<span style="color:var(--green)">✓</span><span style="color:var(--green)">登録済み</span>`
+    : `<span style="color:var(--orange)">○</span><span style="color:var(--muted)">未登録</span>`;
+  const wrap = document.getElementById(`scan-${key}`);
+  if (wrap) { wrap.className = 'scan-item' + (filled?' filled':''); }
+  updateProgress();
+}
+
+function lookupTrack(key) {
+  const num = currentCase.trackNos[key];
+  if (!num || num.length < 12) { alert('12桁の追跡番号を入力してください'); return; }
+  window.open(`https://trackings.post.japanpost.jp/services/srv/search/direct?reqCodeNo1=${num}&searchKind=S002&locale=ja`, '_blank');
+}
+
+// ================================================================
+//  Doc checklist
+// ================================================================
+function renderDocChecklist() {
+  document.getElementById('sec-doc-scan').innerHTML = DOC_CHECKLIST.map((it,i) => `
+    <div class="chk" id="drow-${it.id}">
+      <div class="chk-num">${String(i+1).padStart(2,'0')}</div>
+      <div class="chk-body">
+        <div class="chk-label">
+          ${it.label}
+          ${it.required ? '<span class="chk-tag tag-req">必須</span>' : ''}
+        </div>
+        <div class="chk-desc">${it.desc}</div>
+      </div>
+      <div class="sbg">
+        <button class="sb" id="dsb-ok-${it.id}"  onclick="setDocCheck('${it.id}','ok')">✓</button>
+        <button class="sb" id="dsb-ng-${it.id}"  onclick="setDocCheck('${it.id}','ng')">✗</button>
+        <button class="sb" id="dsb-na-${it.id}"  onclick="setDocCheck('${it.id}','na')">—</button>
+      </div>
+    </div>`).join('');
+
+  // Restore
+  Object.entries(currentCase.docCheckState).forEach(([id, s]) => applyDocCheck(id, s));
+  updateDocProgress();
+}
+
+// ================================================================
+//  Check state
+// ================================================================
+function setCheck(id, state) {
+  currentCase.checkState[id] = state;
+  applyCheck(id, state);
+  updateProgress();
+  updateSectionProgress();
+}
+function applyCheck(id, state) {
+  ['ok','ng','na'].forEach(s => {
+    const b = document.getElementById(`sb-${s}-${id}`);
+    if (b) b.className = 'sb' + (state===s ? ' '+s : '');
+  });
+  const row = document.getElementById(`row-${id}`);
+  if (row) { row.className = 'chk'+(state==='ok'?' ok-row':state==='ng'?' ng-row':''); }
+  const inp = document.getElementById(`inp-${id}`);
+  if (inp) inp.className = 'chk-input' + (state==='ng'?' show':'');
+}
+
+function setDocCheck(id, state) {
+  currentCase.docCheckState[id] = state;
+  applyDocCheck(id, state);
+  updateDocProgress();
+  updateProgress();
+}
+function applyDocCheck(id, state) {
+  ['ok','ng','na'].forEach(s => {
+    const b = document.getElementById(`dsb-${s}-${id}`);
+    if (b) b.className = 'sb' + (state===s ? ' '+s : '');
+  });
+  const row = document.getElementById(`drow-${id}`);
+  if (row) row.className = 'chk'+(state==='ok'?' ok-row':state==='ng'?' ng-row':'');
+}
+
+// ================================================================
+//  Progress
+// ================================================================
+function updateProgress() {
+  if (!currentCase) return;
+  const allIT  = IT_CHECKLIST.flatMap(s=>s.items);
+  const doneIT = allIT.filter(it=>currentCase.checkState[it.id]).length;
+  const trackDone = Object.values(currentCase.trackNos).filter(v=>v&&v.length===12).length;
+  const doneDoc = Object.values(currentCase.docCheckState).filter(v=>v).length;
+
+  const total = allIT.length + 2 + DOC_CHECKLIST.length; // 2 required tracks
+  const done  = doneIT + Math.min(trackDone,2) + doneDoc;
+  const pct   = total > 0 ? Math.round((done/total)*100) : 0;
+
+  const clr   = pct < 40 ? 'var(--orange)' : pct < 100 ? 'var(--blue)' : 'var(--green)';
+  document.getElementById('c-pct').textContent = pct + '%';
+  document.getElementById('c-pct').style.color  = clr;
+  document.getElementById('c-bar').style.width   = pct + '%';
+  document.getElementById('c-bar').style.background = clr;
+
+  const itPct = allIT.length > 0 ? Math.round((doneIT/allIT.length)*100) : 0;
+  document.getElementById('ab-progress').textContent =
+    `IT重説 ${doneIT}/${allIT.length}項目 完了 ／ 書類 ${doneDoc}/${DOC_CHECKLIST.length}項目 ／ 追跡番号 ${trackDone}/3`;
+}
+
+function updateSectionProgress() {
+  IT_CHECKLIST.forEach(sec => {
+    const done = sec.items.filter(it=>currentCase.checkState[it.id]).length;
+    const el   = document.getElementById(`sp-${sec.id}`);
+    if (el) el.textContent = `${done}/${sec.items.length}`;
+  });
+}
+
+function updateDocProgress() {
+  const done = Object.values(currentCase.docCheckState).filter(v=>v).length;
+  const el   = document.getElementById('doc-prog');
+  if (el) el.textContent = `${done}/${DOC_CHECKLIST.length}`;
+}
+
+// ================================================================
+//  Section toggle
+// ================================================================
+function toggleSec(id, btn) {
+  const body = document.getElementById(`sb-${id}`);
+  const chev = btn ? btn.querySelector('.sec-chev') : null;
+  if (body) body.classList.toggle('collapsed');
+  if (chev) chev.classList.toggle('open');
+}
+// ================================================================
+//  Pane switch
+// ================================================================
+function switchPane(i, btn) {
+  currentPane = i;
+  document.querySelectorAll('.tt').forEach((t,j)=>t.classList.toggle('on',j===i));
+  document.getElementById('pane-0').style.display = i===0?'block':'none';
+  document.getElementById('pane-1').style.display = i===1?'block':'none';
+}
+
+// ================================================================
+//  Actions
+// ================================================================
+function saveMemo(id, val) {
+  if (!currentCase.memos) currentCase.memos = {};
+  currentCase.memos[id] = val;
+}
+
+function saveToKintone() {
+  if (!currentCase) return;
+  const done = IT_CHECKLIST.flatMap(s=>s.items).filter(it=>currentCase.checkState[it.id]).length;
+  const total= IT_CHECKLIST.flatMap(s=>s.items).length;
+  alert(`💾 Kintoneに保存しました\n\n案件：${currentCase.id}\n顧客：${currentCase.name}\nIT重説チェック：${done}/${total}項目\n追跡番号：往路${currentCase.trackNos.send||'未'} / 復路${currentCase.trackNos.reply||'未'}`);
+}
+
+function notifySlack() {
+  if (!currentCase) return;
+  alert(`📢 Slack通知送信\n\n#案件管理チャンネルに投稿\n「${currentCase.id} ${currentCase.name}様 IT重説チェック更新」\n\n※本番ではZapier経由でSlackに自動通知されます`);
+}
+
+function showCompleteModal() {
+  if (!currentCase) return;
+  const c   = currentCase;
+  const all = IT_CHECKLIST.flatMap(s=>s.items);
+  const done= all.filter(it=>c.checkState[it.id]==='ok').length;
+  const ng  = all.filter(it=>c.checkState[it.id]==='ng').length;
+  const mins= Math.floor(timerElapsed/60);
+  const secs= timerElapsed%60;
+
+  document.getElementById('modal-body').innerHTML = `
+    <div class="modal-row"><span class="mr-key">案件ID</span><span class="mr-val">${c.id}</span></div>
+    <div class="modal-row"><span class="mr-key">顧客名</span><span class="mr-val">${c.name} 様</span></div>
+    <div class="modal-row"><span class="mr-key">実施日時</span><span class="mr-val">${new Date().toLocaleString('ja-JP')}</span></div>
+    <div class="modal-row"><span class="mr-key">所要時間</span><span class="mr-val">${mins}分${secs}秒</span></div>
+    <div class="modal-row"><span class="mr-key">チェック完了</span><span class="mr-val" style="color:var(--green)">${done}/${all.length}項目</span></div>
+    ${ng>0?`<div class="modal-row"><span class="mr-key">問題あり項目</span><span class="mr-val" style="color:var(--red)">${ng}項目</span></div>`:''}
+    <div class="modal-row"><span class="mr-key">メモ</span><span class="mr-val" style="font-family:inherit;font-size:11px;max-width:280px;text-align:right">${document.getElementById('it-memo').value||'（なし）'}</span></div>
+    <div style="margin-top:12px;padding:10px;background:rgba(52,211,153,.06);border-radius:8px;
+                font-size:11px;color:var(--sub)">
+      送信すると Kintone に完了記録が保存され、エージェントの LINE に完了通知が送られます。
+    </div>`;
+  document.getElementById('modal-overlay').classList.add('show');
+}
+
+function submitComplete() {
+  if (currentCase) {
+    currentCase.status = 'scan-pending';
+    currentCase.itStatus = 'done';
+    currentCase.itDoneAt = new Date().toLocaleString('ja-JP');
+    currentCase.itDuration = Math.floor(timerElapsed/60);
+  }
+  closeModal();
+  renderCaseList();
+  document.getElementById('ab-complete-btn').textContent = '📦 書類管理へ';
+  alert('✅ IT重説完了報告を送信しました\n\nKintoneに記録されました。\n次のステップ：契約書（往路）の発送と追跡番号登録');
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('show');
+}
+</script>
+</body>
+</html>

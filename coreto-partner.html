@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CORETO パートナーポータル</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090f;--card:#0f1119;--card2:#141720;--border:#1e2235;--border2:#252a3d;
+  --gold:#c9a84c;--gold-l:#e8c96a;--gold-dim:#7a5f22;--gold-bg:rgba(201,168,76,.07);
+  --blue:#4f9cf9;--green:#34d399;--red:#f87171;--orange:#fb923c;--purple:#a78bfa;--teal:#2dd4bf;
+  --muted:#4a5270;--sub:#7a849e;--text:#e2e6f3;
+}
+html,body{height:100%;font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text)}
+
+/* ── Header ── */
+.header{display:flex;align-items:center;justify-content:space-between;
+  padding:0 24px;height:54px;border-bottom:1px solid var(--border);
+  background:rgba(7,9,15,.92);backdrop-filter:blur(14px);position:sticky;top:0;z-index:200}
+.logo{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:var(--gold);letter-spacing:3px}
+.header-right{display:flex;align-items:center;gap:12px}
+.pt-badge{display:flex;align-items:center;gap:8px;padding:5px 12px;
+  background:var(--gold-bg);border:1px solid var(--gold-dim);border-radius:8px}
+.pt-avatar{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--gold),#8a5e1a);
+  display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#0a0c10}
+.pt-name{font-size:11px;color:var(--gold);font-weight:700}
+.pt-id{font-size:9px;color:var(--gold-dim);font-family:'DM Mono',monospace}
+
+/* ── Layout ── */
+.layout{display:flex;height:calc(100vh - 54px)}
+
+/* ── Sidebar ── */
+.sidebar{width:220px;flex-shrink:0;background:var(--card2);border-right:1px solid var(--border);
+  padding:20px 0;display:flex;flex-direction:column;gap:2px;overflow-y:auto}
+.nav-section{padding:0 16px;margin-bottom:6px;margin-top:14px}
+.nav-section:first-child{margin-top:0}
+.ns-label{font-size:8px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;
+  padding-left:10px;margin-bottom:6px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px 9px 10px;
+  border-radius:9px;cursor:pointer;transition:all .15s;font-size:12px;color:var(--sub)}
+.nav-item:hover{background:rgba(255,255,255,.04);color:var(--text)}
+.nav-item.on{background:var(--gold-bg);color:var(--gold);border:1px solid var(--gold-dim)}
+.nav-icon{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;
+  font-size:14px;background:rgba(255,255,255,.04);flex-shrink:0}
+.nav-item.on .nav-icon{background:rgba(201,168,76,.12)}
+.nav-badge{margin-left:auto;background:var(--red);color:#fff;font-size:8px;font-weight:700;
+  padding:2px 6px;border-radius:10px;min-width:18px;text-align:center}
+
+/* ── Content ── */
+.content{flex:1;overflow-y:auto;padding:24px 28px 60px}
+.page{display:none}
+.page.on{display:block}
+
+/* ── Page header ── */
+.page-hdr{margin-bottom:22px}
+.page-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;margin-bottom:4px}
+.page-sub{font-size:11px;color:var(--sub)}
+
+/* ── Cards ── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px}
+.card-hdr{padding:14px 18px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between}
+.card-title{font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;
+  display:flex;align-items:center;gap:8px}
+.card-title::before{content:'';width:3px;height:12px;border-radius:2px}
+.card-body{padding:18px}
+
+/* ── Stats grid ── */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:13px;
+  padding:16px 18px;position:relative;overflow:hidden;cursor:pointer;transition:border-color .15s}
+.stat:hover{border-color:var(--border2)}
+.stat-val{font-family:'DM Mono',monospace;font-size:28px;font-weight:500;line-height:1;margin-bottom:4px}
+.stat-label{font-size:10px;color:var(--muted)}
+.stat-trend{font-size:10px;margin-top:6px}
+
+/* ── Referral code card ── */
+.code-display{background:linear-gradient(135deg,#0d1020,#141928);
+  border:1px solid var(--gold-dim);border-radius:14px;padding:24px;position:relative;overflow:hidden}
+.code-display::before{content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse at top right,rgba(201,168,76,.08),transparent 60%)}
+.code-text{font-family:'DM Mono',monospace;font-size:36px;font-weight:500;
+  color:var(--gold-l);letter-spacing:6px;margin:12px 0}
+.code-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.code-stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:18px}
+.cs-item{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:12px}
+.cs-val{font-family:'DM Mono',monospace;font-size:20px;font-weight:700;color:var(--gold)}
+.cs-label{font-size:10px;color:var(--muted);margin-top:3px}
+
+/* share QR placeholder */
+.qr-placeholder{width:100px;height:100px;background:var(--border2);border-radius:10px;
+  display:flex;align-items:center;justify-content:center;font-size:28px;
+  border:1px solid var(--border)}
+
+/* ── Case list ── */
+.case-list{display:flex;flex-direction:column;gap:1px}
+.case-row{display:grid;align-items:center;padding:12px 18px;
+  border-bottom:1px solid rgba(30,34,53,.6);gap:12px;transition:background .12s;cursor:pointer}
+.case-row:last-child{border:none}
+.case-row:hover{background:rgba(255,255,255,.015)}
+.case-row-7{grid-template-columns:1.8fr 1.2fr .8fr 1fr 1fr .8fr auto}
+.case-row-5{grid-template-columns:1.8fr 1.2fr 1fr 1fr auto}
+
+/* ── Status pill ── */
+.pill{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;
+  border-radius:6px;font-size:9px;font-weight:700;white-space:nowrap}
+.pill-green{background:rgba(52,211,153,.13);color:var(--green);border:1px solid rgba(52,211,153,.3)}
+.pill-blue{background:rgba(79,156,249,.12);color:var(--blue);border:1px solid rgba(79,156,249,.25)}
+.pill-orange{background:rgba(251,146,60,.12);color:var(--orange);border:1px solid rgba(251,146,60,.3)}
+.pill-gold{background:rgba(201,168,76,.13);color:var(--gold);border:1px solid var(--gold-dim)}
+.pill-muted{background:rgba(74,82,112,.15);color:var(--sub);border:1px solid var(--border2)}
+.pill-red{background:rgba(248,113,113,.13);color:var(--red);border:1px solid rgba(248,113,113,.3)}
+
+/* ── Progress stepper ── */
+.stepper{display:flex;align-items:center;gap:0}
+.step{display:flex;align-items:center}
+.step-dot{width:20px;height:20px;border-radius:50%;border:2px solid var(--border2);
+  display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;
+  flex-shrink:0;font-family:'DM Mono',monospace}
+.step-dot.done{background:var(--green);border-color:var(--green);color:#0a0c10}
+.step-dot.active{background:var(--blue);border-color:var(--blue);color:#fff;
+  box-shadow:0 0 10px rgba(79,156,249,.4)}
+.step-dot.wait{color:var(--muted)}
+.step-line{width:24px;height:1px;background:var(--border2)}
+.step-line.done{background:var(--green)}
+
+/* ── Timeline ── */
+.timeline{display:flex;flex-direction:column;gap:0}
+.tl-item{display:flex;gap:14px;padding-bottom:18px;position:relative}
+.tl-item:last-child{padding-bottom:0}
+.tl-left{display:flex;flex-direction:column;align-items:center;gap:0}
+.tl-dot{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-size:13px;flex-shrink:0;z-index:1}
+.tl-line{width:1px;flex:1;margin:4px 0;min-height:14px}
+.tl-content{flex:1;padding-top:3px}
+.tl-date{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:2px}
+.tl-msg{font-size:12px;line-height:1.6}
+
+/* ── Buttons ── */
+.btn{padding:8px 16px;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;
+  font-family:'Noto Sans JP',sans-serif;transition:all .15s;border:none;white-space:nowrap}
+.btn-primary{background:linear-gradient(135deg,var(--gold),#a8742a);color:#0a0c10}
+.btn-primary:hover{filter:brightness(1.1);transform:translateY(-1px)}
+.btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--sub)}
+.btn-ghost:hover{color:var(--text);border-color:var(--sub)}
+.btn-blue{background:rgba(79,156,249,.12);border:1px solid rgba(79,156,249,.3);color:var(--blue)}
+.btn-blue:hover{background:rgba(79,156,249,.2)}
+.btn-green{background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);color:var(--green)}
+.btn-sm{padding:5px 11px;font-size:10px;border-radius:7px}
+
+/* ── Reward table ── */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{padding:9px 14px;font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.5px;
+  text-transform:uppercase;border-bottom:1px solid var(--border);background:var(--card2);text-align:left;white-space:nowrap}
+.tbl td{padding:11px 14px;border-bottom:1px solid rgba(30,34,53,.5);font-size:12px;vertical-align:middle}
+.tbl tr:last-child td{border:none}
+.tbl tr:hover td{background:rgba(255,255,255,.01)}
+.mono{font-family:'DM Mono',monospace}
+
+/* ── Message ── */
+.msg-layout{display:grid;grid-template-columns:220px 1fr;gap:0;height:calc(100vh - 54px - 48px - 48px);
+  background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.msg-list{border-right:1px solid var(--border);overflow-y:auto}
+.msg-list-hdr{padding:14px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700}
+.msg-contact{display:flex;align-items:center;gap:10px;padding:11px 14px;cursor:pointer;transition:background .12s}
+.msg-contact:hover{background:rgba(255,255,255,.03)}
+.msg-contact.on{background:var(--gold-bg)}
+.mc-avatar{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;
+  justify-content:center;font-size:14px;flex-shrink:0}
+.mc-name{font-size:12px;font-weight:700;line-height:1.3}
+.mc-last{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px}
+.mc-time{font-size:9px;color:var(--muted);margin-left:auto;flex-shrink:0}
+.mc-unread{background:var(--blue);color:#fff;font-size:8px;font-weight:700;
+  padding:1px 5px;border-radius:8px;min-width:16px;text-align:center}
+.msg-main{display:flex;flex-direction:column}
+.msg-hdr{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px}
+.msg-body{flex:1;overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:12px}
+.msg-bubble{max-width:70%;padding:10px 14px;border-radius:12px;font-size:12px;line-height:1.6}
+.msg-me{align-self:flex-end;background:rgba(201,168,76,.15);border:1px solid var(--gold-dim);border-radius:12px 12px 3px 12px}
+.msg-them{align-self:flex-start;background:var(--card2);border:1px solid var(--border);border-radius:12px 12px 12px 3px}
+.msg-time{font-size:9px;color:var(--muted);margin-top:3px;text-align:right}
+.msg-footer{padding:12px 18px;border-top:1px solid var(--border);display:flex;gap:10px;align-items:flex-end}
+.msg-input{flex:1;background:var(--card2);border:1px solid var(--border2);border-radius:10px;
+  padding:10px 14px;color:var(--text);font-size:12px;font-family:'Noto Sans JP',sans-serif;
+  resize:none;min-height:42px;max-height:100px;line-height:1.6}
+.msg-input:focus{outline:none;border-color:var(--blue)}
+
+/* ── Register form ── */
+.form-section{background:var(--card2);border:1px solid var(--border);border-radius:10px;
+  padding:16px;margin-bottom:14px}
+.fs-title{font-size:9px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;
+  margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.fs-title::before{content:'';width:3px;height:10px;border-radius:2px;background:var(--gold)}
+.frow{display:grid;gap:10px;margin-bottom:10px}
+.f2{grid-template-columns:1fr 1fr}
+.f3{grid-template-columns:1fr 1fr 1fr}
+.field label{display:block;font-size:10px;color:var(--sub);margin-bottom:4px}
+.field input,.field select,.field textarea{
+  width:100%;background:#090b13;border:1px solid var(--border2);border-radius:8px;
+  padding:9px 12px;color:var(--text);font-size:12px;font-family:'Noto Sans JP',sans-serif}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--blue)}
+.field input::placeholder{color:var(--muted)}
+.req{color:var(--red);margin-left:2px}
+
+/* ── Referral link box ── */
+.link-box{display:flex;align-items:center;gap:0;background:#090b13;border:1px solid var(--border2);
+  border-radius:9px;overflow:hidden}
+.link-text{flex:1;padding:9px 12px;font-size:11px;color:var(--sub);font-family:'DM Mono',monospace;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.link-copy-btn{padding:9px 14px;background:var(--card2);border-left:1px solid var(--border2);
+  font-size:11px;font-weight:700;cursor:pointer;color:var(--muted);border:none;
+  font-family:'Noto Sans JP',sans-serif;transition:all .15s;white-space:nowrap}
+.link-copy-btn:hover{color:var(--gold);background:var(--gold-bg)}
+
+/* ── Unread dot ── */
+.unread-dot{width:7px;height:7px;border-radius:50%;background:var(--blue);flex-shrink:0}
+
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+</style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<div class="header">
+  <div style="display:flex;align-items:center;gap:12px">
+    <div class="logo">CORETO
+  <button onclick="window.location.href='coreto-hub.html'"
+            style="font-size:10px;padding:5px 12px;border-radius:6px;border:1px solid var(--border2);
+            background:transparent;color:var(--muted);cursor:pointer;font-family:'Noto Sans JP',sans-serif">
+    ← ログイン
+  </button>
+</div>
+    <div style="width:1px;height:18px;background:var(--border2)"></div>
+    <div style="font-size:10px;color:var(--muted);letter-spacing:1px">パートナーポータル</div>
+  </div>
+  <div class="header-right">
+    <div class="pt-badge">
+      <div class="pt-avatar">佐</div>
+      <div>
+        <div class="pt-name">佐藤 美咲</div>
+        <div class="pt-id">PT-30007</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="layout">
+
+<!-- ── Sidebar ── -->
+<div class="sidebar">
+  <div class="nav-section">
+    <div class="ns-label">メニュー</div>
+    <div class="nav-item on" onclick="nav(0,this)">
+      <div class="nav-icon">📊</div> ダッシュボード
+    </div>
+    <div class="nav-item" onclick="nav(1,this)">
+      <div class="nav-icon">📋</div> 紹介案件
+    </div>
+    <div class="nav-item" onclick="nav(2,this)">
+      <div class="nav-icon">🔗</div> 紹介コード
+    </div>
+    <div class="nav-item" onclick="nav(3,this)">
+      <div class="nav-icon">💰</div> 報酬・振込
+    </div>
+    <div class="nav-item" onclick="nav(4,this)">
+      <div class="nav-icon">✉️</div> メッセージ
+      <span class="nav-badge" id="msg-badge">2</span>
+    </div>
+  </div>
+  <div class="nav-section">
+    <div class="ns-label">アクション</div>
+    <div class="nav-item" onclick="nav(5,this)">
+      <div class="nav-icon">➕</div> 新規紹介を登録
+    </div>
+  </div>
+  <div style="flex:1"></div>
+  <div style="padding:16px;border-top:1px solid var(--border)">
+    <div style="font-size:10px;color:var(--muted);line-height:1.8;margin-bottom:10px">
+      サポート：<br>
+      <span style="color:var(--blue)"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="c4b7b1b4b4abb6b084a7abb6a1b0abeaaeb4">[email&#160;protected]</a></span>
+    </div>
+    <button onclick="doLogout()"
+            style="width:100%;padding:7px;border-radius:7px;background:transparent;
+            border:1px solid var(--border2);color:var(--muted);font-size:11px;
+            cursor:pointer;font-family:'Noto Sans JP',sans-serif;transition:all .15s"
+            onmouseover="this.style.color='var(--red)';this.style.borderColor='rgba(248,113,113,.4)'"
+            onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border2)'">
+      🚪 ログアウト
+    </button>
+  </div>
+</div>
+
+<!-- ── Main Content ── -->
+<div class="content">
+
+<!-- ━━ PAGE 0: Dashboard ━━ -->
+<div class="page on" id="page-0">
+  <div class="page-hdr">
+    <div class="page-title">ダッシュボード</div>
+    <div class="page-sub">佐藤 美咲さん、こんにちは。あなたの紹介活動の概要です。</div>
+  </div>
+
+  <div class="stats">
+    <div class="stat" onclick="nav(1,null)">
+      <div style="font-size:20px;margin-bottom:8px">📋</div>
+      <div class="stat-val" style="color:var(--blue)">8</div>
+      <div class="stat-label">紹介案件（累計）</div>
+      <div class="stat-trend" style="color:var(--green)">▲ 今月 +2件</div>
+    </div>
+    <div class="stat" onclick="nav(1,null)">
+      <div style="font-size:20px;margin-bottom:8px">🔄</div>
+      <div class="stat-val" style="color:var(--orange)">3</div>
+      <div class="stat-label">進行中</div>
+      <div class="stat-trend" style="color:var(--sub)">対応中の案件</div>
+    </div>
+    <div class="stat" onclick="nav(3,null)">
+      <div style="font-size:20px;margin-bottom:8px">✅</div>
+      <div class="stat-val" style="color:var(--green)">5</div>
+      <div class="stat-label">成約件数</div>
+      <div class="stat-trend" style="color:var(--green)">成約率 62.5%</div>
+    </div>
+    <div class="stat" onclick="nav(3,null)">
+      <div style="font-size:20px;margin-bottom:8px">💰</div>
+      <div class="stat-val" style="color:var(--gold);font-size:20px">¥523,750</div>
+      <div class="stat-label">累計受取報酬</div>
+      <div class="stat-trend" style="color:var(--sub)">次回振込 3月25日</div>
+    </div>
+  </div>
+
+  <!-- Recent cases + Next payment -->
+  <div style="display:grid;grid-template-columns:1fr 320px;gap:16px">
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-title" style="--c:var(--blue)">最近の紹介案件</div>
+        <button class="btn btn-ghost btn-sm" onclick="nav(1,null)">すべて見る</button>
+      </div>
+      <div>
+        <div style="display:grid;grid-template-columns:1.8fr 1.2fr 1fr auto;padding:9px 18px;
+                    font-size:9px;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;
+                    border-bottom:1px solid var(--border);background:var(--card2);gap:12px">
+          <div>顧客名 / 物件</div><div>担当AG</div><div>ステータス</div><div>報酬</div>
+        </div>
+        <div id="dash-cases"></div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <!-- Next payment -->
+      <div class="card">
+        <div class="card-hdr">
+          <div class="card-title">次回振込</div>
+        </div>
+        <div class="card-body">
+          <div style="font-family:'DM Mono',monospace;font-size:28px;font-weight:700;color:var(--gold);margin-bottom:6px">¥83,750</div>
+          <div style="font-size:11px;color:var(--sub);margin-bottom:14px">2026年3月25日 振込予定</div>
+          <div style="background:var(--card2);border-radius:8px;padding:10px 12px">
+            <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:5px">
+              <span style="color:var(--sub)">報酬合計</span>
+              <span class="mono">¥83,750</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:5px">
+              <span style="color:var(--sub)">源泉徴収</span>
+              <span class="mono" style="color:var(--red)">-¥8,551</span>
+            </div>
+            <div style="height:1px;background:var(--border);margin:8px 0"></div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700">
+              <span style="color:var(--sub)">振込額</span>
+              <span class="mono" style="color:var(--green)">¥75,199</span>
+            </div>
+          </div>
+          <button class="btn btn-ghost btn-sm" style="width:100%;margin-top:12px;text-align:center" onclick="nav(3,null)">振込明細を確認</button>
+        </div>
+      </div>
+
+      <!-- Code quick view -->
+      <div class="card">
+        <div class="card-hdr">
+          <div class="card-title">紹介コード</div>
+        </div>
+        <div class="card-body">
+          <div style="font-family:'DM Mono',monospace;font-size:22px;font-weight:700;
+                      color:var(--gold);letter-spacing:4px;text-align:center;padding:10px 0">PT-SATO2026</div>
+          <button class="btn btn-ghost btn-sm" style="width:100%;text-align:center;margin-top:8px"
+                  onclick="copyCode()">📋 コードをコピー</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ━━ PAGE 1: Cases ━━ -->
+<div class="page" id="page-1">
+  <div class="page-hdr">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div>
+        <div class="page-title">紹介案件</div>
+        <div class="page-sub">あなたが紹介した案件のステータスをリアルタイムで追跡できます</div>
+      </div>
+      <button class="btn btn-primary" onclick="nav(5,null)">➕ 新規紹介を登録</button>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+    <button class="btn btn-ghost btn-sm on-filter" data-f="all" onclick="filterCases('all',this)" style="border-color:var(--gold-dim);color:var(--gold);background:var(--gold-bg)">全て（8）</button>
+    <button class="btn btn-ghost btn-sm" data-f="active" onclick="filterCases('active',this)">進行中（3）</button>
+    <button class="btn btn-ghost btn-sm" data-f="done" onclick="filterCases('done',this)">成約済み（5）</button>
+  </div>
+
+  <div class="card" style="overflow:hidden">
+    <div style="display:grid;grid-template-columns:1.8fr 1fr 1fr 1.4fr 1fr auto;
+                padding:9px 18px;font-size:9px;color:var(--muted);letter-spacing:.5px;
+                text-transform:uppercase;border-bottom:1px solid var(--border);
+                background:var(--card2);gap:12px">
+      <div>顧客名 / 物件・ポジション</div><div>担当エージェント</div>
+      <div>紹介日</div><div>進捗</div><div>報酬</div><div>詳細</div>
+    </div>
+    <div id="case-list-body"></div>
+  </div>
+</div>
+
+<!-- ━━ PAGE 2: Code ━━ -->
+<div class="page" id="page-2">
+  <div class="page-hdr">
+    <div class="page-title">紹介コード</div>
+    <div class="page-sub">このコードを顧客に共有することで案件を紹介できます</div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 300px;gap:16px">
+    <div>
+      <div class="code-display" style="margin-bottom:16px">
+        <div style="font-size:11px;color:var(--gold-dim);letter-spacing:2px;text-transform:uppercase">あなたの紹介コード</div>
+        <div class="code-text">PT-SATO2026</div>
+        <div style="font-size:11px;color:var(--sub)">このコードを使って登録した顧客が成約すると、手数料の25%が報酬として支払われます</div>
+        <div class="code-actions">
+          <button class="btn btn-primary" onclick="copyCode()">📋 コードをコピー</button>
+          <button class="btn btn-blue" onclick="copyLink()">🔗 紹介リンクをコピー</button>
+          <button class="btn btn-ghost" onclick="shareSlack()">💬 Slackで共有</button>
+        </div>
+        <div class="code-stat-grid">
+          <div class="cs-item">
+            <div class="cs-val">8</div>
+            <div class="cs-label">コード使用回数</div>
+          </div>
+          <div class="cs-item">
+            <div class="cs-val">5</div>
+            <div class="cs-label">成約件数</div>
+          </div>
+          <div class="cs-item">
+            <div class="cs-val">62.5%</div>
+            <div class="cs-label">成約率</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Referral link -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-hdr"><div class="card-title">紹介リンク</div></div>
+        <div class="card-body">
+          <div class="link-box">
+            <div class="link-text" id="ref-link-text">https://coreto.jp/register?code=PT-SATO2026</div>
+            <button class="link-copy-btn" onclick="copyLink()">コピー</button>
+          </div>
+          <div style="font-size:10px;color:var(--muted);margin-top:8px;line-height:1.8">
+            このリンクを顧客に送ると、登録フォームにコードが自動入力されます。
+          </div>
+        </div>
+      </div>
+
+      <!-- How it works -->
+      <div class="card">
+        <div class="card-hdr"><div class="card-title">紹介フロー</div></div>
+        <div class="card-body">
+          <div style="display:flex;gap:0;flex-wrap:nowrap;align-items:flex-start">
+            <div style="flex:1;text-align:center;padding:0 8px">
+              <div style="width:40px;height:40px;border-radius:10px;background:var(--gold-bg);border:1px solid var(--gold-dim);
+                          display:flex;align-items:center;justify-content:center;font-size:18px;margin:0 auto 8px">🤝</div>
+              <div style="font-size:11px;font-weight:700;margin-bottom:4px">①紹介</div>
+              <div style="font-size:10px;color:var(--sub)">顧客にコード or リンクを渡す</div>
+            </div>
+            <div style="padding-top:20px;color:var(--muted)">→</div>
+            <div style="flex:1;text-align:center;padding:0 8px">
+              <div style="width:40px;height:40px;border-radius:10px;background:rgba(79,156,249,.1);border:1px solid rgba(79,156,249,.25);
+                          display:flex;align-items:center;justify-content:center;font-size:18px;margin:0 auto 8px">📋</div>
+              <div style="font-size:11px;font-weight:700;margin-bottom:4px">②案件登録</div>
+              <div style="font-size:10px;color:var(--sub)">このポータルから物件・条件を登録</div>
+            </div>
+            <div style="padding-top:20px;color:var(--muted)">→</div>
+            <div style="flex:1;text-align:center;padding:0 8px">
+              <div style="width:40px;height:40px;border-radius:10px;background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.2);
+                          display:flex;align-items:center;justify-content:center;font-size:18px;margin:0 auto 8px">🏠</div>
+              <div style="font-size:11px;font-weight:700;margin-bottom:4px">③AGが対応</div>
+              <div style="font-size:10px;color:var(--sub)">COREが担当エージェントを選定</div>
+            </div>
+            <div style="padding-top:20px;color:var(--muted)">→</div>
+            <div style="flex:1;text-align:center;padding:0 8px">
+              <div style="width:40px;height:40px;border-radius:10px;background:var(--gold-bg);border:1px solid var(--gold-dim);
+                          display:flex;align-items:center;justify-content:center;font-size:18px;margin:0 auto 8px">💰</div>
+              <div style="font-size:11px;font-weight:700;margin-bottom:4px">④報酬受取</div>
+              <div style="font-size:10px;color:var(--sub)">成約で手数料の25%を毎月25日に振込</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: QR -->
+    <div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-hdr"><div class="card-title">QRコード</div></div>
+        <div class="card-body" style="display:flex;flex-direction:column;align-items:center;gap:14px">
+          <div class="qr-placeholder">📱</div>
+          <div style="font-size:10px;color:var(--muted);text-align:center;line-height:1.7">
+            QRコードを印刷して<br>名刺や資料に貼り付けられます
+          </div>
+          <button class="btn btn-ghost btn-sm" style="width:100%">🖨 QRを印刷</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hdr"><div class="card-title">報酬シミュレーター</div></div>
+        <div class="card-body">
+          <div style="font-size:11px;color:var(--sub);margin-bottom:10px">想定手数料を入力すると報酬額がわかります</div>
+          <div class="field" style="margin-bottom:10px">
+            <label>手数料合計（円）</label>
+            <input type="number" id="sim-fee" value="335000" oninput="updateSim()" style="font-family:'DM Mono',monospace">
+          </div>
+          <div style="background:var(--card2);border-radius:9px;padding:12px">
+            <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:5px">
+              <span style="color:var(--sub)">報酬（25%）</span>
+              <span class="mono" id="sim-gross">¥83,750</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:5px">
+              <span style="color:var(--sub)">源泉徴収（10.21%）</span>
+              <span class="mono" style="color:var(--red)" id="sim-tax">-¥8,551</span>
+            </div>
+            <div style="height:1px;background:var(--border);margin:7px 0"></div>
+            <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:700">
+              <span style="color:var(--sub)">手取り</span>
+              <span class="mono" style="color:var(--gold)" id="sim-net">¥75,199</span>
+            </div>
+          </div>
+          <div style="font-size:9px;color:var(--muted);margin-top:8px;line-height:1.7">
+            ※法人パートナーの場合は源泉徴収なし<br>
+            ※毎月25日に登録口座へ振込
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ━━ PAGE 3: Rewards ━━ -->
+<div class="page" id="page-3">
+  <div class="page-hdr">
+    <div class="page-title">報酬・振込明細</div>
+    <div class="page-sub">紹介報酬の履歴と振込明細を確認できます</div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">
+    <div class="stat" style="cursor:default">
+      <div style="font-size:18px;margin-bottom:6px">💰</div>
+      <div class="stat-val" style="color:var(--gold);font-size:22px">¥523,750</div>
+      <div class="stat-label">累計報酬（税抜）</div>
+    </div>
+    <div class="stat" style="cursor:default">
+      <div style="font-size:18px;margin-bottom:6px">💸</div>
+      <div class="stat-val" style="color:var(--red);font-size:22px">¥53,475</div>
+      <div class="stat-label">累計源泉徴収</div>
+    </div>
+    <div class="stat" style="cursor:default">
+      <div style="font-size:18px;margin-bottom:6px">🏦</div>
+      <div class="stat-val" style="color:var(--green);font-size:22px">¥470,275</div>
+      <div class="stat-label">累計手取り</div>
+    </div>
+  </div>
+
+  <!-- Monthly history -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-hdr">
+      <div class="card-title">月別報酬履歴</div>
+      <button class="btn btn-ghost btn-sm">📥 CSVダウンロード</button>
+    </div>
+    <table class="tbl">
+      <thead><tr>
+        <th>対象月</th><th>成約件数</th><th>報酬合計（税抜）</th><th>源泉徴収</th>
+        <th>手取り</th><th>振込日</th><th>ステータス</th><th>明細</th>
+      </tr></thead>
+      <tbody id="reward-history"></tbody>
+    </table>
+  </div>
+
+  <!-- Transfer info -->
+  <div class="card">
+    <div class="card-hdr"><div class="card-title">振込先口座</div></div>
+    <div class="card-body" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div>
+        <div style="font-size:10px;color:var(--sub);margin-bottom:10px">登録口座</div>
+        <div style="font-size:13px;line-height:2.2">
+          GMOあおぞらネット銀行　ビジネス営業部<br>
+          普通　1234567<br>
+          <strong>サトウ ミサキ</strong>
+        </div>
+        <button class="btn btn-ghost btn-sm" style="margin-top:12px">✏️ 口座を変更する</button>
+      </div>
+      <div style="background:var(--card2);border-radius:10px;padding:14px">
+        <div style="font-size:10px;color:var(--sub);margin-bottom:8px">振込スケジュール</div>
+        <div style="font-size:11px;color:var(--sub);line-height:2">
+          締め日：毎月末<br>
+          振込日：翌月25日<br>
+          源泉徴収票：年末発行<br>
+          <span style="color:var(--muted)">※法人口座への振込は源泉なし</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ━━ PAGE 4: Messages ━━ -->
+<div class="page" id="page-4">
+  <div class="page-hdr">
+    <div class="page-title">メッセージ</div>
+    <div class="page-sub">担当エージェントとCORETO本部とのメッセージ</div>
+  </div>
+  <div class="msg-layout">
+    <div class="msg-list">
+      <div class="msg-list-hdr">会話一覧</div>
+      <div id="contact-list"></div>
+    </div>
+    <div class="msg-main" id="msg-main">
+      <div id="msg-placeholder" style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px">
+        左の会話を選択してください
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ━━ PAGE 5: Register ━━ -->
+<div class="page" id="page-5">
+  <div class="page-hdr">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div>
+        <div class="page-title">新規紹介を登録</div>
+        <div class="page-sub">紹介する顧客・物件の情報を入力してください。登録後、担当エージェントが対応します。</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 300px;gap:16px">
+    <div>
+      <!-- 顧客情報 -->
+      <div class="form-section">
+        <div class="fs-title">顧客情報</div>
+        <div class="frow f2">
+          <div class="field"><label>顧客名<span class="req">*</span></label><input type="text" placeholder="例：田中 太郎"></div>
+          <div class="field"><label>電話番号<span class="req">*</span></label><input type="tel" placeholder="例：090-1234-5678"></div>
+        </div>
+        <div class="frow f2">
+          <div class="field"><label>メールアドレス</label><input type="email" placeholder="例：tanaka@example.com"></div>
+          <div class="field"><label>希望入居日 / 入職日</label><input type="date"></div>
+        </div>
+      </div>
+
+      <!-- 案件種別 -->
+      <div class="form-section">
+        <div class="fs-title">案件種別</div>
+        <div class="frow f2">
+          <div class="field"><label>事業種別<span class="req">*</span></label>
+            <select id="reg-type" onchange="updateRegType()">
+              <option value="rent">🏠 賃貸</option>
+              <option value="buy">🏢 売買</option>
+              <option value="hr">👥 人材紹介</option>
+            </select>
+          </div>
+          <div class="field"><label>希望エリア / 業種</label><input type="text" id="reg-area" placeholder="例：渋谷区・港区"></div>
+        </div>
+      </div>
+
+      <!-- 物件情報（不動産） -->
+      <div class="form-section" id="re-section">
+        <div class="fs-title">物件情報</div>
+        <div class="frow f2">
+          <div class="field"><label>物件名・番地</label><input type="text" placeholder="例：渋谷マンション 101号室"></div>
+          <div class="field"><label>家賃 / 売買価格（円）</label><input type="number" placeholder="例：150000" style="font-family:'DM Mono',monospace"></div>
+        </div>
+        <div class="frow f3">
+          <div class="field"><label>間取り</label>
+            <select><option>1R</option><option>1K</option><option>1DK</option><option>1LDK</option>
+              <option>2LDK</option><option>3LDK</option><option>その他</option></select>
+          </div>
+          <div class="field"><label>築年数</label><input type="number" placeholder="例：10" style="font-family:'DM Mono',monospace"></div>
+          <div class="field"><label>管理会社名</label><input type="text" placeholder="例：積水ハウス"></div>
+        </div>
+      </div>
+
+      <!-- HR情報 -->
+      <div class="form-section" id="hr-section" style="display:none">
+        <div class="fs-title">求人情報</div>
+        <div class="frow f2">
+          <div class="field"><label>希望職種</label><input type="text" placeholder="例：営業・ITエンジニア"></div>
+          <div class="field"><label>希望年収（万円）</label><input type="number" placeholder="例：600" style="font-family:'DM Mono',monospace"></div>
+        </div>
+        <div class="frow f2">
+          <div class="field"><label>現職・経験</label><input type="text" placeholder="例：営業5年"></div>
+          <div class="field"><label>転職時期</label>
+            <select><option>すぐ</option><option>1ヶ月以内</option><option>3ヶ月以内</option><option>半年以内</option></select>
+          </div>
+        </div>
+      </div>
+
+      <!-- メモ -->
+      <div class="form-section">
+        <div class="fs-title">備考・申し送り</div>
+        <div class="field">
+          <label>担当エージェントへのメモ</label>
+          <textarea rows="3" placeholder="例：犬を1匹飼っています。ペット可物件でお願いします。"></textarea>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:4px">
+        <button class="btn btn-ghost" onclick="nav(0,null)">キャンセル</button>
+        <button class="btn btn-primary" onclick="submitReferral()">📤 登録してエージェントに送る</button>
+      </div>
+    </div>
+
+    <!-- Right: guidance -->
+    <div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-hdr"><div class="card-title">登録後の流れ</div></div>
+        <div class="card-body">
+          <div class="timeline" id="reg-timeline">
+            <div class="tl-item">
+              <div class="tl-left"><div class="tl-dot" style="background:var(--gold-bg);border:1px solid var(--gold-dim)">①</div><div class="tl-line" style="background:var(--border2)"></div></div>
+              <div class="tl-content"><div class="tl-date">登録直後</div><div class="tl-msg">CORETO本部がSlackで案件を受け取り、担当エージェントに連絡します</div></div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-left"><div class="tl-dot" style="background:var(--card2);border:1px solid var(--border2)">②</div><div class="tl-line" style="background:var(--border2)"></div></div>
+              <div class="tl-content"><div class="tl-date">1〜2営業日</div><div class="tl-msg">エージェントが顧客に連絡。物件確認・内見を設定します</div></div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-left"><div class="tl-dot" style="background:var(--card2);border:1px solid var(--border2)">③</div><div class="tl-line" style="background:var(--border2)"></div></div>
+              <div class="tl-content"><div class="tl-date">進行中</div><div class="tl-msg">このポータルで進捗をリアルタイム確認できます</div></div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-left"><div class="tl-dot" style="background:var(--card2);border:1px solid var(--border2)">④</div></div>
+              <div class="tl-content"><div class="tl-date">成約後</div><div class="tl-msg">翌月25日に手数料の<strong style="color:var(--gold)">25%</strong>が振込まれます</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hdr"><div class="card-title">今月の試算</div></div>
+        <div class="card-body">
+          <div style="font-size:11px;color:var(--sub);line-height:1.9">
+            成約した場合の報酬例：<br>
+            <span style="color:var(--text)">賃貸 家賃15万円</span>→ 手数料¥165,000<br>
+            紹介報酬：<span style="color:var(--gold);font-weight:700">¥41,250</span>（25%）<br><br>
+            <span style="color:var(--text)">売買 3,000万円</span>→ 手数料¥1,056,000<br>
+            紹介報酬：<span style="color:var(--gold);font-weight:700">¥264,000</span>（25%）
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /content -->
+</div><!-- /layout -->
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+// ═══════════════════════════════════════
+//  Data
+// ═══════════════════════════════════════
+const yen = v => '¥' + Math.round(v).toLocaleString();
+
+const CASES = [
+  { id:1, client:'田中 雄介', prop:'渋谷区東2丁目マンション 302号室', type:'rent',
+    ag:'山田 誠', agId:'10012', date:'2026-01-15', status:'done',
+    fee:335000, reward:83750, step:4 },
+  { id:2, client:'鈴木 明日香', prop:'港区南青山 1LDK', type:'rent',
+    ag:'佐藤 花子', agId:'10008', date:'2026-01-28', status:'done',
+    fee:220000, reward:55000, step:4 },
+  { id:3, client:'高橋 健太', prop:'新宿区西新宿 2LDK', type:'rent',
+    ag:'山田 誠', agId:'10012', date:'2026-02-05', status:'done',
+    fee:285000, reward:71250, step:4 },
+  { id:4, client:'木村 奈々', prop:'世田谷区太子堂 1K', type:'rent',
+    ag:'鈴木 健太', agId:'10023', date:'2026-02-08', status:'done',
+    fee:130000, reward:32500, step:4 },
+  { id:5, client:'伊藤 良太', prop:'目黒区中目黒 マンション', type:'rent',
+    ag:'佐藤 花子', agId:'10008', date:'2026-02-10', status:'done',
+    fee:165000, reward:41250, step:4 },
+  { id:6, client:'中村 えみ', prop:'品川区大崎 1LDK', type:'rent',
+    ag:'山田 誠', agId:'10012', date:'2026-02-12', status:'active',
+    fee:null, reward:null, step:2 },
+  { id:7, client:'渡辺 翔', prop:'渋谷区代官山 2DK', type:'rent',
+    ag:'鈴木 健太', agId:'10023', date:'2026-02-16', status:'active',
+    fee:null, reward:null, step:1 },
+  { id:8, client:'松本 遥', prop:'新宿区四谷 1LDK', type:'rent',
+    ag:'—', agId:null, date:'2026-02-19', status:'active',
+    fee:null, reward:null, step:0 },
+];
+
+const STEPS = ['登録済み','AG対応中','内見・審査','申込済み','成約'];
+
+const REWARD_HISTORY = [
+  { month:'2026年2月分', count:1, gross:83750, tax:8551, net:75199, payDate:'2026-03-25', status:'予定' },
+  { month:'2026年1月分', count:2, gross:126250, tax:12890, net:113360, payDate:'2026-02-25', status:'振込済' },
+  { month:'2025年12月分', count:1, gross:71250, tax:7275, net:63975, payDate:'2026-01-25', status:'振込済' },
+  { month:'2025年11月分', count:1, gross:41250, tax:4211, net:37039, payDate:'2025-12-25', status:'振込済' },
+  { month:'2025年10月分', count:0, gross:0, tax:0, net:0, payDate:'—', status:'—' },
+];
+
+const CONTACTS = [
+  { id:1, name:'山田 誠', role:'担当エージェント（RE）', icon:'🏠',
+    unread:1,
+    msgs:[
+      { me:false, text:'佐藤さん、こんにちは。品川区大崎の件ですが、明日13時に内見を設定しました。', time:'2月19日 14:32' },
+      { me:true,  text:'ありがとうございます。顧客にも連絡しておきます！', time:'2月19日 14:45' },
+      { me:false, text:'よろしくお願いします。物件の詳細資料をDropboxに共有しました。', time:'2月19日 15:01' },
+      { me:false, text:'内見後の感触を教えていただけますか？申込みに進めそうであれば審査書類を準備します。', time:'2月20日 09:15' },
+    ]
+  },
+  { id:2, name:'CORETO 本部', role:'HQ サポート', icon:'🏢',
+    unread:1,
+    msgs:[
+      { me:false, text:'佐藤 美咲様、いつもご紹介ありがとうございます。2月分の報酬計算が完了しました。¥83,750を3月25日にお振込みします。', time:'2月20日 10:00' },
+      { me:true,  text:'確認しました。ありがとうございます。', time:'2月20日 10:15' },
+    ]
+  },
+  { id:3, name:'鈴木 健太', role:'担当エージェント（RE）', icon:'🏠',
+    unread:0,
+    msgs:[
+      { me:false, text:'佐藤さん、渡辺様の物件探しを開始しました。代官山エリアで3件候補があります。', time:'2月17日 16:00' },
+      { me:true,  text:'よろしくお願いします。渡辺さんは2LDKを希望していましたよね。', time:'2月17日 16:20' },
+      { me:false, text:'はい、2LDK・駅徒歩10分以内・築15年以内の条件で探しています。', time:'2月17日 16:25' },
+    ]
+  },
+];
+
+let currentContact = null;
+let caseFilter = 'all';
+
+// ═══════════════════════════════════════
+//  Navigation
+// ═══════════════════════════════════════
+function nav(i, btn) {
+  document.querySelectorAll('.page').forEach((p,j)=>p.classList.toggle('on',j===i));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('on'));
+  if (btn) btn.classList.add('on');
+  else {
+    const items = document.querySelectorAll('.nav-item');
+    if (i < items.length) items[i].classList.add('on');
+  }
+  if (i===4) renderMessages();
+}
+
+// ═══════════════════════════════════════
+//  Dashboard
+// ═══════════════════════════════════════
+function renderDash() {
+  const recent = CASES.slice(0,5);
+  document.getElementById('dash-cases').innerHTML = recent.map(c=>`
+    <div style="display:grid;grid-template-columns:1.8fr 1.2fr 1fr auto;
+                padding:11px 18px;border-bottom:1px solid rgba(30,34,53,.6);
+                gap:12px;font-size:12px;cursor:pointer;transition:background .12s"
+         onmouseover="this.style.background='rgba(255,255,255,.012)'" onmouseout="this.style.background=''"
+         onclick="nav(1,null)">
+      <div>
+        <div style="font-weight:700">${c.client}</div>
+        <div style="font-size:10px;color:var(--muted)">${c.prop}</div>
+      </div>
+      <div style="color:var(--sub);font-size:11px">${c.ag}</div>
+      <div>${statusPill(c.status)}</div>
+      <div class="mono" style="color:var(--gold);font-weight:700;white-space:nowrap">
+        ${c.reward ? yen(c.reward) : '—'}
+      </div>
+    </div>`).join('');
+}
+
+// ═══════════════════════════════════════
+//  Cases
+// ═══════════════════════════════════════
+function statusPill(s) {
+  if (s==='done')   return '<span class="pill pill-green">✓ 成約</span>';
+  if (s==='active') return '<span class="pill pill-blue">進行中</span>';
+  return '<span class="pill pill-muted">待機中</span>';
+}
+function stepperHTML(step) {
+  return '<div class="stepper">'
+    + STEPS.map((s,i)=>`
+      <div class="step">
+        <div class="step-dot ${i<step?'done':i===step?'active':'wait'}">${i<step?'✓':i+1}</div>
+        ${i<STEPS.length-1?`<div class="step-line ${i<step?'done':''}"></div>`:''}
+      </div>`).join('') + '</div>'
+    + `<div style="font-size:9px;color:var(--sub);margin-top:4px">${STEPS[Math.min(step,STEPS.length-1)]}</div>`;
+}
+
+function filterCases(f, btn) {
+  caseFilter = f;
+  document.querySelectorAll('.on-filter').forEach(b=>{
+    b.classList.remove('on-filter');
+    b.style.borderColor=''; b.style.color=''; b.style.background='';
+  });
+  btn.classList.add('on-filter');
+  btn.style.borderColor='var(--gold-dim)'; btn.style.color='var(--gold)'; btn.style.background='var(--gold-bg)';
+  renderCases();
+}
+
+function renderCases() {
+  const rows = caseFilter==='all' ? CASES
+    : caseFilter==='active' ? CASES.filter(c=>c.status==='active')
+    : CASES.filter(c=>c.status==='done');
+  document.getElementById('case-list-body').innerHTML = rows.map(c=>`
+    <div style="display:grid;grid-template-columns:1.8fr 1fr 1fr 1.4fr 1fr auto;
+                padding:12px 18px;border-bottom:1px solid rgba(30,34,53,.5);
+                gap:12px;font-size:12px;cursor:pointer;transition:background .12s;align-items:center"
+         onmouseover="this.style.background='rgba(255,255,255,.012)'" onmouseout="this.style.background=''">
+      <div>
+        <div style="font-weight:700">${c.client}</div>
+        <div style="font-size:10px;color:var(--muted)">${c.prop}</div>
+      </div>
+      <div>
+        <div style="font-size:11px">${c.ag}</div>
+        ${c.agId?`<div style="font-size:9px;color:var(--muted);font-family:'DM Mono',monospace">${c.agId}</div>`:''}
+      </div>
+      <div style="font-size:11px;color:var(--sub)">${c.date}</div>
+      <div>${stepperHTML(c.step)}</div>
+      <div class="mono" style="color:${c.reward?'var(--gold)':'var(--muted)'};font-weight:${c.reward?700:400}">
+        ${c.reward?yen(c.reward):'—'}
+      </div>
+      <div>${statusPill(c.status)}</div>
+    </div>`).join('');
+}
+
+// ═══════════════════════════════════════
+//  Simulator
+// ═══════════════════════════════════════
+function updateSim() {
+  const fee  = parseFloat(document.getElementById('sim-fee').value)||0;
+  const gr   = Math.round(fee * 0.25);
+  const tax  = gr <= 1e6 ? Math.floor(gr*0.1021) : Math.floor(1e6*0.1021+(gr-1e6)*0.2042);
+  const net  = gr - tax;
+  document.getElementById('sim-gross').textContent = yen(gr);
+  document.getElementById('sim-tax').textContent   = '-' + yen(tax);
+  document.getElementById('sim-net').textContent   = yen(net);
+}
+
+// ═══════════════════════════════════════
+//  Rewards
+// ═══════════════════════════════════════
+function renderRewards() {
+  document.getElementById('reward-history').innerHTML = REWARD_HISTORY.map(r=>`
+    <tr>
+      <td style="font-weight:600">${r.month}</td>
+      <td class="mono">${r.count}件</td>
+      <td class="mono">${r.gross?yen(r.gross):'—'}</td>
+      <td class="mono" style="color:var(--red)">${r.tax?'-'+yen(r.tax):'—'}</td>
+      <td class="mono" style="font-weight:700;color:${r.net?'var(--gold)':'var(--muted)'}">${r.net?yen(r.net):'—'}</td>
+      <td style="font-size:11px;color:var(--sub)">${r.payDate}</td>
+      <td>${r.status==='振込済'?'<span class="pill pill-green">振込済</span>':r.status==='予定'?'<span class="pill pill-orange">予定</span>':'<span class="pill pill-muted">—</span>'}</td>
+      <td>${r.count?'<button class="btn btn-ghost btn-sm">📄 明細</button>':'—'}</td>
+    </tr>`).join('');
+}
+
+// ═══════════════════════════════════════
+//  Messages
+// ═══════════════════════════════════════
+function renderMessages() {
+  const totalUnread = CONTACTS.reduce((s,c)=>s+c.unread,0);
+  document.getElementById('msg-badge').textContent = totalUnread || '';
+  document.getElementById('msg-badge').style.display = totalUnread ? 'inline-block' : 'none';
+
+  document.getElementById('contact-list').innerHTML = CONTACTS.map(c=>`
+    <div class="msg-contact ${currentContact===c.id?'on':''}" onclick="openChat(${c.id})">
+      <div class="mc-avatar" style="background:${c.id===2?'rgba(201,168,76,.15)':'rgba(79,156,249,.12)'}">${c.icon}</div>
+      <div style="flex:1;overflow:hidden">
+        <div style="display:flex;align-items:center;gap:6px">
+          <div class="mc-name">${c.name}</div>
+          ${c.unread?`<span class="mc-unread">${c.unread}</span>`:''}
+        </div>
+        <div class="mc-last">${c.msgs[c.msgs.length-1].text}</div>
+      </div>
+      <div class="mc-time">${c.msgs[c.msgs.length-1].time}</div>
+    </div>`).join('');
+}
+
+function openChat(id) {
+  currentContact = id;
+  const c = CONTACTS.find(x=>x.id===id);
+  c.unread = 0;
+  renderMessages();
+
+  const main = document.getElementById('msg-main');
+  main.innerHTML = `
+    <div class="msg-hdr">
+      <div class="mc-avatar" style="background:${id===2?'rgba(201,168,76,.15)':'rgba(79,156,249,.12)'};">${c.icon}</div>
+      <div>
+        <div style="font-weight:700;font-size:13px">${c.name}</div>
+        <div style="font-size:10px;color:var(--sub)">${c.role}</div>
+      </div>
+    </div>
+    <div class="msg-body" id="chat-body-${id}">
+      ${c.msgs.map(m=>`
+        <div>
+          <div class="msg-bubble ${m.me?'msg-me':'msg-them'}">${m.text}</div>
+          <div class="msg-time">${m.time}</div>
+        </div>`).join('')}
+    </div>
+    <div class="msg-footer">
+      <textarea class="msg-input" id="msg-inp" placeholder="メッセージを入力…" rows="1"
+                onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg(${id})}"></textarea>
+      <button class="btn btn-primary btn-sm" onclick="sendMsg(${id})">送信</button>
+    </div>`;
+}
+
+function sendMsg(id) {
+  const inp = document.getElementById('msg-inp');
+  const text = inp.value.trim();
+  if (!text) return;
+  const c = CONTACTS.find(x=>x.id===id);
+  const now = new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+  c.msgs.push({ me:true, text, time:'今日 '+now });
+  inp.value = '';
+  const body = document.getElementById(`chat-body-${id}`);
+  if (body) {
+    const div = document.createElement('div');
+    div.innerHTML = `<div class="msg-bubble msg-me">${text}</div><div class="msg-time">今日 ${now}</div>`;
+    body.appendChild(div);
+    body.scrollTop = body.scrollHeight;
+  }
+}
+
+// ═══════════════════════════════════════
+//  Register
+// ═══════════════════════════════════════
+function updateRegType() {
+  const v = document.getElementById('reg-type').value;
+  document.getElementById('re-section').style.display = v==='hr'?'none':'block';
+  document.getElementById('hr-section').style.display = v==='hr'?'block':'none';
+  document.getElementById('reg-area').placeholder = v==='hr'?'例：IT・営業・製造':'例：渋谷区・港区';
+}
+
+function submitReferral() {
+  alert('✅ 紹介を登録しました！\n\nCORETO本部がSlackで通知を受け取り、\n担当エージェントが顧客に連絡します。\n\n案件の進捗は「紹介案件」タブで確認できます。');
+  nav(1, null);
+}
+
+// ═══════════════════════════════════════
+//  Copy helpers
+// ═══════════════════════════════════════
+function copyCode() {
+  navigator.clipboard.writeText('PT-SATO2026').then(()=>alert('✅ コード「PT-SATO2026」をコピーしました'));
+}
+function copyLink() {
+  const url = 'https://coreto.jp/register?code=PT-SATO2026';
+  navigator.clipboard.writeText(url).then(()=>alert('✅ 紹介リンクをコピーしました'));
+}
+function shareSlack() {
+  alert('📢 Slackの #案件紹介 チャンネルに投稿するテキストをコピーしました。\n\n【案件紹介】\n紹介コード：PT-SATO2026\nhttps://coreto.jp/register?code=PT-SATO2026\n\n#案件紹介 #パートナー');
+}
+
+// ═══════════════════════════════════════
+//  Logout & Session
+// ═══════════════════════════════════════
+function doLogout() {
+  if (confirm('ログアウトしますか？')) {
+    sessionStorage.removeItem('coreto_session');
+    window.location.href = 'coreto-hub.html';
+  }
+}
+
+// ═══════════════════════════════════════
+//  Init
+// ═══════════════════════════════════════
+window.addEventListener('DOMContentLoaded', ()=>{
+  // セッション反映
+  const s = JSON.parse(sessionStorage.getItem('coreto_session') || 'null');
+  if (s && s.type === 'pt') {
+    const nameEl = document.querySelector('.pt-name');
+    const idEl   = document.querySelector('.pt-id');
+    if (nameEl) nameEl.textContent = s.name || '佐藤 美咲';
+    if (idEl)   idEl.textContent   = 'PT-' + (s.agId || '30007');
+  }
+  renderDash();
+  renderCases();
+  renderRewards();
+  updateSim();
+  const ba

@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CORETO ログイン</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090f;--card:#0f1119;--border:#1e2235;--border2:#252a3d;
+  --gold:#c9a84c;--gold-l:#e8c96a;--gold-dim:#7a5f22;
+  --green:#34d399;--red:#f87171;--blue:#4f9cf9;
+  --muted:#4a5270;--sub:#7a849e;--text:#e2e6f3;--line:#06c755;
+}
+html,body{height:100%}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);
+  display:flex;align-items:center;justify-content:center;min-height:100vh;
+  background-image:
+    radial-gradient(ellipse 80% 60% at 50% -20%,rgba(201,168,76,.08) 0%,transparent 60%),
+    radial-gradient(ellipse 50% 40% at 100% 100%,rgba(79,156,249,.04) 0%,transparent 60%)}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;
+  background-image:linear-gradient(rgba(201,168,76,.025) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(201,168,76,.025) 1px,transparent 1px);
+  background-size:48px 48px}
+.wrap{width:100%;max-width:400px;padding:20px}
+.logo-area{text-align:center;margin-bottom:40px}
+.logo{font-family:'Syne',sans-serif;font-size:42px;font-weight:800;color:var(--gold);
+  letter-spacing:8px;display:block;text-shadow:0 0 40px rgba(201,168,76,.3)}
+.tagline{font-size:11px;color:var(--muted);letter-spacing:2px;margin-top:6px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:20px;
+  padding:32px 28px;position:relative;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+.card::before{content:'';position:absolute;top:0;left:10%;right:10%;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(201,168,76,.5),transparent)}
+.card-title{font-size:12px;color:var(--sub);text-align:center;
+  margin-bottom:24px;letter-spacing:1.5px;text-transform:uppercase;font-weight:600}
+.btn-line{width:100%;padding:15px 20px;border-radius:13px;border:none;cursor:pointer;
+  background:var(--line);color:#fff;font-size:14px;font-weight:700;
+  font-family:'Noto Sans JP',sans-serif;display:flex;align-items:center;
+  justify-content:center;gap:12px;transition:all .22s;letter-spacing:.5px;
+  box-shadow:0 4px 20px rgba(6,199,85,.2)}
+.btn-line:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(6,199,85,.35)}
+.btn-line:active{transform:translateY(0)}
+.line-icon{width:26px;height:26px;background:#fff;border-radius:6px;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.line-icon svg{width:18px;height:18px}
+.divider{display:flex;align-items:center;gap:10px;margin:22px 0}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
+.divider span{font-size:10px;color:var(--muted);letter-spacing:1px;white-space:nowrap}
+.fg{margin-bottom:14px}
+.fg label{font-size:11px;color:var(--sub);display:block;margin-bottom:5px}
+.fg input{width:100%;background:#090b13;border:1px solid var(--border2);border-radius:10px;
+  padding:12px 14px;color:var(--text);font-family:'DM Mono',monospace;
+  font-size:14px;letter-spacing:2px;transition:border-color .15s,box-shadow .15s}
+.fg input::placeholder{font-size:13px;letter-spacing:1px;color:var(--muted)}
+.fg input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,168,76,.1)}
+.type-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;
+  border-radius:6px;font-size:10px;font-weight:700;margin-top:6px;opacity:0;
+  transition:opacity .2s;font-family:'Noto Sans JP',sans-serif}
+.type-badge.visible{opacity:1}
+.tb-re{background:rgba(79,156,249,.12);color:var(--blue);border:1px solid rgba(79,156,249,.25)}
+.tb-hr{background:rgba(20,184,166,.12);color:#2dd4bf;border:1px solid rgba(20,184,166,.25)}
+.tb-pt{background:rgba(52,211,153,.12);color:var(--green);border:1px solid rgba(52,211,153,.25)}
+.pw-wrap{position:relative}
+.pw-wrap input{padding-right:52px}
+.pw-toggle{position:absolute;right:12px;top:50%;transform:translateY(-50%);
+  font-size:11px;color:var(--muted);cursor:pointer;font-family:'Noto Sans JP',sans-serif;
+  user-select:none}
+.pw-toggle:hover{color:var(--sub)}
+.btn-login{width:100%;padding:13px;border-radius:12px;border:none;cursor:pointer;
+  background:linear-gradient(135deg,var(--gold) 0%,#a8862e 100%);color:#0a0c10;
+  font-size:13px;font-weight:700;font-family:'Noto Sans JP',sans-serif;
+  letter-spacing:.5px;transition:all .2s;margin-top:4px}
+.btn-login:hover{background:linear-gradient(135deg,var(--gold-l) 0%,var(--gold) 100%);
+  transform:translateY(-1px);box-shadow:0 8px 24px rgba(201,168,76,.28)}
+.btn-login:active{transform:translateY(0)}
+.err{background:rgba(248,113,113,.07);border:1px solid rgba(248,113,113,.25);
+  border-radius:9px;padding:10px 13px;font-size:11px;color:var(--red);
+  margin-bottom:12px;display:none;line-height:1.7}
+.err.show{display:block}
+.footer{text-align:center;margin-top:20px;font-size:10px;color:var(--muted)}
+.footer a{color:var(--sub);text-decoration:none;margin:0 8px}
+.footer a:hover{color:var(--gold)}
+.loading{position:fixed;inset:0;background:rgba(7,9,15,.9);backdrop-filter:blur(8px);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  z-index:999;opacity:0;pointer-events:none;transition:opacity .3s}
+.loading.show{opacity:1;pointer-events:all}
+.spinner{width:44px;height:44px;border:2px solid rgba(201,168,76,.2);
+  border-top-color:var(--gold);border-radius:50%;
+  animation:spin .75s linear infinite;margin-bottom:18px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-msg{font-size:12px;color:var(--sub);letter-spacing:1.5px}
+</style>
+</head>
+<body>
+
+<div class="loading" id="loading">
+  <div class="spinner"></div>
+  <div class="loading-msg" id="loading-msg">ログイン中...</div>
+</div>
+
+<div class="wrap">
+  <div class="logo-area">
+    <span class="logo">CORETO</span>
+    <div class="tagline">不動産 ／ 人材 統合プラットフォーム</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">エージェント・パートナーログイン</div>
+
+    <button class="btn-line" onclick="lineLogin()">
+      <div class="line-icon">
+        <svg viewBox="0 0 24 24" fill="#06c755">
+          <path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63h2.386c.346 0 .627.285.627.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63.346 0 .628.285.628.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/>
+        </svg>
+      </div>
+      LINEでログイン（推奨）
+    </button>
+
+    <div class="divider"><span>または 会員ID でログイン</span></div>
+
+    <div class="err" id="err"></div>
+
+    <div class="fg">
+      <label>会員ID</label>
+      <input type="text" id="f-id" inputmode="numeric" maxlength="5"
+             autocomplete="username" placeholder="例：10012"
+             oninput="onIdChange(this)"
+             onkeydown="if(event.key==='Enter')document.getElementById('f-pw').focus()">
+      <div class="type-badge" id="type-badge"></div>
+    </div>
+
+    <div class="fg">
+      <label>パスワード</label>
+      <div class="pw-wrap">
+        <input type="password" id="f-pw" placeholder="パスワードを入力"
+               autocomplete="current-password"
+               onkeydown="if(event.key==='Enter')doLogin()">
+        <span class="pw-toggle" id="pw-toggle" onclick="togglePw()">表示</span>
+      </div>
+    </div>
+
+    <button class="btn-login" onclick="doLogin()">ログイン</button>
+  </div>
+
+  <div class="footer">
+    <a href="#" onclick="openPasswordReset()" style="color:var(--blue)">パスワードを忘れた方</a>
+    <a href="#">新規登録</a>
+    <a href="#" onclick="hqLogin()">本部HQログイン</a>
+  </div>
+</div>
+
+<script>
+const TYPE_INFO = {
+  '1':{ type:'re', label:'🏠 不動産エージェント', cls:'tb-re' },
+  '2':{ type:'hr', label:'👥 人材エージェント',   cls:'tb-hr' },
+  '3':{ type:'pt', label:'🤝 パートナー',         cls:'tb-pt' },
+};
+
+function onIdChange(el) {
+  el.value = el.value.replace(/\D/g,'').slice(0,5);
+  showErr('');
+  const badge = document.getElementById('type-badge');
+  const info  = TYPE_INFO[el.value.charAt(0)];
+  if (el.value.length >= 1 && info) {
+    badge.textContent = info.label;
+    badge.className   = 'type-badge visible ' + info.cls;
+  } else {
+    badge.className = 'type-badge';
+  }
+}
+
+function togglePw() {
+  const el = document.getElementById('f-pw');
+  const tg = document.getElementById('pw-toggle');
+  el.type        = el.type === 'password' ? 'text' : 'password';
+  tg.textContent = el.type === 'password' ? '表示' : '非表示';
+}
+
+function showErr(msg) {
+  const el = document.getElementById('err');
+  el.textContent = msg;
+  el.className   = msg ? 'err show' : 'err';
+}
+
+const ACCOUNTS = {
+  '10012':{ name:'山田 誠',   rank:'Gold',     rankKey:'gold',     type:'re' },
+  '10008':{ name:'佐藤 花子', rank:'Platinum', rankKey:'platinum', type:'re' },
+  '10023':{ name:'鈴木 健太', rank:'Silver',   rankKey:'silver',   type:'re' },
+  '10041':{ name:'渡辺 隆',   rank:'Bronze',   rankKey:'bronze',   type:'re' },
+  '20005':{ name:'田中 美穂', rank:'Gold',     rankKey:'gold',     type:'hr' },
+  '30007':{ name:'佐藤 美咲', rank:'Partner',  rankKey:'pt',       type:'pt' },
+};
+const DEMO_PW = 'coreto2026';
+
+function doLogin() {
+  const id = document.getElementById('f-id').value.trim();
+  const pw = document.getElementById('f-pw').value;
+  if (id.length !== 5)          { showErr('会員IDを正しく入力してください'); return; }
+  if (!TYPE_INFO[id.charAt(0)]) { showErr('会員IDの先頭桁が無効です'); return; }
+  const ac = ACCOUNTS[id];
+  if (!ac || pw !== DEMO_PW) {
+    showErr('会員IDまたはパスワードが正しくありません');
+    document.getElementById('f-pw').value = '';
+    return;
+  }
+  startSession(id, ac, false);
+}
+
+function lineLogin() {
+  showLoading('ログイン中...');
+  setTimeout(() => startSession('10012', ACCOUNTS['10012'], true), 1800);
+}
+
+function startSession(id, ac, fromLine) {
+  showLoading('ログイン中...');
+  const session = {
+    agId:id, name:ac.name, rank:ac.rank,
+    rankKey:ac.rankKey, type:ac.type,
+    lineLinked:fromLine, loginAt:new Date().toISOString(),
+  };
+  sessionStorage.setItem('coreto_session', JSON.stringify(session));
+  // タイプ別ルーティング
+  const dest = ac.type === 'pt'
+    ? 'coreto-partner.html'
+    : 'coreto-agent-mypage.html';
+  setTimeout(() => { window.location.href = dest; }, 900);
+}
+
+function hqLogin() {
+  const pw = prompt('HQ管理者パスワードを入力してください');
+  if (pw === 'coreto2026') {
+    showLoading('管理ポータルへ移動中...');
+    const hqSession = {
+      agId:'HQ-001', name:'管理ユーザー', rank:'HQ', rankKey:'hq',
+      type:'hq', lineLinked:false, loginAt:new Date().toISOString(),
+    };
+    sessionStorage.setItem('coreto_session', JSON.stringify(hqSession));
+    setTimeout(() => { window.location.href = 'coreto-hub.html'; }, 600);
+  } else if (pw !== null) {
+    alert('パスワードが正しくありません');
+  }
+}
+
+function showLoading(msg) {
+  document.getElementById('loading-msg').textContent = msg;
+  document.getElementById('loading').classList.add('show');
+}
+</script>
+
+<!-- ════ パスワード再設定モーダル ════ -->
+<div id="reset-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);
+     backdrop-filter:blur(5px);z-index:400;align-items:center;justify-content:center">
+  <div style="background:var(--card);border:1px solid var(--border2);border-radius:16px;
+              width:440px;max-width:95vw;overflow:hidden">
+
+    <!-- ステップ0: 送信先選択 -->
+    <div id="rst-s0">
+      <div style="display:flex;align-items:center;justify-content:space-between;
+                  padding:16px 22px;border-bottom:1px solid var(--border)">
+        <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:var(--gold)">
+          パスワード再設定
+        </div>
+        <button onclick="closePasswordReset()"
+                style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer">✕</button>
+      </div>
+      <div style="padding:20px 22px">
+        <div style="font-size:12px;color:var(--sub);line-height:1.8;margin-bottom:16px;
+                    padding:10px 14px;background:rgba(79,156,249,.07);
+                    border:1px solid rgba(79,156,249,.2);border-radius:9px">
+          ℹ️ 登録済みの LINE または メールアドレスに再設定リンクを送信します。<br>
+          リンク有効期限：<strong style="color:var(--orange)">30分</strong>
+        </div>
+
+        <!-- ID入力 -->
+        <div style="margin-bottom:14px">
+          <label style="display:block;font-size:10px;color:var(--sub);margin-bottom:5px;font-weight:600">
+            エージェントID <span style="color:var(--red)">*</span>
+          </label>
+          <input type="text" id="rst-id" placeholder="例：10012"
+            style="width:100%;background:#090b13;border:1px solid var(--border2);border-radius:9px;
+                   padding:10px 14px;color:var(--text);font-size:14px;font-family:'DM Mono',monospace;
+                   outline:none;transition:.15s"
+            oninput="lookupResetUser(this.value)" onfocus="this.style.borderColor='var(--blue)'"
+            onblur="this.style.borderColor='var(--border2)'">
+        </div>
+
+        <!-- 送信先選択（ID確認後に表示） -->
+        <div id="rst-methods" style="display:none">
+          <div style="font-size:10px;color:var(--sub);margin-bottom:8px;font-weight:600">送信先を選択</div>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+            <label id="rst-line-opt"
+              style="display:flex;align-items:center;gap:10px;padding:12px;
+                     background:var(--card2);border:1px solid var(--border);
+                     border-radius:10px;cursor:pointer">
+              <input type="radio" name="rst-method" value="line" checked>
+              <span style="font-size:18px">💬</span>
+              <div>
+                <div style="font-size:12px;font-weight:700">LINE</div>
+                <div style="font-size:10px;color:var(--muted)" id="rst-line-hint">登録済みLINEに送信</div>
+              </div>
+            </label>
+            <label id="rst-email-opt"
+              style="display:flex;align-items:center;gap:10px;padding:12px;
+                     background:var(--card2);border:1px solid var(--border);
+                     border-radius:10px;cursor:pointer">
+              <input type="radio" name="rst-method" value="email">
+              <span style="font-size:18px">📧</span>
+              <div>
+                <div style="font-size:12px;font-weight:700">メール</div>
+                <div style="font-size:10px;color:var(--muted)" id="rst-email-hint">登録済みメールに送信</div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button onclick="closePasswordReset()"
+            style="padding:8px 16px;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;
+                   background:transparent;border:1px solid var(--border2);color:var(--sub);
+                   font-family:'Noto Sans JP',sans-serif">キャンセル</button>
+          <button id="rst-send-btn" onclick="sendResetLink()" disabled
+            style="padding:8px 16px;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;
+                   background:linear-gradient(135deg,var(--blue),#3070c0);color:#fff;border:none;
+                   font-family:'Noto Sans JP',sans-serif;transition:.15s;opacity:.4">
+            📨 リンクを送信
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ステップ1: 認証コード入力 -->
+    <div id="rst-s1" style="display:none;padding:24px 22px;text-align:center">
+      <div style="width:64px;height:64px;border-radius:50%;margin:0 auto 16px;
+                  background:rgba(79,156,249,.1);border:2px solid rgba(79,156,249,.3);
+                  display:flex;align-items:center;justify-content:center;font-size:28px">💬</div>
+      <div style="font-size:14px;font-weight:700;margin-bottom:6px">認証コードを入力</div>
+      <div style="font-size:11px;color:var(--sub);line-height:1.8;margin-bottom:16px" id="rst-otp-desc">
+        LINEに6桁のコードを送信しました
+      </div>
+      <div style="display:flex;gap:7px;justify-content:center;margin-bottom:12px">
+        <input class="rst-otp" maxlength="1" type="text" inputmode="numeric"
+               oninput="rstOtpIn(this,0)" onkeydown="rstOtpKey(event,0)" id="ro0">
+        <input class="rst-otp" maxlength="1" type="text" inputmode="numeric"
+               oninput="rstOtpIn(this,1)" onkeydown="rstOtpKey(event,1)" id="ro1">
+        <input class="rst-otp" maxlength="1" type="text" inputmode="numeric"
+               oninput="rstOtpIn(this,2)" onkeydown="rstOtpKey(event,2)" id="ro2">
+        <input class="rst-otp" maxlength="1" type="text" inputmode="numeric"
+               oninput="rstOtpIn(this,3)" onkeydown="rstOtpKey(event,3)" id="ro3">
+        <input class="rst-otp" maxlength="1" type="text" inputmode="numeric"
+               oninput="rstOtpIn(this,4)" onkeydown="rstOtpKey(event,4)" id="ro4">
+        <input class="rst-otp" maxlength="1" type="text" inputmode="numeric"
+               oninput="rstOtpIn(this,5)" onkeydown="rstOtpKey(event,5)" id="ro5">
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:4px">
+        有効期限：<span id="rst-timer" style="font-family:'DM Mono',monospace;color:var(--orange);font-weight:700">5:00</span>
+      </div>
+      <div style="font-size:10px;color:var(--muted);margin-bottom:16px" id="rst-demo-hint"></div>
+      <button onclick="closePasswordReset()"
+        style="padding:6px 14px;border-radius:8px;font-size:10px;font-weight:700;cursor:pointer;
+               background:transparent;border:1px solid var(--border2);color:var(--sub);
+               font-family:'Noto Sans JP',sans-serif">キャンセル</button>
+    </div>
+
+    <!-- ステップ2: 新パスワード設定 -->
+    <div id="rst-s2" style="display:none;padding:20px 22px">
+      <div style="text-align:center;margin-bottom:16px">
+        <span style="font-size:32px">🔑</span>
+        <div style="font-size:14px;font-weight:700;margin-top:8px">新しいパスワードを設定</div>
+        <div style="font-size:11px;color:var(--green);margin-top:4px">✅ 本人確認完了</div>
+      </div>
+      <div style="margin-bottom:12px">
+        <label style="display:block;font-size:10px;color:var(--sub);margin-bottom:5px;font-weight:600">
+          新しいパスワード <span style="color:var(--red)">*</span>
+        </label>
+        <input type="password" id="rst-pw1" placeholder="8文字以上"
+          style="width:100%;background:#090b13;border:1px solid var(--border2);border-radius:9px;
+                 padding:10px 14px;color:var(--text);font-size:12px;
+                 font-family:'Noto Sans JP',sans-serif;outline:none;transition:.15s"
+          onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border2)'">
+      </div>
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:10px;color:var(--sub);margin-bottom:5px;font-weight:600">
+          確認
+        </label>
+        <input type="password" id="rst-pw2" placeholder="もう一度入力"
+          style="width:100%;background:#090b13;border:1px solid var(--border2);border-radius:9px;
+                 padding:10px 14px;color:var(--text);font-size:12px;
+                 font-family:'Noto Sans JP',sans-serif;outline:none;transition:.15s"
+          onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border2)'">
+      </div>
+      <button onclick="submitNewPw()"
+        style="width:100%;padding:12px;background:linear-gradient(135deg,var(--gold),#a8742a);
+               color:#0a0c10;border:none;border-radius:10px;font-size:13px;font-weight:700;
+               cursor:pointer;font-family:'Noto Sans JP',sans-serif">
+        🔑 パスワードを設定する
+      </button>
+    </div>
+  </div>
+</div>
+
+<style>
+.rst-otp{width:46px;height:54px;background:#090b13;border:2px solid var(--border2);
+  border-radius:9px;font-size:22px;font-weight:700;text-align:center;color:var(--text);
+  font-family:'DM Mono',monospace;outline:none;transition:.15s}
+.rst-otp:focus{border-color:var(--blue)}
+.rst-otp.ok{border-color:var(--green);background:rgba(52,211,153,.05)}
+.rst-otp.err{border-color:var(--red);animation:shake .3s ease}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+</style>
+
+<script>
+// ══════════════════════════════════════════════════════════════════
+// パスワードリセットフロー
+// ══════════════════════════════════════════════════════════════════
+const RESET_USERS = {
+  '10012': { line:'@yamada_makoto',  email:'yama***@gmail.com', name:'山田 誠' },
+  '10008': { line:'@sato_hanako',    email:'sato***@gmail.com', name:'佐藤 花子' },
+  '10023': { line:'@suzuki_kenta',   email:'suzu***@gmail.com', name:'鈴木 健太' },
+  '20005': { line:'@tanaka_miho',    email:'tana***@gmail.com', name:'田中 美穂' },
+  '30007': { line:'@sato_misaki',    email:'misa***@gmail.com', name:'佐藤 美咲' },
+};
+let _rstOtp='', _rstTimer=null, _rstCountdown=300;
+
+function openPasswordReset() {
+  document.getElementById('reset-overlay').style.display='flex';
+  document.getElementById('rst-s0').style.display='block';
+  document.getElementById('rst-s1').style.display='none';
+  document.getElementById('rst-s2').style.display='none';
+  document.getElementById('rst-id').value='';
+  document.getElementById('rst-methods').style.display='none';
+  const btn = document.getElementById('rst-send-btn');
+  btn.disabled=true; btn.style.opacity='.4';
+}
+function closePasswordReset() {
+  clearInterval(_rstTimer);
+  document.getElementById('reset-overlay').style.display='none';
+}
+function lookupResetUser(val) {
+  const user = RESET_USERS[val.trim()];
+  const methods = document.getElementById('rst-methods');
+  const sendBtn = document.getElementById('rst-send-btn');
+  if (user) {
+    methods.style.display='block';
+    document.getElementById('rst-line-hint').textContent = user.line;
+    document.getElementById('rst-email-hint').textContent = user.email;
+    sendBtn.disabled=false; sendBtn.style.opacity='1';
+  } else {
+    methods.style.display='none';
+    sendBtn.disabled=true; sendBtn.style.opacity='.4';
+  }
+}
+function sendResetLink() {
+  const id = document.getElementById('rst-id').value.trim();
+  const method = document.querySelector('input[name="rst-method"]:checked').value;
+  const user = RESET_USERS[id];
+  if (!user) return;
+  const dest = method==='line' ? 'LINE（'+user.line+'）' : 'メール（'+user.email+'）';
+  document.getElementById('rst-s0').style.display='none';
+  document.getElementById('rst-s1').style.display='block';
+  _rstOtp = String(Math.floor(100000+Math.random()*900000));
+  document.getElementById('rst-otp-desc').textContent = dest+' に6桁のコードを送信しました（'+user.name+'様）';
+  document.getElementById('rst-demo-hint').textContent = '【デモ用コード: '+_rstOtp+'】';
+  document.getElementById('rst-timer').textContent = '5:00';
+  document.getElementById('rst-timer').style.color = 'var(--orange)';
+  for(let i=0;i<6;i++){const c=document.getElementById('ro'+i);c.value='';c.className='rst-otp';c.disabled=false;}
+  clearInterval(_rstTimer); _rstCountdown=300;
+  _rstTimer=setInterval(()=>{
+    _rstCountdown--;
+    const m=Math.floor(_rstCountdown/60),s=_rstCountdown%60;
+    const el=document.getElementById('rst-timer');
+    if(el){el.textContent=m+':'+String(s).padStart(2,'0');if(_rstCountdown<60)el.style.color='var(--red)';}
+    if(_rstCountdown<=0){clearInterval(_rstTimer);for(let i=0;i<6;i++){const c=document.getElementById('ro'+i);if(c)c.disabled=true;}}
+  },1000);
+  setTimeout(()=>document.getElementById('ro0').focus(),100);
+}
+function rstOtpIn(el,idx){
+  const v=el.value.replace(/\D/g,'');el.value=v;el.className='rst-otp';
+  if(v&&idx<5)document.getElementById('ro'+(idx+1)).focus();
+  if(idx===5&&v)rstCheckOtp();
+}
+function rstOtpKey(e,idx){if(e.key==='Backspace'&&!e.target.value&&idx>0)document.getElementById('ro'+(idx-1)).focus();}
+function rstCheckOtp(){
+  const entered=Array.from({length:6},(_,i)=>document.getElementById('ro'+i).value).join('');
+  if(entered===_rstOtp){
+    for(let i=0;i<6;i++)document.getElementById('ro'+i).className='rst-otp ok';
+    clearInterval(_rstTimer);
+    setTimeout(()=>{
+      document.getElementById('rst-s1').style.display='none';
+      document.getElementById('rst-s2').style.display='block';
+    },500);
+  } else {
+    for(let i=0;i<6;i++)document.getElementById('ro'+i).className='rst-otp err';
+    setTimeout(()=>{for(let i=0;i<6;i++){const c=document.getElementById('ro'+i);c.value='';c.className='rst-otp';}document.getElementById('ro0').focus();},800);
+  }
+}
+function submitNewPw(){
+  const pw1=document.getElementById('rst-pw1').value;
+  const pw2=document.getElementById('rst-pw2').value;
+  if(!pw1||pw1.length<8){alert('パスワードは8文字以上で入力してください');return;}
+  if(pw1!==pw2){alert('パスワードが一致しません');return;}
+  clearInterval(_rstTimer);
+  closePasswordReset();
+  alert('✅ パスワードを再設定しました。\n新しいパスワードでログインしてください。');
+}
+</script>
+</body>
+</html>

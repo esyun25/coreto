@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CORETO — パートナー案件フィード</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090f;--card:#0f1119;--card2:#141720;--border:#1e2235;--border2:#252a3d;
+  --gold:#c9a84c;--gold-dim:#7a5f22;
+  --blue:#4f9cf9;--green:#34d399;--red:#f87171;--orange:#fb923c;--purple:#a78bfa;
+  --teal:#2dd4bf;
+  --muted:#4a5270;--sub:#7a849e;--text:#e2e6f3;
+}
+html,body{height:100%;font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text)}
+.hdr{height:54px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 26px;border-bottom:1px solid var(--border);background:rgba(7,9,15,.95);position:sticky;top:0;z-index:100}
+.logo{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:var(--gold);letter-spacing:3px}
+.main{max-width:900px;margin:0 auto;padding:26px 28px 80px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;margin-bottom:14px}
+.ch{padding:12px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.ch-t{font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+.ch-t::before{content:'';width:3px;height:11px;border-radius:2px;background:var(--teal)}
+.cb{padding:18px 20px}
+.pill{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:6px;font-size:9px;font-weight:700}
+.pg{background:rgba(52,211,153,.13);color:var(--green);border:1px solid rgba(52,211,153,.3)}
+.pb{background:rgba(79,156,249,.12);color:var(--blue);border:1px solid rgba(79,156,249,.25)}
+.po{background:rgba(251,146,60,.12);color:var(--orange);border:1px solid rgba(251,146,60,.3)}
+.pr{background:rgba(248,113,113,.12);color:var(--red);border:1px solid rgba(248,113,113,.3)}
+.pm{background:rgba(74,82,112,.15);color:var(--sub);border:1px solid var(--border2)}
+.pgd{background:rgba(201,168,76,.13);color:var(--gold);border:1px solid var(--gold-dim)}
+.pt{background:rgba(45,212,191,.12);color:var(--teal);border:1px solid rgba(45,212,191,.28)}
+.btn{padding:8px 16px;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;
+  font-family:'Noto Sans JP',sans-serif;transition:.15s;border:none;display:inline-flex;align-items:center;gap:6px}
+.btn-blue{background:linear-gradient(135deg,var(--blue),#3070c0);color:#fff}
+.btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--sub)}
+.btn-ghost:hover{color:var(--text)}
+.btn-teal{background:linear-gradient(135deg,var(--teal),#1a9e90);color:#0a0c10}
+.btn-sm{padding:4px 10px;font-size:10px;border-radius:6px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+/* Referral card */
+.ref-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;
+  transition:.15s;cursor:pointer}
+.ref-card:hover{border-color:var(--border2);transform:translateY(-1px)}
+.ref-card.selected{border-color:var(--teal);background:rgba(45,212,191,.04)}
+/* Timeline */
+.timeline{position:relative;padding-left:20px}
+.timeline::before{content:'';position:absolute;left:6px;top:0;bottom:0;width:1px;background:var(--border)}
+.tl-item{position:relative;padding:0 0 16px 20px}
+.tl-item:last-child{padding-bottom:0}
+.tl-dot{position:absolute;left:-14px;top:3px;width:10px;height:10px;border-radius:50%;border:2px solid var(--border2);background:var(--bg)}
+.tl-dot.act{background:var(--blue);border-color:var(--blue)}
+.tl-dot.done{background:var(--green);border-color:var(--green)}
+.tl-dot.warn{background:var(--orange);border-color:var(--orange)}
+.tl-date{font-family:'DM Mono';font-size:10px;color:var(--muted);margin-bottom:2px}
+.tl-text{font-size:12px;line-height:1.6}
+/* Reward bar */
+.reward-bar{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px}
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{padding:8px 14px;font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.5px;text-transform:uppercase;border-bottom:1px solid var(--border);background:var(--card2);text-align:left}
+.tbl td{padding:10px 14px;border-bottom:1px solid rgba(30,34,53,.5);font-size:12px;vertical-align:middle}
+.tbl tr:last-child td{border:none}
+.mono{font-family:'DM Mono',monospace}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+</style>
+</head>
+<body>
+<div class="hdr">
+  <div style="display:flex;align-items:center;gap:12px">
+    <div class="logo">CORETO</div>
+    <div style="width:1px;height:18px;background:var(--border2)"></div>
+    <span style="font-size:10px;color:var(--muted);letter-spacing:1px">パートナー案件フィード</span>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center">
+    <span class="pill pt">佐藤 美咲 / 30007</span>
+    <button class="btn btn-ghost btn-sm" onclick="window.location.href='coreto-hub.html'">🏠 ホーム</button>
+  </div>
+</div>
+
+<div class="main">
+  <div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:800;margin-bottom:4px">紹介案件フィード</div>
+  <div style="font-size:11px;color:var(--sub);margin-bottom:20px">あなたが紹介したエージェントの案件進捗と報酬確認</div>
+
+  <!-- KPI -->
+  <div class="g4">
+    <div class="card" style="margin:0;padding:16px">
+      <div style="font-size:18px;margin-bottom:6px">👥</div>
+      <div class="mono" style="font-size:26px;color:var(--teal)">3</div>
+      <div style="font-size:10px;color:var(--muted)">紹介エージェント数</div>
+    </div>
+    <div class="card" style="margin:0;padding:16px">
+      <div style="font-size:18px;margin-bottom:6px">📋</div>
+      <div class="mono" style="font-size:26px;color:var(--blue)">12</div>
+      <div style="font-size:10px;color:var(--muted)">進行中案件</div>
+    </div>
+    <div class="card" style="margin:0;padding:16px">
+      <div style="font-size:18px;margin-bottom:6px">💴</div>
+      <div class="mono" style="font-size:26px;color:var(--gold)">¥84,000</div>
+      <div style="font-size:10px;color:var(--muted)">今月紹介報酬（確定）</div>
+    </div>
+    <div class="card" style="margin:0;padding:16px">
+      <div style="font-size:18px;margin-bottom:6px">📈</div>
+      <div class="mono" style="font-size:26px;color:var(--green)">¥320,000</div>
+      <div style="font-size:10px;color:var(--muted)">累計紹介報酬</div>
+    </div>
+  </div>
+
+  <!-- エージェント一覧 -->
+  <div class="card" style="margin-bottom:14px">
+    <div class="ch"><div class="ch-t">紹介エージェント</div><span class="pill pt">3名</span></div>
+    <div class="cb">
+      <div style="display:flex;flex-direction:column;gap:10px" id="agent-list">
+        <!-- JS render -->
+      </div>
+    </div>
+  </div>
+
+  <!-- 選択エージェントの案件詳細 -->
+  <div id="case-detail" style="display:none"></div>
+
+  <!-- 紹介報酬明細 -->
+  <div class="card">
+    <div class="ch"><div class="ch-t">紹介報酬明細</div><button class="btn btn-ghost btn-sm" onclick="window.location.href='coreto-receipt.html'">📄 領収書</button></div>
+    <table class="tbl">
+      <thead><tr><th>月</th><th>紹介エージェント</th><th>成約案件</th><th>紹介報酬</th><th>支払日</th><th>状態</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">2026/02</td><td>山田 誠（10012）</td><td>賃貸 R042857</td>
+            <td class="mono" style="color:var(--gold)">¥24,000</td>
+            <td class="mono" style="font-size:10px">2026/02/25</td>
+            <td><span class="pill pg">支払済み</span></td></tr>
+        <tr><td class="mono">2026/02</td><td>田中 一郎（10034）</td><td>賃貸 R039201</td>
+            <td class="mono" style="color:var(--gold)">¥18,000</td>
+            <td class="mono" style="font-size:10px">2026/02/25</td>
+            <td><span class="pill pg">支払済み</span></td></tr>
+        <tr><td class="mono">2026/02</td><td>山田 誠（10012）</td><td>売買 S819204</td>
+            <td class="mono" style="color:var(--gold)">¥42,000</td>
+            <td class="mono" style="font-size:10px">—</td>
+            <td><span class="pill po">精算待ち</span></td></tr>
+        <tr><td class="mono">2026/01</td><td>山田 誠（10012）</td><td>賃貸 R038100</td>
+            <td class="mono" style="color:var(--gold)">¥21,000</td>
+            <td class="mono" style="font-size:10px">2026/01/25</td>
+            <td><span class="pill pg">支払済み</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const AGENTS = [
+  {
+    id:'10012', name:'山田 誠', rank:'Gold', type:'re',
+    joined:'2026/01/15', cases:5, closed:3, pending_reward:42000,
+    timeline:[
+      {date:'2026/02/21',text:'売買案件 S819204 入金待ち中',dot:'act'},
+      {date:'2026/02/18',text:'賃貸案件 R040011 成約完了 — 報酬確定¥24,000',dot:'done'},
+      {date:'2026/02/15',text:'賃貸案件 R042857 内見実施',dot:'done'},
+      {date:'2026/01/25',text:'賃貸案件 R038100 成約完了 — 報酬確定¥21,000',dot:'done'},
+    ]
+  },
+  {
+    id:'10034', name:'田中 一郎', rank:'Silver', type:'re',
+    joined:'2026/01/20', cases:3, closed:1, pending_reward:0,
+    timeline:[
+      {date:'2026/02/19',text:'賃貸案件 R041501 申込受理',dot:'act'},
+      {date:'2026/02/10',text:'賃貸案件 R039201 成約完了 — 報酬確定¥18,000',dot:'done'},
+      {date:'2026/01/28',text:'顧客DB 3名登録',dot:'done'},
+    ]
+  },
+  {
+    id:'20012', name:'中村 咲子', rank:'Bronze', type:'hr',
+    joined:'2026/02/01', cases:1, closed:0, pending_reward:0,
+    timeline:[
+      {date:'2026/02/18',text:'HR案件 H335201 一次面接設定',dot:'act'},
+      {date:'2026/02/05',text:'研修フェーズ2開始',dot:'done'},
+    ]
+  },
+];
+
+let selectedAgent = null;
+
+function renderAgents() {
+  const rankColor = {Gold:'var(--gold)',Silver:'#c0c0c0',Bronze:'#cd7f32',Platinum:'var(--purple)'};
+  document.getElementById('agent-list').innerHTML = AGENTS.map(ag=>`
+    <div class="ref-card ${selectedAgent===ag.id?'selected':''}" onclick="selectAgent('${ag.id}')">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--gold-dim),rgba(201,168,76,.2));
+                      display:flex;align-items:center;justify-content:center;font-size:16px">👤</div>
+          <div>
+            <div style="font-weight:700;font-size:13px">${ag.name}</div>
+            <div style="font-size:10px;color:var(--muted)">${ag.id} · 入会 ${ag.joined}</div>
+          </div>
+        </div>
+        <div style="text-align:right">
+          <div style="color:${rankColor[ag.rank]};font-weight:700;font-size:11px">${ag.rank}</div>
+          <span class="pill ${ag.type==='re'?'pb':'pg'}">${ag.type.toUpperCase()}</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:16px;font-size:11px;color:var(--sub)">
+        <span>📋 案件 <strong style="color:var(--text)">${ag.cases}</strong>件</span>
+        <span>✅ 成約 <strong style="color:var(--green)">${ag.closed}</strong>件</span>
+        ${ag.pending_reward>0?`<span style="margin-left:auto;color:var(--gold);font-weight:700">精算待ち ¥${ag.pending_reward.toLocaleString()}</span>`:''}
+      </div>
+    </div>`).join('');
+}
+
+function selectAgent(id) {
+  selectedAgent = id;
+  renderAgents();
+  const ag = AGENTS.find(a=>a.id===id);
+  if (!ag) return;
+  const detail = document.getElementById('case-detail');
+  detail.style.display = 'block';
+  detail.innerHTML = `
+    <div class="card" style="border-color:rgba(45,212,191,.25)">
+      <div class="ch" style="background:rgba(45,212,191,.04)">
+        <div class="ch-t">${ag.name} の活動タイムライン</div>
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('case-detail').style.display='none';selectedAgent=null;renderAgents()">✕ 閉じる</button>
+      </div>
+      <div class="cb">
+        <div class="timeline">
+          ${ag.timeline.map(t=>`
+            <div class="tl-item">
+              <div class="tl-dot ${t.dot}"></div>
+              <div class="tl-date">${t.date}</div>
+              <div class="tl-text">${t.text}</div>
+            </div>`).join('')}
+        </div>
+      </div>
+    </div>`;
+  detail.scrollIntoView({behavior:'smooth'});
+}
+
+renderAgents();
+</script>
+</body>
+</html>

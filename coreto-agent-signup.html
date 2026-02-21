@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CORETO — エージェント入会申込</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090f;--card:#0f1119;--card2:#141720;--border:#1e2235;--border2:#252a3d;
+  --gold:#c9a84c;--blue:#4f9cf9;--green:#34d399;--red:#f87171;--orange:#fb923c;
+  --muted:#4a5270;--sub:#7a849e;--text:#e2e6f3;
+}
+html,body{min-height:100%;font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text)}
+.hdr{height:54px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 26px;border-bottom:1px solid var(--border);background:rgba(7,9,15,.96)}
+.logo{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:var(--gold);letter-spacing:3px}
+/* Steps */
+.steps{display:flex;justify-content:center;gap:0;padding:20px 24px;background:var(--card);
+  border-bottom:1px solid var(--border);overflow-x:auto}
+.step{flex:1;max-width:110px;text-align:center;position:relative;padding-bottom:4px}
+.step:not(:last-child)::after{content:'';position:absolute;top:16px;left:60%;width:80%;height:2px;
+  background:var(--border);z-index:0}
+.step.done:not(:last-child)::after{background:var(--green)}
+.step-dot{width:32px;height:32px;border-radius:50%;margin:0 auto 6px;display:flex;align-items:center;
+  justify-content:center;font-size:13px;border:2px solid var(--border2);background:var(--bg);
+  position:relative;z-index:1;font-family:'DM Mono',monospace;font-weight:700}
+.step.on .step-dot{background:var(--blue);border-color:var(--blue);color:#fff}
+.step.done .step-dot{background:var(--green);border-color:var(--green);color:#fff}
+.step-lbl{font-size:9px;color:var(--muted);line-height:1.4}
+.step.on .step-lbl{color:var(--blue)}
+.step.done .step-lbl{color:var(--green)}
+/* Layout */
+.wrap{max-width:640px;margin:0 auto;padding:28px 24px 80px}
+/* Card */
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;margin-bottom:16px}
+.ch{padding:13px 20px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between}
+.ch-t{font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;
+  display:flex;align-items:center;gap:8px}
+.ch-t::before{content:'';width:3px;height:11px;border-radius:2px;background:var(--blue)}
+.cb{padding:18px 20px}
+.pill{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;
+  border-radius:6px;font-size:9px;font-weight:700}
+.pb{background:rgba(79,156,249,.12);color:var(--blue);border:1px solid rgba(79,156,249,.25)}
+/* Fields */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:10px;color:var(--sub);margin-bottom:5px;font-weight:600}
+.req{color:var(--red);margin-left:2px}
+.field input,.field select{width:100%;background:#090b13;border:1px solid var(--border2);
+  border-radius:9px;padding:10px 13px;color:var(--text);font-size:13px;
+  font-family:'Noto Sans JP',sans-serif;outline:none;transition:.15s}
+.field input:focus,.field select:focus{border-color:var(--blue)}
+.fhint{font-size:10px;color:var(--muted);margin-top:4px}
+/* Buttons */
+.btn{width:100%;padding:13px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;
+  border:none;font-family:'Noto Sans JP',sans-serif;transition:.15s;
+  display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-blue{background:linear-gradient(135deg,var(--blue),#3070c0);color:#fff}
+.btn-blue:hover{filter:brightness(1.08)}
+.btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--sub);padding:10px}
+.btn-ghost:hover{border-color:var(--sub);color:var(--text)}
+.btn-gold{background:linear-gradient(135deg,var(--gold),#a07830);color:#000}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+/* Alert */
+.al{display:flex;align-items:flex-start;gap:10px;padding:12px 16px;border-radius:10px;
+  margin-bottom:14px;font-size:12px;line-height:1.7}
+.al-info{background:rgba(79,156,249,.07);border:1px solid rgba(79,156,249,.2)}
+.al-warn{background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.25)}
+.al-ok{background:rgba(52,211,153,.07);border:1px solid rgba(52,211,153,.2)}
+/* 宅建士選択カード */
+.takken-choice{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}
+.tc-card{padding:20px;border:2px solid var(--border2);border-radius:14px;cursor:pointer;
+  transition:.2s;text-align:center;background:var(--card2)}
+.tc-card:hover{border-color:var(--blue);background:rgba(79,156,249,.05)}
+.tc-card.selected{border-color:var(--gold);background:rgba(201,168,76,.07)}
+.tc-card.selected-free{border-color:var(--green);background:rgba(52,211,153,.06)}
+.tc-icon{font-size:32px;margin-bottom:10px}
+.tc-title{font-size:14px;font-weight:700;margin-bottom:6px}
+.tc-sub{font-size:11px;color:var(--sub);line-height:1.8}
+/* OTP */
+.otp-wrap{display:flex;gap:8px;justify-content:center;margin:16px 0}
+.otp-cell{width:48px;height:58px;background:#090b13;border:2px solid var(--border2);
+  border-radius:10px;text-align:center;font-size:24px;font-family:'DM Mono',monospace;
+  color:var(--text);outline:none;transition:.2s}
+.otp-cell:focus{border-color:var(--blue)}
+.otp-cell.success{border-color:var(--green);background:rgba(52,211,153,.07);color:var(--green)}
+.otp-cell.error{border-color:var(--red);background:rgba(248,113,113,.07)}
+/* Summary table */
+.sum-row{display:flex;justify-content:space-between;padding:10px 0;
+  border-bottom:1px solid rgba(30,34,53,.4);font-size:12px}
+.sum-row:last-child{border:none}
+/* Fee section */
+.fee-highlight{background:rgba(52,211,153,.07);border:1px solid rgba(52,211,153,.25);
+  border-radius:12px;padding:16px;margin:12px 0;text-align:center}
+.fee-free{font-family:'DM Mono',monospace;font-size:32px;font-weight:700;color:var(--green)}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="logo">CORETO</div>
+  <div style="font-size:12px;color:var(--sub)">エージェント 入会申込</div>
+</div>
+
+<div class="steps" id="stepbar">
+  <div class="step on"  id="s0"><div class="step-dot">1</div><div class="step-lbl">基本<br>情報</div></div>
+  <div class="step"     id="s1"><div class="step-dot">2</div><div class="step-lbl">宅建士<br>確認</div></div>
+  <div class="step"     id="s2"><div class="step-dot">3</div><div class="step-lbl">SMS<br>認証</div></div>
+  <div class="step"     id="s3"><div class="step-dot">4</div><div class="step-lbl">決済<br>情報</div></div>
+  <div class="step"     id="s4"><div class="step-dot">5</div><div class="step-lbl">確認<br>送信</div></div>
+</div>
+
+<div class="wrap" id="wrap"></div>
+
+<script>
+var step = 0;
+var form = {
+  name:'', nameKana:'', phone:'', email:'', zip:'', addr:'',
+  referral:'', agentType:'re',
+  // 宅建士
+  hasTakken: null,       // true / false
+  takkenSennin: null,    // true / false（専任希望）
+  licNo:'', licPref:'東京都',
+  // 費用
+  monthlyFee: 980,       // 専任なら0（ブロンズ初期値）
+  meishiFee:  2000,      // 名刺（専任なら0）
+  meishiWant: true,
+  // 決済
+  cardNo:'', cardExp:'', cardCvv:'', cardName:'',
+};
+
+var demoOtp = '';
+var otpTimer = null;
+var otpSec = 300;
+
+// ── Step control ─────────────────────────────────────────────
+function goStep(n) {
+  step = n;
+  for (var i=0;i<5;i++) {
+    var el = document.getElementById('s'+i);
+    el.className = 'step'+(i<n?' done':i===n?' on':'');
+    el.querySelector('.step-dot').textContent = i<n ? '✓' : String(i+1);
+  }
+  [step0,step1,step2,step3,step4][n]();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ══════════════════════════════════════
+//  STEP 0: 基本情報
+// ══════════════════════════════════════
+function step0() {
+  document.getElementById('wrap').innerHTML =
+    '<div class="card"><div class="ch"><div class="ch-t">基本情報</div><span class="pill pb">1 / 5</span></div><div class="cb">' +
+    '<div class="g2">' +
+    '<div class="field"><label>氏名（漢字）<span class="req">*</span></label><input id="f-name" value="'+form.name+'" placeholder="山田 誠"></div>' +
+    '<div class="field"><label>氏名（カナ）<span class="req">*</span></label><input id="f-kana" value="'+form.nameKana+'" placeholder="ヤマダ マコト"></div>' +
+    '</div>' +
+    '<div class="g2">' +
+    '<div class="field"><label>携帯電話番号<span class="req">*</span></label><input id="f-phone" type="tel" value="'+form.phone+'" placeholder="090-0000-0000"></div>' +
+    '<div class="field"><label>メールアドレス<span class="req">*</span></label><input id="f-email" type="email" value="'+form.email+'" placeholder="you@example.com"></div>' +
+    '</div>' +
+    '<div class="field"><label>郵便番号</label><input id="f-zip" value="'+form.zip+'" placeholder="150-0001" style="max-width:140px"></div>' +
+    '<div class="field"><label>住所</label><input id="f-addr" value="'+form.addr+'" placeholder="東京都渋谷区..."></div>' +
+    '<div class="g2">' +
+    '<div class="field"><label>エージェント種別<span class="req">*</span></label>' +
+    '<select id="f-type"><option value="re"'+(form.agentType==='re'?' selected':'')+'>不動産エージェント（RE）</option>' +
+    '<option value="hr"'+(form.agentType==='hr'?' selected':'')+'>人材エージェント（HR）</option></select></div>' +
+    '<div class="field"><label>紹介コード（任意）</label><input id="f-ref" value="'+form.referral+'" placeholder="CORE-XXXXXX" style="font-family:\'DM Mono\',monospace"></div>' +
+    '</div>' +
+    '<button class="btn btn-blue" onclick="validateStep0()">次へ →</button>' +
+    '</div></div>';
+}
+
+function validateStep0() {
+  var name  = document.getElementById('f-name').value.trim();
+  var kana  = document.getElementById('f-kana').value.trim();
+  var phone = document.getElementById('f-phone').value.trim();
+  var email = document.getElementById('f-email').value.trim();
+  if (!name || !kana || !phone || !email) { alert('必須項目をすべて入力してください'); return; }
+  form.name      = name; form.nameKana = kana;
+  form.phone     = phone; form.email   = email;
+  form.zip       = document.getElementById('f-zip').value.trim();
+  form.addr      = document.getElementById('f-addr').value.trim();
+  form.agentType = document.getElementById('f-type').value;
+  form.referral  = document.getElementById('f-ref').value.trim();
+  goStep(1);
+}
+
+// ══════════════════════════════════════
+//  STEP 1: 宅建士確認（分岐ステップ）
+// ══════════════════════════════════════
+function step1() {
+  document.getElementById('wrap').innerHTML =
+    '<div class="card"><div class="ch"><div class="ch-t">宅地建物取引士 資格確認</div><span class="pill pb">2 / 5</span></div><div class="cb">' +
+    '<div class="al al-info">ℹ️ <div>宅建士資格をお持ちの方は、COREBLDGの専任宅建士として登録できます。<br>' +
+    '専任登録を選択いただくと <strong style="color:var(--green)">月会費・名刺費用が無料</strong> になります。</div></div>' +
+    '<div style="font-size:13px;font-weight:700;margin-bottom:16px">宅地建物取引士の資格をお持ちですか？</div>' +
+    '<div class="takken-choice">' +
+    '<div class="tc-card" id="tc-yes" onclick="selectTakken(true)">' +
+    '<div class="tc-icon">🏛️</div>' +
+    '<div class="tc-title">はい、持っています</div>' +
+    '<div class="tc-sub">宅建士証番号を入力します<br>専任登録の意思を確認します</div>' +
+    '</div>' +
+    '<div class="tc-card" id="tc-no" onclick="selectTakken(false)">' +
+    '<div class="tc-icon">📋</div>' +
+    '<div class="tc-title">いいえ</div>' +
+    '<div class="tc-sub">通常のエージェントとして<br>入会手続きを進めます</div>' +
+    '</div></div>' +
+    '<div id="takken-detail" style="display:none"></div>' +
+    '<div style="display:flex;gap:10px;margin-top:16px">' +
+    '<button class="btn btn-ghost" onclick="goStep(0)" style="width:auto;padding:10px 20px">← 戻る</button>' +
+    '<button class="btn btn-blue" id="step1-next" onclick="validateStep1()" disabled>次へ →</button>' +
+    '</div></div></div>';
+
+  // 前回の選択を復元
+  if (form.hasTakken === true)  selectTakken(true);
+  if (form.hasTakken === false) selectTakken(false);
+}
+
+function selectTakken(has) {
+  form.hasTakken = has;
+  document.getElementById('tc-yes').className = 'tc-card' + (has ? ' selected' : '');
+  document.getElementById('tc-no').className  = 'tc-card' + (!has ? ' selected' : '');
+
+  var detail = document.getElementById('takken-detail');
+  if (has) {
+    detail.style.display = 'block';
+    detail.innerHTML =
+      '<div style="border-top:1px solid var(--border2);padding-top:16px;margin-top:4px">' +
+      '<div style="font-size:13px;font-weight:700;margin-bottom:14px">COREBLDGの専任宅建士として登録しますか？</div>' +
+      '<div class="takken-choice">' +
+
+      '<div class="tc-card" id="tc-sennin" onclick="selectSennin(true)">' +
+      '<div class="tc-icon">⭐</div>' +
+      '<div class="tc-title" style="color:var(--green)">専任として登録する</div>' +
+      '<div class="tc-sub">月会費 <strong style="color:var(--green);font-size:13px">無料</strong>（通常ブロンズ¥980・シルバー¥490・ゴールド以上¥0）<br>' +
+      '名刺費用 <strong style="color:var(--green)">無料</strong>（通常¥2,000）<br>' +
+      'IT重説 報酬あり（1件あたり）<br>' +
+      '<span style="font-size:10px;color:var(--muted)">※ 他社への専任宅建士としての登録は不可</span>' +
+      '</div></div>' +
+
+      '<div class="tc-card" id="tc-nonsennin" onclick="selectSennin(false)">' +
+      '<div class="tc-icon">📋</div>' +
+      '<div class="tc-title">一般エージェントとして</div>' +
+      '<div class="tc-sub">月会費 ¥980 / 月（Bronze）〜¥0（Gold以上）<br>' +
+      '名刺費用 ¥2,000<br>' +
+      'IT重説対応なし<br>' +
+      '<span style="font-size:10px;color:var(--muted)">※ 他社勤務・掛け持ち可</span>' +
+      '</div></div>' +
+      '</div>' +
+
+      '<div id="sennin-form" style="display:none;margin-top:14px">' +
+      '<div class="al al-warn">⚖️ <div>専任宅建士として登録すると、宅建業法上 <strong>他社での専任宅建士登録はできません</strong>。' +
+      '他社に就職・転職された場合は必ずCOREBLDGへご連絡ください（専任解除は弊社管理職が行います）。</div></div>' +
+      '<div class="g2">' +
+      '<div class="field"><label>宅建士証番号<span class="req">*</span></label>' +
+      '<input id="f-licno" value="'+form.licNo+'" placeholder="東京(1)第123456号" style="font-family:\'DM Mono\',monospace"></div>' +
+      '<div class="field"><label>登録都道府県<span class="req">*</span></label>' +
+      '<select id="f-licpref"><option>東京都</option><option>神奈川県</option><option>大阪府</option>' +
+      '<option>愛知県</option><option>福岡県</option><option>その他</option></select></div>' +
+      '</div>' +
+      '<div class="fee-highlight">' +
+      '<div style="font-size:11px;color:var(--muted);margin-bottom:6px">専任登録の場合の費用</div>' +
+      '<div class="fee-free">¥0</div>' +
+      '<div style="font-size:12px;color:var(--green);margin-top:4px">月会費・名刺費用　すべて無料</div>' +
+      '</div>' +
+      '</div>' +
+      '</div>';
+
+    // 前回の選択を復元
+    if (form.takkenSennin === true)  selectSennin(true);
+    if (form.takkenSennin === false) selectSennin(false);
+  } else {
+    detail.style.display = 'none';
+    form.takkenSennin = false;
+    form.monthlyFee = 980; // ブロンズ初期値
+    form.meishiFee  = 2000;
+    document.getElementById('step1-next').disabled = false;
+  }
+}
+
+function selectSennin(isSennin) {
+  form.takkenSennin = isSennin;
+  document.getElementById('tc-sennin').className    = 'tc-card' + (isSennin ? ' selected-free' : '');
+  document.getElementById('tc-nonsennin').className = 'tc-card' + (!isSennin ? ' selected' : '');
+
+  var senninForm = document.getElementById('sennin-form');
+  if (isSennin) {
+    senninForm.style.display = 'block';
+    form.monthlyFee = 0;
+    form.meishiFee  = 0;
+    form.meishiWant = true;
+  } else {
+    senninForm.style.display = 'none';
+    form.monthlyFee = 980; // ブロンズ初期値
+    form.meishiFee  = 2000;
+  }
+  document.getElementById('step1-next').disabled = false;
+}
+
+function validateStep1() {
+  if (form.hasTakken === null) { alert('資格の有無を選択してください'); return; }
+  if (form.hasTakken && form.takkenSennin === null) { alert('専任登録の意思を選択してください'); return; }
+  if (form.hasTakken && form.takkenSennin) {
+    var licNo = document.getElementById('f-licno') ? document.getElementById('f-licno').value.trim() : '';
+    if (!licNo) { alert('宅建士証番号を入力してください'); return; }
+    form.licNo   = licNo;
+    form.licPref = document.getElementById('f-licpref') ? document.getElementById('f-licpref').value : '東京都';
+  }
+  goStep(2);
+}
+
+// ══════════════════════════════════════
+//  STEP 2: SMS認証
+// ══════════════════════════════════════
+function step2() {
+  demoOtp = String(Math.floor(100000+Math.random()*900000));
+  otpSec = 300;
+
+  document.getElementById('wrap').innerHTML =
+    '<div class="card"><div class="ch"><div class="ch-t">SMS本人確認</div><span class="pill pb">3 / 5</span></div><div class="cb">' +
+    '<div class="al al-info">📱 <div><strong>' + form.phone + '</strong> にSMSで6桁の認証コードを送信しました。<br>' +
+    '<span style="font-size:10px;color:var(--muted)">[デモ用コード: ' + demoOtp + ']</span></div></div>' +
+    '<div class="otp-wrap">' +
+    [0,1,2,3,4,5].map(function(i){ return '<input class="otp-cell" maxlength="1" type="text" inputmode="numeric" id="oc-'+i+'" oninput="otpIn(this,'+i+')" onkeydown="otpKey(event,'+i+')">'; }).join('') +
+    '</div>' +
+    '<div style="text-align:center;font-size:11px;color:var(--muted);margin-bottom:16px">有効期限：<span id="otp-timer">5:00</span></div>' +
+    '<button class="btn btn-ghost" onclick="resendOtp()" id="resend-btn" style="margin-bottom:10px" disabled>📱 再送信する</button>' +
+    '<div style="display:flex;gap:10px">' +
+    '<button class="btn btn-ghost" onclick="goStep(1)" style="width:auto;padding:10px 20px">← 戻る</button>' +
+    '</div></div></div>';
+
+  clearInterval(otpTimer);
+  otpTimer = setInterval(function() {
+    otpSec--;
+    var m = Math.floor(otpSec/60), s = otpSec%60;
+    var el = document.getElementById('otp-timer');
+    if (el) el.textContent = m+':'+(s<10?'0':'')+s;
+    if (otpSec <= 0) {
+      clearInterval(otpTimer);
+      var rb = document.getElementById('resend-btn');
+      if (rb) rb.disabled = false;
+    }
+  }, 1000);
+}
+
+function otpIn(el, i) {
+  el.value = el.value.replace(/\D/g,'');
+  if (el.value && i<5) document.getElementById('oc-'+(i+1)).focus();
+  if (i===5 && el.value) checkOtp();
+}
+function otpKey(e, i) {
+  if (e.key==='Backspace' && !e.target.value && i>0) document.getElementById('oc-'+(i-1)).focus();
+}
+function checkOtp() {
+  var entered = [0,1,2,3,4,5].map(function(i){ return document.getElementById('oc-'+i).value; }).join('');
+  if (entered === demoOtp) {
+    [0,1,2,3,4,5].forEach(function(i){ document.getElementById('oc-'+i).className='otp-cell success'; });
+    clearInterval(otpTimer);
+    setTimeout(function(){ goStep(3); }, 600);
+  } else {
+    [0,1,2,3,4,5].forEach(function(i){ document.getElementById('oc-'+i).className='otp-cell error'; });
+    setTimeout(function(){
+      [0,1,2,3,4,5].forEach(function(i){ document.getElementById('oc-'+i).className='otp-cell'; document.getElementById('oc-'+i).value=''; });
+      document.getElementById('oc-0').focus();
+    }, 800);
+  }
+}
+function resendOtp() {
+  demoOtp = String(Math.floor(100000+Math.random()*900000));
+  alert('[デモ] 新しい認証コード: ' + demoOtp);
+  otpSec = 300;
+  document.getElementById('resend-btn').disabled = true;
+  clearInterval(otpTimer);
+  otpTimer = setInterval(function() {
+    otpSec--;
+    var m=Math.floor(otpSec/60),s=otpSec%60;
+    var el=document.getElementById('otp-timer');
+    if(el) el.textContent=m+':'+(s<10?'0':'')+s;
+    if(otpSec<=0){clearInterval(otpTimer);var rb=document.getElementById('resend-btn');if(rb)rb.disabled=false;}
+  },1000);
+}
+
+// ══════════════════════════════════════
+//  STEP 3: 決済情報
+// ══════════════════════════════════════
+function step3() {
+  var feeNote = form.takkenSennin
+    ? '<div class="fee-highlight"><div style="font-size:11px;color:var(--muted);margin-bottom:4px">専任宅建士 特典</div><div class="fee-free">¥0</div><div style="font-size:11px;color:var(--green);margin-top:4px">月会費・名刺費用 すべて無料</div></div>'
+    : '<div class="al al-info">💳 <div>月会費 <strong>¥980</strong>（ブロンズランク）が翌月から請求されます。</div></div>';
+
+  document.getElementById('wrap').innerHTML =
+    '<div class="card"><div class="ch"><div class="ch-t">決済情報</div><span class="pill pb">4 / 5</span></div><div class="cb">' +
+    feeNote +
+    (form.takkenSennin ? '' :
+      '<div class="field"><label>カード番号<span class="req">*</span></label>' +
+      '<input id="f-card" type="tel" maxlength="19" value="'+form.cardNo+'" placeholder="0000 0000 0000 0000" oninput="fmtCard(this)" style="font-family:\'DM Mono\',monospace;font-size:16px"></div>' +
+      '<div class="g2">' +
+      '<div class="field"><label>有効期限<span class="req">*</span></label><input id="f-exp" maxlength="5" value="'+form.cardExp+'" placeholder="MM/YY" oninput="fmtExp(this)" style="font-family:\'DM Mono\',monospace"></div>' +
+      '<div class="field"><label>セキュリティコード<span class="req">*</span></label><input id="f-cvv" maxlength="4" type="password" value="'+form.cardCvv+'" placeholder="000" style="font-family:\'DM Mono\',monospace"></div>' +
+      '</div>' +
+      '<div class="field"><label>カード名義（ローマ字）<span class="req">*</span></label><input id="f-cname" value="'+form.cardName+'" placeholder="MAKOTO YAMADA" style="font-family:\'DM Mono\',monospace;text-transform:uppercase"></div>'
+    ) +
+    '<div style="display:flex;gap:10px;margin-top:8px">' +
+    '<button class="btn btn-ghost" onclick="goStep(2)" style="width:auto;padding:10px 20px">← 戻る</button>' +
+    '<button class="btn btn-blue" onclick="validateStep3()">次へ →</button>' +
+    '</div></div></div>';
+}
+
+function fmtCard(el) {
+  var v = el.value.replace(/\D/g,'').slice(0,16);
+  el.value = v.replace(/(\d{4})(?=\d)/g,'$1 ');
+  form.cardNo = el.value;
+}
+function fmtExp(el) {
+  var v = el.value.replace(/\D/g,'').slice(0,4);
+  el.value = v.length>2 ? v.slice(0,2)+'/'+v.slice(2) : v;
+  form.cardExp = el.value;
+}
+function validateStep3() {
+  if (!form.takkenSennin) {
+    var card = document.getElementById('f-card') ? document.getElementById('f-card').value.trim() : '';
+    var exp  = document.getElementById('f-exp')  ? document.getElementById('f-exp').value.trim()  : '';
+    var cvv  = document.getElementById('f-cvv')  ? document.getElementById('f-cvv').value.trim()  : '';
+    var cname= document.getElementById('f-cname')? document.getElementById('f-cname').value.trim(): '';
+    if (!card || !exp || !cvv || !cname) { alert('カード情報をすべて入力してください'); return; }
+    form.cardNo=card; form.cardExp=exp; form.cardCvv=cvv; form.cardName=cname;
+  }
+  goStep(4);
+}
+
+// ══════════════════════════════════════
+//  STEP 4: 確認・送信
+// ══════════════════════════════════════
+function step4() {
+  var rows = [
+    ['氏名', form.name + '（' + form.nameKana + '）'],
+    ['電話番号', form.phone],
+    ['メールアドレス', form.email],
+    ['住所', form.addr || '—'],
+    ['エージェント種別', form.agentType==='re'?'不動産エージェント（RE）':'人材エージェント（HR）'],
+    ['宅建士', form.hasTakken ? (form.takkenSennin ? '⭐ 専任宅建士として登録' : '一般（宅建士資格あり）') : 'なし'],
+    form.hasTakken && form.takkenSennin ? ['宅建士証番号', form.licNo + '（' + form.licPref + '）'] : null,
+    ['月会費', form.monthlyFee===0 ? '¥0（専任特典・無料）' : '¥980 / 月（ブロンズ。ランク昇格で割引）'],
+    ['名刺', form.meishiFee===0 ? '¥0（専任特典・無料）' : '¥2,000（初回）'],
+    ['紹介コード', form.referral || '—'],
+  ].filter(Boolean);
+
+  document.getElementById('wrap').innerHTML =
+    '<div class="card"><div class="ch"><div class="ch-t">申込内容の確認</div><span class="pill pb">5 / 5</span></div><div class="cb">' +
+    (form.takkenSennin ? '<div class="al al-ok">⭐ <div><strong style="color:var(--green)">専任宅建士として登録されます</strong><br>' +
+    '月会費・名刺費用が無料になります。IT重説の報酬は本部が設定します。<br>' +
+    '<span style="font-size:10px;color:var(--muted)">他社への専任宅建士登録は宅建業法上不可となります。</span></div></div>' : '') +
+    rows.map(function(r){ return '<div class="sum-row"><span style="color:var(--sub)">'+r[0]+'</span><span style="font-weight:600">'+r[1]+'</span></div>'; }).join('') +
+    '<div style="display:flex;gap:10px;margin-top:20px">' +
+    '<button class="btn btn-ghost" onclick="goStep(3)" style="width:auto;padding:10px 20px">← 戻る</button>' +
+    '<button class="btn btn-gold" onclick="submitSignup()">申込を送信する ✓</button>' +
+    '</div></div></div>';
+}
+
+function submitSignup() {
+  document.getElementById('wrap').innerHTML =
+    '<div style="text-align:center;padding:60px 20px">' +
+    '<div style="font-size:48px;margin-bottom:20px">✅</div>' +
+    '<div style="font-family:\'Syne\',sans-serif;font-size:24px;font-weight:800;color:var(--green);margin-bottom:10px">申込が完了しました</div>' +
+    '<div style="font-size:13px;color:var(--sub);line-height:2;margin-bottom:24px">' +
+    '入会申込を受け付けました。<br>' +
+    (form.takkenSennin
+      ? '専任宅建士登録の審査後、本部より連絡いたします。<br>審査完了後にIDとパスワードが発行されます。'
+      : '本部でeKYC確認後、IDとパスワードをSMSでお送りします。') +
+    '</div>' +
+    '<div style="background:var(--card2);border-radius:12px;padding:16px;font-size:12px;color:var(--muted);line-height:2;display:inline-block;text-align:left;min-width:280px">' +
+    '申込番号：<span class="mono" style="color:var(--gold)">APP-' + String(Date.now()).slice(-8) + '</span><br>' +
+    '氏名：' + form.name + '<br>' +
+    '登録種別：' + (form.takkenSennin ? '⭐ 専任宅建士' : '一般エージェント') +
+    '</div></div>';
+}
+
+// Init
+step0();
+</script>
+</body>
+</html>

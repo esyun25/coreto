@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CORETO 感熱ラベル印刷システム</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap');
+
+*{box-sizing:border-box;margin:0;padding:0;}
+
+:root{
+  --bg:#0d0f14;
+  --card:#161921;
+  --hover:#1e2230;
+  --border:#252a38;
+  --gold:#c9a84c;
+  --gold-l:#e8c96a;
+  --muted:#6b7280;
+  --sub:#9ca3af;
+  --green:#22c55e;
+  --blue:#3b82f6;
+  --orange:#f59e0b;
+  --red:#ef4444;
+  --purple:#a855f7;
+}
+
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:#e8eaf0;min-height:100vh;}
+
+/* ===== HEADER ===== */
+.header{background:#0a0c10;border-bottom:1px solid var(--border);padding:16px 28px;display:flex;align-items:center;justify-content:space-between;}
+.logo{font-family:'DM Mono',monospace;font-size:20px;color:var(--gold);letter-spacing:3px;}
+.header-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+
+/* ===== TABS ===== */
+.tabs{background:#0a0c10;border-bottom:1px solid var(--border);padding:0 28px;display:flex;gap:0;}
+.tab{padding:11px 18px;font-size:12px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap;background:none;border-top:none;border-left:none;border-right:none;font-family:'Noto Sans JP',sans-serif;}
+.tab:hover{color:#e8eaf0;}
+.tab.active{color:var(--gold);border-bottom-color:var(--gold);}
+
+/* ===== LAYOUT ===== */
+.page{display:none;padding:28px;}
+.page.active{display:block;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
+
+/* ===== CARDS ===== */
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:16px;}
+.card-title{font-size:14px;font-weight:700;margin-bottom:14px;}
+.section-label{font-size:11px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px;margin-top:24px;}
+
+/* ===== PRINTER COMPARE ===== */
+.printer-card{background:var(--card);border:2px solid var(--border);border-radius:12px;padding:20px;transition:all .2s;position:relative;overflow:hidden;}
+.printer-card.recommended{border-color:var(--gold);}
+.recommend-badge{position:absolute;top:14px;right:14px;background:var(--gold);color:#0a0c10;font-size:10px;font-weight:700;padding:3px 8px;border-radius:3px;letter-spacing:0.5px;}
+.printer-name{font-size:16px;font-weight:700;margin-bottom:4px;}
+.printer-model{font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);margin-bottom:14px;}
+.printer-price{font-family:'DM Mono',monospace;font-size:20px;font-weight:700;color:var(--gold);margin-bottom:14px;}
+.printer-price span{font-size:12px;color:var(--muted);font-weight:400;}
+
+.spec-row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(37,42,56,0.6);font-size:12px;}
+.spec-row:last-child{border-bottom:none;}
+.spec-key{color:var(--muted);}
+.spec-val{color:#e8eaf0;font-weight:500;}
+.spec-val.good{color:var(--green);}
+.spec-val.ok{color:var(--orange);}
+.spec-val.bad{color:var(--red);}
+
+.pros-cons{margin-top:14px;display:flex;gap:12px;}
+.pros,.cons{flex:1;background:var(--hover);border-radius:6px;padding:10px;}
+.pros-title{font-size:11px;color:var(--green);margin-bottom:6px;font-weight:600;}
+.cons-title{font-size:11px;color:var(--red);margin-bottom:6px;font-weight:600;}
+.pros li,.cons li{font-size:11px;color:var(--sub);line-height:1.7;list-style:none;padding-left:10px;position:relative;}
+.pros li::before{content:'✓';position:absolute;left:0;color:var(--green);}
+.cons li::before{content:'×';position:absolute;left:0;color:var(--red);}
+
+/* ===== LABEL PRINT INTERFACE ===== */
+.print-interface{display:grid;grid-template-columns:300px 1fr;gap:20px;align-items:start;}
+
+.label-buttons{display:flex;flex-direction:column;gap:10px;}
+
+.label-btn{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:14px 16px;
+  cursor:pointer;
+  transition:all .15s;
+  text-align:left;
+  font-family:'Noto Sans JP',sans-serif;
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+.label-btn:hover{border-color:var(--gold);background:rgba(201,168,76,0.06);}
+.label-btn.active{border-color:var(--gold);background:rgba(201,168,76,0.1);}
+
+.label-btn-icon{font-size:22px;flex-shrink:0;}
+.label-btn-text{}
+.label-btn-name{font-size:13px;font-weight:600;color:#e8eaf0;}
+.label-btn-desc{font-size:11px;color:var(--muted);margin-top:2px;}
+.label-btn-print{
+  margin-left:auto;
+  background:var(--gold);
+  color:#0a0c10;
+  border:none;
+  border-radius:5px;
+  padding:6px 12px;
+  font-size:11px;
+  font-weight:700;
+  cursor:pointer;
+  font-family:'Noto Sans JP',sans-serif;
+  white-space:nowrap;
+  transition:background .15s;
+}
+.label-btn-print:hover{background:var(--gold-l);}
+
+/* ===== LABEL PREVIEW ===== */
+.preview-area{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px;}
+.preview-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.preview-title{font-size:13px;font-weight:600;}
+.preview-meta{font-size:11px;color:var(--muted);}
+
+/* 感熱ラベル本体（102mm × 62mm を画面表示） */
+.thermal-label{
+  width:306px; /* 102mm × 3px/mm */
+  min-height:186px; /* 62mm × 3px/mm */
+  background:white;
+  border-radius:4px;
+  padding:10px 12px;
+  font-family:'Noto Sans JP',sans-serif;
+  color:#111;
+  margin:0 auto;
+  box-shadow:0 2px 16px rgba(0,0,0,0.4);
+  display:flex;
+  flex-direction:column;
+  position:relative;
+}
+
+.tl-type-bar{
+  font-size:7px;
+  font-weight:700;
+  letter-spacing:0.5px;
+  padding:2px 7px;
+  border-radius:2px;
+  display:inline-block;
+  margin-bottom:6px;
+  width:fit-content;
+}
+.tl-bar-blue{background:#dbeafe;color:#1d4ed8;}
+.tl-bar-purple{background:#ede9fe;color:#6d28d9;}
+.tl-bar-amber{background:#fef3c7;color:#b45309;}
+
+.tl-to-label{font-size:6.5px;color:#9ca3af;letter-spacing:0.5px;margin-bottom:2px;}
+.tl-postal{font-size:11px;color:#374151;letter-spacing:2px;margin-bottom:1px;}
+.tl-address{font-size:7.5px;color:#374151;line-height:1.5;margin-bottom:2px;}
+.tl-name{font-size:14px;font-weight:700;color:#111827;line-height:1.2;}
+.tl-honorific{font-size:9px;font-weight:400;color:#374151;}
+
+.tl-divider{border:none;border-top:0.5px solid #e5e7eb;margin:5px 0;}
+
+.tl-from-label{font-size:6px;color:#9ca3af;letter-spacing:0.5px;margin-bottom:2px;}
+.tl-from-name{font-size:8px;font-weight:700;color:#374151;line-height:1.4;}
+.tl-from-addr{font-size:7px;color:#6b7280;line-height:1.4;}
+.tl-from-tel{font-size:7px;color:#6b7280;}
+
+.tl-case-info{
+  position:absolute;
+  bottom:6px;right:8px;
+  font-size:6.5px;color:#9ca3af;
+  text-align:right;line-height:1.4;
+}
+
+/* 印刷ボタン */
+.print-trigger{
+  margin-top:14px;
+  display:flex;
+  gap:10px;
+  justify-content:center;
+}
+
+.btn{padding:9px 20px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:'Noto Sans JP',sans-serif;transition:all .15s;}
+.btn-gold{background:var(--gold);color:#0a0c10;}
+.btn-gold:hover{background:var(--gold-l);}
+.btn-outline{background:transparent;color:var(--sub);border:1px solid var(--border);}
+.btn-outline:hover{border-color:var(--gold);color:var(--gold);}
+
+/* ===== CASE INFO PANEL ===== */
+.case-panel{background:var(--hover);border-radius:8px;padding:14px;margin-bottom:16px;}
+.case-panel-title{font-size:11px;color:var(--muted);margin-bottom:10px;letter-spacing:0.5px;}
+.case-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.case-field{}
+.case-field-key{font-size:10px;color:var(--muted);margin-bottom:2px;}
+.case-field-val{font-size:12px;font-weight:500;}
+
+/* ===== SETUP STEPS ===== */
+.step{display:flex;gap:14px;align-items:flex-start;padding:14px 0;border-bottom:1px solid rgba(37,42,56,0.5);}
+.step:last-child{border-bottom:none;}
+.step-num{width:26px;height:26px;background:var(--gold);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#0a0c10;flex-shrink:0;}
+.step-body{}
+.step-title{font-size:13px;font-weight:600;margin-bottom:4px;}
+.step-desc{font-size:12px;color:var(--sub);line-height:1.7;}
+code{background:var(--hover);padding:1px 5px;border-radius:3px;font-size:11px;color:var(--gold);font-family:'DM Mono',monospace;}
+
+.hint{background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.2);border-radius:6px;padding:12px;font-size:12px;color:var(--sub);line-height:1.7;margin-top:12px;}
+
+/* ===== FLOW ===== */
+.flow-row{display:flex;align-items:center;gap:0;flex-wrap:wrap;margin-bottom:20px;}
+.flow-box{background:var(--hover);border:1px solid var(--border);border-radius:6px;padding:10px 14px;font-size:12px;text-align:center;min-width:100px;}
+.flow-box.hl{border-color:var(--gold);background:rgba(201,168,76,0.08);color:var(--gold);}
+.flow-box.hl-green{border-color:var(--green);background:rgba(34,197,94,0.08);color:var(--green);}
+.flow-arr{color:var(--muted);font-size:16px;padding:0 8px;}
+
+/* animate */
+.thermal-label{animation:fadeIn .25s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="logo">CORETO
+  <button onclick="window.location.href='coreto-hub.html'"
+            style="font-size:10px;padding:5px 12px;border-radius:6px;border:1px solid var(--border2);
+            background:transparent;color:var(--muted);cursor:pointer;font-family:'Noto Sans JP',sans-serif">
+    ← マイページ
+  </button>
+</div>
+    <div class="header-sub">感熱ラベル印刷システム ／ 1枚ずつ印刷</div>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="showTab('printer')">🖨 機種選定</button>
+  <button class="tab" onclick="showTab('print')">📋 印刷インターフェース</button>
+  <button class="tab" onclick="showTab('setup')">⚙️ 導入手順</button>
+</div>
+
+<!-- ================================================================ -->
+<!-- TAB: PRINTER -->
+<!-- ================================================================ -->
+<div id="tab-printer" class="page active">
+
+  <div class="section-label">推奨機種 比較</div>
+
+  <div class="grid3" style="margin-bottom:20px">
+
+    <!-- 推奨 -->
+    <div class="printer-card recommended">
+      <div class="recommend-badge">★ 推奨</div>
+      <div class="printer-name">Brother</div>
+      <div class="printer-model">QL-820NWB</div>
+      <div class="printer-price">¥18,000 <span>〜（Amazon相場）</span></div>
+      <div class="spec-row"><span class="spec-key">ラベル幅</span><span class="spec-val good">29〜102mm対応</span></div>
+      <div class="spec-row"><span class="spec-key">接続</span><span class="spec-val good">WiFi / USB / Bluetooth</span></div>
+      <div class="spec-row"><span class="spec-key">印刷速度</span><span class="spec-val good">110mm/秒</span></div>
+      <div class="spec-row"><span class="spec-key">ラベルコスト</span><span class="spec-val">約¥3〜5/枚</span></div>
+      <div class="spec-row"><span class="spec-key">API/SDK</span><span class="spec-val good">b-PAC SDK（無料）</span></div>
+      <div class="spec-row"><span class="spec-key">Kintone連携</span><span class="spec-val good">カスタマイズ可能</span></div>
+      <div class="pros-cons">
+        <ul class="pros"><div class="pros-title">メリット</div>
+          <li>WiFiでネットワーク印刷可能</li>
+          <li>無料SDKで完全自動化できる</li>
+          <li>102mm幅でレターパック宛名欄にピッタリ</li>
+          <li>ランニングコストが安い</li>
+        </ul>
+        <ul class="cons"><div class="cons-title">デメリット</div>
+          <li>初期費用がやや高め</li>
+          <li>SDK設定に少し手間</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 次点 -->
+    <div class="printer-card">
+      <div class="printer-name">Brother</div>
+      <div class="printer-model">QL-700</div>
+      <div class="printer-price">¥8,000 <span>〜（Amazon相場）</span></div>
+      <div class="spec-row"><span class="spec-key">ラベル幅</span><span class="spec-val ok">29〜62mm対応</span></div>
+      <div class="spec-row"><span class="spec-key">接続</span><span class="spec-val ok">USB のみ</span></div>
+      <div class="spec-row"><span class="spec-key">印刷速度</span><span class="spec-val good">150mm/秒</span></div>
+      <div class="spec-row"><span class="spec-key">ラベルコスト</span><span class="spec-val">約¥3〜4/枚</span></div>
+      <div class="spec-row"><span class="spec-key">API/SDK</span><span class="spec-val ok">b-PAC SDK（無料）</span></div>
+      <div class="spec-row"><span class="spec-key">Kintone連携</span><span class="spec-val ok">PC経由のみ</span></div>
+      <div class="pros-cons">
+        <ul class="pros"><div class="pros-title">メリット</div>
+          <li>安価で入手しやすい</li>
+          <li>印刷速度が速い</li>
+          <li>SDKは820NWBと同じ</li>
+        </ul>
+        <ul class="cons"><div class="cons-title">デメリット</div>
+          <li>62mm幅上限で少し狭い</li>
+          <li>WiFiなし・USB接続のみ</li>
+          <li>複数拠点では使いにくい</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 参考 -->
+    <div class="printer-card">
+      <div class="printer-name">DYMO</div>
+      <div class="printer-model">LabelWriter 450</div>
+      <div class="printer-price">¥15,000 <span>〜（Amazon相場）</span></div>
+      <div class="spec-row"><span class="spec-key">ラベル幅</span><span class="spec-val ok">最大54mm</span></div>
+      <div class="spec-row"><span class="spec-key">接続</span><span class="spec-val ok">USB のみ</span></div>
+      <div class="spec-row"><span class="spec-key">印刷速度</span><span class="spec-val ok">51枚/分</span></div>
+      <div class="spec-row"><span class="spec-key">ラベルコスト</span><span class="spec-val bad">約¥8〜12/枚</span></div>
+      <div class="spec-row"><span class="spec-key">API/SDK</span><span class="spec-val ok">DYMOWebSDK</span></div>
+      <div class="spec-row"><span class="spec-key">Kintone連携</span><span class="spec-val ok">PC経由のみ</span></div>
+      <div class="pros-cons">
+        <ul class="pros"><div class="pros-title">メリット</div>
+          <li>海外シェアが高く安定</li>
+          <li>Web SDKが使いやすい</li>
+        </ul>
+        <ul class="cons"><div class="cons-title">デメリット</div>
+          <li>幅54mm上限で住所が入りにくい</li>
+          <li>ランニングコストが高い</li>
+          <li>専用ラベルのみ使用可</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">✅ QL-820NWB を推奨する理由</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+      <div>
+        <div style="font-size:12px;color:var(--sub);line-height:1.9">
+          <strong style="color:#e8eaf0">① 102mm幅ラベルが使える</strong><br>
+          レターパックの宛名欄（約100mm幅）にピッタリ。住所・氏名・差出人・案件IDを全て余裕を持って収められます。<br><br>
+          <strong style="color:#e8eaf0">② WiFi接続でどこからでも印刷</strong><br>
+          Kintoneのボタンを押したら、プリンターが繋がっているネットワーク内のどのPCからでも印刷できます。PCに刺しっぱなし不要。<br><br>
+          <strong style="color:#e8eaf0">③ 無料SDKで完全自動化できる</strong><br>
+          Brother の <code>b-PAC SDK</code> を使えば「Kintoneのボタン押下 → 自動で宛名印刷」まで1クリックで完結します。
+        </div>
+      </div>
+      <div>
+        <div style="background:var(--hover);border-radius:8px;padding:14px">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:10px">使用するラベル（推奨）</div>
+          <div style="display:flex;flex-direction:column;gap:8px;font-size:12px">
+            <div style="background:var(--card);border-radius:6px;padding:10px">
+              <div style="font-weight:600;margin-bottom:3px">DK-11202（出荷ラベル）</div>
+              <div style="color:var(--muted)">62mm × 100mm / 300枚ロール</div>
+              <div style="color:var(--gold);font-family:'DM Mono',monospace;margin-top:3px">約¥2,500 / ロール ≒ ¥8/枚</div>
+            </div>
+            <div style="background:var(--card);border-radius:6px;padding:10px;border:1px solid rgba(201,168,76,0.3)">
+              <div style="font-weight:600;margin-bottom:3px">DK-22243（連続テープ 102mm）★推奨</div>
+              <div style="color:var(--muted)">102mm幅 × 30.48m / 任意の長さに切断</div>
+              <div style="color:var(--gold);font-family:'DM Mono',monospace;margin-top:3px">約¥3,500 / ロール ≒ ¥3〜5/枚</div>
+            </div>
+          </div>
+        </div>
+        <div class="hint" style="margin-top:12px">
+          💡 <strong style="color:#e8eaf0">DK-22243（102mm幅）</strong> を使うと、1枚あたりの印刷コストが最安になり、レターパックの宛名欄に完全フィットします。切断は自動なので手間なし。
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ================================================================ -->
+<!-- TAB: PRINT -->
+<!-- ================================================================ -->
+<div id="tab-print" class="page">
+
+  <!-- 案件情報パネル -->
+  <div class="case-panel">
+    <div class="case-panel-title">現在の案件情報（Kintoneから自動取得）</div>
+    <div class="case-fields">
+      <div class="case-field"><div class="case-field-key">案件ID</div><div class="case-field-val" style="font-family:'DM Mono',monospace;color:var(--gold)">C-003</div></div>
+      <div class="case-field"><div class="case-field-key">物件名</div><div class="case-field-val">渋谷区代々木 2LDK</div></div>
+      <div class="case-field"><div class="case-field-key">お客様</div><div class="case-field-val">鈴木 一郎 様</div></div>
+      <div class="case-field"><div class="case-field-key">お客様住所</div><div class="case-field-val" style="font-size:11px">〒150-0001 渋谷区神宮前1-1-1 201号</div></div>
+      <div class="case-field"><div class="case-field-key">管理会社</div><div class="case-field-val">株式会社渋谷管理</div></div>
+      <div class="case-field"><div class="case-field-key">管理会社住所</div><div class="case-field-val" style="font-size:11px">〒160-0022 新宿区新宿2-3-4</div></div>
+      <div class="case-field"><div class="case-field-key">担当エージェント</div><div class="case-field-val">山田 誠</div></div>
+      <div class="case-field"><div class="case-field-key">エージェントTEL</div><div class="case-field-val" style="font-family:'DM Mono',monospace;color:var(--green)">090-1234-5678</div></div>
+    </div>
+  </div>
+
+  <div class="print-interface">
+
+    <!-- 左：印刷ボタン群 -->
+    <div>
+      <div style="font-size:11px;color:var(--muted);letter-spacing:1px;margin-bottom:12px">印刷するラベルを選択</div>
+      <div class="label-buttons">
+
+        <div class="label-btn active" onclick="showLabel('client-contract')">
+          <div class="label-btn-icon">📄</div>
+          <div class="label-btn-text">
+            <div class="label-btn-name">顧客宛 ー 契約書送付</div>
+            <div class="label-btn-desc">CORETO事務所 → お客様</div>
+          </div>
+          <button class="label-btn-print" onclick="event.stopPropagation();triggerPrint('contract')">🖨 印刷</button>
+        </div>
+
+        <div class="label-btn" onclick="showLabel('client-key')">
+          <div class="label-btn-icon">🔑</div>
+          <div class="label-btn-text">
+            <div class="label-btn-name">顧客宛 ー 鍵送付</div>
+            <div class="label-btn-desc">CORETO事務所 → お客様</div>
+          </div>
+          <button class="label-btn-print" onclick="event.stopPropagation();triggerPrint('key')">🖨 印刷</button>
+        </div>
+
+        <div class="label-btn" onclick="showLabel('return')">
+          <div class="label-btn-icon">↩️</div>
+          <div class="label-btn-text">
+            <div class="label-btn-name">返信用 ー 契約書返送</div>
+            <div class="label-btn-desc">お客様 → CORETO事務所</div>
+          </div>
+          <button class="label-btn-print" onclick="event.stopPropagation();triggerPrint('return')">🖨 印刷</button>
+        </div>
+
+        <div class="label-btn" onclick="showLabel('mgmt')">
+          <div class="label-btn-icon">🏢</div>
+          <div class="label-btn-text">
+            <div class="label-btn-name">管理会社宛</div>
+            <div class="label-btn-desc">CORETO事務所 → 管理会社</div>
+          </div>
+          <button class="label-btn-print" onclick="event.stopPropagation();triggerPrint('mgmt')">🖨 印刷</button>
+        </div>
+
+        <div style="margin-top:4px;padding-top:14px;border-top:1px solid var(--border)">
+          <button class="btn btn-gold" style="width:100%;padding:11px" onclick="triggerPrint('all')">
+            ⚡ 全ラベルをまとめて印刷（4枚連続）
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 右：プレビュー -->
+    <div>
+      <div class="preview-area">
+        <div class="preview-header">
+          <div class="preview-title">印刷プレビュー</div>
+          <div class="preview-meta" id="preview-meta">📄 顧客宛（契約書送付）― 102mm × 62mm</div>
+        </div>
+
+        <!-- ラベル1：顧客宛・契約書 -->
+        <div id="label-client-contract">
+          <div class="thermal-label">
+            <span class="tl-type-bar tl-bar-blue">📄 契約書送付</span>
+            <div class="tl-to-label">お届け先</div>
+            <div class="tl-postal">〒150-0001</div>
+            <div class="tl-address">東京都渋谷区神宮前1-1-1<br>○○マンション 201号室</div>
+            <div class="tl-name">鈴木 一郎 <span class="tl-honorific">様</span></div>
+            <hr class="tl-divider">
+            <div class="tl-from-label">差出人</div>
+            <div class="tl-from-name">CORETO ／ 担当：山田 誠</div>
+            <div class="tl-from-addr">〒171-0021 東京都豊島区西池袋1-1-1</div>
+            <div class="tl-from-tel">TEL: 090-1234-5678</div>
+            <div class="tl-case-info">C-003<br>渋谷代々木 賃貸</div>
+          </div>
+        </div>
+
+        <!-- ラベル2：顧客宛・鍵 -->
+        <div id="label-client-key" style="display:none">
+          <div class="thermal-label">
+            <span class="tl-type-bar tl-bar-blue">🔑 鍵送付</span>
+            <div class="tl-to-label">お届け先</div>
+            <div class="tl-postal">〒150-0001</div>
+            <div class="tl-address">東京都渋谷区神宮前1-1-1<br>○○マンション 201号室</div>
+            <div class="tl-name">鈴木 一郎 <span class="tl-honorific">様</span></div>
+            <hr class="tl-divider">
+            <div class="tl-from-label">差出人</div>
+            <div class="tl-from-name">CORETO ／ 担当：山田 誠</div>
+            <div class="tl-from-addr">〒171-0021 東京都豊島区西池袋1-1-1</div>
+            <div class="tl-from-tel">TEL: 090-1234-5678</div>
+            <div class="tl-case-info">C-003<br>渋谷代々木 賃貸</div>
+          </div>
+        </div>
+
+        <!-- ラベル3：返信用 -->
+        <div id="label-return" style="display:none">
+          <div class="thermal-label">
+            <span class="tl-type-bar tl-bar-purple">↩️ 返信用（契約書返送）</span>
+            <div class="tl-to-label">お届け先</div>
+            <div class="tl-postal">〒171-0021</div>
+            <div class="tl-address">東京都豊島区西池袋1-1-1</div>
+            <div class="tl-name" style="font-size:11px;line-height:1.4">合同会社帝国開発<br><span style="font-size:9px;font-weight:600">CORETO 契約書受付 係</span></div>
+            <hr class="tl-divider">
+            <div class="tl-from-label">差出人（お客様のお名前をご記入ください）</div>
+            <div class="tl-from-name">鈴木 一郎 様</div>
+            <div class="tl-from-addr">〒150-0001 東京都渋谷区神宮前1-1-1</div>
+            <div class="tl-case-info">C-003 返送用<br>署名後にご投函ください</div>
+          </div>
+        </div>
+
+        <!-- ラベル4：管理会社 -->
+        <div id="label-mgmt" style="display:none">
+          <div class="thermal-label">
+            <span class="tl-type-bar tl-bar-amber">🏢 管理会社送付</span>
+            <div class="tl-to-label">お届け先</div>
+            <div class="tl-postal">〒160-0022</div>
+            <div class="tl-address">東京都新宿区新宿2-3-4<br>○○ビル 5階</div>
+            <div class="tl-name" style="font-size:13px">株式会社渋谷管理 <span class="tl-honorific">御中</span></div>
+            <div style="font-size:7.5px;color:#374151;margin-top:2px">管理部 ご担当者様</div>
+            <hr class="tl-divider">
+            <div class="tl-from-label">差出人</div>
+            <div class="tl-from-name">CORETO ／ 担当：山田 誠</div>
+            <div class="tl-from-addr">〒171-0021 東京都豊島区西池袋1-1-1</div>
+            <div class="tl-from-tel">TEL: 090-1234-5678</div>
+            <div class="tl-case-info">C-003<br>渋谷代々木 賃貸</div>
+          </div>
+        </div>
+
+        <!-- 印刷ステータス -->
+        <div id="print-status" style="display:none;margin-top:14px;padding:12px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:6px;font-size:12px;color:var(--green);text-align:center">
+          ✅ Brother QL-820NWB に印刷指示を送信しました
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ================================================================ -->
+<!-- TAB: SETUP -->
+<!-- ================================================================ -->
+<div id="tab-setup" class="page">
+
+  <div class="card">
+    <div class="card-title">⚡ 全体フロー</div>
+    <div class="flow-row">
+      <div class="flow-box">Kintone<br>契約レコード</div>
+      <div class="flow-arr">→</div>
+      <div class="flow-box hl">「🖨 印刷」<br>ボタンをクリック</div>
+      <div class="flow-arr">→</div>
+      <div class="flow-box">b-PAC SDK が<br>データ取得</div>
+      <div class="flow-arr">→</div>
+      <div class="flow-box hl">QL-820NWB に<br>WiFiで送信</div>
+      <div class="flow-arr">→</div>
+      <div class="flow-box hl-green">ラベル1枚<br>自動印刷</div>
+    </div>
+    <div style="font-size:12px;color:var(--sub)">Zapier不要・Print Creator不要・追加費用ゼロで実現できます。b-PAC SDKはBrotherが無料提供しています。</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🔧 導入手順</div>
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="step-title">QL-820NWB を購入・WiFi設定</div>
+        <div class="step-desc">
+          Amazon等で購入（¥18,000前後）<br>
+          同梱の設定ウィザードでWiFiに接続。IPアドレスを固定IPにしておくと安定します。<br>
+          ロールラベル <code>DK-22243（102mm幅）</code> をセット。
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="step-title">b-PAC SDK をインストール</div>
+        <div class="step-desc">
+          Brother公式サイトから <code>b-PAC SDK</code> を無料ダウンロード・インストール。<br>
+          これによりブラウザのJavaScriptからプリンターに直接印刷指示を出せるようになります。<br>
+          対応OS：Windows（Macは別途 AirPrint 経由で可能）
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <div class="step-title">Kintoneにカスタムボタンを設置</div>
+        <div class="step-desc">
+          Kintone → アプリ設定 → JavaScript/CSSカスタマイズ に以下を追加：<br><br>
+          <code>kintone.events.on('app.record.detail.show', ...)</code> で詳細画面を検知<br>
+          ボタン名：<code>🖨 宛名ラベルを印刷</code> を追加<br>
+          ラベル種別（契約書・鍵・返送用・管理会社）を選べるドロップダウンも設置<br><br>
+          ボタンクリック時に b-PAC SDK を呼び出し、Kintoneの住所フィールドを自動取得して印刷。
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <div class="step-title">ラベルテンプレート（.lbx）を作成</div>
+        <div class="step-desc">
+          Brother の <code>P-touch Editor</code>（無料）でラベルデザインを作成し <code>.lbx</code> 形式で保存。<br>
+          差し込みフィールド（宛先・氏名・差出人TEL・案件ID等）を配置。<br>
+          テンプレートは1種類ずつ作成：<br>
+          ・<code>label_customer.lbx</code>（顧客宛：契約書 / 鍵 共通）<br>
+          ・<code>label_return.lbx</code>（返信用）<br>
+          ・<code>label_mgmt.lbx</code>（管理会社宛）
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <div class="step-title">差出人TELの自動切り替え設定</div>
+        <div class="step-desc">
+          Kintoneの「ユーザー管理」アプリに各エージェントの電話番号を登録済みのため、<br>
+          契約レコードの「担当エージェント」フィールドからルックアップで <code>{{担当エージェント_TEL}}</code> を自動引用。<br>
+          顧客宛ラベルの差出人TELにこのフィールドを差し込むことで、<br>
+          <strong style="color:var(--gold)">エージェントが変わっても電話番号が自動で切り替わります。</strong>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">6</div>
+      <div class="step-body">
+        <div class="step-title">テスト印刷で位置確認</div>
+        <div class="step-desc">
+          実際のレターパックに貼り付けて宛名欄内に収まるか確認。<br>
+          ズレがある場合は P-touch Editor でマージン調整（1〜2mmの微調整で完了します）。
+        </div>
+      </div>
+    </div>
+
+    <div class="hint">
+      💡 <strong style="color:#e8eaf0">KintoneのカスタマイズコードはClaudeと一緒に書けます。</strong><br>
+      「b-PAC SDK + Kintone連携のJavaScriptを書いてほしい」と依頼するだけで、そのままコピペして使えるコードを生成できます。エンジニア不要で実装できます。<br><br>
+      💡 <strong style="color:#e8eaf0">追加コスト：ゼロ</strong>（b-PAC SDK・P-touch Editorは無料。Print Creatorは不要になります）
+    </div>
+  </div>
+
+</div>
+
+<script>
+function showTab(t){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+t).classList.add('active');
+  event.target.classList.add('active');
+}
+
+const metaLabels = {
+  'client-contract':'📄 顧客宛（契約書送付）― 102mm × 62mm',
+  'client-key':'🔑 顧客宛（鍵送付）― 102mm × 62mm',
+  'return':'↩️ 返信用（契約書返送）― 102mm × 62mm',
+  'mgmt':'🏢 管理会社宛 ― 102mm × 62mm',
+};
+
+function showLabel(id){
+  ['client-contract','client-key','return','mgmt'].forEach(k=>{
+    document.getElementById('label-'+k).style.display = k===id?'block':'none';
+  });
+  document.querySelectorAll('.label-btn').forEach(b=>b.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  document.getElementById('preview-meta').textContent = metaLabels[id];
+  document.getElementById('print-status').style.display='none';
+}
+
+function triggerPrint(type){
+  const status = document.getElementById('print-status');
+  const labels = {
+    contract:'契約書送付ラベル',
+    key:'鍵送付ラベル',
+    return:'返信用ラベル',
+    mgmt:'管理会社宛ラベル',
+    all:'全4枚（連続）',
+  };
+  status.textContent = `✅ Brother QL-820NWB に「${labels[type]}」の印刷指示を送信しました`;
+  status.style.display='block';
+  setTimeout(()=>status.style.display='none', 3500);
+}
+</script>
+</body>
+</html>

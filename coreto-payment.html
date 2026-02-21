@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CORETO 支払明細書ジェネレーター</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090f;--card:#0f1119;--card2:#141720;--border:#1e2235;--border2:#252a3d;
+  --gold:#c9a84c;--gold-l:#e8c96a;--gold-dim:#7a5f22;
+  --blue:#4f9cf9;--green:#34d399;--red:#f87171;--orange:#fb923c;--purple:#a78bfa;
+  --muted:#4a5270;--sub:#7a849e;--text:#e2e6f3;
+}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* ─ Header ─ */
+.header{display:flex;align-items:center;justify-content:space-between;padding:0 28px;height:54px;
+  border-bottom:1px solid var(--border);background:rgba(7,9,15,.9);backdrop-filter:blur(12px);
+  position:sticky;top:0;z-index:100}
+.logo{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--gold);letter-spacing:3px}
+
+/* ─ Layout ─ */
+.layout{display:grid;grid-template-columns:340px 1fr;height:calc(100vh - 54px)}
+
+/* ─ Left: Editor ─ */
+.editor{background:var(--card2);border-right:1px solid var(--border);overflow-y:auto;padding:20px}
+.ed-title{font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;
+  margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.ed-title::before{content:'';width:3px;height:12px;background:var(--gold);border-radius:2px}
+
+/* ─ Field groups ─ */
+.field-group{background:var(--card);border:1px solid var(--border);border-radius:10px;
+  padding:14px;margin-bottom:12px}
+.fg-title{font-size:9px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;
+  margin-bottom:10px;font-weight:700}
+.field{margin-bottom:10px}
+.field:last-child{margin-bottom:0}
+.field label{display:block;font-size:10px;color:var(--sub);margin-bottom:4px}
+.field input,.field select{width:100%;background:#090b13;border:1px solid var(--border2);
+  border-radius:7px;padding:8px 10px;color:var(--text);font-size:12px;
+  font-family:'Noto Sans JP',sans-serif;transition:border-color .15s}
+.field input:focus,.field select:focus{outline:none;border-color:var(--blue)}
+.field input[type=number]{font-family:'DM Mono',monospace}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.field-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+
+/* toggle */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;
+  padding:7px 0;border-bottom:1px solid rgba(30,34,53,.6)}
+.toggle-row:last-child{border:none;padding-bottom:0}
+.toggle-label{font-size:11px;color:var(--sub)}
+.toggle{width:36px;height:20px;background:var(--border2);border-radius:10px;cursor:pointer;
+  position:relative;transition:background .2s;flex-shrink:0;border:none}
+.toggle.on{background:var(--green)}
+.toggle::after{content:'';position:absolute;top:3px;left:3px;width:14px;height:14px;
+  border-radius:50%;background:#fff;transition:left .2s}
+.toggle.on::after{left:19px}
+
+/* Cases */
+.cases-list{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+.case-entry{background:#0a0c14;border:1px solid var(--border2);border-radius:8px;padding:12px;position:relative}
+.case-entry.hr-case{border-color:rgba(167,139,250,.25)}
+.ce-row{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px}
+.ce-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:6px}
+.ce-field label{font-size:9px;color:var(--muted);display:block;margin-bottom:3px}
+.ce-field input,.ce-field select{width:100%;background:#07090f;border:1px solid var(--border2);
+  border-radius:5px;padding:6px 8px;color:var(--text);font-size:11px;
+  font-family:'DM Mono',monospace}
+.ce-field input:focus,.ce-field select:focus{outline:none;border-color:var(--blue)}
+.ce-del{position:absolute;top:8px;right:8px;font-size:11px;color:var(--muted);
+  background:none;border:none;cursor:pointer;padding:2px 6px;border-radius:4px}
+.ce-del:hover{color:var(--red);background:rgba(248,113,113,.1)}
+.ce-type-badge{font-size:8px;font-weight:700;padding:1px 6px;border-radius:3px;
+  margin-bottom:8px;display:inline-block}
+
+.add-case-btn{width:100%;padding:9px;border-radius:8px;border:1px dashed var(--border2);
+  background:transparent;color:var(--sub);font-size:11px;cursor:pointer;
+  font-family:'Noto Sans JP',sans-serif;transition:all .15s}
+.add-case-btn:hover{border-color:var(--blue);color:var(--blue);background:rgba(79,156,249,.05)}
+
+/* mentor entries */
+.mentor-entry{background:#0a0c14;border:1px solid rgba(167,139,250,.2);border-radius:8px;
+  padding:10px;margin-bottom:6px;position:relative}
+
+/* ─ Right: Preview ─ */
+.preview{overflow-y:auto;padding:28px;background:var(--bg)}
+.preview-actions{display:flex;gap:8px;justify-content:flex-end;margin-bottom:20px}
+.pa-btn{padding:8px 18px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;
+  font-family:'Noto Sans JP',sans-serif;transition:all .15s;letter-spacing:.5px}
+.pa-gen{background:linear-gradient(135deg,var(--gold),#a8742a);color:#0a0c10;border:none}
+.pa-gen:hover{filter:brightness(1.1)}
+.pa-print{background:rgba(79,156,249,.12);border:1px solid rgba(79,156,249,.3);color:var(--blue)}
+.pa-print:hover{background:rgba(79,156,249,.2)}
+
+/* ─ Statement ─ */
+.stmt{background:#fff;color:#111;border-radius:12px;padding:40px 44px;max-width:720px;
+  margin:0 auto;font-family:'Noto Sans JP',sans-serif;box-shadow:0 8px 40px rgba(0,0,0,.4)}
+.stmt-header{display:flex;justify-content:space-between;align-items:flex-start;
+  border-bottom:2px solid #111;padding-bottom:16px;margin-bottom:20px}
+.stmt-logo{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;letter-spacing:4px;color:#111}
+.stmt-title{font-size:20px;font-weight:700;margin-bottom:4px}
+.stmt-period{font-size:12px;color:#555}
+.stmt-to{margin-bottom:20px}
+.stmt-to-name{font-size:18px;font-weight:700;margin-bottom:3px}
+.stmt-to-id{font-size:11px;color:#666;font-family:'DM Mono',monospace}
+.stmt-to-msg{font-size:12px;color:#444;margin-top:6px}
+
+/* summary badges */
+.stmt-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;
+  background:#e5e5e5;border-radius:10px;overflow:hidden;margin-bottom:24px}
+.ss-item{background:#f8f8f8;padding:14px 16px}
+.ss-label{font-size:9px;color:#888;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}
+.ss-val{font-size:20px;font-weight:700;color:#111;font-family:'DM Mono',monospace}
+.ss-val.big{font-size:26px;color:#1a6b3a}
+
+/* case table */
+.stmt-section-title{font-size:11px;font-weight:700;color:#333;letter-spacing:1px;
+  text-transform:uppercase;border-bottom:1px solid #ddd;padding-bottom:6px;margin-bottom:10px}
+.case-table{width:100%;border-collapse:collapse;margin-bottom:20px;font-size:11px}
+.case-table th{padding:7px 8px;text-align:left;color:#666;font-weight:600;font-size:10px;
+  border-bottom:1px solid #ddd;white-space:nowrap}
+.case-table td{padding:8px 8px;border-bottom:1px solid #f0f0f0;vertical-align:top}
+.case-table tr:last-child td{border-bottom:none}
+.case-table .mono{font-family:'DM Mono',monospace}
+.incentive-row td{background:#fffbf0;font-size:10px;color:#8a6200}
+.hr2nd-row td{background:#f5f0ff;font-size:10px;color:#5a3ea0}
+
+/* breakdown */
+.stmt-breakdown{border:1px solid #e0e0e0;border-radius:8px;overflow:hidden;margin-bottom:20px}
+.bk-row{display:flex;justify-content:space-between;padding:9px 14px;font-size:12px;
+  border-bottom:1px solid #f0f0f0}
+.bk-row:last-child{border:none}
+.bk-label{color:#555}
+.bk-val{font-family:'DM Mono',monospace;font-weight:600}
+.bk-minus{color:#d44}
+.bk-total{background:#111;color:#fff;font-size:14px;font-weight:700}
+.bk-total .bk-label{color:#ccc}
+.bk-total .bk-val{color:var(--gold-l);font-size:16px}
+
+/* transfer info */
+.stmt-transfer{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+.st-box{background:#f8f8f8;border-radius:8px;padding:14px;border:1px solid #e8e8e8}
+.st-box-title{font-size:9px;color:#888;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px}
+.st-bank{font-size:12px;color:#333;line-height:2}
+.st-date{font-size:13px;font-weight:700;color:#111}
+
+/* footer */
+.stmt-footer{font-size:10px;color:#888;text-align:center;border-top:1px solid #ddd;
+  padding-top:14px;margin-top:4px;line-height:1.8}
+
+/* HR 2-pay badge */
+.hr-pay-badge{display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:700;
+  padding:1px 6px;border-radius:3px;background:#ede8ff;color:#5a3ea0;margin-left:4px}
+
+/* ─ Scrollbar ─ */
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* ─ Print ─ */
+@media print{
+  .header,.editor,.preview-actions{display:none!important}
+  .layout{display:block;height:auto}
+  .preview{padding:0;background:#fff}
+  .stmt{box-shadow:none;border-radius:0;max-width:100%}
+  body{background:#fff}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div style="display:flex;align-items:center;gap:12px">
+    <div class="logo">CORETO</div>
+    <div style="width:1px;height:18px;background:var(--border2)"></div>
+    <div style="font-size:10px;color:var(--muted);letter-spacing:1px">支払明細書ジェネレーター</div>
+  </div>
+  <button onclick="history.back()"
+          style="font-size:10px;padding:5px 12px;border-radius:6px;border:1px solid var(--border2);
+          background:transparent;color:var(--muted);cursor:pointer;font-family:'Noto Sans JP',sans-serif">
+    ← 戻る
+  </button>
+</div>
+
+<div class="layout">
+
+<!-- ─ Left Editor ─ -->
+<div class="editor" id="editor-pane">
+
+  <!-- エージェント情報 -->
+  <div class="ed-title">エージェント情報</div>
+  <div class="field-group">
+    <div class="fg-title">基本情報</div>
+    <div class="field-row">
+      <div class="field">
+        <label>エージェント名</label>
+        <input type="text" id="ag-name" value="山田 誠" oninput="generate()">
+      </div>
+      <div class="field">
+        <label>エージェントID</label>
+        <input type="text" id="ag-id" value="10012" oninput="generate()">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>ランク</label>
+        <select id="ag-rank" onchange="generate()">
+          <option value="bronze">🥉 Bronze (65%/45%)</option>
+          <option value="silver">🥈 Silver (67.5%/47.5%)</option>
+          <option value="gold" selected>🥇 Gold (70%/50%)</option>
+          <option value="platinum">💎 Platinum (75%/55%)</option>
+          <option value="founder">⭐ 創業メンバー (90%)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>対象月</label>
+        <input type="month" id="target-month" value="2026-02" oninput="generate()">
+      </div>
+    </div>
+    <div class="field">
+      <label>振込予定日</label>
+      <input type="date" id="pay-date" value="2026-03-25" oninput="generate()">
+    </div>
+  </div>
+
+  <div class="field-group">
+    <div class="fg-title">振込先口座</div>
+    <div class="field-row">
+      <div class="field">
+        <label>銀行名</label>
+        <input type="text" id="bank-name" value="GMOあおぞらネット銀行" oninput="generate()">
+      </div>
+      <div class="field">
+        <label>支店名</label>
+        <input type="text" id="bank-branch" value="ビジネス営業部" oninput="generate()">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>口座種別</label>
+        <select id="bank-type" onchange="generate()">
+          <option value="普通">普通</option>
+          <option value="当座">当座</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>口座番号</label>
+        <input type="text" id="bank-no" value="1234567" oninput="generate()">
+      </div>
+    </div>
+    <div class="field">
+      <label>口座名義（カナ）</label>
+      <input type="text" id="bank-holder" value="ヤマダ マコト" oninput="generate()">
+    </div>
+  </div>
+
+  <div class="field-group">
+    <div class="fg-title">オプション</div>
+    <div class="toggle-row">
+      <span class="toggle-label">特別紹介コード（月会費永久無料）</span>
+      <button class="toggle" id="tog-freefee" onclick="toggleOpt('freefee')"></button>
+    </div>
+    <div class="toggle-row">
+      <span class="toggle-label">法人パートナー経由払い（源泉なし）</span>
+      <button class="toggle" id="tog-corp" onclick="toggleOpt('corp')"></button>
+    </div>
+  </div>
+
+  <!-- 成約案件 -->
+  <div class="ed-title" style="margin-top:8px">成約案件</div>
+  <div class="cases-list" id="cases-list"></div>
+  <button class="add-case-btn" onclick="addCase()">＋ 案件を追加</button>
+
+  <!-- メンター報酬 -->
+  <div class="ed-title" style="margin-top:16px">メンター報酬</div>
+  <div id="mentor-list"></div>
+  <button class="add-case-btn" style="margin-top:0" onclick="addMentor()">＋ メンター報酬を追加</button>
+
+</div>
+
+<!-- ─ Right Preview ─ -->
+<div class="preview">
+  <div class="preview-actions">
+    <button class="pa-btn pa-print" onclick="window.print()">🖨 印刷 / PDF保存</button>
+    <button class="pa-btn pa-gen" onclick="generate()">🔄 再計算</button>
+  </div>
+  <div id="stmt-wrap"></div>
+</div>
+
+</div><!-- /layout -->
+
+<script>
+// ================================================================
+//  Role detection (HQ vs Agent)
+// ================================================================
+const _S = (()=>{ try{ return JSON.parse(sessionStorage.getItem('coreto_session')||'null'); }catch(e){return null;} })();
+// HQ = type 'hq' or 'admin'. Agents (re/hr/pt) see statement only.
+const IS_HQ = !_S || _S.type === 'hq' || _S.type === 'admin';
+
+// ================================================================
+//  State
+// ================================================================
+const RANKS = {
+  bronze:  { rateRE:.65,  rateHR:.45,  fee:980,  label:'Bronze' },
+  silver:  { rateRE:.675, rateHR:.475, fee:490,  label:'Silver' },
+  gold:    { rateRE:.70,  rateHR:.50,  fee:0,    label:'Gold' },
+  platinum:{ rateRE:.75,  rateHR:.55,  fee:0,    label:'Platinum' },
+  founder: { rateRE:.90,  rateHR:.90,  fee:0,    label:'創業メンバー' },
+};
+
+let cases   = [];
+let mentors = [];
+let opts    = { freefee: false, corp: false };
+let caseId  = 0;
+let mentorId= 0;
+
+// ================================================================
+//  Init
+// ================================================================
+window.addEventListener('DOMContentLoaded', () => {
+  // Demo cases
+  addCase({ name:'渋谷区東2丁目マンション 302号室', date:'2026-02-05',
+            fees:335000, type:'re', caseType:'self', sanmei:false, hr2nd:false });
+  addCase({ name:'港区南青山4丁目 1LDK',          date:'2026-02-12',
+            fees:185000, type:'re', caseType:'self', sanmei:false, hr2nd:false });
+  addCase({ name:'新宿区西新宿 2LDK',              date:'2026-02-18',
+            fees:462000, type:'re', caseType:'pt',   sanmei:false, hr2nd:false });
+  addCase({ name:'ITエンジニア 転職支援',           date:'2026-02-22',
+            fees:693000, type:'hr', caseType:'self', sanmei:false, hr2nd:false });
+  addMentor({ name:'渡辺 隆（10041）', reward:23100 });
+  generate();
+
+  // HQ/Agent view control
+  if (!IS_HQ) {
+    // Agent view: hide editor, show statement fullscreen
+    document.getElementById('editor-pane').style.display = 'none';
+    document.querySelector('.layout').style.gridTemplateColumns = '1fr';
+    document.querySelector('.preview-actions').style.display = 'none';
+    // Add agent header
+    const agHeader = document.createElement('div');
+    agHeader.style.cssText = 'padding:14px 28px;background:rgba(52,211,153,.06);border-bottom:1px solid rgba(52,211,153,.15);font-size:12px;color:var(--sub);display:flex;align-items:center;justify-content:space-between';
+    agHeader.innerHTML = '<span>📄 支払明細書</span><span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">印刷：ブラウザのCtrl+P / ⌘+P</span>';
+    document.querySelector('.preview').insertBefore(agHeader, document.querySelector('.preview').firstChild);
+  }
+});
+
+// ================================================================
+//  Cases
+// ================================================================
+function addCase(preset) {
+  const id = ++caseId;
+  cases.push({ id, name:'', date:'', fees:0, type:'re', caseType:'self', sanmei:false, hr2nd:false, ...preset });
+  renderCases();
+  if (!preset) generate();
+}
+function removeCase(id) {
+  cases = cases.filter(c=>c.id!==id);
+  renderCases();
+  generate();
+}
+function updateCase(id, field, val) {
+  const c = cases.find(c=>c.id===id);
+  if (!c) return;
+  if (field==='fees') val = parseFloat(val)||0;
+  if (field==='sanmei'||field==='hr2nd') val = !!val;
+  c[field] = val;
+  generate();
+}
+
+function renderCases() {
+  document.getElementById('cases-list').innerHTML = cases.map(c => {
+    const isHR  = c.type === 'hr';
+    const isPT  = c.caseType === 'pt';
+    return `
+    <div class="case-entry ${isHR?'hr-case':''}" id="ce-${c.id}">
+      <button class="ce-del" onclick="removeCase(${c.id})">✕</button>
+      <div class="ce-row" style="margin-bottom:6px">
+        <div class="ce-field">
+          <label>事業種別</label>
+          <select onchange="updateCase(${c.id},'type',this.value);renderCases();generate()">
+            <option value="re" ${c.type==='re'?'selected':''}>🏠 不動産</option>
+            <option value="hr" ${c.type==='hr'?'selected':''}>👥 人材</option>
+          </select>
+        </div>
+        <div class="ce-field">
+          <label>案件タイプ</label>
+          <select onchange="updateCase(${c.id},'caseType',this.value)">
+            <option value="self" ${c.caseType==='self'?'selected':''}>自己開拓</option>
+            <option value="pt"   ${c.caseType==='pt'  ?'selected':''}>PT紹介（25%固定）</option>
+          </select>
+        </div>
+      </div>
+      <div class="ce-field" style="margin-bottom:6px">
+        <label>物件名 / 案件名</label>
+        <input type="text" value="${c.name}" placeholder="例：渋谷区マンション 301号室"
+               oninput="updateCase(${c.id},'name',this.value)" style="font-family:'Noto Sans JP',sans-serif">
+      </div>
+      <div class="ce-row">
+        <div class="ce-field">
+          <label>成約日</label>
+          <input type="date" value="${c.date}" oninput="updateCase(${c.id},'date',this.value)">
+        </div>
+        <div class="ce-field">
+          <label>手数料合計（円）</label>
+          <input type="number" value="${c.fees||''}" min="0" step="1000"
+                 oninput="updateCase(${c.id},'fees',this.value)">
+        </div>
+      </div>
+      <div style="display:flex;gap:12px;margin-top:8px;flex-wrap:wrap">
+        ${c.type==='re'?`<label style="font-size:10px;color:var(--sub);display:flex;align-items:center;gap:5px;cursor:pointer">
+          <input type="checkbox" ${c.sanmei?'checked':''} onchange="updateCase(${c.id},'sanmei',this.checked)">
+          三為取引 (−15%)
+        </label>`:''}
+        ${c.type==='hr'?`<label style="font-size:10px;color:var(--sub);display:flex;align-items:center;gap:5px;cursor:pointer">
+          <input type="checkbox" ${c.hr2nd?'checked':''} onchange="updateCase(${c.id},'hr2nd',this.checked)">
+          第2回支払（入社3ヶ月後）
+        </label>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ================================================================
+//  Mentors
+// ================================================================
+function addMentor(preset) {
+  const id = ++mentorId;
+  mentors.push({ id, name:'', reward:0, ...preset });
+  renderMentors();
+  if (!preset) generate();
+}
+function removeMentor(id) {
+  mentors = mentors.filter(m=>m.id!==id);
+  renderMentors();
+  generate();
+}
+function updateMentor(id, field, val) {
+  const m = mentors.find(m=>m.id===id);
+  if (!m) return;
+  if (field==='reward') val = parseFloat(val)||0;
+  m[field] = val;
+  generate();
+}
+function renderMentors() {
+  document.getElementById('mentor-list').innerHTML = mentors.map(m => `
+    <div class="mentor-entry" id="me-${m.id}">
+      <button class="ce-del" onclick="removeMentor(${m.id})">✕</button>
+      <div class="ce-row">
+        <div class="ce-field">
+          <label>育成エージェント名</label>
+          <input type="text" value="${m.name}" placeholder="例：渡辺 隆（10041）"
+                 oninput="updateMentor(${m.id},'name',this.value)"
+                 style="font-family:'Noto Sans JP',sans-serif">
+        </div>
+        <div class="ce-field">
+          <label>メンター報酬（円）</label>
+          <input type="number" value="${m.reward||''}" min="0" step="1000"
+                 oninput="updateMentor(${m.id},'reward',this.value)">
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+// ================================================================
+//  Toggle
+// ================================================================
+function toggleOpt(key) {
+  opts[key] = !opts[key];
+  document.getElementById(`tog-${key}`).classList.toggle('on', opts[key]);
+  generate();
+}
+
+// ================================================================
+//  Core calculation
+// ================================================================
+function calcCase(c, rankKey) {
+  const r       = RANKS[rankKey];
+  const isPT    = c.caseType === 'pt';
+  const isHR    = c.type === 'hr';
+  const isSan   = c.sanmei && !isPT;
+
+  let baseRate  = isPT ? 0.25 : isHR ? r.rateHR : r.rateRE;
+  if (isSan) baseRate -= 0.15;
+
+  // High-value incentive brackets
+  const T1=5e6, T2=10e6;
+  const fees = c.fees;
+  let gross;
+  let inc1=0, inc2=0, inc3=0;
+  if (!isPT) {
+    const b1 = Math.min(fees, T1);
+    const b2 = Math.max(0, Math.min(fees, T2) - T1);
+    const b3 = Math.max(0, fees - T2);
+    inc1 = b1 * baseRate;
+    inc2 = b2 * (baseRate + 0.05);
+    inc3 = b3 * (baseRate + 0.10);
+    gross = inc1 + inc2 + inc3;
+  } else {
+    gross = fees * 0.25;
+    inc1  = gross;
+  }
+  gross = Math.floor(gross);
+
+  // Withholding (source tax)
+  let tax = 0;
+  if (!opts.corp) {
+    const M = 1e6;
+    tax = gross <= M
+      ? Math.floor(gross * 0.1021)
+      : Math.floor(M * 0.1021 + (gross - M) * 0.2042);
+  }
+
+  const net = gross - tax;
+
+  // HR: split 50/50
+  const payNow = c.hr2nd ? Math.ceil(net * 0.5) : (isHR && !c.hr2nd && !c.hr1stPaid ? Math.ceil(net * 0.5) : net);
+  // For statement: show what's paid THIS month
+  const payThisMonth = isHR ? Math.ceil(net * 0.5) : net;
+
+  return { fees, baseRate, isSan, isPT, isHR, gross, tax, net,
+           payThisMonth, inc1, inc2, inc3,
+           hasIncentive: !isPT && (fees > T1) };
+}
+
+function yen(v) { return '¥' + Math.round(v).toLocaleString(); }
+function pct(v) { return Math.round(v * 100) + '%'; }
+function fmtDate(d) {
+  if (!d) return '—';
+  const [y,m,da] = d.split('-');
+  return `${parseInt(m)}月${parseInt(da)}日`;
+}
+function fmtMonth(m) {
+  if (!m) return '—';
+  const [y, mo] = m.split('-');
+  return `${y}年${parseInt(mo)}月`;
+}
+
+// ================================================================
+//  Generate statement
+// ================================================================
+function generate() {
+  const agName  = document.getElementById('ag-name').value || '—';
+  const agId    = document.getElementById('ag-id').value   || '—';
+  const rankKey = document.getElementById('ag-rank').value;
+  const r       = RANKS[rankKey];
+  const month   = document.getElementById('target-month').value;
+  const payDate = document.getElementById('pay-date').value;
+  const bankName   = document.getElementById('bank-name').value;
+  const bankBranch = document.getElementById('bank-branch').value;
+  const bankType   = document.getElementById('bank-type').value;
+  const bankNo     = document.getElementById('bank-no').value;
+  const bankHolder = document.getElementById('bank-holder').value;
+
+  // Monthly fee
+  const freeFee = opts.freefee || ['gold','platinum','founder'].includes(rankKey);
+  const mFee    = freeFee ? 0 : r.fee;
+
+  // Compute each case
+  const computed = cases.map(c => ({ ...c, calc: calcCase(c, rankKey) }));
+
+  // Totals
+  const totalGross      = computed.reduce((s,c)=>s+c.calc.gross, 0);
+  const totalTax        = computed.reduce((s,c)=>s+c.calc.tax,   0);
+  const totalNet        = computed.reduce((s,c)=>s+c.calc.net,   0);
+  const totalPayMonth   = computed.reduce((s,c)=>s+c.calc.payThisMonth, 0);
+  const totalMentor     = mentors.reduce((s,m)=>s+(m.reward||0), 0);
+  const finalTransfer   = totalPayMonth + totalMentor - mFee;
+
+  // Case rows HTML
+  const caseRowsHTML = computed.map((c, i) => {
+    const ca = c.calc;
+    let payNote = '';
+    if (ca.isHR) {
+      payNote = c.hr2nd
+        ? '<span class="hr-pay-badge">第2回（入社3ヶ月後）</span>'
+        : '<span class="hr-pay-badge">第1回（入社時 50%）</span>';
+    }
+    const rows = [`
+      <tr>
+        <td>${i+1}</td>
+        <td>
+          ${c.name || '（案件名未入力）'}
+          ${payNote}
+          ${ca.isPT ? '<span style="font-size:9px;background:#fff4e0;color:#9a6400;padding:1px 5px;border-radius:3px;margin-left:4px">PT紹介</span>' : ''}
+          ${ca.isSan ? '<span style="font-size:9px;background:#fff0f0;color:#b33;padding:1px 5px;border-radius:3px;margin-left:4px">三為</span>' : ''}
+        </td>
+        <td style="white-space:nowrap">${fmtDate(c.date)}</td>
+        <td class="mono" style="text-align:right">${yen(ca.fees)}</td>
+        <td class="mono" style="text-align:center">${pct(ca.baseRate)}${ca.isSan?' <span style="color:#b33">(-15%)</span>':''}</td>
+        <td class="mono" style="text-align:right">${yen(ca.gross)}</td>
+        <td class="mono" style="text-align:right;color:#d44">${ca.tax > 0 ? '-'+yen(ca.tax) : '—'}</td>
+        <td class="mono" style="text-align:right;font-weight:700">${yen(ca.payThisMonth)}</td>
+      </tr>`];
+    // Incentive detail
+    if (ca.hasIncentive) {
+      rows.push(`<tr class="incentive-row">
+        <td></td>
+        <td colspan="7" style="padding:4px 8px">
+          ＋高額インセンティブ適用：0〜500万=${pct(ca.baseRate)} / 500〜1000万=${pct(ca.baseRate+.05)} / 1000万超=${pct(ca.baseRate+.10)}
+        </td>
+      </tr>`);
+    }
+    return rows.join('');
+  }).join('');
+
+  // Mentor rows
+  const mentorRowsHTML = mentors.length > 0 ? mentors.map(m => `
+    <tr style="background:#f9f9f9">
+      <td colspan="5" style="color:#555">🎓 メンター報酬 — ${m.name||'（名前未入力）'}</td>
+      <td class="mono" style="text-align:right">${yen(m.reward)}</td>
+      <td class="mono" style="text-align:right;color:#d44">—</td>
+      <td class="mono" style="text-align:right;font-weight:700;color:#555">${yen(m.reward)}</td>
+    </tr>`).join('') : '';
+
+  // HR 2nd payment note
+  const hasHR2nd = computed.some(c=>c.calc.isHR && c.hr2nd);
+  const hasHR1st = computed.some(c=>c.calc.isHR && !c.hr2nd);
+
+  // Build statement
+  const [py,pm] = (payDate||'').split('-');
+  const payDateFmt = payDate ? `${py}年${parseInt(pm)}月${parseInt((payDate.split('-')[2]))}日` : '—';
+
+  const html = `
+  <div class="stmt">
+    <div class="stmt-header">
+      <div>
+        <div class="stmt-logo">CORETO</div>
+        <div style="font-size:11px;color:#888;margin-top:3px">Teikoku Development Co., Ltd.</div>
+      </div>
+      <div style="text-align:right">
+        <div class="stmt-title">支払明細書</div>
+        <div class="stmt-period">${fmtMonth(month)}分</div>
+        <div style="font-size:10px;color:#888;margin-top:3px">発行日：${new Date().toLocaleDateString('ja-JP')}</div>
+      </div>
+    </div>
+
+    <div class="stmt-to">
+      <div class="stmt-to-name">${agName} 様</div>
+      <div class="stmt-to-id">エージェントID：${agId}　／　ランク：${r.label}${opts.corp?' ／ 法人払い':''}</div>
+      <div class="stmt-to-msg">${fmtMonth(month)}分の報酬をお支払いします。</div>
+    </div>
+
+    <div class="stmt-summary">
+      <div class="ss-item">
+        <div class="ss-label">成約件数</div>
+        <div class="ss-val">${cases.length} <span style="font-size:13px;font-weight:400;color:#888">件</span></div>
+      </div>
+      <div class="ss-item">
+        <div class="ss-label">報酬合計（税抜）</div>
+        <div class="ss-val">${yen(totalGross + totalMentor)}</div>
+      </div>
+      <div class="ss-item" style="border-left:2px solid #1a6b3a">
+        <div class="ss-label">振込額</div>
+        <div class="ss-val big">${yen(Math.max(0, finalTransfer))}</div>
+      </div>
+    </div>
+
+    <div class="stmt-section-title">成約一覧</div>
+    <table class="case-table">
+      <thead>
+        <tr>
+          <th style="width:28px">#</th>
+          <th>案件名</th>
+          <th>成約日</th>
+          <th style="text-align:right">手数料</th>
+          <th style="text-align:center">報酬率</th>
+          <th style="text-align:right">報酬額</th>
+          <th style="text-align:right">源泉徴収</th>
+          <th style="text-align:right">今月支払額</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${caseRowsHTML}
+        ${mentorRowsHTML}
+      </tbody>
+    </table>
+
+    <div class="stmt-section-title">支払金額内訳</div>
+    <div class="stmt-breakdown">
+      <div class="bk-row"><span class="bk-label">報酬合計（税抜）</span><span class="bk-val">${yen(totalGross)}</span></div>
+      <div class="bk-row"><span class="bk-label">源泉徴収合計${opts.corp?' <span style="font-size:10px;color:#888">（法人のため非課税）</span>':''}</span><span class="bk-val bk-minus">${totalTax > 0 ? '-'+yen(totalTax) : '¥0'}</span></div>
+      <div class="bk-row"><span class="bk-label">手取り小計</span><span class="bk-val">${yen(totalNet)}</span></div>
+      ${hasHR1st||hasHR2nd ? `<div class="bk-row" style="background:#f5f0ff">
+        <span class="bk-label" style="color:#5a3ea0">人材紹介 今月支払分（50%）</span>
+        <span class="bk-val" style="color:#5a3ea0">${yen(totalPayMonth)}</span>
+      </div>` : ''}
+      ${totalMentor > 0 ? `<div class="bk-row"><span class="bk-label">🎓 メンター報酬合計</span><span class="bk-val">+${yen(totalMentor)}</span></div>` : ''}
+      ${mFee > 0 ? `<div class="bk-row"><span class="bk-label">月会費（${r.label}）</span><span class="bk-val bk-minus">-${yen(mFee)}</span></div>` : ''}
+      <div class="bk-row bk-total">
+        <span class="bk-label">振込額</span>
+        <span class="bk-val">${yen(Math.max(0, finalTransfer))}</span>
+      </div>
+    </div>
+
+    ${hasHR1st ? `<div style="background:#f5f0ff;border-radius:8px;padding:10px 14px;font-size:11px;color:#5a3ea0;margin-bottom:20px;border:1px solid #ddd0ff">
+      📌 <strong>人材紹介 第2回支払について</strong>：上記の人材案件（第1回）は報酬の50%を今月お支払いします。残り50%は入社3ヶ月後の在籍確認後にお支払いします。
+    </div>` : ''}
+
+    <div class="stmt-transfer">
+      <div class="st-box">
+        <div class="st-box-title">振込先口座</div>
+        <div class="st-bank">
+          ${bankName}　${bankBranch}<br>
+          ${bankType}　${bankNo}<br>
+          <strong>${bankHolder}</strong>
+        </div>
+      </div>
+      <div class="st-box">
+        <div class="st-box-title">振込予定日</div>
+        <div class="st-date" style="margin-top:8px">${payDateFmt}</div>
+        <div style="font-size:10px;color:#888;margin-top:6px;line-height:1.7">
+          源泉徴収票は年末にまとめて発行します。<br>
+          ご不明な点は本部までご連絡ください。
+        </div>
+      </div>
+    </div>
+
+    <div class="stmt-footer">
+      本明細書はCORETO管理システムにより自動生成されました。<br>
+      CORETO / Teikoku Development Co., Ltd. ｜ support@coreto.jp
+    </div>
+  </div>`;
+
+  document.getElementById('stmt-wrap').innerHTML = html;
+}
+</script>
+</body>
+</html>
