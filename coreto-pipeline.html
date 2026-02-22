@@ -522,6 +522,191 @@ function stepScreening(c) {
   return html;
 }
 
+function stepPrekey(c) {
+  const td = c.taskDone || {};
+  const ad = c.adOnly || false;
+  const paidOk   = td.paid || false;
+  const setsuOk  = td.itsetsu || false;
+  const canKey   = setsuOk && (paidOk || ad);
+
+  function taskRow(done, label, onclick) {
+    if (done) return '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;'
+      +'background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.2);border-radius:8px;margin-bottom:8px">'
+      +'<span style="font-size:16px">✅</span><span style="font-size:12px;color:var(--green);font-weight:700">'+label+'</span></div>';
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;'
+      +'background:var(--card2);border:1px solid var(--border);border-radius:8px;margin-bottom:8px">'
+      +'<span style="font-size:12px">'+label+'</span>'
+      +'<button class="btn btn-green btn-sm" onclick="'+onclick+'">完了</button></div>';
+  }
+
+  let h = '<div class="step-title">📝 重説・入金</div>';
+  h += taskRow(setsuOk, 'IT重説・契約',
+    "window.open('coreto-it-setsu.html','_blank');itsetsuCheck('"+c.id+"')");
+  if (!ad) {
+    h += taskRow(paidOk, '入金確認', "paymentCheck('"+c.id+"')");
+  } else {
+    h += '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;'
+      +'background:rgba(251,146,60,.06);border:1px solid rgba(251,146,60,.2);border-radius:8px;margin-bottom:8px">'
+      +'<span style="font-size:12px;color:var(--orange)">💴 入金</span>'
+      +'<span style="font-size:10px;color:var(--muted)">AD案件: 鍵渡し後でOK</span></div>';
+  }
+  h += '<div style="margin-top:6px">';
+  if (canKey) {
+    h += '<button class="btn btn-green" style="width:100%;justify-content:center" onclick="advance(\''+c.id+'\',\'key\',null,null,\'鍵渡し準備完了\')">鍵渡しへ →</button>';
+  } else {
+    const miss = []; if(!setsuOk) miss.push('重説'); if(!paidOk&&!ad) miss.push('入金');
+    h += '<button class="btn btn-ghost" style="width:100%;justify-content:center;opacity:.45;cursor:default">'
+      +miss.join('・')+' 完了後に解放</button>';
+  }
+  h += '</div>';
+  return h;
+}
+function stepPayment(c) { return stepPrekey(c); }
+function stepItsetsu(c) { return stepPrekey(c); }
+
+// ── 売買 steps ──
+function stepOffer(c) {
+  const today = new Date().toISOString().slice(0,10);
+  return '<div class="step-title">📄 買付申込</div>'
+    +'<div class="fi"><label>物件名</label><input type="text" id="s-sale-prop" placeholder="〇〇マンション 101号"></div>'
+    +'<div class="fi"><label>買付日</label><input type="date" id="s-offer-date" class="mono" value="'+today+'"></div>'
+    +'<button class="btn btn-green" style="width:100%;justify-content:center;margin-top:14px" onclick="offerDone(\''+c.id+'\')">買付受領 → 売買契約へ</button>';
+}
+
+function stepSaleContract(c) {
+  return '<div class="step-title">✍️ 売買契約</div>'
+    +'<div class="row" style="margin-bottom:12px">'
+    +'<button class="btn btn-blue" onclick="window.open(\'coreto-sale-report.html\',\'_blank\')">売買報告書を開く</button>'
+    +'</div>'
+    +'<button class="btn btn-green" style="width:100%;justify-content:center" onclick="saleContractDone(\''+c.id+'\')">✓ 契約締結 → 決済へ</button>';
+}
+
+function stepSettlement(c) {
+  const today = new Date().toISOString().slice(0,10);
+  const val = c.dates.settlement || today;
+  return '<div class="step-title">💴 決済・引渡し</div>'
+    +'<div class="fi"><label>決済日</label><input type="date" id="s-settlement" class="mono" value="'+val+'"></div>'
+    +'<button class="btn btn-green" style="width:100%;justify-content:center;margin-top:12px" onclick="settlementDone(\''+c.id+'\')">✓ 決済完了 → 成約</button>';
+}
+
+// ── Sub components ──
+function appsHTML(c) {
+  return c.apps.map(a=>{
+    const s = a.status;
+    const pill = s==='reviewing'?'<span class="pill pill-orange">審査中</span>'
+      :s==='approved'?'<span class="pill pill-green">通過</span>'
+      :s==='rejected'?'<span class="pill pill-red">落ち</span>'
+      :s==='cancelled'?'<span class="pill pill-muted">取消</span>'
+      :'<span class="pill pill-blue">提出済</span>';
+    return '<div class="app-item" style="margin-bottom:6px">'
+      +'<div class="app-name"><span>'+a.prop+'</span>'+pill+(a.sim?' <span class="pill pill-orange">同時</span>':'')+'</div>'
+      +'<div class="app-meta">'+a.mgmt+' · '+a.date+'</div>'
+      +'</div>';
+  }).join('');
+}
+
+function histHTML(c) {
+  if (!c.hist||!c.hist.length) return '';
+  return '<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">'
+    +'<div style="font-size:9px;color:var(--muted);font-weight:700;letter-spacing:1.5px;margin-bottom:10px">活動履歴</div>'
+    +c.hist.map((h,i)=>'<div class="hist-item">'
+      +'<div><div class="hist-dot'+(i===0?' cur':'')+'"></div>'+(i<c.hist.length-1?'<div class="hist-line"></div>':'')+'</div>'
+      +'<div style="font-size:11px;color:var(--sub);padding:0 0 4px 8px">'+h+'</div>'
+      +'</div>').join('')
+    +'<div style="display:flex;gap:6px;margin-top:8px">'
+    +'<input type="text" id="memo-inp" placeholder="メモ追加..." style="flex:1;background:#090b13;border:1px solid var(--border2);border-radius:7px;padding:6px 10px;color:var(--text);font-size:11px;font-family:inherit;outline:none" onkeydown="if(event.key===\'Enter\')addMemo(\''+c.id+'\')">'
+    +'<button class="btn btn-ghost btn-sm" onclick="addMemo(\''+c.id+'\')">追加</button>'
+    +'</div></div>';
+}
+
+// ═══════════════════════════════════════════════
+// STEP ACTIONS
+// ═══════════════════════════════════════════════
+function today() { return new Date().toLocaleDateString('ja-JP',{month:'numeric',day:'numeric'}); }
+function todayISO() { return new Date().toISOString().slice(0,10); }
+
+function advance(id, nextStep, dateKey, dateVal, memo) {
+  const c = CASES.find(x=>x.id===id); if(!c) return;
+  c.step = nextStep;
+  c.age = 0;
+  if (dateKey) c.dates[dateKey] = dateVal || todayISO();
+  if (memo) c.hist.unshift(today()+' '+memo);
+  open_case(id);
+  toast(memo||'更新しました');
+}
+
+function naikenDone(id) {
+  const c = CASES.find(x=>x.id===id);
+  const d = document.getElementById('s-naiken-date')?.value || todayISO();
+  const p = document.getElementById('s-naiken-prop')?.value.trim() || '';
+  c.dates.naiken = d;
+  if(p) c.dates.naikenProp = p;
+  advance(id, 'apply', null, null, '内見完了');
+}
+function naikenSkip(id) {
+  if(!confirm('見送りにしますか？')) return;
+  advance(id, 'cancel', null, null, '見送り（内見後）');
+}
+
+function submitApply(id) {
+  const prop = document.getElementById('s-prop')?.value.trim();
+  const mgmt = document.getElementById('s-mgmt')?.value.trim();
+  const date = document.getElementById('s-apply-date')?.value || todayISO();
+  if(!prop||!mgmt){alert('物件名と管理会社を入力してください');return;}
+  const c = CASES.find(x=>x.id===id);
+  c.apps.push({id:'A'+Date.now().toString().slice(-5), prop, mgmt, date, status:'reviewing'});
+  c.dates.applied = date;
+  advance(id, 'screening', null, null, prop+' 申込');
+}
+
+function addApp(id) {
+  const c = CASES.find(x=>x.id===id);
+  const activeCount = c.apps.filter(a=>a.status==='reviewing'||a.status==='submitted').length;
+  openModal(
+    '＋ 申込追加'
+    +'<div class="fi"><label>物件名</label><input type="text" id="m-prop" placeholder="〇〇マンション 1LDK"></div>'
+    +'<div class="fi"><label>管理会社</label><input type="text" id="m-mgmt" placeholder="〇〇管理株式会社"></div>'
+    +(activeCount>0?'<div style="margin:10px 0 4px"><label style="display:flex;align-items:center;gap:7px;font-size:11px;cursor:pointer"><input type="checkbox" id="m-sim" checked> 同時申込としてマーク</label></div>':'')
+    +'<div class="row" style="margin-top:14px"><button class="btn btn-ghost" style="flex:1" onclick="closeModal()">戻る</button>'
+    +'<button class="btn btn-green" style="flex:2;justify-content:center" onclick="doAddApp(\''+id+'\')">申込追加</button></div>'
+  );
+}
+
+function doAddApp(id) {
+  const prop = document.getElementById('m-prop')?.value.trim();
+  const mgmt = document.getElementById('m-mgmt')?.value.trim();
+  const sim  = document.getElementById('m-sim')?.checked || false;
+  if(!prop||!mgmt){alert('入力してください');return;}
+  const c = CASES.find(x=>x.id===id);
+  c.apps.push({id:'A'+Date.now().toString().slice(-5), prop, mgmt, date:todayISO(), status:'reviewing', sim});
+  c.hist.unshift(today()+' '+prop+' 申込追加'+(sim?' (同時)':''));
+  closeModal();
+  open_case(id);
+  toast('申込追加しました');
+}
+
+function appPassed(id, appId) {
+  const c = CASES.find(x=>x.id===id);
+  const a = c.apps.find(a=>a.id===appId);
+  if(!a) return;
+  a.status = 'approved';
+  // cancel other reviewing apps
+  c.apps.filter(x=>x.id!==appId&&(x.status==='reviewing'||x.status==='submitted')).forEach(x=>{x.status='cancelled';});
+  if(!c.taskDone) c.taskDone={paid:false,itsetsu:false};
+  advance(id, 'invoice', 'approved', todayISO(), a.prop+' 審査通過 → 請求書発行へ');
+}
+
+function appRejected(id, appId) {
+  const c = CASES.find(x=>x.id===id);
+  const a = c.apps.find(a=>a.id===appId);
+  if(!a) return;
+  a.status = 'rejected';
+  c.hist.unshift(today()+' '+a.prop+' 審査落ち');
+  const remaining = c.apps.filter(x=>x.status==='reviewing'||x.status==='submitted');
+  if(remaining.length===0) c.hist.unshift(today()+' 全物件落ち → 別物件追加してください');
+  open_case(id);
+}
+
 function stepInvoice(c) {
   const app = c.apps.find(a=>a.status==='approved') || c.apps[c.apps.length-1] || {};
   const now = new Date();
@@ -834,11 +1019,17 @@ function openNewModal(stageHint) {
     +'</div>'
     +'<div class="fi"><label id="nc-name-lbl">氏名</label><input type="text" id="nc-name" placeholder="田中 太郎"></div>'
     +'<div id="nc-corp-ext" style="display:none"><div class="fi"><label>担当者名</label><input type="text" id="nc-contact" placeholder="田中 一郎"></div></div>'
-    +'<div class="fi"><label>種別</label><select id="nc-type"><option value="reLet">🏠 賃貸</option><option value="reSale">🏢 売買</option><option value="hr">👥 人材</option></select></div>'
+    +'<div class="fi"><label>種別</label><select id="nc-type" onchange="toggleAD()"><option value="reLet">🏠 賃貸</option><option value="reSale">🏢 売買</option><option value="hr">👥 人材</option></select></div>'+'<div id="nc-ad-wrap" style="margin-bottom:10px"><label style="display:flex;align-items:center;gap:7px;font-size:11px;cursor:pointer"><input type="checkbox" id="nc-ad"> AD案件（仲介手数料は鍵渡し後入金）</label></div>'
     +'<div class="fi"><label>希望条件</label><input type="text" id="nc-sub" placeholder="渋谷区 1LDK 〜¥150,000"></div>'
     +'<div class="row" style="margin-top:14px"><button class="btn btn-ghost" style="flex:1" onclick="closeModal()">キャンセル</button>'
     +'<button class="btn btn-gold" style="flex:2;justify-content:center" onclick="createCase()">登録</button></div>'
   );
+}
+
+function toggleAD() {
+  const t = document.getElementById('nc-type')?.value;
+  const wrap = document.getElementById('nc-ad-wrap');
+  if(wrap) wrap.style.display = t==='reLet' ? 'block' : 'none';
 }
 
 function setCorp(flag) {
@@ -869,7 +1060,8 @@ function createCase() {
   const prefix = type==='reLet'?'R':type==='reSale'?'S':'H';
   const id = prefix+String(Math.floor(Math.random()*90000+10000));
   const initStep = type==='reLet'?'naiken':type==='reSale'?'offer':'new';
-  const obj = {id, name, type, corp:_corpMode, agent:'10012', sub, step:initStep, age:0, stale:false, adOnly:false, taskDone:{paid:false,itsetsu:false}, apps:[], dates:{}, hist:[today()+' 案件登録']};
+  const adOnly = document.getElementById('nc-ad')?.checked && type==='reLet';
+  const obj = {id, name, type, corp:_corpMode, agent:'10012', sub, step:initStep, age:0, stale:false, adOnly, taskDone:{paid:false,itsetsu:false}, apps:[], dates:{}, hist:[today()+' 案件登録'+(adOnly?' [AD案件]':'')]};
   if(_corpMode&&contact) obj.contactName = contact;
   CASES.unshift(obj);
   closeModal();
