@@ -559,6 +559,27 @@ function stepPrekey(c) {
       +miss.join('・')+' 完了後に解放</button>';
   }
   h += '</div>';
+  // ── 発行済み請求書サマリー（修正ボタン付き） ──
+  if (c.invoice && c.invoice.issued) {
+    const inv = c.invoice;
+    const typeLabel = inv.type==='commission'?'仲介手数料のみ':inv.type==='ad_plus'?'AD＋仲介手数料':'ADのみ';
+    const total = inv.grandTotal ? inv.grandTotal : (inv.commAmt||0)+(inv.adAmt||0)||(inv.totalItems||0);
+    h = '<div style="margin-bottom:10px;padding:10px 12px;background:rgba(201,168,76,.06);border:1px solid rgba(201,168,76,.2);border-radius:8px;font-size:11px">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
+      +'<span style="color:var(--gold);font-weight:700">🧾 発行済み請求書</span>'
+      +'<button onclick="editInvoice(\''+c.id+'\')" style="background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.3);color:var(--gold);border-radius:5px;padding:3px 10px;cursor:pointer;font-size:10px;font-weight:600">✏ 修正する</button>'
+      +'</div>'
+      +'<div style="display:grid;grid-template-columns:auto 1fr;gap:2px 10px;color:var(--sub)">'
+      +(inv.prop?'<span>物件</span><span style="color:var(--t)">'+inv.prop+'</span>':'')
+      +'<span>種別</span><span style="color:var(--t)">'+typeLabel+'</span>'
+      +(inv.commAmt?'<span>仲介手数料</span><span class="mono" style="color:var(--t)">¥'+parseInt(inv.commAmt).toLocaleString()+'</span>':'')
+      +(inv.adAmt?'<span>'+(inv.adDesc||'業務委託')+' (AD)</span><span class="mono" style="color:var(--t)">¥'+parseInt(inv.adAmt).toLocaleString()+'</span>':'')
+      +(total?'<span style="font-weight:600">合計</span><span class="mono" style="color:var(--gold);font-weight:700">¥'+parseInt(total).toLocaleString()+'</span>':'')
+      +(inv.underReason?'<span style="color:var(--orange)">減額理由</span><span style="color:var(--orange)">'+inv.underReason+'</span>':'')
+      +'</div></div>'
+      + h;
+  }
+
   return h;
 }
 function stepPayment(c) { return stepPrekey(c); }
@@ -966,7 +987,55 @@ function issueInvoice(id) {
   c.invoice=Object.assign(inv,{type,adFmt,items,commAmt,totalItems,adAmt,adDesc,grandTotal,rent,prop,date,due,underReason:reason,issued:true,dualInvoice:dualInv});
   const adLabel=adAmt>0?' 業務委託¥'+adAmt.toLocaleString():'';
   c.hist.unshift(today()+' 請求書発行 合計¥'+grandTotal.toLocaleString()+adLabel+(dualInv?' [2枚]':''));
+  invSendSlack(c, grandTotal, adAmt, adDesc, dualInv);
   advance(id,'prekey','invoiced',date,'請求書発行完了');
+}
+
+
+function invSendSlack(c, grandTotal, adAmt, adDesc, dualInv) {
+  const inv = c.invoice || {};
+  const typeLabel = inv.type==='commission' ? '仲介手数料のみ'
+    : inv.type==='ad_plus' ? 'AD＋仲介手数料' : 'ADのみ';
+  const fmtLabel = inv.adFmt==='custom' ? '指定フォーマット' : inv.adFmt==='standard' ? 'CORETO標準' : '—';
+  const lines = [
+    '━━━━━━━━━━━━━━━━━━━━━━',
+    '🧾 *請求書発行通知*',
+    '━━━━━━━━━━━━━━━━━━━━━━',
+    `📁 *案件ID*：${c.id}`,
+    `👤 *クライアント*：${c.name}`,
+    `🏠 *物件*：${inv.prop||c.sub||'—'}`,
+    `📋 *種別*：${typeLabel}`,
+    inv.rent ? `🏷 *家賃*：¥${parseInt(inv.rent).toLocaleString()}` : null,
+    inv.commAmt ? `💴 *仲介手数料*：¥${parseInt(inv.commAmt).toLocaleString()}` : null,
+    adAmt ? `💼 *${adDesc||'業務委託手数料'}*：¥${parseInt(adAmt).toLocaleString()}` : null,
+    `💰 *合計*：¥${parseInt(grandTotal).toLocaleString()}`,
+    dualInv ? '📄 請求書2枚発行（仲介＋業務委託）' : null,
+    inv.adFmt ? `📋 管理会社フォーマット：${fmtLabel}` : null,
+    inv.underReason ? `⚠ 減額理由：${inv.underReason}` : null,
+    '━━━━━━━━━━━━━━━━━━━━━━',
+    `🕐 ${new Date().toLocaleString('ja-JP')}`,
+  ].filter(Boolean).join('\n');
+
+  // 本番: SLACK_WEBHOOK_URL に fetch POST
+  console.log('[Slack #請求書] ', lines);
+
+  // クリップボードにコピー
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = lines; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+  } catch(e) {}
+
+  toast('Slack #請求書 に送信しました ✅');
+}
+
+function editInvoice(id) {
+  const c = CASES.find(x=>x.id===id); if(!c) return;
+  // 編集モードに戻す: stepをinvoiceに、issued フラグをリセット
+  if(c.invoice) c.invoice.issued = false;
+  c.step = 'invoice';
+  c.hist.unshift(today()+' 請求書修正（再編集）');
+  open_case(id);
 }
 
 
