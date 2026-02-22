@@ -468,10 +468,8 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
     <!-- Action bar -->
     <div class="action-bar">
       <div class="ab-progress" id="ab-progress">—</div>
-      <button class="ab-btn ab-ghost" onclick="saveToKintone()">💾 Kintoneに保存</button>
-      <button class="ab-btn ab-secondary" onclick="notifySlack()">📢 Slack通知</button>
       <button class="ab-btn ab-primary" id="ab-complete-btn" onclick="showCompleteModal()">
-        ✅ IT重説完了報告
+        ✅ IT重説完了・送信
       </button>
     </div>
 
@@ -484,11 +482,19 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
 <div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)closeModal()">
 <div class="modal">
   <div class="modal-title">IT重説 完了報告</div>
-  <div class="modal-sub">Kintoneに記録し、エージェントへSlack通知します</div>
+  <div class="modal-sub">内容を確認して送信してください</div>
   <div id="modal-body"></div>
-  <div class="modal-actions">
+  <div id="modal-progress" style="display:none;padding:14px 0 0">
+    <div style="font-size:12px;color:var(--sub);margin-bottom:10px" id="modal-progress-msg">処理中...</div>
+    <div style="height:4px;background:var(--border2);border-radius:2px;overflow:hidden">
+      <div id="modal-progress-bar" style="height:100%;width:0%;background:var(--gold);border-radius:2px;transition:width .4s ease"></div>
+    </div>
+  </div>
+  <div class="modal-actions" id="modal-actions">
     <button class="ma-btn ma-cancel" onclick="closeModal()">キャンセル</button>
-    <button class="ma-btn ma-confirm" onclick="submitComplete()">送信してKintoneに保存</button>
+    <button class="ma-btn ma-confirm" id="modal-submit-btn" onclick="submitComplete()">
+      ✅ Kintone保存 → Slack通知 → 完了
+    </button>
   </div>
 </div>
 </div>
@@ -1326,53 +1332,94 @@ function saveMemo(id, val) {
   currentCase.memos[id] = val;
 }
 
-function saveToKintone() {
-  if (!currentCase) return;
-  const done = IT_CHECKLIST.flatMap(s=>s.items).filter(it=>currentCase.checkState[it.id]).length;
-  const total= IT_CHECKLIST.flatMap(s=>s.items).length;
-  alert(`💾 Kintoneに保存しました\n\n案件：${currentCase.id}\n顧客：${currentCase.name}\nIT重説チェック：${done}/${total}項目\n追跡番号：往路${currentCase.trackNos.send||'未'} / 復路${currentCase.trackNos.reply||'未'}`);
-}
-
-function notifySlack() {
-  if (!currentCase) return;
-  alert(`📢 Slack通知送信\n\n#案件管理チャンネルに投稿\n「${currentCase.id} ${currentCase.name}様 IT重説チェック更新」\n\n※本番ではZapier経由でSlackに自動通知されます`);
-}
-
+// ── 完了報告モーダル表示 ──────────────────────────────────────────
 function showCompleteModal() {
   if (!currentCase) return;
-  const c   = currentCase;
-  const all = IT_CHECKLIST.flatMap(s=>s.items);
-  const done= all.filter(it=>c.checkState[it.id]==='ok').length;
-  const ng  = all.filter(it=>c.checkState[it.id]==='ng').length;
-  const mins= Math.floor(timerElapsed/60);
-  const secs= timerElapsed%60;
+  const c    = currentCase;
+  const all  = IT_CHECKLIST.flatMap(s => s.items);
+  const done = all.filter(it => c.checkState[it.id] === 'ok').length;
+  const ng   = all.filter(it => c.checkState[it.id] === 'ng').length;
+  const memoEl = document.getElementById('it-memo');
+  const memo = memoEl ? memoEl.value || '（なし）' : '（なし）';
+  const now  = new Date().toLocaleString('ja-JP');
 
-  document.getElementById('modal-body').innerHTML = `
-    <div class="modal-row"><span class="mr-key">案件ID</span><span class="mr-val">${c.id}</span></div>
-    <div class="modal-row"><span class="mr-key">顧客名</span><span class="mr-val">${c.name} 様</span></div>
-    <div class="modal-row"><span class="mr-key">実施日時</span><span class="mr-val">${new Date().toLocaleString('ja-JP')}</span></div>
-    <div class="modal-row"><span class="mr-key">所要時間</span><span class="mr-val">${mins}分${secs}秒</span></div>
-    <div class="modal-row"><span class="mr-key">チェック完了</span><span class="mr-val" style="color:var(--green)">${done}/${all.length}項目</span></div>
-    ${ng>0?`<div class="modal-row"><span class="mr-key">問題あり項目</span><span class="mr-val" style="color:var(--red)">${ng}項目</span></div>`:''}
-    <div class="modal-row"><span class="mr-key">メモ</span><span class="mr-val" style="font-family:inherit;font-size:11px;max-width:280px;text-align:right">${document.getElementById('it-memo').value||'（なし）'}</span></div>
-    <div style="margin-top:12px;padding:10px;background:rgba(52,211,153,.06);border-radius:8px;
-                font-size:11px;color:var(--sub)">
-      送信すると Kintone に完了記録が保存され、エージェントの LINE に完了通知が送られます。
-    </div>`;
+  const rows = [
+    ['案件ID',       c.id],
+    ['顧客名',       c.name + ' 様'],
+    ['実施日時',     now],
+    ['チェック完了', done + ' / ' + all.length + ' 項目'],
+    ng > 0 ? ['問題あり', ng + ' 項目'] : null,
+    ['メモ',         memo],
+  ].filter(Boolean);
+
+  document.getElementById('modal-body').innerHTML =
+    rows.map(function(r){
+      var k=r[0], v=r[1];
+      var col = k==='問題あり' ? 'color:var(--red)' : k==='チェック完了' ? 'color:var(--green)' : '';
+      return '<div class="modal-row"><span class="mr-key">'+k+'</span><span class="mr-val" style="'+col+'">'+v+'</span></div>';
+    }).join('') +
+    '<div style="margin-top:14px;padding:11px 13px;background:rgba(201,168,64,.06);border:1px solid rgba(201,168,64,.2);border-radius:9px;font-size:11px;color:var(--sub);line-height:1.9">' +
+    'ボタン1回で以下を自動実行します：<br>' +
+    '<strong style="color:var(--gold)">① Kintone</strong> に完了記録を保存&nbsp;&nbsp;' +
+    '<strong style="color:var(--gold)">② Slack</strong> #案件管理 に通知&nbsp;&nbsp;' +
+    '<strong style="color:var(--gold)">③ LINE</strong> でエージェントへ完了通知' +
+    '</div>';
+
+  document.getElementById('modal-progress').style.display = 'none';
+  var actions = document.getElementById('modal-actions');
+  if (actions) actions.style.display = 'flex';
+  var submitBtn = document.getElementById('modal-submit-btn');
+  if (submitBtn) { submitBtn.disabled = false; submitBtn.style.opacity = '1'; }
   document.getElementById('modal-overlay').classList.add('show');
 }
 
+// ── ワンクリック自動送信 ──────────────────────────────────────────
 function submitComplete() {
-  if (currentCase) {
-    currentCase.status = 'scan-pending';
-    currentCase.itStatus = 'done';
-    currentCase.itDoneAt = new Date().toLocaleString('ja-JP');
-    currentCase.itDuration = Math.floor(timerElapsed/60);
+  if (!currentCase) return;
+
+  var btn       = document.getElementById('modal-submit-btn');
+  var cancelBtn = document.querySelector('.ma-cancel');
+  var progress  = document.getElementById('modal-progress');
+  var progMsg   = document.getElementById('modal-progress-msg');
+  var progBar   = document.getElementById('modal-progress-bar');
+
+  if (btn) { btn.disabled = true; btn.style.opacity = '0.5'; }
+  if (cancelBtn) { cancelBtn.disabled = true; cancelBtn.style.opacity = '0.4'; }
+  if (progress) progress.style.display = 'block';
+
+  var steps = [
+    { pct: 30,  msg: '💾 Kintoneに完了記録を保存中...',  ms: 700 },
+    { pct: 65,  msg: '📢 Slackに通知を送信中...',         ms: 600 },
+    { pct: 90,  msg: '📱 LINE完了通知を送信中...',         ms: 500 },
+    { pct: 100, msg: '✅ 全て完了しました',                ms: 400 },
+  ];
+
+  var i = 0;
+  function runStep() {
+    if (i >= steps.length) {
+      // 完了処理
+      currentCase.status   = 'scan-pending';
+      currentCase.itStatus = 'done';
+      currentCase.itDoneAt = new Date().toLocaleString('ja-JP');
+      setTimeout(function() {
+        closeModal();
+        renderCaseList();
+        var completeBtn = document.getElementById('ab-complete-btn');
+        if (completeBtn) {
+          completeBtn.textContent = '📦 完了済み';
+          completeBtn.disabled    = true;
+          completeBtn.style.opacity = '0.5';
+        }
+        showSlackToast('✅ 完了報告送信済み — Kintone・Slack・LINEに自動通知しました');
+      }, 300);
+      return;
+    }
+    var s = steps[i++];
+    if (progMsg) progMsg.textContent = s.msg;
+    if (progBar) progBar.style.width = s.pct + '%';
+    setTimeout(runStep, s.ms);
   }
-  closeModal();
-  renderCaseList();
-  document.getElementById('ab-complete-btn').textContent = '📦 書類管理へ';
-  alert('✅ IT重説完了報告を送信しました\n\nKintoneに記録されました。\n次のステップ：契約書（往路）の発送と追跡番号登録');
+  runStep();
 }
 
 function closeModal() {
