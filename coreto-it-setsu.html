@@ -93,7 +93,7 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
 .sec-hdr-left{display:flex;align-items:center;gap:10px}
 .sec-icon{font-size:17px;width:26px;text-align:center}
 .sec-title-text{font-size:12px;font-weight:700}
-.sec-timing{font-size:10px;color:var(--muted);margin-left:4px;font-weight:400}
+
 .sec-right{display:flex;align-items:center;gap:10px}
 .sec-prog{font-size:10px;font-family:'DM Mono',monospace;color:var(--sub)}
 .sec-chev{color:var(--muted);font-size:12px;transition:transform .2s}
@@ -494,6 +494,15 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
 </div>
 
 <script>
+// ── アクセス制御: 不動産エージェント（RE）専用 ──
+(function(){
+  const s = JSON.parse(sessionStorage.getItem('coreto_session') || 'null');
+  if (!s || s.type !== 're') {
+    document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0b0d12;color:#4a4f68;font-family:sans-serif;flex-direction:column;gap:12px"><div style="font-size:32px">🔒</div><div style="font-size:14px">このページは不動産エージェント専用です</div><a href=\"coreto-hub.html\" style=\"color:#c9a840;font-size:12px;margin-top:8px\">← Hub へ戻る</a></div>';
+    return;
+  }
+})();
+
 // ================================================================
 //  Demo Cases
 // ================================================================
@@ -870,70 +879,84 @@ const CASES = [
 // ================================================================
 const IT_CHECKLIST = [
   {
-    id:'prep', icon:'📋', title:'事前準備', timing:'重説前に完了',
+    id:'prep', icon:'📋', title:'事前準備',
     items:[
       { id:'pre-1', label:'Calendly予約の確認',
         desc:'予約日時・顧客名・Google Meet URLを確認。リマインドメール送付済みか確認' },
       { id:'pre-2', label:'Google Meet URLの動作確認',
-        desc:'実際にURLを開き接続テスト。音声・ビデオが正常か確認。画面共有の準備' },
-      { id:'pre-3', label:'重説書・契約書の準備',
-        desc:'該当物件の重説書・契約書PDFを開いておく。画面共有で表示できる状態に',
+        desc:'実際にURLを開き接続テスト。音声・ビデオが正常か確認' },
+      { id:'pre-3', label:'重説書・契約書の手元確認',
+        desc:'顧客に原本（郵送済み）が届いているか事前に確認する',
         tag:'required', tagLabel:'必須' },
       { id:'pre-4', label:'宅建士証の準備',
-        desc:'宅建士証を手元に用意。画面表示できる状態（カードまたは証明書PDF）',
+        desc:'宅建士証を手元に用意。カメラに映せる状態にしておく',
         tag:'takken', tagLabel:'宅建士必須' },
     ]
   },
   {
-    id:'ice', icon:'👋', title:'アイスブレイク（0〜5分）', timing:'開始〜5分',
+    id:'ice', icon:'👋', title:'アイスブレイク',
     items:[
       { id:'ice-1', label:'自己紹介・宅建士証の提示',
-        desc:'氏名・宅建士登録番号を口頭で説明し、宅建士証を画面に表示して提示',
+        desc:'氏名・宅建士登録番号を口頭で説明し、宅建士証をカメラに映して提示',
         tag:'takken', tagLabel:'宅建士証提示' },
-      { id:'ice-2', label:'本日の流れの説明',
-        desc:'「本日は重要事項説明→契約書説明→今後の流れの3部構成で約60分です」' },
+      { id:'ice-2', label:'顧客手元の書類確認',
+        desc:'「お手元に重要事項説明書と賃貸借契約書はございますか？」と確認する',
+        tag:'required', tagLabel:'必須' },
+      { id:'ice-3', label:'本日の流れの説明',
+        desc:'「重要事項説明→契約書のご説明→捺印箇所のご案内の3部構成です」' },
     ]
   },
   {
-    id:'jyusetsu', icon:'📜', title:'重要事項説明（5〜40分）', timing:'5〜40分',
+    id:'jyusetsu', icon:'📜', title:'重要事項説明',
     items:[
-      { id:'exp-1', label:'重説書の画面共有開始',
-        desc:'PDFを画面共有。「共有されていますか？」と顧客に確認を取ってから開始',
-        tag:'record', tagLabel:'記録' },
-      { id:'exp-2', label:'各項目の読み上げと説明',
-        desc:'物件概要・登記事項・都市計画・設備状況・管理規約・特約事項を順に説明' },
-      { id:'exp-3', label:'質疑応答・顧客の理解確認',
-        desc:'「ご不明な点はありますか？」を各セクション後に必ず確認。記録を残す' },
-      { id:'exp-4', label:'顧客の同意確認（口頭）',
-        desc:'「重要事項についてご理解いただけましたか？」→「はい」の確認を取る',
+      { id:'exp-1', label:'各項目の読み上げと説明',
+        desc:'物件概要・登記事項・都市計画・設備状況・管理規約・特約事項を順に読み上げる（顧客は手元の書類を参照）' },
+      { id:'exp-2', label:'質疑応答・顧客の理解確認',
+        desc:'「ご不明な点はありますか？」を各セクション後に必ず確認。内容は記録に残す' },
+      { id:'exp-3', label:'顧客の同意確認（口頭）',
+        desc:'「重要事項についてご理解いただけましたか？」→「はい」の口頭確認を取る',
         tag:'required', tagLabel:'必須' },
-      { id:'exp-5', label:'電磁的方法による重説の同意確認',
+      { id:'exp-4', label:'電磁的方法による重説の同意確認',
         desc:'「IT重説による電磁的方法での説明に同意いただけますか？」の確認',
         tag:'required', tagLabel:'法定必須' },
     ]
   },
   {
-    id:'contract', icon:'✍️', title:'契約書説明（40〜55分）', timing:'40〜55分',
+    id:'contract', icon:'✍️', title:'契約書説明',
     items:[
-      { id:'cnt-1', label:'契約書の画面共有（切り替え）',
-        desc:'重説書から契約書PDFに切り替えて共有。正常に表示されているか確認' },
+      { id:'cnt-1', label:'契約書ページの案内',
+        desc:'「次に賃貸借契約書をご覧ください」と伝え、顧客に手元の契約書を開いてもらう' },
       { id:'cnt-2', label:'契約内容の説明',
         desc:'契約期間・更新条件（自動更新の有無）・解約条件・特約事項を説明' },
-      { id:'cnt-3', label:'署名・捺印方法の説明',
-        desc:'「届いた契約書に署名と捺印をお願いします。認印で可」と案内' },
     ]
   },
   {
-    id:'closing', icon:'🔑', title:'今後の流れ説明（55〜60分）', timing:'55〜60分',
+    id:'hanko', icon:'🔏', title:'捺印箇所のご案内',
+    items:[
+      { id:'hk-1', label:'重要事項説明書 — 氏名・捺印欄',
+        desc:'「重要事項説明書の末尾、署名欄にご署名と捺印をお願いします（認印で可）」' },
+      { id:'hk-2', label:'賃貸借契約書 — 借主署名欄',
+        desc:'「賃貸借契約書の1枚目、借主の署名欄に住所・氏名をご記入ください」' },
+      { id:'hk-3', label:'賃貸借契約書 — 捺印箇所（全ページ）',
+        desc:'「契約書の各ページに捺印箇所があります。ページをめくりながら赤枠に捺印してください」' },
+      { id:'hk-4', label:'連帯保証人欄（該当者のみ）',
+        desc:'「連帯保証人様の署名・捺印欄が末尾にございます。後日保証人様にご対応いただく旨をお伝えください」' },
+      { id:'hk-5', label:'捺印漏れの最終確認を依頼',
+        desc:'「書類全体をもう一度ご確認いただき、捺印漏れがないかチェックをお願いします」',
+        tag:'required', tagLabel:'必須' },
+    ]
+  },
+  {
+    id:'closing', icon:'🔑', title:'今後の流れ説明',
     items:[
       { id:'end-1', label:'返送方法の案内',
-        desc:'「署名後はレターパックライトで返送してください。送付先は同封の封筒に記載しています」' },
+        desc:'「署名・捺印後はレターパックライトで返送してください。送付先は同封の封筒に記載しています」' },
       { id:'end-2', label:'鍵の受け渡し方法の確認',
         desc:'入居日・鍵の受取方法（郵送 or 直接受取）を再確認してKintoneに記録' },
       { id:'end-3', label:'入居日・今後のスケジュール確認',
         desc:'入居予定日・ライフライン手続き（電気・ガス・水道）の案内' },
       { id:'end-4', label:'重説実施の完了記録',
-        desc:'宅建士名・実施日時・所要時間をKintoneに記録（本フォーム送信で自動記録）',
+        desc:'宅建士名・実施日・顧客確認の記録（本フォーム送信で自動記録）',
         tag:'record', tagLabel:'Kintone記録' },
     ]
   },
@@ -1073,7 +1096,7 @@ function renderITChecklist() {
       <div class="sec-hdr" onclick="toggleSec('${sec.id}',this)">
         <div class="sec-hdr-left">
           <div class="sec-icon">${sec.icon}</div>
-          <div class="sec-title-text">${sec.title}<span class="sec-timing">${sec.timing}</span></div>
+          <div class="sec-title-text">${sec.title}</div>
         </div>
         <div class="sec-right">
           <div class="sec-prog" id="sp-${sec.id}">0/${sec.items.length}</div>
