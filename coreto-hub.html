@@ -1144,34 +1144,93 @@ function rankPage() {
   const u = session;
   const rankColors = {platinum:'var(--purple)',gold:'var(--gold)',silver:'var(--green)',bronze:'var(--orange)',pt:'var(--purple)'};
   const rankCol = rankColors[u.rankKey] || 'var(--muted)';
+
+  const RANKS = [
+    {
+      icon:'💎', label:'Platinum', col:'var(--purple)',
+      fee:'¥0（永久無料）', rate_re:'75%', rate_hr:'55%',
+      conditions:[
+        '12ヶ月連続で月5件以上成約',
+        '顧客満足度 平均4.8以上',
+        'メンター活動（3名以上育成）',
+        '特別な貢献',
+      ],
+    },
+    {
+      icon:'🥇', label:'Gold', col:'var(--gold)',
+      fee:'¥0', rate_re:'70%', rate_hr:'50%',
+      conditions:[
+        '6ヶ月連続で月3件以上成約',
+        '顧客満足度 平均4.5以上',
+        'メンター活動（1名以上育成）',
+      ],
+    },
+    {
+      icon:'🥈', label:'Silver', col:'var(--green)',
+      fee:'¥490', rate_re:'67.5%', rate_hr:'47.5%',
+      conditions:[
+        '3ヶ月連続で月2件以上成約',
+        '顧客満足度 平均4.0以上',
+      ],
+    },
+    {
+      icon:'🥉', label:'Bronze', col:'var(--orange)',
+      fee:'¥980', rate_re:'65%', rate_hr:'45%',
+      conditions:['登録直後の初期ランク'],
+    },
+  ];
+
+  const feeMap    = {platinum:'¥0（永久無料）', gold:'¥0', silver:'¥490', bronze:'¥980'};
+  const rate_re   = {platinum:'75%', gold:'70%', silver:'67.5%', bronze:'65%'};
+
   return `<div class="page" id="page-rank">
-  <div class="page-hdr"><div class="page-title">ランク・ポイント</div><div class="page-sub">ランク昇格条件と今月の進捗</div></div>
-  <div class="grid-2">
+  <div class="page-hdr"><div class="page-title">ランク・ポイント</div><div class="page-sub">ランク昇格条件（毎月1日 自動判定）</div></div>
+
+  <div class="grid-2" style="margin-bottom:16px">
     <div class="card">
       <div class="card-hdr"><div class="ch-title">現在のランク</div></div>
-      <div class="card-body">
-        <div style="text-align:center;padding:14px 0">
-          <div style="font-size:42px;margin-bottom:8px">${u.rank==='Platinum'?'💎':u.rank==='Gold'?'🥇':u.rank==='Silver'?'🥈':'🥉'}</div>
-          <div style="font-size:22px;font-weight:800;color:${rankCol}">${u.rank}</div>
-          <div style="font-size:12px;color:var(--sub);margin-top:6px">月額費用: ${u.rankKey==='platinum'||u.rankKey==='gold'?'¥0':u.rankKey==='silver'?'¥490':'¥980'}</div>
-        </div>
+      <div class="card-body" style="text-align:center;padding:20px 0">
+        <div style="font-size:48px;margin-bottom:10px">${u.rank==='Platinum'?'💎':u.rank==='Gold'?'🥇':u.rank==='Silver'?'🥈':'🥉'}</div>
+        <div style="font-size:24px;font-weight:800;color:${rankCol}">${u.rank}</div>
+        <div style="font-size:12px;color:var(--sub);margin-top:6px">月額費用：${feeMap[u.rankKey]||'¥980'}</div>
+        <div style="font-size:12px;color:var(--sub);margin-top:2px">報酬率（不動産）：${rate_re[u.rankKey]||'65%'}</div>
       </div>
     </div>
     <div class="card">
-      <div class="card-hdr"><div class="ch-title">ランク条件一覧</div></div>
-      <div style="overflow-x:auto">
-        <table class="tbl">
-          <thead><tr><th>ランク</th><th>月次成約</th><th>月額費用</th><th>手数料率</th></tr></thead>
-          <tbody>
-            ${[
-              ['💎 Platinum','5件以上','¥0','75%'],
-              ['🥇 Gold','3〜4件','¥0','75%'],
-              ['🥈 Silver','1〜2件','¥490','75%'],
-              ['🥉 Bronze','0件','¥980','75%'],
-            ].map(([r,c,f,p]) => `<tr><td class="fw-700">${r}</td><td>${c}</td><td class="mono">${f}</td><td class="mono">${p}</td></tr>`).join('')}
-          </tbody>
-        </table>
+      <div class="card-hdr"><div class="ch-title">判定スケジュール</div></div>
+      <div class="card-body" style="font-size:12px;line-height:2;color:var(--sub)">
+        ランクは <strong class="text-gold">毎月1日</strong> に自動判定されます。<br>
+        前月末時点の実績をもとに Kintone で集計し、<br>
+        昇格・降格があった場合は Slack で通知されます。<br><br>
+        <span class="text-muted" style="font-size:11px">顧客満足度は成約後アンケートの平均値。<br>メンター活動は登録エージェントの育成件数。</span>
       </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-hdr"><div class="ch-title">ランク昇格条件一覧</div></div>
+    <div style="overflow-x:auto">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>ランク</th>
+            <th>月額費用</th>
+            <th>報酬率（不動産）</th>
+            <th>報酬率（人材）</th>
+            <th>昇格条件（全て満たすこと）</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${RANKS.map(r => `
+          <tr>
+            <td><span style="font-weight:800;color:${r.col}">${r.icon} ${r.label}</span></td>
+            <td class="mono" style="white-space:nowrap">${r.fee}</td>
+            <td class="mono" style="color:${r.col};font-weight:700">${r.rate_re}</td>
+            <td class="mono" style="color:${r.col};font-weight:700">${r.rate_hr}</td>
+            <td style="font-size:11px;color:var(--sub);line-height:1.9">${r.conditions.map(c=>`・${c}`).join('<br>')}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
     </div>
   </div>
 </div>`;
