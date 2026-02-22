@@ -527,24 +527,158 @@ function stepInvoice(c) {
   const now = new Date();
   const due = new Date(now.getTime()+30*864e5).toISOString().slice(0,10);
   const invNum = 'INV-'+now.getFullYear()+String(now.getMonth()+1).padStart(2,'0')+'-'+c.agent;
-  const defaultAmt = c.type==='reLet' ? '' : '';
+  // Parse rent from sub string e.g. "渋谷区 1K ¥155,000"
+  const rentMatch = (c.sub||'').match(/[¥¥]([\d,]+)/);
+  const rentGuess = rentMatch ? rentMatch[1].replace(/,/g,'') : '';
+  // Restore previous items if re-entering
+  const prevItems = (c.invoice && c.invoice.items) ? c.invoice.items : [{desc:'仲介手数料（借主）',amt:''}];
+  const prevAD = (c.invoice && c.invoice.adAmt) ? c.invoice.adAmt : '';
+  const prevRent = (c.invoice && c.invoice.rent) ? c.invoice.rent : rentGuess;
+  const prevReason = (c.invoice && c.invoice.underReason) ? c.invoice.underReason : '';
+  const prevIsAD = c.adOnly || false;
+
+  const itemRowsHtml = prevItems.map((it,i)=>invItemRow(i,it.desc,it.amt)).join('');
 
   return '<div class="step-title">🧾 請求書発行</div>'
+    // Header info
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px">'
     +'<div class="fi"><label>請求書番号</label>'
     +'<input type="text" class="mono" value="'+invNum+'" readonly style="color:var(--muted);font-size:11px;background:rgba(255,255,255,.02);cursor:not-allowed"></div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
+    +'<div class="fi"><label>物件名</label><input type="text" id="inv-prop" value="'+(app.prop||'')+'" oninput="invCalc()"></div>'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px">'
     +'<div class="fi"><label>発行日</label><input type="date" id="inv-date" class="mono" value="'+now.toISOString().slice(0,10)+'"></div>'
     +'<div class="fi"><label>支払期限</label><input type="date" id="inv-due" class="mono" value="'+due+'"></div>'
     +'</div>'
-    +'<div class="fi"><label>物件名</label><input type="text" id="inv-prop" value="'+(app.prop||'')+'"></div>'
-    +'<div class="fi"><label>仲介手数料（税込）</label>'
-    +'<input type="number" id="inv-amt" class="mono" placeholder="例: 165000"></div>'
-    +'<div style="margin:10px 0 12px;padding:10px 12px;background:var(--card2);border:1px solid var(--border);border-radius:8px">'
-    +'<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px">'
-    +'<input type="checkbox" id="inv-ad" style="width:15px;height:15px"> AD案件（入金は鍵渡し後）</label>'
+    // Rent baseline
+    +'<div class="fi" style="margin-bottom:2px"><label>家賃（月額・税込）<span style="color:var(--muted);font-size:10px;margin-left:6px">上限計算の基準額</span></label>'
+    +'<input type="number" id="inv-rent" class="mono" placeholder="例: 150000" value="'+prevRent+'" oninput="invCalc()" style="font-size:13px"></div>'
+    // Items
+    +'<div style="margin:10px 0 4px;font-size:11px;color:var(--sub);font-weight:600;letter-spacing:.05em">請求項目</div>'
+    +'<div id="inv-items">'+itemRowsHtml+'</div>'
+    +'<button onclick="invAddItem()" style="width:100%;background:transparent;border:1px dashed var(--border2);color:var(--sub);padding:7px;border-radius:7px;cursor:pointer;font-size:11px;margin-bottom:10px">＋ 項目を追加</button>'
+    // AD section
+    +'<div id="inv-ad-section" style="padding:10px 12px;background:var(--card2);border:1px solid var(--border);border-radius:8px;margin-bottom:10px">'
+    +'<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;margin-bottom:8px">'
+    +'<input type="checkbox" id="inv-ad" style="width:15px;height:15px" '+(prevIsAD?'checked ':'')+' onchange="invToggleAD();invCalc()"> AD案件（入金は鍵渡し後）</label>'
+    +'<div id="inv-ad-amt-wrap" style="display:'+(prevIsAD?'block':'none')+'">'
+    +'<div class="fi" style="margin-bottom:4px"><label>AD金額（オーナーから受領）</label>'
+    +'<input type="number" id="inv-ad-amt" class="mono" placeholder="例: 150000" value="'+prevAD+'" oninput="invCalc()" style="font-size:13px"></div>'
+    +'</div></div>'
+    // Validation panel
+    +'<div id="inv-validation" style="margin-bottom:10px"></div>'
+    // Reason (shown when total < 家賃×1)
+    +'<div id="inv-reason-wrap" style="display:none;margin-bottom:10px">'
+    +'<div class="fi"><label style="color:var(--orange)">⚠ 合計が家賃1ヶ月分未満 — 理由を記入してください</label>'
+    +'<textarea id="inv-reason" rows="2" placeholder="例: クライアント交渉の結果、手数料を減額。入居率優先のため。" style="font-size:12px;resize:vertical">'+prevReason+'</textarea></div>'
     +'</div>'
     +'<button class="btn btn-gold" style="width:100%;justify-content:center" onclick="issueInvoice(\"'+c.id+'\")">📄 請求書発行 → 重説・入金へ</button>';
 }
+
+function invItemRow(idx, desc, amt) {
+  return '<div class="inv-row" data-idx="'+idx+'" style="display:grid;grid-template-columns:1fr auto auto;gap:6px;margin-bottom:6px;align-items:center">'
+    +'<input type="text" placeholder="項目名（例：仲介手数料（借主））" value="'+desc+'" oninput="invCalc()" style="font-size:12px">'
+    +'<input type="number" placeholder="金額" value="'+amt+'" oninput="invCalc()" class="mono" style="width:120px;font-size:13px">'
+    +'<button onclick="invRemoveItem('+idx+')" style="background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);color:var(--red);border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:14px;padding:0;line-height:1" title="削除">×</button>'
+    +'</div>';
+}
+
+let _invItemCount = 1;
+function invAddItem() {
+  const wrap = document.getElementById('inv-items');
+  if(!wrap) return;
+  const idx = _invItemCount++;
+  const row = document.createElement('div');
+  row.innerHTML = invItemRow(idx,'','');
+  wrap.appendChild(row.firstChild);
+  invCalc();
+}
+function invRemoveItem(idx) {
+  const rows = document.querySelectorAll('#inv-items .inv-row');
+  rows.forEach(r=>{ if(parseInt(r.dataset.idx)===idx) r.remove(); });
+  invCalc();
+}
+function invToggleAD() {
+  const ad = document.getElementById('inv-ad')?.checked;
+  const wrap = document.getElementById('inv-ad-amt-wrap');
+  if(wrap) wrap.style.display = ad ? 'block' : 'none';
+  invCalc();
+}
+function invGetItems() {
+  const rows = document.querySelectorAll('#inv-items .inv-row');
+  const items=[];
+  rows.forEach(r=>{
+    const inputs = r.querySelectorAll('input');
+    const desc = inputs[0]?.value.trim()||'';
+    const amt = parseInt(inputs[1]?.value)||0;
+    if(desc||amt) items.push({desc, amt});
+  });
+  return items;
+}
+function invCalc() {
+  const rent = parseInt(document.getElementById('inv-rent')?.value)||0;
+  const items = invGetItems();
+  const total = items.reduce((s,it)=>s+it.amt, 0);
+  const adChecked = document.getElementById('inv-ad')?.checked||false;
+  const adAmt = adChecked ? (parseInt(document.getElementById('inv-ad-amt')?.value)||0) : 0;
+  const grandTotal = total + adAmt;
+  const limit11 = Math.round(rent * 1.1);  // 宅建業法上限（税込）
+  const limit10 = rent;                     // 1ヶ月分
+
+  let html = '';
+  if(rent > 0) {
+    // Summary line
+    html += '<div style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:12px">';
+    html += '<div style="display:flex;justify-content:space-between;margin-bottom:6px">';
+    html += '<span style="color:var(--sub)">仲介手数料 合計</span>';
+    html += '<span class="mono" style="font-size:13px">¥'+total.toLocaleString()+'</span></div>';
+    if(adChecked && adAmt>0) {
+      html += '<div style="display:flex;justify-content:space-between;margin-bottom:6px">';
+      html += '<span style="color:var(--sub)">AD金額</span>';
+      html += '<span class="mono" style="font-size:13px">¥'+adAmt.toLocaleString()+'</span></div>';
+      html += '<div style="border-top:1px solid var(--border);margin:6px 0;padding-top:6px;display:flex;justify-content:space-between">';
+      html += '<span style="color:var(--sub);font-weight:600">合計（仲介手数料＋AD）</span>';
+      html += '<span class="mono" style="font-size:14px;color:var(--gold)">¥'+grandTotal.toLocaleString()+'</span></div>';
+    }
+
+    // Rule 1: 仲介手数料 ≤ 家賃×1.1
+    if(total > 0 && total > limit11) {
+      html += '<div style="margin-top:8px;padding:8px 10px;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.4);border-radius:6px;color:var(--red);font-size:11px">'
+        +'⛔ 仲介手数料（¥'+total.toLocaleString()+'）が家賃の1.1ヶ月分（¥'+limit11.toLocaleString()+'）を超過しています。宅建業法上の上限を確認してください。</div>';
+    } else if(total > 0 && total <= limit11) {
+      html += '<div style="margin-top:8px;padding:6px 10px;background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.3);border-radius:6px;color:var(--green);font-size:11px">'
+        +'✅ 仲介手数料 ¥'+total.toLocaleString()+' ／ 上限 ¥'+limit11.toLocaleString()+'（家賃×1.1）— 適正</div>';
+    }
+
+    // Rule 2: grandTotal vs 家賃×1.0
+    if(grandTotal > 0) {
+      const underLimit = grandTotal < limit10;
+      const overLimit  = grandTotal >= limit10;
+      if(overLimit) {
+        html += '<div style="margin-top:6px;padding:6px 10px;background:rgba(79,156,249,.08);border:1px solid rgba(79,156,249,.3);border-radius:6px;color:var(--blue);font-size:11px">'
+          +'💰 合計 ¥'+grandTotal.toLocaleString()+' ≥ 家賃1ヶ月分（¥'+limit10.toLocaleString()+'）— 適正</div>';
+      } else {
+        html += '<div style="margin-top:6px;padding:6px 10px;background:rgba(251,146,60,.1);border:1px solid rgba(251,146,60,.4);border-radius:6px;color:var(--orange);font-size:11px">'
+          +'⚠ 合計 ¥'+grandTotal.toLocaleString()+' が家賃1ヶ月分（¥'+limit10.toLocaleString()+'）を下回っています。下欄に理由を記入してください。</div>';
+      }
+      const rw = document.getElementById('inv-reason-wrap');
+      if(rw) rw.style.display = underLimit ? 'block' : 'none';
+    }
+
+    html += '</div>';
+  } else if(total > 0) {
+    // No rent entered, just show total
+    html = '<div style="display:flex;justify-content:space-between;padding:8px 12px;background:var(--card2);border:1px solid var(--border);border-radius:8px;font-size:12px">';
+    html += '<span style="color:var(--sub)">仲介手数料 合計</span>';
+    html += '<span class="mono" style="font-size:13px">¥'+total.toLocaleString()+'</span></div>';
+  }
+
+  const vPanel = document.getElementById('inv-validation');
+  if(vPanel) vPanel.innerHTML = html;
+}
+// Initialize calc on first render
+setTimeout(()=>{ invCalc(); _invItemCount = document.querySelectorAll('#inv-items .inv-row').length; },100);
+
 
 function stepPrekey(c) {
   const td = c.taskDone || {};
@@ -732,16 +866,31 @@ function appRejected(id, appId) {
 }
 
 function issueInvoice(id) {
-  const amt = document.getElementById('inv-amt')?.value;
   const prop = document.getElementById('inv-prop')?.value.trim();
-  if (!amt || !prop) { alert('物件名と仲介手数料を入力してください'); return; }
-  const ad = document.getElementById('inv-ad')?.checked || false;
+  const rent = parseInt(document.getElementById('inv-rent')?.value)||0;
+  const items = invGetItems();
+  const total = items.reduce((s,it)=>s+it.amt, 0);
+  const ad = document.getElementById('inv-ad')?.checked||false;
+  const adAmt = ad ? (parseInt(document.getElementById('inv-ad-amt')?.value)||0) : 0;
+  const grandTotal = total + adAmt;
   const date = document.getElementById('inv-date')?.value;
   const due  = document.getElementById('inv-due')?.value;
+  const reason = document.getElementById('inv-reason')?.value.trim()||'';
+
+  if(!prop) { alert('物件名を入力してください'); return; }
+  if(items.length===0 || total===0) { alert('請求項目と金額を入力してください'); return; }
+  if(rent > 0 && total > Math.round(rent*1.1)) {
+    alert('仲介手数料が家賃の1.1ヶ月分（¥'+Math.round(rent*1.1).toLocaleString()+'）を超過しています。\n修正してから発行してください。'); return;
+  }
+  if(rent > 0 && grandTotal < rent && !reason) {
+    alert('合計が家賃1ヶ月分未満のため、理由の記入が必要です。'); return;
+  }
+
   const c = CASES.find(x=>x.id===id); if(!c) return;
   c.adOnly = ad;
-  c.invoice = {amt:parseInt(amt), prop, date, due, issued:true};
-  c.hist.unshift(today()+' 請求書発行 ¥'+parseInt(amt).toLocaleString()+(ad?' [AD案件]':''));
+  c.invoice = {items, total, adAmt, grandTotal, rent, prop, date, due, underReason:reason, issued:true};
+  const note = ad ? ' [AD案件 AD¥'+adAmt.toLocaleString()+']' : '';
+  c.hist.unshift(today()+' 請求書発行 合計¥'+grandTotal.toLocaleString()+note);
   advance(id, 'prekey', 'invoiced', date, '請求書発行完了');
 }
 
