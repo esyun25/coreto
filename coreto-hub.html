@@ -1145,18 +1145,78 @@ function reMyPage() {
 
 function rankPage() {
   const u = session;
-  const rankColors = {platinum:'var(--purple)',gold:'var(--gold)',silver:'var(--green)',bronze:'var(--orange)',pt:'var(--purple)'};
-  const rankCol = rankColors[u.rankKey] || 'var(--muted)';
+  const rankColors = {platinum:'var(--purple)',gold:'var(--gold)',silver:'var(--green)',bronze:'var(--orange)'};
+  const rankCol = rankColors[u.rankKey] || 'var(--orange)';
 
   const RANKS = [
     { icon:'💎', label:'Platinum', col:'var(--purple)', fee:'¥0（永久無料）', rate_re:'75%', rate_hr:'55%', pts:'30pt 以上' },
     { icon:'🥇', label:'Gold',     col:'var(--gold)',   fee:'¥0',            rate_re:'70%', rate_hr:'50%', pts:'20〜29pt' },
-    { icon:'🥈', label:'Silver',   col:'var(--green)',  fee:'¥490',          rate_re:'67.5%',rate_hr:'47.5%',pts:'10〜19pt' },
-    { icon:'🥉', label:'Bronze',   col:'var(--orange)', fee:'¥980',          rate_re:'65%', rate_hr:'45%', pts:'0〜9pt'  },
+    { icon:'🥈', label:'Silver',   col:'var(--green)',  fee:'¥490',          rate_re:'67.5%', rate_hr:'47.5%', pts:'10〜19pt' },
+    { icon:'🥉', label:'Bronze',   col:'var(--orange)', fee:'¥980',          rate_re:'65%',  rate_hr:'45%',  pts:'0〜9pt'  },
   ];
 
-  const feeMap    = {platinum:'¥0（永久無料）', gold:'¥0', silver:'¥490', bronze:'¥980'};
-  const rate_re   = {platinum:'75%', gold:'70%', silver:'67.5%', bronze:'65%'};
+  const feeMap  = {platinum:'¥0（永久無料）', gold:'¥0', silver:'¥490', bronze:'¥980'};
+  const rateMap = {platinum:'75%', gold:'70%', silver:'67.5%', bronze:'65%'};
+
+  // ── Progress bar HTML (built without nested template literals) ──
+  const curPtsMap = {platinum:33, gold:22, silver:12, bronze:5};
+  const curPts = curPtsMap[u.rankKey] || 5;
+  const thresholds = [
+    {pts:0,  label:'Bronze',   icon:'🥉', col:'var(--orange)'},
+    {pts:10, label:'Silver',   icon:'🥈', col:'var(--green)'},
+    {pts:20, label:'Gold',     icon:'🥇', col:'var(--gold)'},
+    {pts:30, label:'Platinum', icon:'💎', col:'var(--purple)'},
+  ];
+  const MAX = 34;
+  const pct = v => Math.min(97, Math.round(v / MAX * 100));
+  const next = thresholds.find(t => t.pts > curPts);
+  const needed = next ? next.pts - curPts : 0;
+
+  const nextLabel = next
+    ? '<div style="font-size:12px;color:var(--muted)">次のランク <strong style="color:' + next.col + '">' + next.icon + ' ' + next.label + '</strong> まで <strong style="color:var(--text)">' + needed + ' pt</strong></div>'
+    : '<div style="font-size:12px;color:var(--purple)">💎 最高ランク到達済み</div>';
+
+  const markers = thresholds.map(t => {
+    const active = curPts >= t.pts;
+    return '<div style="position:absolute;top:0;bottom:0;left:' + pct(t.pts) + '%;transform:translateX(-50%);z-index:2">'
+      + '<div style="width:2px;height:100%;background:' + (active ? 'rgba(255,255,255,.5)' : 'var(--border2)') + ';border-radius:1px"></div>'
+      + '</div>';
+  }).join('');
+
+  const labels = thresholds.map(t => {
+    const active = curPts >= t.pts;
+    return '<div style="position:absolute;left:' + pct(t.pts) + '%;transform:translateX(-50%);text-align:center">'
+      + '<div style="font-size:16px">' + t.icon + '</div>'
+      + '<div style="font-size:9px;font-weight:700;color:' + (active ? t.col : 'var(--muted)') + ';' + (active ? '' : 'opacity:.5') + '">' + t.pts + 'pt</div>'
+      + '</div>';
+  }).join('');
+
+  const progressHTML =
+    '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px">'
+    + '<div><span style="font-size:32px;font-weight:800;color:' + rankCol + '">' + curPts + '</span><span style="font-size:13px;color:var(--sub);margin-left:5px">pt</span></div>'
+    + nextLabel
+    + '</div>'
+    + '<div style="position:relative;height:20px;margin-bottom:10px">'
+    +   '<div style="position:absolute;inset:0;background:#0a0c14;border-radius:10px;overflow:hidden">'
+    +     '<div style="height:100%;width:' + pct(curPts) + '%;background:linear-gradient(90deg,var(--orange),' + rankCol + ');border-radius:10px">'
+    +       '<div style="position:absolute;right:0;top:0;bottom:0;width:3px;background:rgba(255,255,255,.35);border-radius:0 2px 2px 0"></div>'
+    +     '</div>'
+    +   '</div>'
+    +   markers
+    + '</div>'
+    + '<div style="position:relative;height:42px">' + labels + '</div>';
+
+  const rankTableRows = RANKS.map(r => {
+    const isCur = r.label === u.rank;
+    return '<tr style="' + (isCur ? 'background:var(--card2)' : '') + '">'
+      + '<td><span style="font-weight:800;color:' + r.col + '">' + r.icon + ' ' + r.label + '</span>'
+      + (isCur ? ' <span style="font-size:9px;color:var(--sub)">← 現在</span>' : '') + '</td>'
+      + '<td class="mono fw-700" style="color:' + r.col + '">' + r.pts + '</td>'
+      + '<td class="mono" style="white-space:nowrap">' + r.fee + '</td>'
+      + '<td class="mono" style="color:' + r.col + ';font-weight:700">' + r.rate_re + '</td>'
+      + '<td class="mono" style="color:' + r.col + ';font-weight:700">' + r.rate_hr + '</td>'
+      + '</tr>';
+  }).join('');
 
   return `<div class="page" id="page-rank">
   <div class="page-hdr"><div class="page-title">ランク・ポイント</div><div class="page-sub">ランク昇格条件（毎月1日 自動判定）</div></div>
@@ -1165,10 +1225,10 @@ function rankPage() {
     <div class="card">
       <div class="card-hdr"><div class="ch-title">現在のランク</div></div>
       <div class="card-body" style="text-align:center;padding:20px 0">
-        <div style="font-size:48px;margin-bottom:10px">${u.rank==='Platinum'?'💎':u.rank==='Gold'?'🥇':u.rank==='Silver'?'🥈':'🥉'}</div>
+        <div style="font-size:52px;margin-bottom:10px">${u.rank==='Platinum'?'💎':u.rank==='Gold'?'🥇':u.rank==='Silver'?'🥈':'🥉'}</div>
         <div style="font-size:24px;font-weight:800;color:${rankCol}">${u.rank}</div>
-        <div style="font-size:12px;color:var(--sub);margin-top:6px">月額費用：${feeMap[u.rankKey]||'¥980'}</div>
-        <div style="font-size:12px;color:var(--sub);margin-top:2px">報酬率（不動産）：${rate_re[u.rankKey]||'65%'}</div>
+        <div style="font-size:12px;color:var(--sub);margin-top:8px">月額費用：${feeMap[u.rankKey]||'¥980'}</div>
+        <div style="font-size:12px;color:var(--sub);margin-top:2px">報酬率（不動産）：${rateMap[u.rankKey]||'65%'}</div>
       </div>
     </div>
     <div class="card">
@@ -1191,34 +1251,31 @@ function rankPage() {
     </div>
   </div>
 
+  <!-- ランク進捗バー -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-hdr"><div class="ch-title">ランク進捗バー</div></div>
+    <div class="card-body" style="padding-bottom:4px">
+      ${progressHTML}
+    </div>
+  </div>
+
+  <!-- ランク昇格条件一覧 -->
   <div class="card">
     <div class="card-hdr"><div class="ch-title">ランク昇格条件一覧</div></div>
     <div style="overflow-x:auto">
       <table class="tbl">
         <thead>
           <tr>
-            <th>ランク</th>
-            <th>累計ポイント</th>
-            <th>月額費用</th>
-            <th>報酬率（不動産）</th>
-            <th>報酬率（人材）</th>
+            <th>ランク</th><th>累計ポイント</th><th>月額費用</th><th>報酬率（不動産）</th><th>報酬率（人材）</th>
           </tr>
         </thead>
-        <tbody>
-          ${RANKS.map(r => `
-          <tr>
-            <td><span style="font-weight:800;color:${r.col}">${r.icon} ${r.label}</span></td>
-            <td class="mono fw-700" style="color:${r.col}">${r.pts}</td>
-            <td class="mono" style="white-space:nowrap">${r.fee}</td>
-            <td class="mono" style="color:${r.col};font-weight:700">${r.rate_re}</td>
-            <td class="mono" style="color:${r.col};font-weight:700">${r.rate_hr}</td>
-          </tr>`).join('')}
-        </tbody>
+        <tbody>${rankTableRows}</tbody>
       </table>
     </div>
   </div>
 </div>`;
 }
+
 
 function simPage() {
   const u = session;
