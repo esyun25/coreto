@@ -215,8 +215,7 @@ const STEPS_RELET = [
   {id:'naiken',   label:'内見',   icon:'🏠', stage:'naiken'},
   {id:'apply',    label:'申込',   icon:'📋', stage:'apply'},
   {id:'screening',label:'審査',   icon:'⏳', stage:'apply'},
-  {id:'payment',  label:'入金',   icon:'💴', stage:'payment'},
-  {id:'itsetsu',  label:'重説',   icon:'📝', stage:'contract'},
+  {id:'prekey',   label:'重説・入金', icon:'📝', stage:'contract'},
   {id:'key',      label:'鍵渡し', icon:'🔑', stage:'done'},
 ];
 
@@ -257,9 +256,9 @@ let CASES = [
    apps:[], dates:{naiken:'2026-02-23'}, hist:['2/21 内見予約: 2/23 10:00'],
   },
   {id:'R045500', name:'伊藤 翔太', type:'reLet', corp:false, agent:'10012',
-   sub:'渋谷区恵比寿 1LDK ¥155,000', step:'itsetsu', age:2, stale:false,
+   sub:'渋谷区恵比寿 1LDK ¥155,000', step:'prekey', age:2, stale:false,
    apps:[{id:'A020', prop:'渋谷区恵比寿 1LDK', mgmt:'東急管理', date:'2026-02-15', status:'approved'}],
-   dates:{naiken:'2026-02-14', applied:'2026-02-15', approved:'2026-02-17', paid:'2026-02-20'},
+   dates:{naiken:'2026-02-14', applied:'2026-02-15', approved:'2026-02-17', paid:'2026-02-20'}, adOnly:false, taskDone:{paid:true,itsetsu:false},
    hist:['2/14 内見','2/15 申込','2/17 審査通過','2/20 入金確認済'],
   },
   {id:'R047800', name:'株式会社タナカ商事', type:'reLet', corp:true, contactName:'田中 一郎', agent:'10008',
@@ -271,10 +270,16 @@ let CASES = [
    dates:{naiken:'2026-02-22'}, hist:['2/22 内見','2/22 2物件同時申込（法人）'],
   },
   {id:'R038291', name:'松本 浩二', type:'reLet', corp:false, agent:'10012',
-   sub:'渋谷区 2K ¥170,000', step:'key', age:0, stale:false,
+   sub:'渋谷区 2K ¥170,000', step:'prekey', age:0, stale:false,
    apps:[{id:'A040', prop:'渋谷区 2K', mgmt:'東京建物管理', date:'2026-02-08', status:'approved'}],
-   dates:{naiken:'2026-02-07', applied:'2026-02-08', approved:'2026-02-12', paid:'2026-02-17', itsetsu:'2026-02-20', chinkaku:'2026-03-01'},
+   dates:{naiken:'2026-02-07', applied:'2026-02-08', approved:'2026-02-12', paid:'2026-02-17', itsetsu:'2026-02-20', chinkaku:'2026-03-01'}, adOnly:false, taskDone:{paid:true,itsetsu:true},
    hist:['2/07 内見','2/08 申込','2/12 審査通過','2/17 入金確認','2/20 IT重説完了'],
+  },
+  {id:'R049001', name:'山崎 健', type:'reLet', corp:false, agent:'10023',
+   sub:'港区 1K ¥110,000 AD案件', step:'prekey', age:1, stale:false, adOnly:true,
+   apps:[{id:'A080', prop:'港区 1K', mgmt:'東京建物管理', date:'2026-02-21', status:'approved'}],
+   dates:{naiken:'2026-02-20', applied:'2026-02-21', approved:'2026-02-22'}, taskDone:{paid:false,itsetsu:false},
+   hist:['2/20 内見','2/21 申込','2/22 審査通過（AD案件）'],
   },
   {id:'R040011', name:'中村 由美', type:'reLet', corp:false, agent:'10012',
    sub:'港区 1R ¥95,000', step:'done', age:0, stale:false,
@@ -306,7 +311,7 @@ function stageOf(c) {
   if (step==='naiken') return 'naiken';
   if (step==='apply'||step==='screening') return 'apply';
   if (step==='payment') return 'payment';
-  if (step==='itsetsu'||step==='key'||step==='contract') return 'contract';
+  if (step==='prekey'||step==='itsetsu'||step==='key'||step==='contract') return 'contract';
   if (step==='offer') return 'apply';
   return 'new';
 }
@@ -438,8 +443,9 @@ function buildStepContent(c) {
     if (c.step==='naiken') html += stepNaiken(c);
     else if (c.step==='apply') html += stepApply(c);
     else if (c.step==='screening') html += stepScreening(c);
+    else if (c.step==='prekey') html += stepPrekey(c);
     else if (c.step==='payment') html += stepPayment(c);
-    else if (c.step==='itsetsu') html += stepItsetsu(c);
+    else if (c.step==='itsetsu') html += stepPrekey(c);
     else if (c.step==='key') html += stepKey(c);
   }
   // ── 売買フロー ──
@@ -514,27 +520,47 @@ function stepScreening(c) {
   return html;
 }
 
-function stepPayment(c) {
-  return '<div class="step-title">💴 入金確認</div>'
-    +'<div style="font-size:12px;color:var(--sub);margin-bottom:14px">初期費用の入金が確認できたら進めてください</div>'
-    +'<button class="btn btn-green" style="width:100%;justify-content:center" onclick="paymentDone(\''+c.id+'\')">✓ 入金確認済み → 重説へ</button>';
-}
+function stepPrekey(c) {
+  const td = c.taskDone || {};
+  const ad = c.adOnly || false;
+  const paidOk   = td.paid || false;
+  const setsuOk  = td.itsetsu || false;
+  const canKey   = setsuOk && (paidOk || ad);
 
-function stepItsetsu(c) {
-  return '<div class="step-title">📝 IT重説・契約</div>'
-    +'<div class="row" style="margin-bottom:12px">'
-    +'<button class="btn btn-blue" onclick="window.open(\'coreto-it-setsu.html\',\'_blank\')">IT重説チェックリストを開く</button>'
-    +'</div>'
-    +'<button class="btn btn-green" style="width:100%;justify-content:center" onclick="itsetsuDone(\''+c.id+'\')">✓ 重説完了 → 鍵渡しへ</button>';
-}
+  function taskRow(done, label, onclick) {
+    if (done) return '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;'
+      +'background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.2);border-radius:8px;margin-bottom:8px">'
+      +'<span style="font-size:16px">✅</span><span style="font-size:12px;color:var(--green);font-weight:700">'+label+'</span></div>';
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;'
+      +'background:var(--card2);border:1px solid var(--border);border-radius:8px;margin-bottom:8px">'
+      +'<span style="font-size:12px">'+label+'</span>'
+      +'<button class="btn btn-green btn-sm" onclick="'+onclick+'">完了</button></div>';
+  }
 
-function stepKey(c) {
-  const today = new Date().toISOString().slice(0,10);
-  const val = c.dates.chinkaku || today;
-  return '<div class="step-title">🔑 鍵渡し</div>'
-    +'<div class="fi"><label>賃発日（入居日）</label><input type="date" id="s-chinkaku" class="mono" value="'+val+'"></div>'
-    +'<button class="btn btn-green" style="width:100%;justify-content:center;margin-top:12px" onclick="keyDone(\''+c.id+'\')">✓ 鍵渡し完了 → 成約</button>';
+  let h = '<div class="step-title">📝 重説・入金</div>';
+  h += taskRow(setsuOk, 'IT重説・契約',
+    "window.open('coreto-it-setsu.html','_blank');itsetsuCheck('"+c.id+"')");
+  if (!ad) {
+    h += taskRow(paidOk, '入金確認', "paymentCheck('"+c.id+"')");
+  } else {
+    h += '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;'
+      +'background:rgba(251,146,60,.06);border:1px solid rgba(251,146,60,.2);border-radius:8px;margin-bottom:8px">'
+      +'<span style="font-size:12px;color:var(--orange)">💴 入金</span>'
+      +'<span style="font-size:10px;color:var(--muted)">AD案件: 鍵渡し後でOK</span></div>';
+  }
+  h += '<div style="margin-top:6px">';
+  if (canKey) {
+    h += '<button class="btn btn-green" style="width:100%;justify-content:center" onclick="advance(\''+c.id+'\',\'key\',null,null,\'鍵渡し準備完了\')">鍵渡しへ →</button>';
+  } else {
+    const miss = []; if(!setsuOk) miss.push('重説'); if(!paidOk&&!ad) miss.push('入金');
+    h += '<button class="btn btn-ghost" style="width:100%;justify-content:center;opacity:.45;cursor:default">'
+      +miss.join('・')+' 完了後に解放</button>';
+  }
+  h += '</div>';
+  return h;
 }
+function stepPayment(c) { return stepPrekey(c); }
+function stepItsetsu(c) { return stepPrekey(c); }
 
 // ── 売買 steps ──
 function stepOffer(c) {
@@ -664,7 +690,8 @@ function appPassed(id, appId) {
   a.status = 'approved';
   // cancel other reviewing apps
   c.apps.filter(x=>x.id!==appId&&(x.status==='reviewing'||x.status==='submitted')).forEach(x=>{x.status='cancelled';});
-  advance(id, 'payment', 'approved', todayISO(), a.prop+' 審査通過');
+  if(!c.taskDone) c.taskDone={paid:false,itsetsu:false};
+  advance(id, 'prekey', 'approved', todayISO(), a.prop+' 審査通過');
 }
 
 function appRejected(id, appId) {
@@ -678,8 +705,24 @@ function appRejected(id, appId) {
   open_case(id);
 }
 
-function paymentDone(id) { advance(id,'itsetsu','paid',todayISO(),'入金確認済'); }
-function itsetsuDone(id) { advance(id,'key','itsetsu',todayISO(),'IT重説完了'); }
+function paymentCheck(id) {
+  const c = CASES.find(x=>x.id===id); if(!c) return;
+  if(!c.taskDone) c.taskDone={};
+  c.taskDone.paid = true;
+  c.dates.paid = todayISO();
+  c.hist.unshift(today()+' 入金確認済');
+  // If both done, auto-advance step display
+  open_case(id); toast('入金確認しました');
+}
+function itsetsuCheck(id) {
+  const c = CASES.find(x=>x.id===id); if(!c) return;
+  if(!c.taskDone) c.taskDone={};
+  c.taskDone.itsetsu = true;
+  c.dates.itsetsu = todayISO();
+  c.hist.unshift(today()+' IT重説完了');
+  open_case(id); toast('重説完了しました');
+}
+
 
 function keyDone(id) {
   const d = document.getElementById('s-chinkaku')?.value || todayISO();
@@ -746,11 +789,17 @@ function openNewModal(stageHint) {
     +'</div>'
     +'<div class="fi"><label id="nc-name-lbl">氏名</label><input type="text" id="nc-name" placeholder="田中 太郎"></div>'
     +'<div id="nc-corp-ext" style="display:none"><div class="fi"><label>担当者名</label><input type="text" id="nc-contact" placeholder="田中 一郎"></div></div>'
-    +'<div class="fi"><label>種別</label><select id="nc-type"><option value="reLet">🏠 賃貸</option><option value="reSale">🏢 売買</option><option value="hr">👥 人材</option></select></div>'
+    +'<div class="fi"><label>種別</label><select id="nc-type" onchange="toggleAD()"><option value="reLet">🏠 賃貸</option><option value="reSale">🏢 売買</option><option value="hr">👥 人材</option></select></div>'+'<div id="nc-ad-wrap" style="margin-bottom:10px"><label style="display:flex;align-items:center;gap:7px;font-size:11px;cursor:pointer"><input type="checkbox" id="nc-ad"> AD案件（仲介手数料は鍵渡し後入金）</label></div>'
     +'<div class="fi"><label>希望条件</label><input type="text" id="nc-sub" placeholder="渋谷区 1LDK 〜¥150,000"></div>'
     +'<div class="row" style="margin-top:14px"><button class="btn btn-ghost" style="flex:1" onclick="closeModal()">キャンセル</button>'
     +'<button class="btn btn-gold" style="flex:2;justify-content:center" onclick="createCase()">登録</button></div>'
   );
+}
+
+function toggleAD() {
+  const t = document.getElementById('nc-type')?.value;
+  const wrap = document.getElementById('nc-ad-wrap');
+  if(wrap) wrap.style.display = t==='reLet' ? 'block' : 'none';
 }
 
 function setCorp(flag) {
@@ -781,7 +830,8 @@ function createCase() {
   const prefix = type==='reLet'?'R':type==='reSale'?'S':'H';
   const id = prefix+String(Math.floor(Math.random()*90000+10000));
   const initStep = type==='reLet'?'naiken':type==='reSale'?'offer':'new';
-  const obj = {id, name, type, corp:_corpMode, agent:'10012', sub, step:initStep, age:0, stale:false, apps:[], dates:{}, hist:[today()+' 案件登録']};
+  const adOnly = document.getElementById('nc-ad')?.checked && type==='reLet';
+  const obj = {id, name, type, corp:_corpMode, agent:'10012', sub, step:initStep, age:0, stale:false, adOnly, taskDone:{paid:false,itsetsu:false}, apps:[], dates:{}, hist:[today()+' 案件登録'+(adOnly?' [AD案件]':'')]};
   if(_corpMode&&contact) obj.contactName = contact;
   CASES.unshift(obj);
   closeModal();
