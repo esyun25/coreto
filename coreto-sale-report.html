@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CORETO 売買買付報告書</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090f;--card:#0f1119;--card2:#141720;--border:#1e2235;--border2:#252a3d;
+  --gold:#c9a84c;--gold-l:#e8c96a;--gold-dim:#7a5f22;--gold-glow:rgba(201,168,76,.12);
+  --blue:#4f9cf9;--green:#34d399;--red:#f87171;--orange:#fb923c;--purple:#a78bfa;
+  --muted:#4a5270;--sub:#7a849e;--text:#e2e6f3;
+}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;
+  background-image:radial-gradient(ellipse 60% 40% at 80% 10%,rgba(201,168,76,.05) 0%,transparent 60%)}
+.header{display:flex;align-items:center;justify-content:space-between;padding:0 32px;height:56px;
+  border-bottom:1px solid var(--border);background:rgba(7,9,15,.8);backdrop-filter:blur(12px);
+  position:sticky;top:0;z-index:100}
+.logo{font-family:'Syne',sans-serif;font-size:19px;font-weight:800;color:var(--gold);letter-spacing:3px}
+.hdr-badge{font-size:10px;font-weight:700;padding:3px 10px;border-radius:5px;
+  background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);color:var(--red)}
+.hdr-right{display:flex;align-items:center;gap:12px}
+.hdr-agent{font-size:12px;font-weight:600}
+.hdr-id{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)}
+.page{padding:24px 32px;max-width:960px;margin:0 auto}
+.page-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--gold);margin-bottom:4px}
+.page-sub{font-size:11px;color:var(--muted);margin-bottom:24px}
+.panel{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:16px}
+.panel-title{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--gold);
+  letter-spacing:2px;text-transform:uppercase;display:flex;align-items:center;gap:8px;margin-bottom:16px}
+.panel-title::before{content:'';width:3px;height:14px;background:var(--gold);border-radius:2px;flex-shrink:0}
+.s-label{font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;
+  padding:10px 0 7px;border-bottom:1px solid var(--border);margin-bottom:10px;margin-top:18px;
+  display:flex;align-items:center;gap:8px}
+.s-label:first-child{margin-top:0}
+.fg label{font-size:11px;color:var(--sub);display:block;margin-bottom:4px}
+.req{color:var(--red);margin-left:2px;font-size:9px}
+.hint{color:var(--muted);font-size:9px;margin-left:6px}
+.auto-tag{font-size:8px;color:var(--blue);background:rgba(79,156,249,.1);
+  border:1px solid rgba(79,156,249,.2);border-radius:3px;padding:1px 5px}
+input,select,textarea{width:100%;background:#0a0c14;border:1px solid var(--border2);border-radius:8px;
+  padding:9px 12px;color:var(--text);font-size:13px;font-family:'Noto Sans JP',sans-serif;
+  transition:border-color .15s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gold);background:#0c0e18}
+input[type=date]{color-scheme:dark}
+input[readonly]{background:#0c0e18;border-color:rgba(79,156,249,.25);color:var(--blue);cursor:default}
+.mono{font-family:'DM Mono',monospace!important}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.err-msg{font-size:10px;color:var(--red);margin-top:3px;display:none}
+.err-msg.show{display:block}
+.tg{padding:6px 13px;border-radius:7px;font-size:11px;cursor:pointer;border:1px solid var(--border2);
+  background:transparent;color:var(--muted);font-family:'Noto Sans JP',sans-serif;transition:all .2s}
+.tg.on{background:rgba(201,168,76,.12);border-color:var(--gold-dim);color:var(--gold);font-weight:700}
+.tg.on.bl{background:rgba(79,156,249,.12);border-color:rgba(79,156,249,.4);color:var(--blue)}
+.tg.on.re{background:rgba(248,113,113,.12);border-color:rgba(248,113,113,.4);color:var(--red)}
+.tg-group{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:9px;font-size:12px;
+  font-weight:600;cursor:pointer;border:none;font-family:'Noto Sans JP',sans-serif;transition:all .2s}
+.btn-gold{background:linear-gradient(135deg,var(--gold),#a8872f);color:#0a0c10}
+.btn-gold:hover{background:linear-gradient(135deg,var(--gold-l),var(--gold));transform:translateY(-1px)}
+.btn-blue{background:rgba(79,156,249,.15);color:var(--blue);border:1px solid rgba(79,156,249,.3)}
+.btn-muted{background:transparent;color:var(--muted);border:1px solid var(--border2)}
+.badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:4px;font-size:9px;font-weight:700}
+.badge-orange{background:rgba(251,146,60,.12);color:var(--orange);border:1px solid rgba(251,146,60,.2)}
+.badge-green{background:rgba(52,211,153,.12);color:var(--green);border:1px solid rgba(52,211,153,.2)}
+.badge-blue{background:rgba(79,156,249,.12);color:var(--blue);border:1px solid rgba(79,156,249,.2)}
+.result-box{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-top:12px}
+.result-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;
+  font-size:12px;border-bottom:1px solid var(--border)}
+.result-row:last-child{border-bottom:none}
+.result-row.total{font-weight:700;font-size:14px;color:var(--gold);margin-top:4px;padding-top:8px}
+.timeline{display:flex;flex-direction:column;gap:0}
+.tl-item{display:flex;gap:14px;align-items:flex-start;padding:10px 0;position:relative}
+.tl-item:not(:last-child)::before{content:'';position:absolute;left:11px;top:34px;
+  width:1px;height:calc(100% - 10px);background:var(--border)}
+.tl-dot{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:10px;font-weight:700;flex-shrink:0;border:1.5px solid}
+.tl-dot.active{background:rgba(201,168,76,.15);border-color:var(--gold);color:var(--gold)}
+.tl-dot.future{background:transparent;border-color:var(--border2);color:var(--muted)}
+.tl-dot.done{background:rgba(52,211,153,.15);border-color:var(--green);color:var(--green)}
+.tl-content{flex:1;padding-top:2px}
+.tl-title{font-size:12px;font-weight:600}
+.tl-note{font-size:10px;color:var(--muted);margin-top:2px}
+.tl-date{font-size:10px;font-family:'DM Mono',monospace;color:var(--sub);margin-top:2px}
+.submit-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 22px;margin-top:8px}
+.submit-note{font-size:11px;color:var(--muted)}
+.hidden{display:none!important}
+.progress-bar{height:4px;border-radius:2px;background:var(--border2);overflow:hidden;margin-top:8px}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-l));
+  border-radius:2px;transition:width .5s ease}
+#modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);
+  z-index:200;align-items:center;justify-content:center}
+#modal-overlay.show{display:flex}
+#modal-box{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px;
+  max-width:480px;width:90%}
+.modal-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:var(--gold);margin-bottom:16px}
+.toast{position:fixed;bottom:28px;right:28px;background:var(--card);border:1px solid var(--green);
+  border-radius:10px;padding:12px 18px;font-size:12px;color:var(--green);z-index:300;
+  display:none;animation:fadeIn .3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div style="display:flex;align-items:center;gap:16px">
+    <div class="logo">CORETO</div>
+    <div class="hdr-badge">🏢 売買買付報告書</div>
+  </div>
+  <div class="hdr-right">
+    <div>
+      <div class="hdr-agent" id="hdr-agent">— エージェント —</div>
+      <div class="hdr-id" id="hdr-id">ID: ——</div>
+    </div>
+    <button class="btn btn-muted" style="font-size:11px;padding:6px 14px" onclick="history.back()">← 戻る</button>
+  </div>
+</div>
+
+<div class="page">
+  <div class="page-title">売買買付報告書</div>
+  <div class="page-sub">買付申込受領時に作成・提出。HQ承認後、取引進行フローへ移行します。</div>
+
+  <!-- ① 基本情報 -->
+  <div class="panel">
+    <div class="panel-title">① 基本情報</div>
+    <div class="two-col" style="margin-bottom:12px">
+      <div class="fg">
+        <label>Case ID <span class="req">*</span></label>
+        <input type="text" id="case-id" class="mono" placeholder="S0001" oninput="fetchCase()">
+      </div>
+      <div class="fg">
+        <label>報告日 <span class="req">*</span></label>
+        <input type="date" id="report-date" class="mono">
+      </div>
+    </div>
+    <div class="two-col">
+      <div class="fg">
+        <label>担当エージェント <span class="auto-tag">自動入力</span></label>
+        <input type="text" id="agent-name" class="mono" readonly>
+      </div>
+      <div class="fg">
+        <label>案件ソース</label>
+        <div class="tg-group" id="g-source">
+          <button class="tg on bl" data-v="self" onclick="tog('g-source',this)">自己開拓</button>
+          <button class="tg" data-v="pt" onclick="tog('g-source',this)">パートナー紹介</button>
+          <button class="tg" data-v="hq" onclick="tog('g-source',this)">HQ紹介</button>
+        </div>
+      </div>
+    </div>
+    <!-- パートナー（source=pt時） -->
+    <div id="sec-partner" class="hidden" style="margin-top:12px">
+      <div class="two-col">
+        <div class="fg"><label>パートナー名</label><input type="text" id="pt-name"></div>
+        <div class="fg"><label>パートナーID</label><input type="text" id="pt-id" class="mono"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ② 物件情報 -->
+  <div class="panel">
+    <div class="panel-title">② 物件情報</div>
+    <div class="fg" style="margin-bottom:12px">
+      <label>物件名称 <span class="req">*</span></label>
+      <input type="text" id="property-name" placeholder="〇〇マンション 2LDK 301号室">
+    </div>
+    <div class="two-col" style="margin-bottom:12px">
+      <div class="fg">
+        <label>物件住所 <span class="req">*</span></label>
+        <input type="text" id="property-addr" placeholder="東京都渋谷区〇〇1-2-3">
+      </div>
+      <div class="fg">
+        <label>物件種別</label>
+        <div class="tg-group" id="g-prop-type">
+          <button class="tg on bl" data-v="mansion" onclick="tog('g-prop-type',this)">区分マンション</button>
+          <button class="tg" data-v="ikkodate" onclick="tog('g-prop-type',this)">一戸建て</button>
+          <button class="tg" data-v="tochi" onclick="tog('g-prop-type',this)">土地</button>
+          <button class="tg" data-v="other" onclick="tog('g-prop-type',this)">その他</button>
+        </div>
+      </div>
+    </div>
+    <div class="three-col">
+      <div class="fg">
+        <label>売買価格（税込）<span class="req">*</span></label>
+        <input type="number" id="sale-price" class="mono" placeholder="0" oninput="calcAll()">
+      </div>
+      <div class="fg">
+        <label>消費税額</label>
+        <input type="number" id="tax-amount" class="mono" placeholder="0" oninput="calcAll()">
+      </div>
+      <div class="fg">
+        <label>築年数</label>
+        <input type="number" id="building-age" class="mono" placeholder="0">
+      </div>
+    </div>
+  </div>
+
+  <!-- ③ クライアント情報 -->
+  <div class="panel">
+    <div class="panel-title">③ クライアント情報</div>
+    <div class="two-col" style="margin-bottom:12px">
+      <div class="fg">
+        <label>クライアント氏名 <span class="req">*</span></label>
+        <input type="text" id="client-name">
+      </div>
+      <div class="fg">
+        <label>クライアントID</label>
+        <input type="text" id="client-id" class="mono">
+      </div>
+    </div>
+    <div class="two-col" style="margin-bottom:12px">
+      <div class="fg">
+        <label>電話番号</label>
+        <input type="tel" id="client-tel" class="mono">
+      </div>
+      <div class="fg">
+        <label>メールアドレス</label>
+        <input type="email" id="client-email">
+      </div>
+    </div>
+    <div class="fg">
+      <label>売主（相手方）</label>
+      <input type="text" id="seller-name" placeholder="売主氏名または法人名">
+    </div>
+  </div>
+
+  <!-- ④ 買付条件 -->
+  <div class="panel">
+    <div class="panel-title">④ 買付条件</div>
+    <div class="two-col" style="margin-bottom:12px">
+      <div class="fg">
+        <label>買付金額（申込額）<span class="req">*</span></label>
+        <input type="number" id="offer-price" class="mono" placeholder="0" oninput="calcAll()">
+      </div>
+      <div class="fg">
+        <label>買付受領日 <span class="req">*</span></label>
+        <input type="date" id="offer-date" class="mono" onchange="updateTimeline()">
+      </div>
+    </div>
+    <div class="two-col" style="margin-bottom:12px">
+      <div class="fg">
+        <label>融資特約</label>
+        <div class="tg-group" id="g-loan">
+          <button class="tg on bl" data-v="yes" onclick="tog('g-loan',this)">あり（融資条件付き）</button>
+          <button class="tg" data-v="no" onclick="tog('g-loan',this)">なし（現金・確約）</button>
+        </div>
+      </div>
+      <div class="fg">
+        <label>ローン審査期限</label>
+        <input type="date" id="loan-deadline" class="mono">
+      </div>
+    </div>
+    <div class="two-col">
+      <div class="fg">
+        <label>手付金額</label>
+        <input type="number" id="deposit-amount" class="mono" placeholder="0" oninput="calcAll()">
+      </div>
+      <div class="fg">
+        <label>手付支払期限</label>
+        <input type="date" id="deposit-deadline" class="mono">
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑤ 取引スケジュール -->
+  <div class="panel">
+    <div class="panel-title">⑤ 取引スケジュール</div>
+    <div class="three-col" style="margin-bottom:16px">
+      <div class="fg">
+        <label>売買契約予定日</label>
+        <input type="date" id="contract-date" class="mono" onchange="updateTimeline()">
+      </div>
+      <div class="fg">
+        <label>決済日（引渡日）<span class="req">*</span> <span class="hint">ポイント判定基準日</span></label>
+        <input type="date" id="settlement-date" class="mono" onchange="calcAll(); updateTimeline()">
+      </div>
+      <div class="fg">
+        <label>入居予定日</label>
+        <input type="date" id="move-in-date" class="mono">
+      </div>
+    </div>
+
+    <!-- タイムライン -->
+    <div class="s-label">取引タイムライン</div>
+    <div class="timeline" id="timeline">
+      <div class="tl-item">
+        <div class="tl-dot done">✓</div>
+        <div class="tl-content">
+          <div class="tl-title">買付申込受領</div>
+          <div class="tl-note">本報告書を作成・提出</div>
+          <div class="tl-date" id="tl-offer-date">—</div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot active">▶</div>
+        <div class="tl-content">
+          <div class="tl-title">HQ承認 → 売主側交渉</div>
+          <div class="tl-note">条件調整・売主承諾確認</div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot future">3</div>
+        <div class="tl-content">
+          <div class="tl-title">売買契約締結（重要事項説明）</div>
+          <div class="tl-note">宅建士立会・手付金授受</div>
+          <div class="tl-date" id="tl-contract-date">—</div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot future">4</div>
+        <div class="tl-content">
+          <div class="tl-title">ローン審査期限</div>
+          <div class="tl-note">融資特約あり案件のみ</div>
+          <div class="tl-date" id="tl-loan-date">—</div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot future">5</div>
+        <div class="tl-content">
+          <div class="tl-title">決済・引渡し</div>
+          <div class="tl-note" style="color:var(--gold)">🏆 ポイント判定基準日</div>
+          <div class="tl-date" id="tl-settlement-date">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑥ 仲介手数料・報酬計算 -->
+  <div class="panel">
+    <div class="panel-title">⑥ 仲介手数料・報酬計算</div>
+    <div class="two-col" style="margin-bottom:16px">
+      <div>
+        <div class="s-label" style="margin-top:0">法定上限計算</div>
+        <div class="result-box">
+          <div class="result-row">
+            <span style="color:var(--sub)">売買価格</span>
+            <span class="mono" id="disp-price">¥—</span>
+          </div>
+          <div class="result-row">
+            <span style="color:var(--sub)">法定上限（税込）</span>
+            <span class="mono" id="disp-legal-max">¥—</span>
+          </div>
+          <div class="result-row">
+            <span style="color:var(--sub)">実際の手数料（税込）</span>
+            <input type="number" id="actual-fee" class="mono" style="width:160px;padding:4px 8px;font-size:12px" 
+              placeholder="0" oninput="calcAll()">
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="s-label" style="margin-top:0">エージェント報酬</div>
+        <div class="result-box">
+          <div class="result-row">
+            <span style="color:var(--sub)">報酬率（ランク別）</span>
+            <span class="mono" id="disp-rate">65%</span>
+          </div>
+          <div class="result-row">
+            <span style="color:var(--sub)">AG報酬（税抜）</span>
+            <span class="mono" id="disp-ag-reward">¥—</span>
+          </div>
+          <div class="result-row">
+            <span style="color:var(--sub)">源泉徴収（10.21%）</span>
+            <span class="mono" id="disp-withholding">¥—</span>
+          </div>
+          <div class="result-row total">
+            <span>振込額（税引後）</span>
+            <span class="mono" id="disp-payout">¥—</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- パートナー案件の場合 -->
+    <div id="sec-pt-fee" class="hidden">
+      <div class="s-label">パートナー報酬</div>
+      <div class="result-box">
+        <div class="result-row">
+          <span style="color:var(--sub)">パートナー報酬率</span>
+          <span class="mono">25%（税抜手数料に対して）</span>
+        </div>
+        <div class="result-row total">
+          <span>パートナー振込額</span>
+          <span class="mono" id="disp-pt-payout">¥—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ポイント試算 -->
+    <div class="s-label">ポイント試算（決済日計上）</div>
+    <div class="result-box">
+      <div class="result-row">
+        <span style="color:var(--sub)">手数料ポイント（10万円/1pt）</span>
+        <span class="mono" id="pt-fee-pts">— pt</span>
+      </div>
+      <div class="result-row">
+        <span style="color:var(--sub)">案件完了ボーナス</span>
+        <span class="mono" id="pt-bonus">
+          <span id="pt-bonus-self">1.0 pt</span>
+          <span id="pt-bonus-pt" class="hidden" style="color:var(--blue)">0.5 pt（パートナー案件）</span>
+        </span>
+      </div>
+      <div class="result-row total">
+        <span>今回獲得予定ポイント合計</span>
+        <span class="mono" style="color:var(--gold)" id="pt-total">— pt</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑦ 特記事項 -->
+  <div class="panel">
+    <div class="panel-title">⑦ 特記事項・備考</div>
+    <div class="fg" style="margin-bottom:12px">
+      <label>買付条件・交渉経緯</label>
+      <textarea id="memo-nego" rows="3" placeholder="価格交渉の経緯、売主の反応、特別条件など"></textarea>
+    </div>
+    <div class="fg">
+      <label>物件特記事項（告知事項・瑕疵等）</label>
+      <textarea id="memo-property" rows="3" placeholder="心理的瑕疵・物理的瑕疵・法的制限・境界確認状況など"></textarea>
+    </div>
+  </div>
+
+  <!-- 送信バー -->
+  <div class="submit-bar">
+    <div class="submit-note">
+      送信後：HQレビュー → Slack #売買案件 通知 → Kintone 案件登録
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-muted" onclick="saveDraft()">💾 下書き保存</button>
+      <button class="btn btn-gold" id="submit-btn" onclick="showConfirmModal()">📤 HQへ提出</button>
+    </div>
+  </div>
+</div>
+
+<!-- 確認モーダル -->
+<div id="modal-overlay">
+  <div id="modal-box">
+    <div class="modal-title">📤 買付報告書を提出</div>
+    <div id="modal-summary" style="font-size:12px;color:var(--sub);line-height:2;margin-bottom:20px"></div>
+    <div id="progress-wrap" class="hidden">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px" id="progress-msg">処理中...</div>
+      <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+    </div>
+    <div id="modal-btns" style="display:flex;gap:10px;margin-top:20px">
+      <button class="btn btn-muted" style="flex:1" onclick="closeModal()">キャンセル</button>
+      <button class="btn btn-gold" style="flex:2" onclick="submitReport()" id="confirm-btn">✅ 提出確定</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">✅ 買付報告書を提出しました — HQ・Slack・Kintoneに自動通知</div>
+
+<script>
+// ── セッション ──
+const session = JSON.parse(sessionStorage.getItem('coreto_session') || '{}');
+const RANK_RATE = { platinum:0.75, gold:0.70, silver:0.675, bronze:0.65 };
+
+document.addEventListener('DOMContentLoaded', () => {
+  // ヘッダー
+  if (session.name) {
+    document.getElementById('hdr-agent').textContent = session.name;
+    document.getElementById('hdr-id').textContent = 'ID: ' + (session.userId || '——');
+    document.getElementById('agent-name').value = session.name;
+  }
+  // デフォルト日付
+  const today = new Date().toISOString().slice(0,10);
+  document.getElementById('report-date').value = today;
+  document.getElementById('offer-date').value = today;
+  updateTimeline();
+  checkSource();
+});
+
+function tog(groupId, el) {
+  document.querySelectorAll(`#${groupId} .tg`).forEach(b => b.classList.remove('on','bl','re'));
+  el.classList.add('on');
+  if (el.dataset.v === 'pt') el.classList.add('bl');
+  checkSource();
+  calcAll();
+}
+function gv(groupId) {
+  const el = document.querySelector(`#${groupId} .tg.on`);
+  return el ? el.dataset.v : null;
+}
+
+function checkSource() {
+  const src = gv('g-source');
+  const isPt = src === 'pt';
+  document.getElementById('sec-partner').classList.toggle('hidden', !isPt);
+  document.getElementById('sec-pt-fee').classList.toggle('hidden', !isPt);
+  // ポイントボーナス表示
+  document.getElementById('pt-bonus-self').classList.toggle('hidden', isPt);
+  document.getElementById('pt-bonus-pt').classList.toggle('hidden', !isPt);
+  calcAll();
+}
+
+function fetchCase() {
+  const id = document.getElementById('case-id').value.trim();
+  if (!id) return;
+  // Demo: auto-fill
+  if (id === 'S0001') {
+    document.getElementById('client-name').value = '田中 雄介';
+    document.getElementById('client-id').value = 'CNT-001';
+    document.getElementById('property-name').value = '渋谷区桜丘 戸建て';
+    document.getElementById('property-addr').value = '東京都渋谷区桜丘1-2-3';
+    document.getElementById('sale-price').value = '65000000';
+    calcAll();
+  }
+}
+
+function calcAll() {
+  const price = parseFloat(document.getElementById('sale-price').value) || 0;
+  const actualFee = parseFloat(document.getElementById('actual-fee').value) || 0;
+  const src = gv('g-source');
+  const rankKey = session.rankKey || 'bronze';
+  const rate = RANK_RATE[rankKey] || 0.65;
+  const isPt = src === 'pt';
+
+  // 法定上限（3%+6万円+消費税）
+  let legalBase = 0;
+  if (price <= 2000000) legalBase = price * 0.05;
+  else if (price <= 4000000) legalBase = price * 0.04 + 20000;
+  else legalBase = price * 0.03 + 60000;
+  const legalMax = Math.round(legalBase * 1.1);
+
+  // 表示
+  document.getElementById('disp-price').textContent = price ? '¥' + price.toLocaleString() : '¥—';
+  document.getElementById('disp-legal-max').textContent = legalMax ? '¥' + legalMax.toLocaleString() : '¥—';
+  document.getElementById('disp-rate').textContent = Math.round(rate*100) + '%';
+
+  if (actualFee > 0) {
+    const feeExTax = Math.round(actualFee / 1.1);
+    const agReward = Math.round(feeExTax * rate);
+    const withholding = Math.round(agReward * 0.1021);
+    const payout = agReward - withholding;
+    document.getElementById('disp-ag-reward').textContent = '¥' + agReward.toLocaleString();
+    document.getElementById('disp-withholding').textContent = '¥' + withholding.toLocaleString();
+    document.getElementById('disp-payout').textContent = '¥' + payout.toLocaleString();
+
+    // パートナー報酬
+    if (isPt) {
+      const ptReward = Math.round(feeExTax * 0.25);
+      document.getElementById('disp-pt-payout').textContent = '¥' + ptReward.toLocaleString();
+    }
+
+    // ポイント計算
+    const feePts = Math.floor(actualFee / 100000) * (isPt ? 0.5 : 1.0);
+    const bonusPts = isPt ? 0.5 : 1.0;
+    const totalPts = feePts + bonusPts;
+    document.getElementById('pt-fee-pts').textContent = feePts.toFixed(1) + ' pt';
+    document.getElementById('pt-total').textContent = totalPts.toFixed(1) + ' pt';
+  }
+}
+
+function updateTimeline() {
+  const fmt = d => d ? new Date(d).toLocaleDateString('ja-JP',{year:'numeric',month:'long',day:'numeric'}) : '—';
+  document.getElementById('tl-offer-date').textContent = fmt(document.getElementById('offer-date').value);
+  document.getElementById('tl-contract-date').textContent = fmt(document.getElementById('contract-date').value);
+  document.getElementById('tl-loan-date').textContent = fmt(document.getElementById('loan-deadline').value);
+  document.getElementById('tl-settlement-date').textContent = fmt(document.getElementById('settlement-date').value);
+}
+
+function showConfirmModal() {
+  const required = [
+    ['case-id','Case ID'],['client-name','クライアント氏名'],
+    ['property-name','物件名称'],['sale-price','売買価格'],
+    ['offer-date','買付受領日'],['settlement-date','決済日'],
+  ];
+  for (const [id, label] of required) {
+    if (!document.getElementById(id).value.trim()) {
+      alert(`「${label}」は必須項目です。`);
+      document.getElementById(id).focus();
+      return;
+    }
+  }
+
+  const price = parseFloat(document.getElementById('sale-price').value)||0;
+  const fee   = parseFloat(document.getElementById('actual-fee').value)||0;
+  const settlementDate = document.getElementById('settlement-date').value;
+  const ptTotal = document.getElementById('pt-total').textContent;
+  const fmt = d => d ? new Date(d).toLocaleDateString('ja-JP') : '—';
+
+  document.getElementById('modal-summary').innerHTML = `
+    <div style="display:grid;grid-template-columns:auto 1fr;gap:4px 12px">
+      <span style="color:var(--muted)">Case ID</span><strong>${document.getElementById('case-id').value}</strong>
+      <span style="color:var(--muted)">クライアント</span><strong>${document.getElementById('client-name').value}</strong>
+      <span style="color:var(--muted)">物件名称</span><strong>${document.getElementById('property-name').value}</strong>
+      <span style="color:var(--muted)">売買価格</span><strong>¥${price.toLocaleString()}</strong>
+      <span style="color:var(--muted)">仲介手数料</span><strong>¥${fee.toLocaleString()}</strong>
+      <span style="color:var(--muted)">買付受領日</span><strong>${fmt(document.getElementById('offer-date').value)}</strong>
+      <span style="color:var(--muted)">決済日</span><strong style="color:var(--gold)">${fmt(settlementDate)}</strong>
+      <span style="color:var(--muted)">獲得予定 pt</span><strong style="color:var(--gold)">${ptTotal}</strong>
+    </div>`;
+
+  document.getElementById('modal-overlay').classList.add('show');
+}
+
+function submitReport() {
+  document.getElementById('modal-btns').classList.add('hidden');
+  const wrap = document.getElementById('progress-wrap');
+  wrap.classList.remove('hidden');
+  const fill = document.getElementById('progress-fill');
+  const msg  = document.getElementById('progress-msg');
+
+  const steps = [
+    [700, 30,  '① Kintone 案件登録中...'],
+    [600, 60,  '② Slack #売買案件 通知中...'],
+    [500, 85,  '③ HQ承認リクエスト送信中...'],
+    [400, 100, '✅ 完了'],
+  ];
+
+  let i = 0;
+  function next() {
+    if (i >= steps.length) {
+      setTimeout(() => {
+        document.getElementById('modal-overlay').classList.remove('show');
+        document.getElementById('submit-btn').textContent = '📦 提出済み';
+        document.getElementById('submit-btn').disabled = true;
+        document.getElementById('submit-btn').style.opacity = '0.5';
+        const t = document.getElementById('toast');
+        t.style.display = 'block';
+        setTimeout(() => t.style.display = 'none', 4000);
+      }, 400);
+      return;
+    }
+    const [delay, pct, label] = steps[i++];
+    setTimeout(() => {
+      fill.style.width = pct + '%';
+      msg.textContent = label;
+      next();
+    }, delay);
+  }
+  next();
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('show');
+  document.getElementById('modal-btns').classList.remove('hidden');
+  document.getElementById('progress-wrap').classList.add('hidden');
+  document.getElementById('progress-fill').style.width = '0%';
+}
+
+function saveDraft() {
+  const toast = document.getElementById('toast');
+  toast.textContent = '💾 下書きを保存しました';
+  toast.style.display = 'block';
+  setTimeout(() => { toast.style.display = 'none'; toast.textContent = '✅ 買付報告書を提出しました — HQ・Slack・Kintoneに自動通知'; }, 2000);
+}
+</script>
+</body>
+</html>

@@ -410,16 +410,30 @@ textarea{resize:vertical;min-height:72px}
           </select>
         </div>
       </div>
-      <div class="two-col-eq">
+
+      <!-- 賃貸のみ：賃発日 + IT重説 -->
+      <div class="two-col-eq" id="sec-rent-dates">
         <div class="fg">
-          <label>入居予定日 <span class="auto-tag" style="margin-left:4px">自動入力</span></label>
-          <input type="date" id="move-in-date" class="mono auto-filled">
+          <label>賃発日（入居日）<span class="req">*</span> <span class="hint">ポイント判定基準日</span></label>
+          <input type="date" id="chinkaku-date" class="mono" onchange="calcReward()">
         </div>
         <div class="fg"><label>IT重説の予約</label>
           <div class="tg-group" id="g-itsuju">
             <button class="tg on" data-v="later" onclick="tog('g-itsuju',this)">到着後に予約</button>
             <button class="tg" data-v="skip" onclick="tog('g-itsuju',this)">今は予約しない</button>
           </div>
+        </div>
+      </div>
+
+      <!-- 売買のみ：決済日 -->
+      <div class="two-col-eq hidden" id="sec-sale-dates">
+        <div class="fg">
+          <label>決済日 <span class="req">*</span> <span class="hint">ポイント判定基準日</span></label>
+          <input type="date" id="settlement-date" class="mono" onchange="calcReward()">
+        </div>
+        <div class="fg">
+          <label>引渡日</label>
+          <input type="date" id="handover-date" class="mono auto-filled">
         </div>
       </div>
     </div>
@@ -913,13 +927,20 @@ function gv(gid) {
   return a ? a.dataset.v : null;
 }
 function updateFields() {
-  const biz  = gv('g-biz') || 're-rent';
-  const isHR = biz === 'hr';
+  const biz    = gv('g-biz') || 're-rent';
+  const isHR   = biz === 'hr';
+  const isRent = biz === 're-rent';
+  const isSale = biz === 're-sale';
   document.getElementById('sec-sanmei').classList.toggle('hidden', isHR);
   document.getElementById('sec-re-billing').classList.toggle('hidden', isHR);
   document.getElementById('sec-hr-billing').classList.toggle('hidden', !isHR);
   document.getElementById('sec-re-delivery').classList.toggle('hidden', isHR);
   document.getElementById('sec-hr-sched').classList.toggle('hidden', !isHR);
+  // 賃発日（賃貸のみ） / 決済日（売買のみ）
+  const rentDates = document.getElementById('sec-rent-dates');
+  const saleDates = document.getElementById('sec-sale-dates');
+  if (rentDates) rentDates.classList.toggle('hidden', !isRent);
+  if (saleDates) saleDates.classList.toggle('hidden', !isSale);
   calcReward();
 }
 function togglePartner() {
