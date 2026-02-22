@@ -3,622 +3,814 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CORETO — 案件パイプライン</title>
+<title>CORETO — 案件管理</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
   --bg:#07090f;--card:#0f1119;--card2:#141720;--border:#1e2235;--border2:#252a3d;
-  --gold:#c9a84c;--gold-dim:#7a5f22;
+  --gold:#c9a84c;--gold-dim:#7a5f22;--gold-glow:rgba(201,168,76,.1);
   --blue:#4f9cf9;--green:#34d399;--red:#f87171;--orange:#fb923c;--purple:#a78bfa;
   --muted:#4a5270;--sub:#7a849e;--text:#e2e6f3;
 }
 html,body{height:100%;font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);overflow:hidden}
-.hdr{height:54px;display:flex;align-items:center;justify-content:space-between;
-  padding:0 22px;border-bottom:1px solid var(--border);background:rgba(7,9,15,.95);z-index:50;position:relative}
+
+/* ── Layout ── */
+.layout{display:flex;flex-direction:column;height:100vh}
+.hdr{height:52px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 20px;border-bottom:1px solid var(--border);background:rgba(7,9,15,.96);flex-shrink:0;z-index:50}
 .logo{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:var(--gold);letter-spacing:3px}
-.toolbar{display:flex;align-items:center;gap:10px;padding:9px 22px;
-  border-bottom:1px solid var(--border);background:var(--card2);flex-wrap:wrap}
-.board{display:flex;gap:0;height:calc(100vh - 54px - 50px);overflow-x:auto;overflow-y:hidden}
-.col{width:290px;flex-shrink:0;display:flex;flex-direction:column;border-right:1px solid var(--border)}
+.toolbar{height:44px;display:flex;align-items:center;gap:10px;padding:0 16px;
+  border-bottom:1px solid var(--border);background:var(--card2);flex-shrink:0}
+.main{display:flex;flex:1;overflow:hidden}
+
+/* ── Board ── */
+.board-wrap{flex:1;overflow-x:auto;overflow-y:hidden;display:flex}
+.board{display:flex;height:100%}
+.col{width:230px;flex-shrink:0;display:flex;flex-direction:column;border-right:1px solid var(--border)}
 .col:last-child{border-right:none}
-.col-hdr{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;
-  justify-content:space-between;flex-shrink:0}
-.col-title{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;display:flex;align-items:center;gap:8px}
-.col-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.col-count{font-size:9px;padding:2px 8px;border-radius:10px;font-weight:700}
-.col-body{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px}
-.case-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;
+.col-hdr{padding:10px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.col-title{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;display:flex;align-items:center;gap:7px}
+.col-dot{width:7px;height:7px;border-radius:50%}
+.col-count{font-size:9px;padding:1px 7px;border-radius:8px;font-weight:700}
+.col-body{flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:7px}
+
+/* ── Case cards ── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:11px 12px;
   cursor:pointer;transition:.15s;position:relative}
-.case-card:hover{border-color:var(--border2);background:#11141f;transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,0,0,.3)}
-.case-card.active{border-color:var(--gold);background:#12110a}
-.cc-type{font-size:8px;font-weight:700;letter-spacing:1px;margin-bottom:6px;display:flex;align-items:center;gap:6px}
-.cc-client{font-size:13px;font-weight:700;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.cc-sub{font-size:10px;color:var(--muted);margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.cc-apps{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px}
-.cc-meta{display:flex;align-items:center;justify-content:space-between;margin-top:6px;padding-top:8px;border-top:1px solid var(--border)}
-.cc-id{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted)}
-.cc-days{font-size:9px;padding:2px 7px;border-radius:5px;font-weight:700}
-.stale-dot{position:absolute;top:8px;right:8px;width:7px;height:7px;border-radius:50%;background:var(--red);animation:pulse 2s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.pill{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:5px;font-size:8px;font-weight:700;white-space:nowrap}
-.pill-blue{background:rgba(79,156,249,.12);color:var(--blue);border:1px solid rgba(79,156,249,.2)}
-.pill-orange{background:rgba(251,146,60,.12);color:var(--orange);border:1px solid rgba(251,146,60,.2)}
-.pill-green{background:rgba(52,211,153,.12);color:var(--green);border:1px solid rgba(52,211,153,.2)}
-.pill-red{background:rgba(248,113,113,.12);color:var(--red);border:1px solid rgba(248,113,113,.2)}
-.pill-muted{background:rgba(74,82,112,.15);color:var(--sub);border:1px solid var(--border2)}
-.pill-gold{background:rgba(201,168,76,.12);color:var(--gold);border:1px solid rgba(201,168,76,.2)}
-.btn{padding:7px 14px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;
-  font-family:'Noto Sans JP',sans-serif;transition:.15s;border:none;display:inline-flex;align-items:center;gap:6px}
-.btn-blue{background:linear-gradient(135deg,var(--blue),#3070c0);color:#fff}
-.btn-gold{background:linear-gradient(135deg,var(--gold),#a8872f);color:#0a0c10}
-.btn-red{background:rgba(248,113,113,.15);color:var(--red);border:1px solid rgba(248,113,113,.3)}
-.btn-green{background:rgba(52,211,153,.15);color:var(--green);border:1px solid rgba(52,211,153,.3)}
-.btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--sub)}
-.btn-ghost:hover{color:var(--text)}
-.btn-sm{padding:4px 10px;font-size:10px;border-radius:6px}
-.btn-xs{padding:2px 8px;font-size:9px;border-radius:5px}
-.panel{position:fixed;right:-440px;top:54px;width:440px;height:calc(100vh - 54px);
-  background:var(--card);border-left:1px solid var(--border);z-index:40;
-  transition:.25s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;overflow:hidden}
-.panel.show{right:0}
-.panel-hdr{padding:16px 18px;border-bottom:1px solid var(--border);flex-shrink:0;
-  display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
-.panel-body{flex:1;overflow-y:auto;padding:16px 18px}
-.panel-sec{margin-bottom:18px}
-.panel-sec-title{font-size:9px;font-weight:700;letter-spacing:2px;color:var(--muted);
-  text-transform:uppercase;padding-bottom:8px;border-bottom:1px solid var(--border);margin-bottom:10px;
-  display:flex;align-items:center;justify-content:space-between}
-.stage-row{display:flex;gap:4px;flex-wrap:wrap}
-.stage-btn{padding:5px 10px;border-radius:7px;font-size:10px;cursor:pointer;border:1px solid var(--border2);
-  background:transparent;color:var(--muted);font-family:'Noto Sans JP',sans-serif;transition:.15s}
-.stage-btn.cur{background:rgba(201,168,76,.15);border-color:var(--gold-dim);color:var(--gold);font-weight:700}
-.stage-btn:hover:not(.cur){border-color:var(--border);color:var(--text)}
-.app-record{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px}
-.app-record.ar-approved{border-left:3px solid var(--green)}
-.app-record.ar-rejected{border-left:3px solid var(--red);opacity:.75}
-.app-record.ar-cancelled{border-left:3px solid var(--muted);opacity:.6}
-.app-record.ar-reviewing{border-left:3px solid var(--orange)}
-.app-record.ar-submitted{border-left:3px solid var(--blue)}
-.app-record.ar-contracted{border-left:3px solid var(--gold)}
-.ar-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;gap:6px}
-.ar-prop{font-size:12px;font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ar-meta{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:10px;color:var(--sub)}
-.ar-actions{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
-.memo-item{display:flex;gap:10px;padding:3px 0}
-.memo-dot{width:8px;height:8px;border-radius:50%;background:var(--border2);flex-shrink:0;margin-top:3px}
-.memo-dot.act{background:var(--gold)}
-#modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);
-  backdrop-filter:blur(4px);z-index:200;align-items:center;justify-content:center}
-#modal-overlay.show{display:flex}
-.modal-box{background:var(--card);border:1px solid var(--border);border-radius:14px;
-  padding:24px;max-width:420px;width:90%}
-.modal-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:var(--gold);margin-bottom:14px}
-.fg label{font-size:11px;color:var(--sub);display:block;margin-bottom:4px;margin-top:10px}
-.fg input,.fg select,.fg textarea{width:100%;background:#0a0c14;border:1px solid var(--border2);
-  border-radius:8px;padding:8px 12px;color:var(--text);font-size:12px;
+.card:hover{border-color:var(--border2);background:#111420;transform:translateY(-1px)}
+.card.active{border-color:var(--gold);background:#13110a}
+.card-type{font-size:8px;font-weight:700;letter-spacing:.5px;margin-bottom:5px;display:flex;align-items:center;gap:5px}
+.card-name{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px}
+.card-sub{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:6px}
+.card-foot{display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--border);padding-top:6px}
+.card-id{font-family:'DM Mono',monospace;font-size:8px;color:var(--muted)}
+.age{font-size:8px;padding:1px 6px;border-radius:4px;font-weight:700}
+.stale{position:absolute;top:8px;right:8px;width:6px;height:6px;border-radius:50%;background:var(--red);animation:blink 2s infinite}
+@keyframes blink{50%{opacity:.2}}
+.add-row{padding:7px;border:1px dashed var(--border2);border-radius:8px;text-align:center;
+  font-size:10px;color:var(--muted);cursor:pointer;transition:.15s}
+.add-row:hover{border-color:var(--blue);color:var(--blue)}
+
+/* ── Detail Panel ── */
+.panel{width:0;overflow:hidden;border-left:1px solid var(--border);transition:.2s cubic-bezier(.4,0,.2,1);
+  display:flex;flex-direction:column;background:var(--card);flex-shrink:0}
+.panel.open{width:460px}
+.panel-top{padding:16px 18px 0;flex-shrink:0}
+.panel-body{flex:1;overflow-y:auto;padding:0 18px 18px}
+
+/* ── Step Progress ── */
+.step-bar{display:flex;align-items:center;margin:16px 0 20px}
+.step-node{display:flex;flex-direction:column;align-items:center;flex:1;position:relative;cursor:pointer}
+.step-node:not(:last-child)::after{content:'';position:absolute;top:14px;left:50%;width:100%;height:1px;background:var(--border2);z-index:0}
+.step-node.done::after{background:var(--green)}
+.step-node.active::after{background:linear-gradient(90deg,var(--gold),var(--border2))}
+.step-circle{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;border:2px solid var(--border2);background:var(--bg);
+  position:relative;z-index:1;transition:.2s}
+.step-node.done .step-circle{background:var(--green);border-color:var(--green);color:#0a0c10;font-size:12px}
+.step-node.active .step-circle{background:var(--gold);border-color:var(--gold);color:#0a0c10;box-shadow:0 0 12px rgba(201,168,76,.4)}
+.step-node.future .step-circle{color:var(--muted)}
+.step-label{font-size:8px;margin-top:4px;font-weight:600;letter-spacing:.3px;white-space:nowrap}
+.step-node.done .step-label{color:var(--green)}
+.step-node.active .step-label{color:var(--gold)}
+.step-node.future .step-label{color:var(--muted)}
+
+/* ── Step Content ── */
+.step-content{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:18px}
+.step-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:800;margin-bottom:14px;
+  display:flex;align-items:center;gap:8px}
+
+/* ── Inputs ── */
+.fi{margin-bottom:10px}
+.fi label{font-size:10px;color:var(--sub);display:block;margin-bottom:3px}
+.fi input,.fi select,.fi textarea{width:100%;background:#090b13;border:1px solid var(--border2);
+  border-radius:7px;padding:8px 11px;color:var(--text);font-size:12px;
   font-family:'Noto Sans JP',sans-serif;outline:none;transition:border .15s}
-.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--gold)}
+.fi input:focus,.fi select:focus{border-color:var(--gold)}
 input[type=date]{color-scheme:dark}
 .mono{font-family:'DM Mono',monospace!important}
-.add-card{padding:8px;border:1px dashed var(--border2);border-radius:8px;
-  text-align:center;font-size:11px;color:var(--muted);cursor:pointer;transition:.15s}
-.add-card:hover{border-color:var(--blue);color:var(--blue)}
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
-  background:var(--card);border:1px solid var(--green);border-radius:10px;
-  padding:10px 18px;font-size:12px;color:var(--green);z-index:300;display:none}
+
+/* ── Buttons ── */
+.btn{padding:9px 18px;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;
+  font-family:'Noto Sans JP',sans-serif;transition:.15s;border:none;display:inline-flex;align-items:center;gap:7px}
+.btn-green{background:var(--green);color:#0a0c10}
+.btn-green:hover{background:#2ec98a;transform:translateY(-1px)}
+.btn-red{background:rgba(248,113,113,.15);color:var(--red);border:1px solid rgba(248,113,113,.3)}
+.btn-red:hover{background:rgba(248,113,113,.25)}
+.btn-gold{background:linear-gradient(135deg,var(--gold),#a8872f);color:#0a0c10}
+.btn-gold:hover{transform:translateY(-1px)}
+.btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--sub)}
+.btn-ghost:hover{color:var(--text);border-color:var(--sub)}
+.btn-blue{background:rgba(79,156,249,.15);color:var(--blue);border:1px solid rgba(79,156,249,.3)}
+.btn-sm{padding:5px 12px;font-size:10px;border-radius:7px}
+.btn-xs{padding:3px 9px;font-size:9px;border-radius:5px}
+.row{display:flex;gap:8px}
+.row .btn{flex:1;justify-content:center}
+
+/* ── Pill tags ── */
+.pill{display:inline-flex;align-items:center;padding:2px 7px;border-radius:4px;font-size:8px;font-weight:700}
+.pill-green{background:rgba(52,211,153,.12);color:var(--green);border:1px solid rgba(52,211,153,.2)}
+.pill-orange{background:rgba(251,146,60,.12);color:var(--orange);border:1px solid rgba(251,146,60,.2)}
+.pill-red{background:rgba(248,113,113,.12);color:var(--red);border:1px solid rgba(248,113,113,.2)}
+.pill-purple{background:rgba(167,139,250,.12);color:var(--purple);border:1px solid rgba(167,139,250,.2)}
+.pill-blue{background:rgba(79,156,249,.12);color:var(--blue);border:1px solid rgba(79,156,249,.2)}
+.pill-muted{background:rgba(74,82,112,.15);color:var(--sub);border:1px solid var(--border2)}
+.pill-gold{background:rgba(201,168,76,.12);color:var(--gold);border:1px solid rgba(201,168,76,.2)}
+
+/* ── App list (複数申込) ── */
+.app-item{background:#0b0d15;border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:6px}
+.app-item.active-app{border-color:var(--gold)}
+.app-name{font-size:12px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;justify-content:space-between}
+.app-meta{font-size:10px;color:var(--sub)}
+
+/* ── History ── */
+.hist-item{display:flex;gap:8px;padding:4px 0}
+.hist-dot{width:7px;height:7px;border-radius:50%;background:var(--border2);flex-shrink:0;margin-top:4px}
+.hist-dot.cur{background:var(--gold)}
+.hist-line{width:1px;height:14px;background:var(--border2);margin:1px auto}
+
+/* ── Modal ── */
+#overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(3px);z-index:200;align-items:center;justify-content:center}
+#overlay.on{display:flex}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:22px;max-width:400px;width:90%}
+.modal-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:var(--gold);margin-bottom:14px}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--card);
+  border:1px solid var(--green);border-radius:9px;padding:9px 16px;font-size:11px;
+  color:var(--green);z-index:300;display:none;white-space:nowrap}
+
+/* ── Done state ── */
+.done-card{text-align:center;padding:20px}
+.done-icon{font-size:48px;margin-bottom:8px}
+.done-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:var(--green)}
+
+/* ── cancel state ── */
+.cancel-card{text-align:center;padding:16px;color:var(--red)}
 </style>
 </head>
 <body>
+<div class="layout">
 
 <div class="hdr">
-  <div style="display:flex;align-items:center;gap:16px">
+  <div style="display:flex;align-items:center;gap:14px">
     <div class="logo">CORETO</div>
-    <div style="font-size:10px;color:var(--muted);font-weight:600;letter-spacing:1px">案件パイプライン</div>
+    <span style="font-size:9px;color:var(--muted);font-weight:600;letter-spacing:1px">案件管理</span>
   </div>
-  <div style="display:flex;align-items:center;gap:8px">
+  <div style="display:flex;gap:8px">
     <button class="btn btn-ghost btn-sm" onclick="history.back()">← 戻る</button>
-    <button class="btn btn-blue btn-sm" onclick="openAddModal()">＋ 新規案件</button>
+    <button class="btn btn-gold btn-sm" onclick="openNewModal()">＋ 新規案件</button>
   </div>
 </div>
 
 <div class="toolbar">
-  <select id="filter-type" onchange="renderBoard()" style="background:#0a0c14;border:1px solid var(--border2);border-radius:7px;padding:5px 10px;color:var(--text);font-size:11px;font-family:'Noto Sans JP',sans-serif">
-    <option value="all">全種別</option>
+  <select id="f-type" onchange="render()" style="background:#090b13;border:1px solid var(--border2);border-radius:6px;padding:4px 10px;color:var(--text);font-size:11px;font-family:inherit">
+    <option value="">全種別</option>
     <option value="reLet">🏠 賃貸</option>
-    <option value="re-sale">🏢 売買</option>
+    <option value="reSale">🏢 売買</option>
     <option value="hr">👥 人材</option>
   </select>
-  <select id="filter-agent" onchange="renderBoard()" style="background:#0a0c14;border:1px solid var(--border2);border-radius:7px;padding:5px 10px;color:var(--text);font-size:11px;font-family:'Noto Sans JP',sans-serif">
-    <option value="all">全エージェント</option>
-    <option value="10012">山田 誠（10012）</option>
-    <option value="10008">鈴木 健太（10008）</option>
-    <option value="10023">佐藤 花子（10023）</option>
+  <select id="f-agent" onchange="render()" style="background:#090b13;border:1px solid var(--border2);border-radius:6px;padding:4px 10px;color:var(--text);font-size:11px;font-family:inherit">
+    <option value="">全担当</option>
+    <option value="10012">山田 誠</option>
+    <option value="10008">鈴木 健太</option>
+    <option value="10023">佐藤 花子</option>
   </select>
-  <div style="margin-left:auto;font-size:10px;color:var(--muted)" id="board-summary"></div>
+  <span id="board-count" style="margin-left:auto;font-size:10px;color:var(--muted)"></span>
 </div>
 
-<div class="board" id="board"></div>
+<div class="main">
+  <div class="board-wrap"><div class="board" id="board"></div></div>
 
-<div class="panel" id="detail-panel">
-  <div class="panel-hdr">
-    <div style="flex:1;min-width:0">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">
-        <div class="mono" style="font-size:11px;color:var(--muted)" id="dp-id">—</div>
-        <div id="dp-stage-pill"></div>
-      </div>
-      <div style="font-size:15px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" id="dp-name">—</div>
-    </div>
-    <button class="btn btn-ghost btn-sm" onclick="closePanel()" style="flex-shrink:0">✕</button>
+  <!-- Detail Panel -->
+  <div class="panel" id="panel">
+    <div class="panel-top" id="panel-top"></div>
+    <div class="panel-body" id="panel-body"></div>
   </div>
-  <div class="panel-body" id="dp-body"></div>
 </div>
 
-<div id="modal-overlay">
-  <div class="modal-box" id="modal-box"></div>
-</div>
+</div><!-- /layout -->
 
+<!-- Modal -->
+<div id="overlay"><div class="modal" id="modal-box"></div></div>
 <div class="toast" id="toast"></div>
 
 <script>
+// ═══════════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════════
 const STAGES = [
-  { id:'inquiry',  label:'問合せ',     color:'var(--sub)',    dot:'#4a5270' },
-  { id:'naiken',   label:'内見調整',   color:'var(--blue)',   dot:'#4f9cf9' },
-  { id:'apply',    label:'申込・審査', color:'var(--orange)', dot:'#fb923c' },
-  { id:'contract', label:'契約中',     color:'var(--gold)',   dot:'#c9a84c' },
-  { id:'payment',  label:'入金待ち',   color:'var(--purple)', dot:'#a78bfa' },
-  { id:'done',     label:'成約完了',   color:'var(--green)',  dot:'#34d399' },
-  { id:'cancel',   label:'キャンセル', color:'var(--red)',    dot:'#f87171' },
+  {id:'new',      label:'新規',     dot:'#4a5270', color:'var(--sub)'},
+  {id:'naiken',   label:'内見',     dot:'#4f9cf9', color:'var(--blue)'},
+  {id:'apply',    label:'申込・審査',dot:'#fb923c', color:'var(--orange)'},
+  {id:'contract', label:'契約中',   dot:'#c9a84c', color:'var(--gold)'},
+  {id:'payment',  label:'入金待ち', dot:'#a78bfa', color:'var(--purple)'},
+  {id:'done',     label:'完了',     dot:'#34d399', color:'var(--green)'},
+  {id:'cancel',   label:'取消',     dot:'#f87171', color:'var(--red)'},
 ];
 
-const APP_STATUS = {
-  submitted: { label:'申込書提出済', cls:'pill-blue',   icon:'📬' },
-  reviewing: { label:'審査中',       cls:'pill-orange', icon:'⏳' },
-  approved:  { label:'審査通過',     cls:'pill-green',  icon:'✅' },
-  rejected:  { label:'審査落ち',     cls:'pill-red',    icon:'❌' },
-  cancelled: { label:'キャンセル',   cls:'pill-muted',  icon:'🚫' },
-  contracted:{ label:'契約成立',     cls:'pill-gold',   icon:'🏆' },
-};
+// ステップ定義（賃貸）
+const STEPS_RELET = [
+  {id:'naiken',   label:'内見',   icon:'🏠', stage:'naiken'},
+  {id:'apply',    label:'申込',   icon:'📋', stage:'apply'},
+  {id:'screening',label:'審査',   icon:'⏳', stage:'apply'},
+  {id:'payment',  label:'入金',   icon:'💴', stage:'payment'},
+  {id:'itsetsu',  label:'重説',   icon:'📝', stage:'contract'},
+  {id:'key',      label:'鍵渡し', icon:'🔑', stage:'done'},
+];
 
+// ステップ定義（売買）
+const STEPS_RESALE = [
+  {id:'offer',    label:'買付',   icon:'📄', stage:'apply'},
+  {id:'contract', label:'契約',   icon:'✍️', stage:'contract'},
+  {id:'payment',  label:'決済',   icon:'💴', stage:'payment'},
+  {id:'done',     label:'引渡し', icon:'🔑', stage:'done'},
+];
+
+// ═══════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════
 let CASES = [
-  { id:'R042857', client:'田中 雄介', type:'reLet', stage:'apply', agent:'10012',
-    sub:'渋谷区 希望 2LDK / 〜¥220,000', days:3, stale:false,
-    applications:[
-      { id:'APL-001', property:'渋谷区桜丘 2LDK', mgmtCo:'三井住友管理', appliedDate:'2026-02-18',
-        status:'rejected', note:'収入審査基準未達（収入倍率3倍以下）' },
-      { id:'APL-002', property:'渋谷区代々木 2LDK', mgmtCo:'東急リバブル管理', appliedDate:'2026-02-21',
-        status:'reviewing', note:'保証会社審査中' },
-    ],
-    memo:['2/18 APL-001 審査落ち（収入倍率）→ 別物件提案','2/21 APL-002 申込。保証会社：オリコFS'],
+  {id:'R042857', name:'田中 雄介', type:'reLet', corp:false, agent:'10012',
+   sub:'渋谷区 2LDK 〜¥220,000', step:'screening', age:3, stale:false,
+   apps:[
+     {id:'A001', prop:'渋谷区桜丘 2LDK', mgmt:'三井住友管理', date:'2026-02-18', status:'rejected'},
+     {id:'A002', prop:'渋谷区代々木 2LDK', mgmt:'東急リバブル管理', date:'2026-02-21', status:'reviewing'},
+   ],
+   dates:{naiken:'2026-02-17'}, hist:['2/17 内見完了','2/18 申込→審査落ち','2/21 別物件で再申込'],
   },
-  { id:'R039102', client:'木村 彩香', type:'reLet', stage:'apply', agent:'10012',
-    sub:'品川区 希望 1K / 〜¥85,000', days:1, stale:false,
-    applications:[
-      { id:'APL-010', property:'品川区大崎 1K', mgmtCo:'大崎管理センター', appliedDate:'2026-02-20',
-        status:'reviewing', note:'同時申込（B物件あり）' },
-      { id:'APL-011', property:'品川区五反田 1K', mgmtCo:'東急コミュニティ', appliedDate:'2026-02-20',
-        status:'reviewing', note:'同時申込（A物件あり）' },
-    ],
-    memo:['2/20 2物件同時申込（先勝ちで対応）'],
+  {id:'R039102', name:'木村 彩香', type:'reLet', corp:false, agent:'10012',
+   sub:'品川区 1K 〜¥85,000', step:'screening', age:1, stale:false,
+   apps:[
+     {id:'A010', prop:'品川区大崎 1K', mgmt:'大崎管理', date:'2026-02-21', status:'reviewing', sim:true},
+     {id:'A011', prop:'品川区五反田 1K', mgmt:'東急コミュニティ', date:'2026-02-21', status:'reviewing', sim:true},
+   ],
+   dates:{naiken:'2026-02-20'}, hist:['2/20 内見完了','2/21 2物件同時申込'],
   },
-  { id:'R041003', client:'斎藤 亮', type:'reLet', stage:'inquiry', agent:'10023',
-    sub:'新宿区 希望 1LDK / 〜¥130,000', days:9, stale:true,
-    applications:[], memo:['2/11 問合せ受信。未連絡。'],
+  {id:'R041003', name:'斎藤 亮', type:'reLet', corp:false, agent:'10023',
+   sub:'新宿区 1LDK 〜¥130,000', step:'naiken', age:9, stale:true,
+   apps:[], dates:{}, hist:['2/11 問合せ受信'],
   },
-  { id:'R044201', client:'橋本 早苗', type:'reLet', stage:'naiken', agent:'10012',
-    sub:'目黒区 希望 1LDK / 〜¥150,000', days:1, stale:false,
-    applications:[], memo:['2/21 内見依頼書送付。2/23 10:00 予定'],
+  {id:'R044201', name:'橋本 早苗', type:'reLet', corp:false, agent:'10012',
+   sub:'目黒区 1LDK 〜¥150,000', step:'naiken', age:1, stale:false,
+   apps:[], dates:{naiken:'2026-02-23'}, hist:['2/21 内見予約: 2/23 10:00'],
   },
-  { id:'R045500', client:'伊藤 翔太', type:'reLet', stage:'contract', agent:'10012',
-    sub:'渋谷区恵比寿 1LDK ¥155,000', days:2, stale:false,
-    applications:[
-      { id:'APL-020', property:'渋谷区恵比寿 1LDK', mgmtCo:'東急管理', appliedDate:'2026-02-15',
-        status:'contracted', note:'審査通過 → IT重説済み' },
-    ],
-    memo:['2/15 申込','2/17 審査通過','2/20 IT重説完了。書類返送待ち'],
-    chinkakuDate:'2026-03-01',
+  {id:'R045500', name:'伊藤 翔太', type:'reLet', corp:false, agent:'10012',
+   sub:'渋谷区恵比寿 1LDK ¥155,000', step:'itsetsu', age:2, stale:false,
+   apps:[{id:'A020', prop:'渋谷区恵比寿 1LDK', mgmt:'東急管理', date:'2026-02-15', status:'approved'}],
+   dates:{naiken:'2026-02-14', applied:'2026-02-15', approved:'2026-02-17', paid:'2026-02-20'},
+   hist:['2/14 内見','2/15 申込','2/17 審査通過','2/20 入金確認済'],
   },
-  { id:'R046001', client:'加藤 美咲', type:'reLet', stage:'cancel', agent:'10008',
-    sub:'港区南青山 1LDK ¥180,000', days:0, stale:false,
-    applications:[
-      { id:'APL-030', property:'港区南青山 1LDK', mgmtCo:'住友不動産管理', appliedDate:'2026-02-10',
-        status:'cancelled', note:'審査通過後、本人都合によりキャンセル' },
-    ],
-    memo:['2/10 申込','2/14 審査通過','2/21 本人都合によりキャンセル申出'],
+  {id:'R047800', name:'株式会社タナカ商事', type:'reLet', corp:true, contactName:'田中 一郎', agent:'10008',
+   sub:'新宿区 事務所 〜¥250,000', step:'screening', age:0, stale:false,
+   apps:[
+     {id:'A060', prop:'新宿区西新宿 30坪', mgmt:'三菱地所管理', date:'2026-02-22', status:'reviewing', sim:true},
+     {id:'A061', prop:'新宿区新宿 25坪', mgmt:'東急コミュニティ', date:'2026-02-22', status:'reviewing', sim:true},
+   ],
+   dates:{naiken:'2026-02-22'}, hist:['2/22 内見','2/22 2物件同時申込（法人）'],
   },
-  { id:'R038291', client:'松本 浩二', type:'reLet', stage:'payment', agent:'10012',
-    sub:'渋谷区 2K ¥170,000', days:0, stale:false,
-    applications:[
-      { id:'APL-040', property:'渋谷区 2K', mgmtCo:'東京建物管理', appliedDate:'2026-02-08',
-        status:'contracted', note:'' },
-    ],
-    memo:['2/08 申込','2/12 審査通過','2/17 IT重説','2/21 入金確認待ち'],
-    chinkakuDate:'2026-03-01',
+  {id:'R038291', name:'松本 浩二', type:'reLet', corp:false, agent:'10012',
+   sub:'渋谷区 2K ¥170,000', step:'key', age:0, stale:false,
+   apps:[{id:'A040', prop:'渋谷区 2K', mgmt:'東京建物管理', date:'2026-02-08', status:'approved'}],
+   dates:{naiken:'2026-02-07', applied:'2026-02-08', approved:'2026-02-12', paid:'2026-02-17', itsetsu:'2026-02-20', chinkaku:'2026-03-01'},
+   hist:['2/07 内見','2/08 申込','2/12 審査通過','2/17 入金確認','2/20 IT重説完了'],
   },
-  { id:'R040011', client:'中村 由美', type:'reLet', stage:'done', agent:'10012',
-    sub:'港区 1R ¥95,000', days:0, stale:false,
-    applications:[
-      { id:'APL-050', property:'港区 1R', mgmtCo:'住友不動産管理', appliedDate:'2026-02-01',
-        status:'contracted', note:'' },
-    ],
-    memo:['2/01 申込','2/05 審査通過','2/10 IT重説','2/18 成約完了'],
-    chinkakuDate:'2026-03-01',
+  {id:'R040011', name:'中村 由美', type:'reLet', corp:false, agent:'10012',
+   sub:'港区 1R ¥95,000', step:'done', age:0, stale:false,
+   apps:[{id:'A050', prop:'港区 1R', mgmt:'住友不動産管理', date:'2026-02-01', status:'approved'}],
+   dates:{naiken:'2026-02-01', applied:'2026-02-01', approved:'2026-02-05', paid:'2026-02-10', itsetsu:'2026-02-15', chinkaku:'2026-03-01'},
+   hist:['2/01 内見・申込','2/05 審査通過','2/10 入金','2/15 重説','2/18 鍵渡し完了'],
   },
-  { id:'S819204', client:'吉田 大輔', type:'re-sale', stage:'contract', agent:'10008',
-    sub:'目黒区 戸建て 3,200万', days:5, stale:false,
-    applications:[], memo:['2/15 買付受領','2/17 売買報告書提出','2/20 契約書作成中'],
-    settlementDate:'2026-03-15',
+  {id:'R046001', name:'加藤 美咲', type:'reLet', corp:false, agent:'10008',
+   sub:'港区南青山 1LDK ¥180,000', step:'cancel', age:0, stale:false,
+   apps:[{id:'A030', prop:'港区南青山 1LDK', mgmt:'住友不動産管理', date:'2026-02-10', status:'cancelled'}],
+   dates:{naiken:'2026-02-09'}, hist:['2/09 内見','2/10 申込','2/14 審査通過','2/21 キャンセル（本人都合）'],
   },
-  { id:'H334521', client:'ITスタートアップA社', type:'hr', stage:'apply', agent:'20005',
-    sub:'エンジニア 年収700万', days:2, stale:false,
-    applications:[], memo:['2/19 書類選考通過。一次面接調整中'],
-  },
-  { id:'R047800', client:'株式会社タナカ商事', type:'reLet', stage:'apply', agent:'10008',
-    sub:'新宿区 希望 事務所 / 〜¥250,000', days:0, stale:false,
-    clientType:'corporate', contactName:'田中 一郎', contactKana:'タナカ イチロウ',
-    applications:[
-      { id:'APL-060', property:'新宿区西新宿 事務所30坪', mgmtCo:'三菱地所管理', appliedDate:'2026-02-22',
-        status:'reviewing', note:'同時申込（2件）', simultaneous:true },
-      { id:'APL-061', property:'新宿区新宿 事務所25坪', mgmtCo:'東急コミュニティ', appliedDate:'2026-02-22',
-        status:'reviewing', note:'同時申込（2件）', simultaneous:true },
-    ],
-    memo:['2/22 法人契約。2物件同時申込。担当：田中一郎氏'],
+  {id:'S819204', name:'吉田 大輔', type:'reSale', corp:false, agent:'10008',
+   sub:'目黒区 戸建て 3,200万', step:'contract', age:5, stale:false,
+   apps:[], dates:{offer:'2026-02-15', contract:'2026-02-20', settlement:'2026-03-15'},
+   hist:['2/15 買付受領','2/20 売買契約締結'],
   },
 ];
 
-let activeCaseId = null;
+let cur = null; // current case id
 
-function renderBoard() {
-  const typeFilter  = document.getElementById('filter-type').value;
-  const agentFilter = document.getElementById('filter-agent').value;
-  let cases = CASES;
-  if (typeFilter !== 'all') cases = cases.filter(c => c.type === typeFilter);
-  if (agentFilter !== 'all') cases = cases.filter(c => c.agent === agentFilter);
+// ═══════════════════════════════════════════════
+// BOARD
+// ═══════════════════════════════════════════════
+function stageOf(c) {
+  const step = c.step;
+  if (step==='done') return 'done';
+  if (step==='cancel') return 'cancel';
+  if (step==='naiken') return 'naiken';
+  if (step==='apply'||step==='screening') return 'apply';
+  if (step==='payment') return 'payment';
+  if (step==='itsetsu'||step==='key'||step==='contract') return 'contract';
+  if (step==='offer') return 'apply';
+  return 'new';
+}
+
+function render() {
+  const tf = document.getElementById('f-type').value;
+  const af = document.getElementById('f-agent').value;
+  let cs = CASES;
+  if (tf) cs = cs.filter(c=>c.type===tf);
+  if (af) cs = cs.filter(c=>c.agent===af);
 
   const board = document.getElementById('board');
-  board.innerHTML = STAGES.map(stage => {
-    const cols = cases.filter(c => c.stage === stage.id);
-    const canAdd = stage.id !== 'done' && stage.id !== 'cancel';
+  board.innerHTML = STAGES.map(st=>{
+    const cols = cs.filter(c=>stageOf(c)===st.id);
+    const canAdd = st.id!=='done'&&st.id!=='cancel';
     return '<div class="col">'
-      + '<div class="col-hdr">'
-      + '<div class="col-title"><div class="col-dot" style="background:'+stage.dot+'"></div>'+stage.label+'</div>'
-      + '<span class="col-count" style="background:'+stage.dot+'22;color:'+stage.color+';border:1px solid '+stage.dot+'44">'+cols.length+'</span>'
-      + '</div>'
-      + '<div class="col-body">'
-      + cols.map(c => renderCard(c, stage)).join('')
-      + (canAdd ? '<div class="add-card" onclick="openAddModal(\''+stage.id+'\')">＋ 追加</div>' : '')
-      + '</div></div>';
+      +'<div class="col-hdr">'
+      +'<div class="col-title"><div class="col-dot" style="background:'+st.dot+'"></div>'+st.label+'</div>'
+      +'<span class="col-count" style="background:'+st.dot+'22;color:'+st.color+';border:1px solid '+st.dot+'55">'+cols.length+'</span>'
+      +'</div>'
+      +'<div class="col-body">'
+      +cols.map(c=>cardHTML(c,st)).join('')
+      +(canAdd?'<div class="add-row" onclick="openNewModal(\''+st.id+'\')">＋</div>':'')
+      +'</div></div>';
   }).join('');
 
-  document.getElementById('board-summary').textContent = '表示: '+cases.length+' 件 / 全 '+CASES.length+' 件';
+  document.getElementById('board-count').textContent = cs.length+' / '+CASES.length+' 件';
 }
 
-function renderCard(c, stage) {
-  const appBadges = c.applications.slice(0,3).map(a => {
-    const s = APP_STATUS[a.status] || APP_STATUS.submitted;
-    const prop = a.property.length > 12 ? a.property.slice(0,12)+'…' : a.property;
-    return '<span class="pill '+s.cls+'">'+s.icon+' '+prop+'</span>';
-  }).join('') + (c.applications.length > 3 ? '<span class="pill pill-muted">+' + (c.applications.length-3) + '</span>' : '');
+function cardHTML(c, st) {
+  const isCur = c.id===cur;
+  const pendingApps = (c.apps||[]).filter(a=>a.status==='reviewing'||a.status==='submitted').length;
+  const rejApps     = (c.apps||[]).filter(a=>a.status==='rejected').length;
 
-  const isActive = c.id === activeCaseId;
-  const daysEl = c.days === 0
-    ? '<span class="cc-days" style="background:rgba(52,211,153,.1);color:var(--green)">本日</span>'
-    : c.days >= 7
-    ? '<span class="cc-days" style="background:rgba(248,113,113,.1);color:var(--red)">'+c.days+'日前</span>'
-    : '<span class="cc-days" style="background:rgba(74,82,112,.2);color:var(--sub)">'+c.days+'日前</span>';
+  let badge = '';
+  if (c.corp) badge += '<span class="pill pill-purple" style="font-size:7px">法人</span> ';
+  if (pendingApps>1) badge += '<span class="pill pill-orange" style="font-size:7px">同時'+pendingApps+'件</span>';
+  if (rejApps>0 && c.step==='screening') badge += ' <span class="pill pill-red" style="font-size:7px">落ち'+rejApps+'</span>';
 
-  const typeLabel = c.type==='reLet' ? '🏠 賃貸' : c.type==='re-sale' ? '🏢 売買' : '👥 人材';
-  const corpBadge = c.clientType==='corporate' ? ' <span class="pill pill-purple" style="font-size:7px">法人</span>' : '';
-  const simCount = c.applications.filter(a=>a.simultaneous&&(a.status==='reviewing'||a.status==='submitted')).length;
-  const simBadge = simCount>1 ? ' <span class="pill pill-orange" style="font-size:7px">同時'+simCount+'件</span>' : '';
+  const ageEl = c.age===0
+    ? '<span class="age" style="background:rgba(52,211,153,.1);color:var(--green)">本日</span>'
+    : c.age>=7
+    ? '<span class="age" style="background:rgba(248,113,113,.1);color:var(--red)">'+c.age+'日前</span>'
+    : '<span class="age" style="background:rgba(74,82,112,.15);color:var(--sub)">'+c.age+'日前</span>';
 
-  return '<div class="case-card'+(isActive?' active':'')+'" onclick="openCase(\''+c.id+'\')">'
-    + (c.stale ? '<div class="stale-dot"></div>' : '')
-    + '<div class="cc-type" style="color:'+stage.color+'">'+typeLabel+corpBadge+simBadge+'</div>'
-    + '<div class="cc-client">'+c.client+'</div>'
-    + '<div class="cc-sub">'+c.sub+'</div>'
-    + (appBadges ? '<div class="cc-apps">'+appBadges+'</div>' : '')
-    + '<div class="cc-meta"><span class="cc-id">'+c.id+'</span>'+daysEl+'</div>'
-    + '</div>';
+  const typeEl = c.type==='reLet'?'🏠 賃貸':c.type==='reSale'?'🏢 売買':'👥 人材';
+
+  return '<div class="card'+(isCur?' active':'')+'" onclick="open_case(\''+c.id+'\')">'
+    +(c.stale?'<div class="stale"></div>':'')
+    +'<div class="card-type" style="color:'+st.color+'">'+typeEl+(badge?' '+badge:'')+'</div>'
+    +'<div class="card-name">'+c.name+'</div>'
+    +'<div class="card-sub">'+c.sub+'</div>'
+    +'<div class="card-foot"><span class="card-id">'+c.id+'</span>'+ageEl+'</div>'
+    +'</div>';
 }
 
-function openCase(id) {
-  const c = CASES.find(c => c.id === id);
-  if (!c) return;
-  activeCaseId = id;
-  const stage = STAGES.find(s => s.id === c.stage);
-  document.getElementById('dp-id').textContent = c.id;
-  document.getElementById('dp-name').textContent = c.client;
-  document.getElementById('dp-stage-pill').innerHTML =
-    '<span class="pill" style="background:'+stage.dot+'18;color:'+stage.color+';border:1px solid '+stage.dot+'44">'+stage.label+'</span>';
-  buildDetailBody(c);
-  document.getElementById('detail-panel').classList.add('show');
-  renderBoard();
+// ═══════════════════════════════════════════════
+// PANEL
+// ═══════════════════════════════════════════════
+function open_case(id) {
+  cur = id;
+  const c = CASES.find(x=>x.id===id);
+  if(!c) return;
+
+  document.getElementById('panel').classList.add('open');
+
+  // Header
+  const corpBadge = c.corp ? ' <span class="pill pill-purple">法人</span>' : '';
+  document.getElementById('panel-top').innerHTML =
+    '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px">'
+    +'<div>'
+    +'<div style="font-family:\'DM Mono\',monospace;font-size:10px;color:var(--muted);margin-bottom:2px">'+c.id+'</div>'
+    +'<div style="font-size:16px;font-weight:800">'+c.name+corpBadge+'</div>'
+    +(c.corp&&c.contactName?'<div style="font-size:11px;color:var(--sub);margin-top:1px">担当: '+c.contactName+'</div>':'')
+    +'<div style="font-size:11px;color:var(--muted);margin-top:2px">'+c.sub+'</div>'
+    +'</div>'
+    +'<button class="btn btn-ghost btn-sm" onclick="close_panel()">✕</button>'
+    +'</div>'
+    + buildStepBar(c);
+
+  buildStepContent(c);
+  render();
 }
 
-function buildDetailBody(c) {
-  const body = document.getElementById('dp-body');
+function close_panel() {
+  cur = null;
+  document.getElementById('panel').classList.remove('open');
+  render();
+}
 
-  // Stage buttons
-  const stageRow = STAGES.map(s =>
-    '<button class="stage-btn'+(s.id===c.stage?' cur':'')+'" onclick="moveCase(\''+c.id+'\',\''+s.id+'\')">'+s.label+'</button>'
+function buildStepBar(c) {
+  const steps = c.type==='reLet' ? STEPS_RELET : c.type==='reSale' ? STEPS_RESALE : [];
+  if (!steps.length) return '';
+  const curIdx = steps.findIndex(s=>s.id===c.step);
+
+  return '<div class="step-bar">'
+    +steps.map((s,i)=>{
+      const cls = i<curIdx?'done':i===curIdx?'active':'future';
+      const inner = i<curIdx ? '✓' : s.icon;
+      return '<div class="step-node '+cls+'" onclick="jumpStep(\''+c.id+'\',\''+s.id+'\')">'
+        +'<div class="step-circle">'+inner+'</div>'
+        +'<div class="step-label">'+s.label+'</div>'
+        +'</div>';
+    }).join('')
+    +'</div>';
+}
+
+function buildStepContent(c) {
+  const body = document.getElementById('panel-body');
+
+  if (c.step==='done') {
+    body.innerHTML = '<div class="done-card"><div class="done-icon">🎉</div>'
+      +'<div class="done-title">成約完了</div>'
+      +'<div style="font-size:11px;color:var(--sub);margin-top:6px">'+(c.dates.chinkaku||'')+'</div>'
+      +'</div>'+histHTML(c);
+    return;
+  }
+  if (c.step==='cancel') {
+    body.innerHTML = '<div class="cancel-card"><div style="font-size:32px">🚫</div>'
+      +'<div style="font-weight:700;margin-top:4px">キャンセル</div></div>'+histHTML(c)
+      +'<div style="margin-top:12px"><button class="btn btn-ghost btn-sm" onclick="reactivate(\''+c.id+'\')">↩ 再開</button></div>';
+    return;
+  }
+
+  let html = '<div class="step-content">';
+
+  // ── 賃貸フロー ──
+  if (c.type==='reLet') {
+    if (c.step==='naiken') html += stepNaiken(c);
+    else if (c.step==='apply') html += stepApply(c);
+    else if (c.step==='screening') html += stepScreening(c);
+    else if (c.step==='payment') html += stepPayment(c);
+    else if (c.step==='itsetsu') html += stepItsetsu(c);
+    else if (c.step==='key') html += stepKey(c);
+  }
+  // ── 売買フロー ──
+  else if (c.type==='reSale') {
+    if (c.step==='offer') html += stepOffer(c);
+    else if (c.step==='contract') html += stepSaleContract(c);
+    else if (c.step==='payment') html += stepSettlement(c);
+  }
+
+  html += '</div>';
+
+  // 複数申込リスト（screening時）
+  if (c.step==='screening' && c.apps.length>0) {
+    html += '<div style="margin-top:12px">'+appsHTML(c)+'</div>';
+  }
+
+  html += histHTML(c);
+
+  // キャンセルボタン
+  html += '<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">'
+    +'<button class="btn btn-red btn-sm" onclick="cancelCase(\''+c.id+'\')">🚫 キャンセル</button>'
+    +'</div>';
+
+  body.innerHTML = html;
+}
+
+// ── STEP RENDERERS ──
+
+function stepNaiken(c) {
+  const today = new Date().toISOString().slice(0,10);
+  const dateVal = c.dates.naiken || today;
+  return '<div class="step-title">🏠 内見</div>'
+    +'<div class="fi"><label>内見日</label><input type="date" id="s-naiken-date" class="mono" value="'+dateVal+'"></div>'
+    +'<div class="fi"><label>物件名</label><input type="text" id="s-naiken-prop" placeholder="〇〇マンション 1LDK" value="'+(c.dates.naikenProp||'')+'"></div>'
+    +'<div class="row" style="margin-top:14px">'
+    +'<button class="btn btn-green" onclick="naikenDone(\''+c.id+'\')">✓ 内見完了 → 申込へ</button>'
+    +'<button class="btn btn-red" onclick="naikenSkip(\''+c.id+'\')">見送り</button>'
+    +'</div>';
+}
+
+function stepApply(c) {
+  const today = new Date().toISOString().slice(0,10);
+  return '<div class="step-title">📋 申込</div>'
+    +'<div class="fi"><label>物件名</label><input type="text" id="s-prop" placeholder="〇〇マンション 1LDK"></div>'
+    +'<div class="fi"><label>管理会社</label><input type="text" id="s-mgmt" placeholder="〇〇管理株式会社"></div>'
+    +'<div class="fi"><label>申込日</label><input type="date" id="s-apply-date" class="mono" value="'+today+'"></div>'
+    +'<button class="btn btn-green" style="width:100%;justify-content:center;margin-top:14px" onclick="submitApply(\''+c.id+'\')">申込済みにする →</button>';
+}
+
+function stepScreening(c) {
+  const activeApps = c.apps.filter(a=>a.status==='reviewing'||a.status==='submitted');
+  const rejApps    = c.apps.filter(a=>a.status==='rejected');
+
+  let html = '<div class="step-title">⏳ 審査中</div>';
+
+  if (activeApps.length===0 && rejApps.length>0) {
+    html += '<div style="background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);border-radius:8px;padding:10px;margin-bottom:12px;font-size:11px;color:var(--red)">全物件で審査落ち</div>';
+    html += '<button class="btn btn-blue" style="width:100%;justify-content:center" onclick="addApp(\''+c.id+'\')">＋ 別物件で再申込</button>';
+    return html;
+  }
+
+  html += activeApps.map(a=>
+    '<div class="app-item active-app" style="margin-bottom:8px">'
+    +'<div class="app-name"><span>'+a.prop+'</span>'+(a.sim?'<span class="pill pill-orange">同時</span>':'')+'</div>'
+    +'<div style="display:flex;gap:6px;margin-top:8px">'
+    +'<button class="btn btn-green btn-sm" onclick="appPassed(\''+c.id+'\',\''+a.id+'\')">審査通過 →</button>'
+    +'<button class="btn btn-red btn-sm" onclick="appRejected(\''+c.id+'\',\''+a.id+'\')">落ち</button>'
+    +'</div></div>'
   ).join('');
 
-  // App records
-  const isRE = c.type === 'reLet' || c.type === 're-sale';
-  const appHtml = isRE ? buildAppRecords(c) : '<div style="font-size:11px;color:var(--muted)">申込管理は不動産案件のみ</div>';
-  const addAppBtn = isRE ? '<button class="btn btn-ghost btn-xs" onclick="openAddAppModal(\''+c.id+'\')">＋ 申込追加</button>' : '';
-
-  // Info rows
-  const infoGrid = [
-    ['種別', c.type==='reLet'?'🏠 賃貸':c.type==='re-sale'?'🏢 売買':'👥 人材'],
-    ['借主区分', c.clientType==='corporate'?'🏢 法人':'👤 個人'],
-    ['担当', c.agent],
-    ['更新', c.days===0?'本日':c.days+'日前'],
-  ];
-  if (c.clientType==='corporate' && c.contactName) infoGrid.push(['法人担当者', c.contactName+(c.contactKana?' ('+c.contactKana+')':'')]);
-  if (c.chinkakuDate) infoGrid.push(['賃発日', c.chinkakuDate]);
-  if (c.settlementDate) infoGrid.push(['決済日', c.settlementDate]);
-  const infoHtml = infoGrid.map(([k,v]) => '<span style="color:var(--muted)">'+k+'</span><span>'+v+'</span>').join('');
-
-  // Memo
-  const memoHtml = (c.memo||[]).map((m,i,arr) =>
-    '<div class="memo-item">'
-    + '<div style="display:flex;flex-direction:column;align-items:center">'
-    + '<div class="memo-dot'+(i===0?' act':'')+'"></div>'
-    + (i<arr.length-1 ? '<div style="width:1px;height:16px;background:var(--border2);margin:2px auto"></div>' : '')
-    + '</div>'
-    + '<div style="flex:1;font-size:11px;padding:0 0 6px 8px;line-height:1.6;color:var(--sub)">'+m+'</div>'
-    + '</div>'
-  ).join('') || '<div style="font-size:11px;color:var(--muted)">履歴なし</div>';
-
-  // Actions
-  const actions = [];
-  if (c.type==='reLet') actions.push('<button class="btn btn-ghost btn-sm" onclick="window.open(\'coreto-naiken.html\',\'_blank\')">🏠 内見依頼書</button>');
-  if (c.type==='reLet') actions.push('<button class="btn btn-ghost btn-sm" onclick="window.open(\'coreto-it-setsu.html\',\'_blank\')">📝 IT重説</button>');
-  if (c.type==='re-sale') actions.push('<button class="btn btn-ghost btn-sm" onclick="window.open(\'coreto-sale-report.html\',\'_blank\')">🏢 売買報告書</button>');
-  if (c.stage==='payment'||c.stage==='contract') actions.push('<button class="btn btn-ghost btn-sm" onclick="window.open(\'coreto-batch-close.html\',\'_blank\')">✅ 成約報告</button>');
-  if (c.stage!=='cancel'&&c.stage!=='done') actions.push('<button class="btn btn-red btn-sm" onclick="cancelCase(\''+c.id+'\')">🚫 キャンセル</button>');
-
-  body.innerHTML = ''
-    + '<div class="panel-sec"><div class="panel-sec-title">ステージ変更</div><div class="stage-row">'+stageRow+'</div></div>'
-    + '<div class="panel-sec"><div class="panel-sec-title">基本情報</div>'
-    + '<div style="display:grid;grid-template-columns:auto 1fr;gap:5px 14px;font-size:11px;background:var(--card2);border-radius:9px;padding:10px 12px">'+infoHtml+'</div></div>'
-    + '<div class="panel-sec"><div class="panel-sec-title"><span>申込管理 <span style="font-size:8px;color:var(--muted);font-weight:400;text-transform:none">('+(c.applications||[]).length+'件)</span></span>'+addAppBtn+'</div>'+appHtml+'</div>'
-    + '<div class="panel-sec"><div class="panel-sec-title">活動履歴</div>'
-    + '<div>'+memoHtml+'</div>'
-    + '<div style="display:flex;gap:8px;margin-top:8px">'
-    + '<input type="text" id="memo-input" placeholder="活動メモを追加..." style="flex:1;background:#090b13;border:1px solid var(--border2);border-radius:8px;padding:7px 11px;color:var(--text);font-size:11px;font-family:\'Noto Sans JP\',sans-serif;outline:none" onkeydown="if(event.key===\'Enter\')addMemo(\''+c.id+'\')">'
-    + '<button class="btn btn-ghost btn-sm" onclick="addMemo(\''+c.id+'\')">追加</button>'
-    + '</div></div>'
-    + '<div class="panel-sec"><div class="panel-sec-title">クイックアクション</div>'
-    + '<div style="display:flex;flex-wrap:wrap;gap:6px">'+actions.join('')+'</div></div>';
+  html += '<button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;margin-top:4px" onclick="addApp(\''+c.id+'\')">＋ 追加申込</button>';
+  return html;
 }
 
-function buildAppRecords(c) {
-  if (!c.applications || c.applications.length === 0) {
-    return '<div style="font-size:11px;color:var(--muted);padding:10px;text-align:center;border:1px dashed var(--border2);border-radius:8px">申込レコードなし<br>「＋ 申込追加」で追加</div>';
-  }
-  return c.applications.map(a => {
-    const s = APP_STATUS[a.status] || APP_STATUS.submitted;
-    let actions = '';
-    if (a.status==='submitted') actions = '<button class="btn btn-ghost btn-xs" onclick="updateApp(\''+c.id+'\',\''+a.id+'\',\'reviewing\')">⏳ 審査中へ</button>';
-    if (a.status==='reviewing') actions =
-      '<button class="btn btn-green btn-xs" onclick="updateApp(\''+c.id+'\',\''+a.id+'\',\'approved\')">✅ 審査通過</button>'
-      +'<button class="btn btn-red btn-xs" onclick="updateApp(\''+c.id+'\',\''+a.id+'\',\'rejected\')">❌ 審査落ち</button>';
-    if (a.status==='approved') actions =
-      '<button class="btn btn-gold btn-xs" onclick="updateApp(\''+c.id+'\',\''+a.id+'\',\'contracted\')">🏆 契約成立</button>'
-      +'<button class="btn btn-red btn-xs" onclick="updateApp(\''+c.id+'\',\''+a.id+'\',\'cancelled\')">🚫 キャンセル</button>';
-    if (a.status==='rejected') actions =
-      '<button class="btn btn-ghost btn-xs" onclick="openAddAppModal(\''+c.id+'\')">🏠 別物件で再申込</button>';
+function stepPayment(c) {
+  return '<div class="step-title">💴 入金確認</div>'
+    +'<div style="font-size:12px;color:var(--sub);margin-bottom:14px">初期費用の入金が確認できたら進めてください</div>'
+    +'<button class="btn btn-green" style="width:100%;justify-content:center" onclick="paymentDone(\''+c.id+'\')">✓ 入金確認済み → 重説へ</button>';
+}
 
-    const simTag = a.simultaneous ? '<span class="pill pill-orange" style="font-size:8px;margin-left:4px">同時申込</span>' : '';
-    return '<div class="app-record ar-'+a.status+'">'
-      + '<div class="ar-hdr"><div class="ar-prop">'+a.property+simTag+'</div><span class="pill '+s.cls+'">'+s.icon+' '+s.label+'</span></div>'
-      + '<div class="ar-meta"><span>管理会社</span><span>'+a.mgmtCo+'</span><span>申込日</span><span class="mono">'+a.appliedDate+'</span>'
-      + (a.note ? '<span>備考</span><span style="color:var(--text)">'+a.note+'</span>' : '')
-      + '</div>'
-      + (actions ? '<div class="ar-actions">'+actions+'</div>' : '')
-      + '</div>';
+function stepItsetsu(c) {
+  return '<div class="step-title">📝 IT重説・契約</div>'
+    +'<div class="row" style="margin-bottom:12px">'
+    +'<button class="btn btn-blue" onclick="window.open(\'coreto-it-setsu.html\',\'_blank\')">IT重説チェックリストを開く</button>'
+    +'</div>'
+    +'<button class="btn btn-green" style="width:100%;justify-content:center" onclick="itsetsuDone(\''+c.id+'\')">✓ 重説完了 → 鍵渡しへ</button>';
+}
+
+function stepKey(c) {
+  const today = new Date().toISOString().slice(0,10);
+  const val = c.dates.chinkaku || today;
+  return '<div class="step-title">🔑 鍵渡し</div>'
+    +'<div class="fi"><label>賃発日（入居日）</label><input type="date" id="s-chinkaku" class="mono" value="'+val+'"></div>'
+    +'<button class="btn btn-green" style="width:100%;justify-content:center;margin-top:12px" onclick="keyDone(\''+c.id+'\')">✓ 鍵渡し完了 → 成約</button>';
+}
+
+// ── 売買 steps ──
+function stepOffer(c) {
+  const today = new Date().toISOString().slice(0,10);
+  return '<div class="step-title">📄 買付申込</div>'
+    +'<div class="fi"><label>物件名</label><input type="text" id="s-sale-prop" placeholder="〇〇マンション 101号"></div>'
+    +'<div class="fi"><label>買付日</label><input type="date" id="s-offer-date" class="mono" value="'+today+'"></div>'
+    +'<button class="btn btn-green" style="width:100%;justify-content:center;margin-top:14px" onclick="offerDone(\''+c.id+'\')">買付受領 → 売買契約へ</button>';
+}
+
+function stepSaleContract(c) {
+  return '<div class="step-title">✍️ 売買契約</div>'
+    +'<div class="row" style="margin-bottom:12px">'
+    +'<button class="btn btn-blue" onclick="window.open(\'coreto-sale-report.html\',\'_blank\')">売買報告書を開く</button>'
+    +'</div>'
+    +'<button class="btn btn-green" style="width:100%;justify-content:center" onclick="saleContractDone(\''+c.id+'\')">✓ 契約締結 → 決済へ</button>';
+}
+
+function stepSettlement(c) {
+  const today = new Date().toISOString().slice(0,10);
+  const val = c.dates.settlement || today;
+  return '<div class="step-title">💴 決済・引渡し</div>'
+    +'<div class="fi"><label>決済日</label><input type="date" id="s-settlement" class="mono" value="'+val+'"></div>'
+    +'<button class="btn btn-green" style="width:100%;justify-content:center;margin-top:12px" onclick="settlementDone(\''+c.id+'\')">✓ 決済完了 → 成約</button>';
+}
+
+// ── Sub components ──
+function appsHTML(c) {
+  return c.apps.map(a=>{
+    const s = a.status;
+    const pill = s==='reviewing'?'<span class="pill pill-orange">審査中</span>'
+      :s==='approved'?'<span class="pill pill-green">通過</span>'
+      :s==='rejected'?'<span class="pill pill-red">落ち</span>'
+      :s==='cancelled'?'<span class="pill pill-muted">取消</span>'
+      :'<span class="pill pill-blue">提出済</span>';
+    return '<div class="app-item" style="margin-bottom:6px">'
+      +'<div class="app-name"><span>'+a.prop+'</span>'+pill+(a.sim?' <span class="pill pill-orange">同時</span>':'')+'</div>'
+      +'<div class="app-meta">'+a.mgmt+' · '+a.date+'</div>'
+      +'</div>';
   }).join('');
 }
 
-function moveCase(id, newStage) {
-  const c = CASES.find(c => c.id === id);
-  if (!c) return;
-  c.stage = newStage;
-  c.days = 0;
-  const today = new Date().toLocaleDateString('ja-JP',{month:'numeric',day:'numeric'});
-  c.memo.unshift(today+' ステージ → '+STAGES.find(s=>s.id===newStage).label);
-  openCase(id);
-  renderBoard();
-  showToast('ステージを「'+STAGES.find(s=>s.id===newStage).label+'」に移動');
+function histHTML(c) {
+  if (!c.hist||!c.hist.length) return '';
+  return '<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">'
+    +'<div style="font-size:9px;color:var(--muted);font-weight:700;letter-spacing:1.5px;margin-bottom:10px">活動履歴</div>'
+    +c.hist.map((h,i)=>'<div class="hist-item">'
+      +'<div><div class="hist-dot'+(i===0?' cur':'')+'"></div>'+(i<c.hist.length-1?'<div class="hist-line"></div>':'')+'</div>'
+      +'<div style="font-size:11px;color:var(--sub);padding:0 0 4px 8px">'+h+'</div>'
+      +'</div>').join('')
+    +'<div style="display:flex;gap:6px;margin-top:8px">'
+    +'<input type="text" id="memo-inp" placeholder="メモ追加..." style="flex:1;background:#090b13;border:1px solid var(--border2);border-radius:7px;padding:6px 10px;color:var(--text);font-size:11px;font-family:inherit;outline:none" onkeydown="if(event.key===\'Enter\')addMemo(\''+c.id+'\')">'
+    +'<button class="btn btn-ghost btn-sm" onclick="addMemo(\''+c.id+'\')">追加</button>'
+    +'</div></div>';
 }
 
-function updateApp(caseId, appId, newStatus) {
-  const c = CASES.find(c => c.id === caseId);
-  if (!c) return;
-  const a = c.applications.find(a => a.id === appId);
-  if (!a) return;
-  a.status = newStatus;
-  const today = new Date().toLocaleDateString('ja-JP',{month:'numeric',day:'numeric'});
-  c.memo.unshift(today+' '+a.property+' → '+APP_STATUS[newStatus].label);
-  if (newStatus==='contracted') { c.stage='contract'; c.memo.unshift(today+' ステージ自動移動 → 契約中'); }
-  else if (newStatus==='approved') { c.stage='contract'; }
-  else if (newStatus==='cancelled'||newStatus==='rejected') {
-    const allDone = c.applications.every(a => a.status==='cancelled'||a.status==='rejected');
-    if (allDone && confirm('全申込がキャンセル/落ちです。案件もキャンセルしますか？')) {
-      c.stage='cancel';
-    }
-  }
-  openCase(caseId);
-  renderBoard();
-  showToast(APP_STATUS[newStatus].label+' に更新');
+// ═══════════════════════════════════════════════
+// STEP ACTIONS
+// ═══════════════════════════════════════════════
+function today() { return new Date().toLocaleDateString('ja-JP',{month:'numeric',day:'numeric'}); }
+function todayISO() { return new Date().toISOString().slice(0,10); }
+
+function advance(id, nextStep, dateKey, dateVal, memo) {
+  const c = CASES.find(x=>x.id===id); if(!c) return;
+  c.step = nextStep;
+  c.age = 0;
+  if (dateKey) c.dates[dateKey] = dateVal || todayISO();
+  if (memo) c.hist.unshift(today()+' '+memo);
+  open_case(id);
+  toast(memo||'更新しました');
+}
+
+function naikenDone(id) {
+  const c = CASES.find(x=>x.id===id);
+  const d = document.getElementById('s-naiken-date')?.value || todayISO();
+  const p = document.getElementById('s-naiken-prop')?.value.trim() || '';
+  c.dates.naiken = d;
+  if(p) c.dates.naikenProp = p;
+  advance(id, 'apply', null, null, '内見完了');
+}
+function naikenSkip(id) {
+  if(!confirm('見送りにしますか？')) return;
+  advance(id, 'cancel', null, null, '見送り（内見後）');
+}
+
+function submitApply(id) {
+  const prop = document.getElementById('s-prop')?.value.trim();
+  const mgmt = document.getElementById('s-mgmt')?.value.trim();
+  const date = document.getElementById('s-apply-date')?.value || todayISO();
+  if(!prop||!mgmt){alert('物件名と管理会社を入力してください');return;}
+  const c = CASES.find(x=>x.id===id);
+  c.apps.push({id:'A'+Date.now().toString().slice(-5), prop, mgmt, date, status:'reviewing'});
+  c.dates.applied = date;
+  advance(id, 'screening', null, null, prop+' 申込');
+}
+
+function addApp(id) {
+  const c = CASES.find(x=>x.id===id);
+  const activeCount = c.apps.filter(a=>a.status==='reviewing'||a.status==='submitted').length;
+  openModal(
+    '＋ 申込追加'
+    +'<div class="fi"><label>物件名</label><input type="text" id="m-prop" placeholder="〇〇マンション 1LDK"></div>'
+    +'<div class="fi"><label>管理会社</label><input type="text" id="m-mgmt" placeholder="〇〇管理株式会社"></div>'
+    +(activeCount>0?'<div style="margin:10px 0 4px"><label style="display:flex;align-items:center;gap:7px;font-size:11px;cursor:pointer"><input type="checkbox" id="m-sim" checked> 同時申込としてマーク</label></div>':'')
+    +'<div class="row" style="margin-top:14px"><button class="btn btn-ghost" style="flex:1" onclick="closeModal()">戻る</button>'
+    +'<button class="btn btn-green" style="flex:2;justify-content:center" onclick="doAddApp(\''+id+'\')">申込追加</button></div>'
+  );
+}
+
+function doAddApp(id) {
+  const prop = document.getElementById('m-prop')?.value.trim();
+  const mgmt = document.getElementById('m-mgmt')?.value.trim();
+  const sim  = document.getElementById('m-sim')?.checked || false;
+  if(!prop||!mgmt){alert('入力してください');return;}
+  const c = CASES.find(x=>x.id===id);
+  c.apps.push({id:'A'+Date.now().toString().slice(-5), prop, mgmt, date:todayISO(), status:'reviewing', sim});
+  c.hist.unshift(today()+' '+prop+' 申込追加'+(sim?' (同時)':''));
+  closeModal();
+  open_case(id);
+  toast('申込追加しました');
+}
+
+function appPassed(id, appId) {
+  const c = CASES.find(x=>x.id===id);
+  const a = c.apps.find(a=>a.id===appId);
+  if(!a) return;
+  a.status = 'approved';
+  // cancel other reviewing apps
+  c.apps.filter(x=>x.id!==appId&&(x.status==='reviewing'||x.status==='submitted')).forEach(x=>{x.status='cancelled';});
+  advance(id, 'payment', 'approved', todayISO(), a.prop+' 審査通過');
+}
+
+function appRejected(id, appId) {
+  const c = CASES.find(x=>x.id===id);
+  const a = c.apps.find(a=>a.id===appId);
+  if(!a) return;
+  a.status = 'rejected';
+  c.hist.unshift(today()+' '+a.prop+' 審査落ち');
+  const remaining = c.apps.filter(x=>x.status==='reviewing'||x.status==='submitted');
+  if(remaining.length===0) c.hist.unshift(today()+' 全物件落ち → 別物件追加してください');
+  open_case(id);
+}
+
+function paymentDone(id) { advance(id,'itsetsu','paid',todayISO(),'入金確認済'); }
+function itsetsuDone(id) { advance(id,'key','itsetsu',todayISO(),'IT重説完了'); }
+
+function keyDone(id) {
+  const d = document.getElementById('s-chinkaku')?.value || todayISO();
+  const c = CASES.find(x=>x.id===id);
+  c.dates.chinkaku = d;
+  advance(id,'done',null,null,'鍵渡し完了 (賃発日: '+d+') → 成約');
+}
+
+// 売買
+function offerDone(id) {
+  const prop = document.getElementById('s-sale-prop')?.value.trim()||'';
+  const d    = document.getElementById('s-offer-date')?.value||todayISO();
+  if(prop){const c=CASES.find(x=>x.id===id);c.dates.naikenProp=prop;}
+  advance(id,'contract','offer',d,'買付受領→契約へ');
+}
+function saleContractDone(id) { advance(id,'payment','contract',todayISO(),'売買契約締結'); }
+function settlementDone(id) {
+  const d = document.getElementById('s-settlement')?.value||todayISO();
+  advance(id,'done','settlement',d,'決済完了 (決済日: '+d+') → 成約');
 }
 
 function cancelCase(id) {
-  if (!confirm('この案件をキャンセルしますか？')) return;
-  const c = CASES.find(c => c.id === id);
-  if (!c) return;
-  c.stage = 'cancel';
-  c.applications.forEach(a => { if (a.status!=='contracted') a.status='cancelled'; });
-  const today = new Date().toLocaleDateString('ja-JP',{month:'numeric',day:'numeric'});
-  c.memo.unshift(today+' 案件キャンセル');
-  openCase(id);
-  renderBoard();
-  showToast('案件をキャンセルしました');
+  if(!confirm('キャンセルしますか？')) return;
+  advance(id,'cancel',null,null,'キャンセル');
+}
+function reactivate(id) {
+  const c = CASES.find(x=>x.id===id);
+  c.step='naiken'; c.hist.unshift(today()+' 案件再開');
+  open_case(id);
+}
+
+function jumpStep(id, stepId) {
+  const c = CASES.find(x=>x.id===id);
+  if(!c) return;
+  const steps = c.type==='reLet'?STEPS_RELET:STEPS_RESALE;
+  const valid = steps.map(s=>s.id);
+  if(!valid.includes(stepId)) return;
+  c.step = stepId;
+  open_case(id);
 }
 
 function addMemo(id) {
-  const input = document.getElementById('memo-input');
-  const text = input.value.trim();
-  if (!text) return;
-  const c = CASES.find(c => c.id === id);
-  if (!c) return;
-  const today = new Date().toLocaleDateString('ja-JP',{month:'numeric',day:'numeric'});
-  c.memo.unshift(today+' '+text);
-  input.value='';
-  buildDetailBody(c);
+  const inp = document.getElementById('memo-inp');
+  const txt = inp?.value.trim();
+  if(!txt) return;
+  const c = CASES.find(x=>x.id===id);
+  c.hist.unshift(today()+' '+txt);
+  inp.value='';
+  buildStepContent(c);
 }
 
-function closePanel() {
-  document.getElementById('detail-panel').classList.remove('show');
-  activeCaseId=null;
-  renderBoard();
-}
+// ═══════════════════════════════════════════════
+// NEW CASE MODAL
+// ═══════════════════════════════════════════════
+let _corpMode = false;
 
-function openAddAppModal(caseId) {
-  const c = CASES.find(c => c.id === caseId);
-  const rejExists = c && c.applications.some(a => a.status==='rejected');
-  const today = new Date().toISOString().slice(0,10);
-  const activeApps = c ? c.applications.filter(a=>a.status==='reviewing'||a.status==='submitted').length : 0;
-  const simWarning = activeApps > 0
-    ? '<div style="background:rgba(251,146,60,.08);border:1px solid rgba(251,146,60,.2);border-radius:8px;padding:8px 12px;font-size:11px;color:var(--orange);margin-bottom:10px">'
-      + '📋 現在 '+activeApps+' 件が審査中 — 同時申込として追加します（件数上限なし）</div>'
-    : '';
-  const corpNote = c && c.clientType==='corporate'
-    ? '<div style="background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.2);border-radius:8px;padding:8px 12px;font-size:11px;color:var(--purple);margin-bottom:10px">'
-      + '🏢 法人契約 — 保証会社は法人対応のもの（オリコFSビジネス等）を備考に記載</div>'
-    : '';
-  document.getElementById('modal-box').innerHTML =
-    '<div class="modal-title">🏠 申込レコード追加</div>'
-    + (rejExists ? '<div style="background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);border-radius:8px;padding:8px 12px;font-size:11px;color:var(--red);margin-bottom:10px">⚠️ 審査落ち案件あり — 別物件への再申込</div>' : '')
-    + simWarning
-    + corpNote
-    + '<div class="fg"><label>物件名 *</label><input type="text" id="m-property" placeholder="〇〇マンション 1LDK"></div>'
-    + '<div class="fg"><label>管理会社 *</label><input type="text" id="m-mgmt" placeholder="〇〇管理株式会社"></div>'
-    + '<div class="fg"><label>申込日 *</label><input type="date" id="m-date" class="mono" value="'+today+'"></div>'
-    + '<div class="fg"><label>初期ステータス</label><select id="m-status"><option value="submitted">申込書提出済</option><option value="reviewing">審査中</option></select></div>'
-    + '<div class="fg" style="display:flex;align-items:center;gap:10px;margin-top:10px">'
-    + '<label style="margin:0">同時申込フラグ</label>'
-    + '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;color:var(--text);margin:0">'
-    + '<input type="checkbox" id="m-simul"'+(activeApps>0?' checked':'')+'> この申込を同時申込としてマーク</label></div>'
-    + '<div class="fg"><label>備考</label><textarea id="m-note" rows="2" placeholder="保証会社・特記事項など"></textarea></div>'
-    + '<div style="display:flex;gap:8px;margin-top:16px">'
-    + '<button class="btn btn-ghost" style="flex:1" onclick="closeModal()">キャンセル</button>'
-    + '<button class="btn btn-blue" style="flex:2" onclick="submitApp(\''+caseId+'\')">追加</button></div>';
-  document.getElementById('modal-overlay').classList.add('show');
-}
-
-function submitApp(caseId) {
-  const property = document.getElementById('m-property').value.trim();
-  const mgmtCo   = document.getElementById('m-mgmt').value.trim();
-  const date     = document.getElementById('m-date').value;
-  const status   = document.getElementById('m-status').value;
-  const note     = document.getElementById('m-note').value.trim();
-  const simultaneous = document.getElementById('m-simul')?.checked || false;
-  if (!property||!mgmtCo||!date) { alert('必須項目を入力してください'); return; }
-  const c = CASES.find(c => c.id === caseId);
-  const newId = 'APL-'+String(Date.now()).slice(-5);
-  c.applications.push({ id:newId, property, mgmtCo, appliedDate:date, status, note, simultaneous });
-  const today = new Date().toLocaleDateString('ja-JP',{month:'numeric',day:'numeric'});
-  c.memo.unshift(today+' 申込追加: '+property+'（'+mgmtCo+'）');
-  if (c.stage==='inquiry'||c.stage==='naiken') c.stage='apply';
-  closeModal();
-  openCase(caseId);
-  renderBoard();
-  showToast('申込レコードを追加しました');
-}
-
-function openAddModal(defaultStage) {
-  const stageOptions = STAGES.filter(s=>s.id!=='done'&&s.id!=='cancel')
-    .map(s=>'<option value="'+s.id+'"'+(s.id===defaultStage?' selected':'')+'>'+s.label+'</option>').join('');
-  document.getElementById('modal-box').innerHTML =
-    '<div class="modal-title">＋ 新規案件登録</div>'
-    +'<div class="fg"><label>借主区分 *</label>'
-    +'<div style="display:flex;gap:8px;margin-top:4px">'
-    +'<button id="ct-ind" class="btn btn-ghost btn-sm" style="flex:1;border-color:var(--gold);color:var(--gold)" onclick="setClientType(&quot;individual&quot;)">👤 個人</button>'
-    +'<button id="ct-corp" class="btn btn-ghost btn-sm" style="flex:1" onclick="setClientType(&quot;corporate&quot;)">🏢 法人</button>'
-    +'</div></div>'
-    +'<div class="fg"><label id="nc-client-label">氏名 *</label><input type="text" id="nc-client" placeholder="田中 太郎"></div>'
-    +'<div id="nc-corp-fields" style="display:none">'
-    +'<div class="fg"><label>担当者氏名 *</label><input type="text" id="nc-contact" placeholder="田中 一郎"></div>'
-    +'<div class="fg"><label>担当者カナ</label><input type="text" id="nc-contact-kana" placeholder="タナカ イチロウ"></div>'
+function openNewModal(stageHint) {
+  _corpMode = false;
+  openModal(
+    '＋ 新規案件'
+    +'<div style="display:flex;gap:6px;margin-bottom:10px">'
+    +'<button id="ct-ind" class="btn btn-ghost btn-sm" style="flex:1;border-color:var(--gold);color:var(--gold)" onclick="setCorp(false)">👤 個人</button>'
+    +'<button id="ct-corp" class="btn btn-ghost btn-sm" style="flex:1" onclick="setCorp(true)">🏢 法人</button>'
     +'</div>'
-    +'<div class="fg"><label>案件種別</label><select id="nc-type"><option value="reLet">🏠 賃貸</option><option value="re-sale">🏢 売買</option><option value="hr">👥 人材</option></select></div>'
-    +'<div class="fg"><label>概要・希望条件</label><input type="text" id="nc-sub" placeholder="渋谷区 1LDK 〜¥150,000"></div>'
-    +'<div class="fg"><label>初期ステージ</label><select id="nc-stage">'+stageOptions+'</select></div>'
-    +'<div style="display:flex;gap:8px;margin-top:16px"><button class="btn btn-ghost" style="flex:1" onclick="closeModal()">キャンセル</button><button class="btn btn-blue" style="flex:2" onclick="submitNew()">登録</button></div>';
-  // default to individual
-  window._ncClientType = 'individual';
-  document.getElementById('modal-overlay').classList.add('show');
+    +'<div class="fi"><label id="nc-name-lbl">氏名</label><input type="text" id="nc-name" placeholder="田中 太郎"></div>'
+    +'<div id="nc-corp-ext" style="display:none"><div class="fi"><label>担当者名</label><input type="text" id="nc-contact" placeholder="田中 一郎"></div></div>'
+    +'<div class="fi"><label>種別</label><select id="nc-type"><option value="reLet">🏠 賃貸</option><option value="reSale">🏢 売買</option><option value="hr">👥 人材</option></select></div>'
+    +'<div class="fi"><label>希望条件</label><input type="text" id="nc-sub" placeholder="渋谷区 1LDK 〜¥150,000"></div>'
+    +'<div class="row" style="margin-top:14px"><button class="btn btn-ghost" style="flex:1" onclick="closeModal()">キャンセル</button>'
+    +'<button class="btn btn-gold" style="flex:2;justify-content:center" onclick="createCase()">登録</button></div>'
+  );
 }
 
-function submitNew() {
-  const client = document.getElementById('nc-client').value.trim();
-  if (!client) { alert('借主名を入力してください'); return; }
-  const clientType = window._ncClientType || 'individual';
-  const contactName = document.getElementById('nc-contact')?.value.trim() || '';
-  const contactKana = document.getElementById('nc-contact-kana')?.value.trim() || '';
-  if (clientType==='corporate' && !contactName) { alert('法人の場合は担当者氏名を入力してください'); return; }
-  const type  = document.getElementById('nc-type').value;
-  const sub   = document.getElementById('nc-sub').value.trim();
-  const stage = document.getElementById('nc-stage').value;
-  const prefix = type==='reLet'?'R':type==='re-sale'?'S':'H';
-  const newId = prefix+String(Math.floor(Math.random()*90000+10000));
-  const today = new Date().toLocaleDateString('ja-JP',{month:'numeric',day:'numeric'});
-  const caseObj = { id:newId, client, clientType, type, stage, agent:'10012', sub:sub||'—', days:0, stale:false, applications:[], memo:[today+' 案件登録（'+(clientType==='corporate'?'法人':'個人')+'）'] };
-  if (clientType==='corporate') { caseObj.contactName=contactName; if(contactKana) caseObj.contactKana=contactKana; }
-  CASES.unshift(caseObj);
-  closeModal();
-  renderBoard();
-  openCase(newId);
-  showToast('案件を登録しました');
-}
-
-function setClientType(type) {
-  window._ncClientType = type;
-  const indBtn  = document.getElementById('ct-ind');
-  const corpBtn = document.getElementById('ct-corp');
-  const corpFields = document.getElementById('nc-corp-fields');
-  const clientLabel = document.getElementById('nc-client-label');
-  if (!indBtn) return;
-  if (type==='individual') {
-    indBtn.style.borderColor='var(--gold)'; indBtn.style.color='var(--gold)';
-    corpBtn.style.borderColor=''; corpBtn.style.color='';
-    corpFields.style.display='none';
-    clientLabel.textContent='氏名 *';
-    document.getElementById('nc-client').placeholder='田中 太郎';
+function setCorp(flag) {
+  _corpMode = flag;
+  const ind  = document.getElementById('ct-ind');
+  const corp = document.getElementById('ct-corp');
+  const ext  = document.getElementById('nc-corp-ext');
+  const lbl  = document.getElementById('nc-name-lbl');
+  const inp  = document.getElementById('nc-name');
+  if(flag) {
+    corp.style.borderColor='var(--purple)'; corp.style.color='var(--purple)';
+    ind.style.borderColor=''; ind.style.color='';
+    ext.style.display='block'; lbl.textContent='法人名'; inp.placeholder='株式会社〇〇';
   } else {
-    corpBtn.style.borderColor='var(--purple)'; corpBtn.style.color='var(--purple)';
-    indBtn.style.borderColor=''; indBtn.style.color='';
-    corpFields.style.display='block';
-    clientLabel.textContent='法人名 *';
-    document.getElementById('nc-client').placeholder='株式会社〇〇';
+    ind.style.borderColor='var(--gold)'; ind.style.color='var(--gold)';
+    corp.style.borderColor=''; corp.style.color='';
+    ext.style.display='none'; lbl.textContent='氏名'; inp.placeholder='田中 太郎';
   }
 }
 
-function closeModal() { document.getElementById('modal-overlay').classList.remove('show'); }
-document.getElementById('modal-overlay').addEventListener('click', e => { if(e.target.id==='modal-overlay') closeModal(); });
-
-function showToast(msg) {
-  const t=document.getElementById('toast');
-  t.textContent='✅ '+msg;
-  t.style.display='block';
-  setTimeout(()=>t.style.display='none',2500);
+function createCase() {
+  const name = document.getElementById('nc-name')?.value.trim();
+  if(!name){alert('名前を入力してください');return;}
+  const contact = document.getElementById('nc-contact')?.value.trim()||'';
+  if(_corpMode&&!contact){alert('担当者名を入力してください');return;}
+  const type = document.getElementById('nc-type')?.value;
+  const sub  = document.getElementById('nc-sub')?.value.trim()||'—';
+  const prefix = type==='reLet'?'R':type==='reSale'?'S':'H';
+  const id = prefix+String(Math.floor(Math.random()*90000+10000));
+  const initStep = type==='reLet'?'naiken':type==='reSale'?'offer':'new';
+  const obj = {id, name, type, corp:_corpMode, agent:'10012', sub, step:initStep, age:0, stale:false, apps:[], dates:{}, hist:[today()+' 案件登録']};
+  if(_corpMode&&contact) obj.contactName = contact;
+  CASES.unshift(obj);
+  closeModal();
+  render();
+  open_case(id);
+  toast('案件を登録しました');
 }
 
-renderBoard();
+// ═══════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════
+function openModal(inner) {
+  document.getElementById('modal-box').innerHTML = inner;
+  document.getElementById('overlay').classList.add('on');
+}
+
+function closeModal() { document.getElementById('overlay').classList.remove('on'); }
+document.getElementById('overlay').addEventListener('click', e=>{if(e.target.id==='overlay')closeModal();});
+
+function toast(msg) {
+  const t=document.getElementById('toast');
+  t.textContent='✓ '+msg; t.style.display='block';
+  clearTimeout(t._t); t._t=setTimeout(()=>t.style.display='none',2200);
+}
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+render();
 </script>
 </body>
 </html>
