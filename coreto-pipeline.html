@@ -800,12 +800,16 @@ function stepInvoice(c) {
     ) : '')
     // 4. AD金額（AD絡む場合 — フォーマット確認前に入力）
     +(hasAD ? (
-      '<div class="fi"><label>業務委託手数料（AD・税込）</label>'
+      '<div style="display:grid;grid-template-columns:1fr auto;gap:6px;align-items:end;margin-bottom:8px">'
+      +'<div class="fi" style="margin-bottom:0"><label>業務委託手数料 — 項目名</label>'
+      +'<input type="text" id="inv-ad-desc" placeholder="例: 業務委託手数料" value="'+(inv.adDesc||'業務委託手数料')+'" style="font-size:12px"></div>'
+      +'<div class="fi" style="margin-bottom:0"><label>金額（税込）</label>'
       +'<input type="number" id="inv-ad-amt" class="mono" placeholder="例: 150000" value="'+prevAdAmt+'" oninput="invCalc()" style="font-size:14px"></div>'
+      +'</div>'
     ) : '')
     // 5. 請求項目（仲介手数料が絡む場合のみ）
     +(showItems ? (
-      '<div style="margin:10px 0 4px;font-size:11px;color:var(--sub);font-weight:600;letter-spacing:.05em">請求項目<span style="color:var(--muted);font-weight:400;margin-left:6px;font-size:10px">★1行目の仲介手数料のみ宅建業法上限チェック対象</span></div>'
+      '<div style="margin:10px 0 4px;font-size:11px;color:var(--sub);font-weight:600;letter-spacing:.05em">クライアント向け請求項目<span style="color:var(--muted);font-weight:400;margin-left:6px;font-size:10px">★1行目の仲介手数料のみ宅建業法上限チェック対象</span></div>'
       +'<div id="inv-items">'+itemRowsHtml+'</div>'
       +'<button onclick="invAddItem()" style="width:100%;background:transparent;border:1px dashed var(--border2);color:var(--sub);padding:7px;border-radius:7px;cursor:pointer;font-size:11px;margin-bottom:10px">＋ 項目を追加</button>'
     ) : '')
@@ -905,7 +909,8 @@ function invCalc() {
   if(rent>0&&(totalItems>0||adAmt>0)){
     html+='<div style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:12px">';
     if(totalItems>0) html+='<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="color:var(--sub)">請求項目合計</span><span class="mono">¥'+totalItems.toLocaleString()+'</span></div>';
-    if(adAmt>0) html+='<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="color:var(--sub)">業務委託手数料（AD）</span><span class="mono">¥'+adAmt.toLocaleString()+'</span></div>';
+    const adDescDisp=document.getElementById('inv-ad-desc')?.value||'業務委託手数料';
+    if(adAmt>0) html+='<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="color:var(--sub)">'+adDescDisp+'（AD）</span><span class="mono">¥'+adAmt.toLocaleString()+'</span></div>';
     if(adAmt>0&&totalItems>0) html+='<div style="border-top:1px solid var(--border);margin:5px 0;padding-top:5px;display:flex;justify-content:space-between"><span style="color:var(--sub);font-weight:600">合計</span><span class="mono" style="color:var(--gold);font-size:13px">¥'+grandTotal.toLocaleString()+'</span></div>';
     if(commAmt>0){
       if(commAmt>limit11) html+='<div style="margin-top:6px;padding:6px 10px;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.4);border-radius:6px;color:var(--red);font-size:11px">⛔ 仲介手数料（¥'+commAmt.toLocaleString()+'）が家賃×1.1（¥'+limit11.toLocaleString()+'）を超過 — 宅建業法違反</div>';
@@ -936,13 +941,14 @@ function issueInvoice(id) {
   const rent=parseInt(document.getElementById('inv-rent')?.value)||0;
   const reason=document.getElementById('inv-reason')?.value.trim()||'';
   const adAmt=parseInt(document.getElementById('inv-ad-amt')?.value)||0;
+  const adDesc=document.getElementById('inv-ad-desc')?.value.trim()||'業務委託手数料';
   if(!prop){alert('物件名を入力してください');return;}
 
   // AD絡む＋指定フォーマットあり
   if((type==='ad_only'||type==='ad_plus')&&adFmt==='custom'){
     if(!adAmt){alert('業務委託手数料を入力してください');return;}
     c.adOnly=true;
-    c.invoice=Object.assign(inv,{type,adFmt,adAmt,prop,date,due,issued:true,grandTotal:adAmt});
+    c.invoice=Object.assign(inv,{type,adFmt,adAmt,adDesc,prop,date,due,issued:true,grandTotal:adAmt});
     c.hist.unshift(today()+' AD請求（指定フォーマット）¥'+adAmt.toLocaleString()+' 口座情報提示');
     advance(id,'prekey','invoiced',date,'AD請求書（指定フォーマット）発行');
     return;
@@ -957,7 +963,7 @@ function issueInvoice(id) {
   if(rent>0&&grandTotal<rent&&!reason){alert('合計が家賃1ヶ月分未満のため理由の記入が必要です。');return;}
   c.adOnly=(type==='ad_only'||type==='ad_plus');
   const dualInv=(type==='ad_plus'&&adFmt==='standard');
-  c.invoice=Object.assign(inv,{type,adFmt,items,commAmt,totalItems,adAmt,grandTotal,rent,prop,date,due,underReason:reason,issued:true,dualInvoice:dualInv});
+  c.invoice=Object.assign(inv,{type,adFmt,items,commAmt,totalItems,adAmt,adDesc,grandTotal,rent,prop,date,due,underReason:reason,issued:true,dualInvoice:dualInv});
   const adLabel=adAmt>0?' 業務委託¥'+adAmt.toLocaleString():'';
   c.hist.unshift(today()+' 請求書発行 合計¥'+grandTotal.toLocaleString()+adLabel+(dualInv?' [2枚]':''));
   advance(id,'prekey','invoiced',date,'請求書発行完了');
