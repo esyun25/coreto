@@ -253,6 +253,17 @@ let CASES = [
     sub:'エンジニア 年収700万', days:2, stale:false,
     applications:[], memo:['2/19 書類選考通過。一次面接調整中'],
   },
+  { id:'R047800', client:'株式会社タナカ商事', type:'reLet', stage:'apply', agent:'10008',
+    sub:'新宿区 希望 事務所 / 〜¥250,000', days:0, stale:false,
+    clientType:'corporate', contactName:'田中 一郎', contactKana:'タナカ イチロウ',
+    applications:[
+      { id:'APL-060', property:'新宿区西新宿 事務所30坪', mgmtCo:'三菱地所管理', appliedDate:'2026-02-22',
+        status:'reviewing', note:'同時申込（2件）', simultaneous:true },
+      { id:'APL-061', property:'新宿区新宿 事務所25坪', mgmtCo:'東急コミュニティ', appliedDate:'2026-02-22',
+        status:'reviewing', note:'同時申込（2件）', simultaneous:true },
+    ],
+    memo:['2/22 法人契約。2物件同時申込。担当：田中一郎氏'],
+  },
 ];
 
 let activeCaseId = null;
@@ -297,10 +308,13 @@ function renderCard(c, stage) {
     : '<span class="cc-days" style="background:rgba(74,82,112,.2);color:var(--sub)">'+c.days+'日前</span>';
 
   const typeLabel = c.type==='reLet' ? '🏠 賃貸' : c.type==='re-sale' ? '🏢 売買' : '👥 人材';
+  const corpBadge = c.clientType==='corporate' ? ' <span class="pill pill-purple" style="font-size:7px">法人</span>' : '';
+  const simCount = c.applications.filter(a=>a.simultaneous&&(a.status==='reviewing'||a.status==='submitted')).length;
+  const simBadge = simCount>1 ? ' <span class="pill pill-orange" style="font-size:7px">同時'+simCount+'件</span>' : '';
 
   return '<div class="case-card'+(isActive?' active':'')+'" onclick="openCase(\''+c.id+'\')">'
     + (c.stale ? '<div class="stale-dot"></div>' : '')
-    + '<div class="cc-type" style="color:'+stage.color+'">'+typeLabel+'</div>'
+    + '<div class="cc-type" style="color:'+stage.color+'">'+typeLabel+corpBadge+simBadge+'</div>'
     + '<div class="cc-client">'+c.client+'</div>'
     + '<div class="cc-sub">'+c.sub+'</div>'
     + (appBadges ? '<div class="cc-apps">'+appBadges+'</div>' : '')
@@ -338,9 +352,11 @@ function buildDetailBody(c) {
   // Info rows
   const infoGrid = [
     ['種別', c.type==='reLet'?'🏠 賃貸':c.type==='re-sale'?'🏢 売買':'👥 人材'],
+    ['借主区分', c.clientType==='corporate'?'🏢 法人':'👤 個人'],
     ['担当', c.agent],
     ['更新', c.days===0?'本日':c.days+'日前'],
   ];
+  if (c.clientType==='corporate' && c.contactName) infoGrid.push(['法人担当者', c.contactName+(c.contactKana?' ('+c.contactKana+')':'')]);
   if (c.chinkakuDate) infoGrid.push(['賃発日', c.chinkakuDate]);
   if (c.settlementDate) infoGrid.push(['決済日', c.settlementDate]);
   const infoHtml = infoGrid.map(([k,v]) => '<span style="color:var(--muted)">'+k+'</span><span>'+v+'</span>').join('');
@@ -396,8 +412,9 @@ function buildAppRecords(c) {
     if (a.status==='rejected') actions =
       '<button class="btn btn-ghost btn-xs" onclick="openAddAppModal(\''+c.id+'\')">🏠 別物件で再申込</button>';
 
+    const simTag = a.simultaneous ? '<span class="pill pill-orange" style="font-size:8px;margin-left:4px">同時申込</span>' : '';
     return '<div class="app-record ar-'+a.status+'">'
-      + '<div class="ar-hdr"><div class="ar-prop">'+a.property+'</div><span class="pill '+s.cls+'">'+s.icon+' '+s.label+'</span></div>'
+      + '<div class="ar-hdr"><div class="ar-prop">'+a.property+simTag+'</div><span class="pill '+s.cls+'">'+s.icon+' '+s.label+'</span></div>'
       + '<div class="ar-meta"><span>管理会社</span><span>'+a.mgmtCo+'</span><span>申込日</span><span class="mono">'+a.appliedDate+'</span>'
       + (a.note ? '<span>備考</span><span style="color:var(--text)">'+a.note+'</span>' : '')
       + '</div>'
@@ -474,14 +491,29 @@ function openAddAppModal(caseId) {
   const c = CASES.find(c => c.id === caseId);
   const rejExists = c && c.applications.some(a => a.status==='rejected');
   const today = new Date().toISOString().slice(0,10);
+  const activeApps = c ? c.applications.filter(a=>a.status==='reviewing'||a.status==='submitted').length : 0;
+  const simWarning = activeApps > 0
+    ? '<div style="background:rgba(251,146,60,.08);border:1px solid rgba(251,146,60,.2);border-radius:8px;padding:8px 12px;font-size:11px;color:var(--orange);margin-bottom:10px">'
+      + '📋 現在 '+activeApps+' 件が審査中 — 同時申込として追加します（件数上限なし）</div>'
+    : '';
+  const corpNote = c && c.clientType==='corporate'
+    ? '<div style="background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.2);border-radius:8px;padding:8px 12px;font-size:11px;color:var(--purple);margin-bottom:10px">'
+      + '🏢 法人契約 — 保証会社は法人対応のもの（オリコFSビジネス等）を備考に記載</div>'
+    : '';
   document.getElementById('modal-box').innerHTML =
     '<div class="modal-title">🏠 申込レコード追加</div>'
-    + (rejExists ? '<div style="background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);border-radius:8px;padding:8px 12px;font-size:11px;color:var(--red);margin-bottom:10px">⚠️ 審査落ち案件あり — 別物件への再申込として追加</div>' : '')
+    + (rejExists ? '<div style="background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);border-radius:8px;padding:8px 12px;font-size:11px;color:var(--red);margin-bottom:10px">⚠️ 審査落ち案件あり — 別物件への再申込</div>' : '')
+    + simWarning
+    + corpNote
     + '<div class="fg"><label>物件名 *</label><input type="text" id="m-property" placeholder="〇〇マンション 1LDK"></div>'
     + '<div class="fg"><label>管理会社 *</label><input type="text" id="m-mgmt" placeholder="〇〇管理株式会社"></div>'
     + '<div class="fg"><label>申込日 *</label><input type="date" id="m-date" class="mono" value="'+today+'"></div>'
     + '<div class="fg"><label>初期ステータス</label><select id="m-status"><option value="submitted">申込書提出済</option><option value="reviewing">審査中</option></select></div>'
-    + '<div class="fg"><label>備考</label><textarea id="m-note" rows="2" placeholder="同時申込・保証会社・特記事項など"></textarea></div>'
+    + '<div class="fg" style="display:flex;align-items:center;gap:10px;margin-top:10px">'
+    + '<label style="margin:0">同時申込フラグ</label>'
+    + '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;color:var(--text);margin:0">'
+    + '<input type="checkbox" id="m-simul"'+(activeApps>0?' checked':'')+'> この申込を同時申込としてマーク</label></div>'
+    + '<div class="fg"><label>備考</label><textarea id="m-note" rows="2" placeholder="保証会社・特記事項など"></textarea></div>'
     + '<div style="display:flex;gap:8px;margin-top:16px">'
     + '<button class="btn btn-ghost" style="flex:1" onclick="closeModal()">キャンセル</button>'
     + '<button class="btn btn-blue" style="flex:2" onclick="submitApp(\''+caseId+'\')">追加</button></div>';
@@ -494,10 +526,11 @@ function submitApp(caseId) {
   const date     = document.getElementById('m-date').value;
   const status   = document.getElementById('m-status').value;
   const note     = document.getElementById('m-note').value.trim();
+  const simultaneous = document.getElementById('m-simul')?.checked || false;
   if (!property||!mgmtCo||!date) { alert('必須項目を入力してください'); return; }
   const c = CASES.find(c => c.id === caseId);
   const newId = 'APL-'+String(Date.now()).slice(-5);
-  c.applications.push({ id:newId, property, mgmtCo, appliedDate:date, status, note });
+  c.applications.push({ id:newId, property, mgmtCo, appliedDate:date, status, note, simultaneous });
   const today = new Date().toLocaleDateString('ja-JP',{month:'numeric',day:'numeric'});
   c.memo.unshift(today+' 申込追加: '+property+'（'+mgmtCo+'）');
   if (c.stage==='inquiry'||c.stage==='naiken') c.stage='apply';
@@ -512,28 +545,67 @@ function openAddModal(defaultStage) {
     .map(s=>'<option value="'+s.id+'"'+(s.id===defaultStage?' selected':'')+'>'+s.label+'</option>').join('');
   document.getElementById('modal-box').innerHTML =
     '<div class="modal-title">＋ 新規案件登録</div>'
-    +'<div class="fg"><label>クライアント氏名 *</label><input type="text" id="nc-client" placeholder="田中 太郎"></div>'
+    +'<div class="fg"><label>借主区分 *</label>'
+    +'<div style="display:flex;gap:8px;margin-top:4px">'
+    +'<button id="ct-ind" class="btn btn-ghost btn-sm" style="flex:1;border-color:var(--gold);color:var(--gold)" onclick="setClientType(&quot;individual&quot;)">👤 個人</button>'
+    +'<button id="ct-corp" class="btn btn-ghost btn-sm" style="flex:1" onclick="setClientType(&quot;corporate&quot;)">🏢 法人</button>'
+    +'</div></div>'
+    +'<div class="fg"><label id="nc-client-label">氏名 *</label><input type="text" id="nc-client" placeholder="田中 太郎"></div>'
+    +'<div id="nc-corp-fields" style="display:none">'
+    +'<div class="fg"><label>担当者氏名 *</label><input type="text" id="nc-contact" placeholder="田中 一郎"></div>'
+    +'<div class="fg"><label>担当者カナ</label><input type="text" id="nc-contact-kana" placeholder="タナカ イチロウ"></div>'
+    +'</div>'
     +'<div class="fg"><label>案件種別</label><select id="nc-type"><option value="reLet">🏠 賃貸</option><option value="re-sale">🏢 売買</option><option value="hr">👥 人材</option></select></div>'
     +'<div class="fg"><label>概要・希望条件</label><input type="text" id="nc-sub" placeholder="渋谷区 1LDK 〜¥150,000"></div>'
     +'<div class="fg"><label>初期ステージ</label><select id="nc-stage">'+stageOptions+'</select></div>'
     +'<div style="display:flex;gap:8px;margin-top:16px"><button class="btn btn-ghost" style="flex:1" onclick="closeModal()">キャンセル</button><button class="btn btn-blue" style="flex:2" onclick="submitNew()">登録</button></div>';
+  // default to individual
+  window._ncClientType = 'individual';
   document.getElementById('modal-overlay').classList.add('show');
 }
 
 function submitNew() {
   const client = document.getElementById('nc-client').value.trim();
-  if (!client) { alert('クライアント氏名を入力してください'); return; }
+  if (!client) { alert('借主名を入力してください'); return; }
+  const clientType = window._ncClientType || 'individual';
+  const contactName = document.getElementById('nc-contact')?.value.trim() || '';
+  const contactKana = document.getElementById('nc-contact-kana')?.value.trim() || '';
+  if (clientType==='corporate' && !contactName) { alert('法人の場合は担当者氏名を入力してください'); return; }
   const type  = document.getElementById('nc-type').value;
   const sub   = document.getElementById('nc-sub').value.trim();
   const stage = document.getElementById('nc-stage').value;
   const prefix = type==='reLet'?'R':type==='re-sale'?'S':'H';
   const newId = prefix+String(Math.floor(Math.random()*90000+10000));
   const today = new Date().toLocaleDateString('ja-JP',{month:'numeric',day:'numeric'});
-  CASES.unshift({ id:newId, client, type, stage, agent:'10012', sub:sub||'—', days:0, stale:false, applications:[], memo:[today+' 案件登録'] });
+  const caseObj = { id:newId, client, clientType, type, stage, agent:'10012', sub:sub||'—', days:0, stale:false, applications:[], memo:[today+' 案件登録（'+(clientType==='corporate'?'法人':'個人')+'）'] };
+  if (clientType==='corporate') { caseObj.contactName=contactName; if(contactKana) caseObj.contactKana=contactKana; }
+  CASES.unshift(caseObj);
   closeModal();
   renderBoard();
   openCase(newId);
   showToast('案件を登録しました');
+}
+
+function setClientType(type) {
+  window._ncClientType = type;
+  const indBtn  = document.getElementById('ct-ind');
+  const corpBtn = document.getElementById('ct-corp');
+  const corpFields = document.getElementById('nc-corp-fields');
+  const clientLabel = document.getElementById('nc-client-label');
+  if (!indBtn) return;
+  if (type==='individual') {
+    indBtn.style.borderColor='var(--gold)'; indBtn.style.color='var(--gold)';
+    corpBtn.style.borderColor=''; corpBtn.style.color='';
+    corpFields.style.display='none';
+    clientLabel.textContent='氏名 *';
+    document.getElementById('nc-client').placeholder='田中 太郎';
+  } else {
+    corpBtn.style.borderColor='var(--purple)'; corpBtn.style.color='var(--purple)';
+    indBtn.style.borderColor=''; indBtn.style.color='';
+    corpFields.style.display='block';
+    clientLabel.textContent='法人名 *';
+    document.getElementById('nc-client').placeholder='株式会社〇〇';
+  }
 }
 
 function closeModal() { document.getElementById('modal-overlay').classList.remove('show'); }
