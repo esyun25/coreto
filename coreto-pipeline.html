@@ -166,7 +166,6 @@ input[type=date]{color-scheme:dark}
 
 <div class="toolbar">
   <select id="f-type" onchange="render()" style="background:#090b13;border:1px solid var(--border2);border-radius:6px;padding:4px 10px;color:var(--text);font-size:11px;font-family:inherit">
-    <option value="">全種別</option>
     <option value="reLet">🏠 賃貸</option>
     <option value="reSale">🏢 売買</option>
     <option value="hr">👥 人材</option>
@@ -222,10 +221,11 @@ const STEPS_RELET = [
 
 // ステップ定義（売買）
 const STEPS_RESALE = [
+  {id:'naiken',   label:'内見',   icon:'🏠', stage:'naiken'},
   {id:'offer',    label:'買付',   icon:'📄', stage:'apply'},
+  {id:'invoice',  label:'請求書', icon:'🧾', stage:'contract'},
   {id:'contract', label:'契約',   icon:'✍️', stage:'contract'},
-  {id:'payment',  label:'決済',   icon:'💴', stage:'payment'},
-  {id:'done',     label:'引渡し', icon:'🔑', stage:'done'},
+  {id:'settlement',label:'決済',  icon:'💴', stage:'done'},
 ];
 
 // ═══════════════════════════════════════════════
@@ -294,11 +294,24 @@ let CASES = [
    dates:{naiken:'2026-02-09'}, hist:['2/09 内見','2/10 申込','2/14 審査通過','2/21 キャンセル（本人都合）'],
   },
   {id:'S819204', name:'吉田 大輔', type:'reSale', corp:false, agent:'10008',
-   sub:'目黒区 戸建て 3,200万', step:'contract', age:5, stale:false,
-   apps:[], dates:{offer:'2026-02-15', contract:'2026-02-20', settlement:'2026-03-15'},
+   sub:'目黒区 戸建て ¥32,000,000', step:'contract', age:5, stale:false,
+   salePrice:32000000,
+   apps:[], dates:{naiken:'2026-02-10', offer:'2026-02-15', contract:'2026-02-20'},
    hist:['2/15 買付受領','2/20 売買契約締結'],
   },
-];
+
+  {id:'S291047', name:'田中 美咲', type:'reSale', corp:false, agent:'10012',
+   sub:'港区 タワマン ¥65,000,000', step:'offer', age:2, stale:false,
+   salePrice:65000000,
+   apps:[], dates:{offer:'2026-02-21'},
+   hist:['2/21 内見なし・買付提出'],
+  },
+  {id:'S104382', name:'渡辺 健一', type:'reSale', corp:true, agent:'10008',
+   sub:'渋谷区 マンション ¥28,500,000', step:'naiken', age:1, stale:false,
+   salePrice:28500000,
+   apps:[], dates:{naiken:'2026-02-22'},
+   hist:['2/22 内見予定'],
+  },];
 
 let cur = null; // current case id
 
@@ -310,14 +323,19 @@ function stageOf(c) {
   if (step==='done') return 'done';
   if (step==='cancel') return 'cancel';
   if (step==='naiken') return 'naiken';
-  if (step==='apply'||step==='screening') return 'apply';
+  if (step==='apply'||step==='screening'||step==='offer') return 'apply';
   if (step==='payment') return 'payment';
   if (step==='invoice'||step==='prekey'||step==='itsetsu'||step==='key'||step==='contract') return 'contract';
+  if (step==='settlement') return 'done';
   if (step==='offer') return 'apply';
   return 'new';
 }
 
 function render() {
+  // デフォルト: f-type が空なら reLet にセット
+  const ft = document.getElementById('f-type');
+  if(ft && ft.value==='') ft.value='reLet';
+
   const tf = document.getElementById('f-type').value;
   const af = document.getElementById('f-agent').value;
   let cs = CASES;
@@ -452,9 +470,11 @@ function buildStepContent(c) {
   }
   // ── 売買フロー ──
   else if (c.type==='reSale') {
-    if (c.step==='offer') html += stepOffer(c);
+    if (c.step==='naiken') html += stepSaleNaiken(c);
+    else if (c.step==='offer') html += stepOffer(c);
+    else if (c.step==='invoice') html += stepInvoice(c);
     else if (c.step==='contract') html += stepSaleContract(c);
-    else if (c.step==='payment') html += stepSettlement(c);
+    else if (c.step==='settlement'||c.step==='payment') html += stepSettlement(c);
   }
 
   html += '</div>';
@@ -586,16 +606,58 @@ function stepPayment(c) { return stepPrekey(c); }
 function stepItsetsu(c) { return stepPrekey(c); }
 
 // ── 売買 steps ──
+function stepSaleNaiken(c) {
+  const val = c.dates.naiken || new Date().toISOString().slice(0,10);
+  return '<div class="step-title">🏠 内見（売買）</div>'
+    +'<div class="fi"><label>物件名</label><input type="text" id="s-sale-prop" value="'+(c.dates.naikenProp||'')+'" placeholder="〇〇マンション 101号"></div>'
+    +'<div class="fi"><label>内見日</label><input type="date" id="s-naiken-date" class="mono" value="'+val+'"></div>'
+    +'<div style="display:flex;gap:8px;margin-top:14px">'
+    +'<button class="btn btn-green" style="flex:1;justify-content:center" onclick="saleNaikenDone(\''+c.id+'\')">内見完了 → 買付へ</button>'
+    +'<button class="btn btn-ghost btn-sm" onclick="saleSkipNaiken(\''+c.id+'\')">内見なし・買付へスキップ</button>'
+    +'</div>';
+}
+
+function saleNaikenDone(id) {
+  const prop = document.getElementById('s-sale-prop')?.value.trim()||'';
+  const d = document.getElementById('s-naiken-date')?.value||todayISO();
+  const c = CASES.find(x=>x.id===id); if(!c) return;
+  if(prop) c.dates.naikenProp = prop;
+  advance(id,'offer','naiken',d,'内見完了 → 買付');
+}
+
+function saleSkipNaiken(id) {
+  const prop = document.getElementById('s-sale-prop')?.value.trim()||'';
+  const c = CASES.find(x=>x.id===id); if(!c) return;
+  if(prop) c.dates.naikenProp = prop;
+  c.hist.unshift(today()+' 内見なし・買付へ');
+  c.step = 'offer';
+  open_case(id);
+}
+
 function stepOffer(c) {
   const today = new Date().toISOString().slice(0,10);
-  return '<div class="step-title">📄 買付申込</div>'
-    +'<div class="fi"><label>物件名</label><input type="text" id="s-sale-prop" placeholder="〇〇マンション 101号"></div>'
+  const skipLabel = c.dates.naiken ? '' : '<span style="font-size:10px;color:var(--orange);margin-left:8px">内見なし</span>';
+  return '<div class="step-title">📄 買付申込'+skipLabel+'</div>'
+    +'<div class="fi"><label>物件名</label><input type="text" id="s-sale-prop" value="'+(c.dates.naikenProp||'')+'" placeholder="〇〇マンション 101号"></div>'
+    +'<div class="fi"><label>売買価格（円）</label><input type="number" id="s-sale-price" class="mono" placeholder="例: 32000000" value="'+(c.salePrice||'')+'" style="font-size:13px"></div>'
     +'<div class="fi"><label>買付日</label><input type="date" id="s-offer-date" class="mono" value="'+today+'"></div>'
-    +'<button class="btn btn-green" style="width:100%;justify-content:center;margin-top:14px" onclick="offerDone(\''+c.id+'\')">買付受領 → 売買契約へ</button>';
+    +'<button class="btn btn-green" style="width:100%;justify-content:center;margin-top:14px" onclick="offerDone(\''+c.id+'\')">買付受領 → 請求書へ</button>';
 }
 
 function stepSaleContract(c) {
+  const inv = c.invoice||{};
+  const invSummary = (inv.issued) ? (
+    '<div style="margin-bottom:10px;padding:10px 12px;background:rgba(201,168,76,.06);border:1px solid rgba(201,168,76,.2);border-radius:8px;font-size:11px">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">'
+    +'<span style="color:var(--gold);font-weight:700">🧾 発行済み請求書</span>'
+    +'<button onclick="editInvoice(\''+c.id+'\')" style="background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.3);color:var(--gold);border-radius:5px;padding:3px 10px;cursor:pointer;font-size:10px;font-weight:600">✏ 修正</button>'
+    +'</div>'
+    +(inv.prop?'<div style="color:var(--sub);font-size:10px">'+inv.prop+'</div>':'')
+    +(inv.grandTotal?'<div class="mono" style="color:var(--gold);font-size:13px;margin-top:3px">¥'+parseInt(inv.grandTotal).toLocaleString()+'</div>':'')
+    +'</div>'
+  ) : '';
   return '<div class="step-title">✍️ 売買契約</div>'
+    +invSummary
     +'<div class="row" style="margin-bottom:12px">'
     +'<button class="btn btn-blue" onclick="window.open(\'coreto-sale-report.html\',\'_blank\')">売買報告書を開く</button>'
     +'</div>'
@@ -816,8 +878,8 @@ function stepInvoice(c) {
     +'</div>'
     // 3. 家賃（仲介手数料が絡む場合のみ）
     +(showRent ? (
-      '<div class="fi"><label>家賃（月額・税込）<span style="color:var(--muted);font-size:10px;margin-left:6px">上限計算の基準額</span></label>'
-      +'<input type="number" id="inv-rent" class="mono" placeholder="例: 150000" value="'+prevRent+'" oninput="invCalc()" style="font-size:13px"></div>'
+      '<div class="fi"><label id="inv-rent-label">'+(c.type==='reSale'?'売買価格（円）':'家賃（月額・税込）')+'<span style="color:var(--muted);font-size:10px;margin-left:6px">上限計算の基準額</span></label>'
+      +'<input type="number" id="inv-rent" class="mono" placeholder="'+(c.type==='reSale'?'例: 32000000':'例: 150000')+'" value="'+(prevRent||(c.salePrice?String(c.salePrice):''))+'" oninput="invCalc()" style="font-size:13px"></div>'
     ) : '')
     // 4. AD金額（AD絡む場合 — フォーマット確認前に入力）
     +(hasAD ? (
@@ -924,8 +986,11 @@ function invCalc() {
   const totalItems=items.reduce((s,it)=>s+it.amt,0);
   const adAmt=parseInt(document.getElementById('inv-ad-amt')?.value)||0;
   const grandTotal=totalItems+adAmt;
-  const limit11=Math.round(rent*1.1);
-  const limit10=rent;
+  // 売買: 宅建業法上限 = (価格×3%+6万)×1.1
+  const isSaleCalc = !document.getElementById('inv-rent') || (rent > 500000); // heuristic: large = 売買価格
+  const saleLimit = rent<=0 ? 0 : Math.round((rent*0.03+60000)*1.1);
+  const limit11 = rent<=0 ? 0 : (rent > 500000 ? saleLimit : Math.round(rent*1.1));
+  const limit10 = rent;
   let html='';
   if(rent>0&&(totalItems>0||adAmt>0)){
     html+='<div style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:12px">';
@@ -934,11 +999,11 @@ function invCalc() {
     if(adAmt>0) html+='<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="color:var(--sub)">'+adDescDisp+'（AD）</span><span class="mono">¥'+adAmt.toLocaleString()+'</span></div>';
     if(adAmt>0&&totalItems>0) html+='<div style="border-top:1px solid var(--border);margin:5px 0;padding-top:5px;display:flex;justify-content:space-between"><span style="color:var(--sub);font-weight:600">合計</span><span class="mono" style="color:var(--gold);font-size:13px">¥'+grandTotal.toLocaleString()+'</span></div>';
     if(commAmt>0){
-      if(commAmt>limit11) html+='<div style="margin-top:6px;padding:6px 10px;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.4);border-radius:6px;color:var(--red);font-size:11px">⛔ 仲介手数料（¥'+commAmt.toLocaleString()+'）が家賃×1.1（¥'+limit11.toLocaleString()+'）を超過 — 宅建業法違反</div>';
-      else html+='<div style="margin-top:6px;padding:5px 10px;background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.3);border-radius:6px;color:var(--green);font-size:11px">✅ 仲介手数料 ¥'+commAmt.toLocaleString()+' ／ 上限 ¥'+limit11.toLocaleString()+'（家賃×1.1） — 適正</div>';
+      if(commAmt>limit11) html+='<div style="margin-top:6px;padding:6px 10px;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.4);border-radius:6px;color:var(--red);font-size:11px">⛔ 仲介手数料（¥'+commAmt.toLocaleString()+'）が上限（¥'+limit11.toLocaleString()+'）を超過 — 宅建業法違反</div>';
+      else html+='<div style="margin-top:6px;padding:5px 10px;background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.3);border-radius:6px;color:var(--green);font-size:11px">✅ 仲介手数料 ¥'+commAmt.toLocaleString()+' ／ 上限 ¥'+limit11.toLocaleString()+(rent>500000?'（売買価格×3%+6万）×1.1':'（家賃×1.1)')+' — 適正</div>';
     }
     const checkAmt=grandTotal>0?grandTotal:totalItems;
-    if(checkAmt>0){
+    if(checkAmt>0 && rent<=500000){
       if(checkAmt>=limit10) html+='<div style="margin-top:5px;padding:5px 10px;background:rgba(79,156,249,.08);border:1px solid rgba(79,156,249,.3);border-radius:6px;color:var(--blue);font-size:11px">💰 合計 ¥'+checkAmt.toLocaleString()+' ≥ 家賃1ヶ月（¥'+limit10.toLocaleString()+'） — 適正</div>';
       else html+='<div style="margin-top:5px;padding:5px 10px;background:rgba(251,146,60,.1);border:1px solid rgba(251,146,60,.4);border-radius:6px;color:var(--orange);font-size:11px">⚠ 合計 ¥'+checkAmt.toLocaleString()+' が家賃1ヶ月（¥'+limit10.toLocaleString()+'）未満</div>';
       const rw=document.getElementById('inv-reason-wrap');
@@ -971,7 +1036,8 @@ function issueInvoice(id) {
     c.adOnly=true;
     c.invoice=Object.assign(inv,{type,adFmt,adAmt,adDesc,prop,date,due,issued:true,grandTotal:adAmt});
     c.hist.unshift(today()+' AD請求（指定フォーマット）¥'+adAmt.toLocaleString()+' 口座情報提示');
-    advance(id,'prekey','invoiced',date,'AD請求書（指定フォーマット）発行');
+    const destStep2 = c.type==='reSale' ? 'contract' : 'prekey';
+  advance(id,destStep2,'invoiced',date,'AD請求書（指定フォーマット）発行');
     return;
   }
 
@@ -988,7 +1054,8 @@ function issueInvoice(id) {
   const adLabel=adAmt>0?' 業務委託¥'+adAmt.toLocaleString():'';
   c.hist.unshift(today()+' 請求書発行 合計¥'+grandTotal.toLocaleString()+adLabel+(dualInv?' [2枚]':''));
   invSendSlack(c, grandTotal, adAmt, adDesc, dualInv);
-  advance(id,'prekey','invoiced',date,'請求書発行完了');
+  const destStep = c.type==='reSale' ? 'contract' : 'prekey';
+  advance(id,destStep,'invoiced',date,'請求書発行完了');
 }
 
 
@@ -1033,7 +1100,7 @@ function editInvoice(id) {
   const c = CASES.find(x=>x.id===id); if(!c) return;
   // 編集モードに戻す: stepをinvoiceに、issued フラグをリセット
   if(c.invoice) c.invoice.issued = false;
-  c.step = 'invoice';
+  c.step = 'invoice';  // reSale will return to contract after re-issue
   c.hist.unshift(today()+' 請求書修正（再編集）');
   open_case(id);
 }
@@ -1068,11 +1135,15 @@ function keyDone(id) {
 // 売買
 function offerDone(id) {
   const prop = document.getElementById('s-sale-prop')?.value.trim()||'';
-  const d    = document.getElementById('s-offer-date')?.value||todayISO();
-  if(prop){const c=CASES.find(x=>x.id===id);c.dates.naikenProp=prop;}
-  advance(id,'contract','offer',d,'買付受領→契約へ');
+  const price = parseInt(document.getElementById('s-sale-price')?.value)||0;
+  const d = document.getElementById('s-offer-date')?.value||todayISO();
+  const c = CASES.find(x=>x.id===id); if(!c) return;
+  if(prop) c.dates.naikenProp = prop;
+  if(price) c.salePrice = price;
+  if(!c.invoice) c.invoice = {type:'commission'};
+  advance(id,'invoice','offer',d,'買付受領 → 請求書へ');
 }
-function saleContractDone(id) { advance(id,'payment','contract',todayISO(),'売買契約締結'); }
+function saleContractDone(id) { advance(id,'settlement','contract',todayISO(),'売買契約締結'); }
 function settlementDone(id) {
   const d = document.getElementById('s-settlement')?.value||todayISO();
   advance(id,'done','settlement',d,'決済完了 (決済日: '+d+') → 成約');
