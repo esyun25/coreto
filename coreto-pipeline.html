@@ -1,4 +1,17 @@
-<!DOCTYPE html>
+<!DOC
+  {id:'N001001', name:'株式会社アルファ不動産', type:'sannai', corp:true, contactName:'山田 課長', agent:'10008',
+   sub:'世田谷区 一棟マンション ¥180,000,000', step:'verify', age:1, stale:false,
+   salePrice:180000000,
+   buyer:{name:'有限会社ベータ開発', takkenNum:'東京都知事（3）第12345号', verified:false, bypass:false},
+   apps:[], dates:{offer:'2026-02-22'},
+   hist:['2/22 内見なし・買付受領','2/22 宅建業者確認中（東京都知事（3）第12345号）'],
+  },
+  {id:'N002002', name:'合同会社サクラ投資', type:'sannai', corp:true, contactName:'佐藤 部長', agent:'10012',
+   sub:'目黒区 区分マンション ¥45,000,000', step:'naiken', age:0, stale:false,
+   salePrice:45000000,
+   apps:[], dates:{naiken:'2026-02-23'},
+   hist:['2/23 内見予定'],
+  },TYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
@@ -168,6 +181,7 @@ input[type=date]{color-scheme:dark}
   <select id="f-type" onchange="render()" style="background:#090b13;border:1px solid var(--border2);border-radius:6px;padding:4px 10px;color:var(--text);font-size:11px;font-family:inherit">
     <option value="reLet">🏠 賃貸</option>
     <option value="reSale">🏢 売買</option>
+    <option value="sannai">🔄 三為</option>
     <option value="hr">👥 人材</option>
   </select>
   <select id="f-agent" onchange="render()" style="background:#090b13;border:1px solid var(--border2);border-radius:6px;padding:4px 10px;color:var(--text);font-size:11px;font-family:inherit">
@@ -226,6 +240,16 @@ const STEPS_RESALE = [
   {id:'invoice',  label:'請求書', icon:'🧾', stage:'contract'},
   {id:'contract', label:'契約',   icon:'✍️', stage:'contract'},
   {id:'settlement',label:'決済',  icon:'💴', stage:'done'},
+];
+
+// ステップ定義（三為）
+const STEPS_SANNAI = [
+  {id:'naiken',    label:'内見',     icon:'🏠', stage:'naiken'},
+  {id:'offer',     label:'買付',     icon:'📄', stage:'apply'},
+  {id:'verify',    label:'業者確認', icon:'🔍', stage:'apply'},
+  {id:'invoice',   label:'請求書',   icon:'🧾', stage:'contract'},
+  {id:'contract',  label:'契約',     icon:'✍️', stage:'contract'},
+  {id:'settlement',label:'決済',     icon:'💴', stage:'done'},
 ];
 
 // ═══════════════════════════════════════════════
@@ -323,7 +347,7 @@ function stageOf(c) {
   if (step==='done') return 'done';
   if (step==='cancel') return 'cancel';
   if (step==='naiken') return 'naiken';
-  if (step==='apply'||step==='screening'||step==='offer') return 'apply';
+  if (step==='apply'||step==='screening'||step==='offer'||step==='verify') return 'apply';
   if (step==='payment') return 'payment';
   if (step==='invoice'||step==='prekey'||step==='itsetsu'||step==='key'||step==='contract') return 'contract';
   if (step==='settlement') return 'done';
@@ -376,7 +400,7 @@ function cardHTML(c, st) {
     ? '<span class="age" style="background:rgba(248,113,113,.1);color:var(--red)">'+c.age+'日前</span>'
     : '<span class="age" style="background:rgba(74,82,112,.15);color:var(--sub)">'+c.age+'日前</span>';
 
-  const typeEl = c.type==='reLet'?'🏠 賃貸':c.type==='reSale'?'🏢 売買':'👥 人材';
+  const typeEl = c.type==='reLet'?'🏠 賃貸':c.type==='reSale'?'🏢 売買':c.type==='sannai'?'🔄 三為':'👥 人材';
 
   return '<div class="card'+(isCur?' active':'')+'" onclick="open_case(\''+c.id+'\')">'
     +(c.stale?'<div class="stale"></div>':'')
@@ -422,7 +446,7 @@ function close_panel() {
 }
 
 function buildStepBar(c) {
-  const steps = c.type==='reLet' ? STEPS_RELET : c.type==='reSale' ? STEPS_RESALE : [];
+  const steps = c.type==='reLet' ? STEPS_RELET : c.type==='reSale' ? STEPS_RESALE : c.type==='sannai' ? STEPS_SANNAI : [];
   if (!steps.length) return '';
   const curIdx = steps.findIndex(s=>s.id===c.step);
 
@@ -467,6 +491,33 @@ function buildStepContent(c) {
     else if (c.step==='payment') html += stepPayment(c);
     else if (c.step==='itsetsu') html += stepPrekey(c);
     else if (c.step==='key') html += stepKey(c);
+  }
+  // ── 三為フロー ──
+  else if (c.type==='sannai') {
+    if (c.step==='naiken') html += stepSaleNaiken(c);
+    else if (c.step==='offer') html += stepSannaiOffer(c);
+    else if (c.step==='verify') html += stepSannaiVerify(c);
+    else if (c.step==='invoice') html += stepInvoice(c);
+    else if (c.step==='contract') html += stepSaleContract(c);
+    else if (c.step==='settlement') html += stepSettlement(c);
+  }
+  // ── 三為フロー ──
+  else if (c.type==='sannai') {
+    if (c.step==='naiken') html += stepSaleNaiken(c);
+    else if (c.step==='offer') html += stepSannaiOffer(c);
+    else if (c.step==='verify') html += stepSannaiVerify(c);
+    else if (c.step==='invoice') html += stepInvoice(c);
+    else if (c.step==='contract') html += stepSaleContract(c);
+    else if (c.step==='settlement') html += stepSettlement(c);
+  }
+  // ── 三為フロー ──
+  else if (c.type==='sannai') {
+    if (c.step==='naiken') html += stepSaleNaiken(c);
+    else if (c.step==='offer') html += stepSannaiOffer(c);
+    else if (c.step==='verify') html += stepSannaiVerify(c);
+    else if (c.step==='invoice') html += stepInvoice(c);
+    else if (c.step==='contract') html += stepSaleContract(c);
+    else if (c.step==='settlement') html += stepSettlement(c);
   }
   // ── 売買フロー ──
   else if (c.type==='reSale') {
@@ -1036,7 +1087,7 @@ function issueInvoice(id) {
     c.adOnly=true;
     c.invoice=Object.assign(inv,{type,adFmt,adAmt,adDesc,prop,date,due,issued:true,grandTotal:adAmt});
     c.hist.unshift(today()+' AD請求（指定フォーマット）¥'+adAmt.toLocaleString()+' 口座情報提示');
-    const destStep2 = c.type==='reSale' ? 'contract' : 'prekey';
+    const destStep2 = (c.type==='reSale'||c.type==='sannai') ? 'contract' : 'prekey';
   advance(id,destStep2,'invoiced',date,'AD請求書（指定フォーマット）発行');
     return;
   }
@@ -1054,7 +1105,7 @@ function issueInvoice(id) {
   const adLabel=adAmt>0?' 業務委託¥'+adAmt.toLocaleString():'';
   c.hist.unshift(today()+' 請求書発行 合計¥'+grandTotal.toLocaleString()+adLabel+(dualInv?' [2枚]':''));
   invSendSlack(c, grandTotal, adAmt, adDesc, dualInv);
-  const destStep = c.type==='reSale' ? 'contract' : 'prekey';
+  const destStep = (c.type==='reSale'||c.type==='sannai') ? 'contract' : 'prekey';
   advance(id,destStep,'invoiced',date,'請求書発行完了');
 }
 
@@ -1133,6 +1184,178 @@ function keyDone(id) {
 }
 
 // 売買
+// ═══════════════════════════════════════
+// 三為 STEP FUNCTIONS
+// ═══════════════════════════════════════
+
+function stepSannaiOffer(c) {
+  const today = new Date().toISOString().slice(0,10);
+  const skipLabel = c.dates.naiken ? '' : '<span style="font-size:10px;color:var(--orange);margin-left:8px">内見なし</span>';
+  return '<div class="step-title">📄 買付（三為）'+skipLabel+'</div>'
+    +'<div class="fi"><label>物件名</label><input type="text" id="s-sale-prop" value="'+(c.dates.naikenProp||'')+'" placeholder="〇〇マンション 101号"></div>'
+    +'<div class="fi"><label>売買価格（円）</label><input type="number" id="s-sale-price" class="mono" placeholder="例: 45000000" value="'+(c.salePrice||'')+'" style="font-size:13px"></div>'
+    +'<div class="fi"><label>買付日</label><input type="date" id="s-offer-date" class="mono" value="'+today+'"></div>'
+    +'<button class="btn btn-green" style="width:100%;justify-content:center;margin-top:14px" onclick="sannaiOfferDone(\''+c.id+'\')">買付受領 → 業者確認へ</button>';
+}
+
+function sannaiOfferDone(id) {
+  const prop = document.getElementById('s-sale-prop')?.value.trim()||'';
+  const price = parseInt(document.getElementById('s-sale-price')?.value)||0;
+  const d = document.getElementById('s-offer-date')?.value||todayISO();
+  const c = CASES.find(x=>x.id===id); if(!c) return;
+  if(prop) c.dates.naikenProp = prop;
+  if(price) c.salePrice = price;
+  if(!c.buyer) c.buyer = {name:'', takkenNum:'', verified:false, bypass:false};
+  advance(id,'verify','offer',d,'買付受領 → 業者確認へ');
+}
+
+function stepSannaiVerify(c) {
+  const b = c.buyer || {};
+  const verified = b.verified || false;
+  const bypass   = b.bypass  || false;
+  const id = c.id;
+
+  // ── 確認済み or バイパス済み → 次へ進めるボタン ──
+  if (verified || bypass) {
+    const statusBg  = bypass ? 'rgba(251,146,60,.08)' : 'rgba(52,211,153,.08)';
+    const statusBdr = bypass ? 'rgba(251,146,60,.3)'  : 'rgba(52,211,153,.3)';
+    const statusClr = bypass ? 'var(--orange)' : 'var(--green)';
+    const statusTxt = bypass
+      ? '⚠ 特例承認済（一般法人）— ' + (b.bypassReason||'本部承認')
+      : '✅ 宅建業者確認済 — ' + b.takkenNum;
+    const buyerName = b.name ? (' / ' + b.name) : '';
+    return '<div class="step-title">🔍 買主業者確認（三為）</div>'
+      +'<div style="padding:12px;background:'+statusBg+';border:1px solid '+statusBdr+';border-radius:8px;margin-bottom:12px;font-size:11px">'
+      +'<div style="color:'+statusClr+';font-weight:700;margin-bottom:4px">'+statusTxt+'</div>'
+      +'<div style="color:var(--sub)">買主'+buyerName+'</div>'
+      +'</div>'
+      +'<button class="btn btn-green" style="width:100%;justify-content:center" onclick="sannaiVerifyPass(\''+id+'\')">→ 請求書へ</button>'
+      +'<div style="margin-top:8px;text-align:right">'
+      +'<button class="btn btn-ghost btn-sm" onclick="sannaiVerifyReset(\''+id+'\')">↩ 再入力</button>'
+      +'</div>';
+  }
+
+  // ── 入力フォーム ──
+  return '<div class="step-title">🔍 買主業者確認（三為）</div>'
+    +'<div style="padding:10px 12px;background:rgba(79,156,249,.06);border:1px solid rgba(79,156,249,.2);border-radius:8px;margin-bottom:12px;font-size:11px;color:var(--sub)">'
+    +'三為取引の原則: 買主は宅建業者に限ります。宅建業者番号を入力して本部確認を依頼してください。'
+    +'</div>'
+    +'<div class="fi"><label>買主 会社名</label><input type="text" id="sn-buyer-name" placeholder="例: 株式会社〇〇不動産" value="'+(b.name||'')+'"></div>'
+    +'<div class="fi"><label>宅建業者番号</label><input type="text" id="sn-takken" class="mono" placeholder="例: 東京都知事（3）第12345号" value="'+(b.takkenNum||'')+'" style="font-size:12px"></div>'
+    +'<button class="btn btn-blue" style="width:100%;justify-content:center;margin-top:4px" onclick="sannaiRequestVerify(\''+id+'\')">📨 本部に確認依頼（Slack通知）</button>'
+    +'<div style="margin:14px 0;border-top:1px solid var(--border);padding-top:12px">'
+    +'<div style="font-size:10px;color:var(--muted);margin-bottom:6px;font-weight:600">⚠ 特例: 一般法人への販売（本部承認コード必須）</div>'
+    +'<div style="display:flex;gap:6px">'
+    +'<input type="text" id="sn-bypass-code" placeholder="承認コードを入力..." style="flex:1;background:#090b13;border:1px solid var(--border2);border-radius:7px;padding:7px 10px;color:var(--text);font-size:12px;font-family:var(--mono);letter-spacing:.08em" onkeydown="if(event.key===\'Enter\')sannaiBypass(\''+id+'\')">'
+    +'<button class="btn btn-ghost btn-sm" onclick="sannaiBypass(\''+id+'\')">承認</button>'
+    +'</div></div>';
+}
+
+// 本部にSlack通知 → ページ内では pending 状態にする
+function sannaiRequestVerify(id) {
+  const c = CASES.find(x=>x.id===id); if(!c) return;
+  const name   = document.getElementById('sn-buyer-name')?.value.trim()||'';
+  const takken = document.getElementById('sn-takken')?.value.trim()||'';
+  if(!name||!takken){alert('会社名と宅建業者番号を入力してください');return;}
+  if(!c.buyer) c.buyer={};
+  c.buyer.name     = name;
+  c.buyer.takkenNum= takken;
+  c.buyer.verified = false;
+  c.buyer.bypass   = false;
+
+  // Slack payload
+  const lines = [
+    '━━━━━━━━━━━━━━━━━━━━━━',
+    '🔍 *三為 買主業者確認依頼*',
+    '━━━━━━━━━━━━━━━━━━━━━━',
+    `📁 *案件ID*：${id}`,
+    `🏠 *物件*：${c.dates.naikenProp||c.sub||'—'}`,
+    `💴 *売買価格*：¥${(c.salePrice||0).toLocaleString()}`,
+    `👤 *担当エージェント*：${c.agent}`,
+    `🏢 *買主*：${name}`,
+    `📋 *宅建業者番号*：${takken}`,
+    '━━━━━━━━━━━━━━━━━━━━━━',
+    '✅ 確認後、CORETO で「業者確認済」にしてください。',
+    `🕐 ${new Date().toLocaleString('ja-JP')}`,
+  ].join('\n');
+
+  console.log('[Slack #三為確認] ', lines);
+  try {
+    const ta=document.createElement('textarea');
+    ta.value=lines; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+  } catch(e){}
+
+  c.hist.unshift(today()+' 買主業者確認依頼 Slack送信（'+name+' / '+takken+'）');
+  open_case(id);
+  toast('本部に確認依頼を送信しました 📨');
+}
+
+// 本部が確認完了した後エージェントが押す
+function sannaiVerifyPass(id) {
+  const c = CASES.find(x=>x.id===id); if(!c) return;
+  if(!c.buyer) c.buyer={};
+  c.buyer.verified = true;
+  if(!c.invoice) c.invoice = {type:'commission'};
+  advance(id,'invoice','verified',todayISO(),'業者確認済 → 請求書へ');
+}
+
+function sannaiVerifyReset(id) {
+  const c = CASES.find(x=>x.id===id); if(!c) return;
+  if(c.buyer) { c.buyer.verified=false; c.buyer.bypass=false; }
+  open_case(id);
+}
+
+// 特例バイパス: 本部が発行した承認コードを入力
+const SANNAI_BYPASS_CODES = {
+  'CORP-OVERRIDE-2026': '本部承認: 一般法人特例（2026年度）',
+  'HQ-SPECIAL-OK': '本部特別承認',
+};
+
+function sannaiBypass(id) {
+  const c = CASES.find(x=>x.id===id); if(!c) return;
+  const code = (document.getElementById('sn-bypass-code')?.value||'').trim().toUpperCase();
+  const reason = SANNAI_BYPASS_CODES[code];
+  if(!reason) {
+    alert('承認コードが正しくありません。
+本部から受け取ったコードを正確に入力してください。');
+    return;
+  }
+  const name = document.getElementById('sn-buyer-name')?.value.trim()||c.buyer?.name||'';
+  if(!name){alert('買主の会社名を入力してください');return;}
+  if(!c.buyer) c.buyer={};
+  c.buyer.name     = name;
+  c.buyer.bypass   = true;
+  c.buyer.verified = false;
+  c.buyer.bypassReason = reason;
+
+  // Slackに特例承認の通知
+  const lines2 = [
+    '━━━━━━━━━━━━━━━━━━━━━━',
+    '⚠ *三為 特例承認（一般法人）*',
+    '━━━━━━━━━━━━━━━━━━━━━━',
+    `📁 *案件ID*：${id}`,
+    `🏠 *物件*：${c.dates.naikenProp||c.sub||'—'}`,
+    `💴 *売買価格*：¥${(c.salePrice||0).toLocaleString()}`,
+    `🏢 *買主*：${name}`,
+    `🔑 *承認コード*：${code}`,
+    `📝 *理由*：${reason}`,
+    '━━━━━━━━━━━━━━━━━━━━━━',
+    `🕐 ${new Date().toLocaleString('ja-JP')}`,
+  ].join('\n');
+  console.log('[Slack #三為確認] ', lines2);
+  try {
+    const ta=document.createElement('textarea');
+    ta.value=lines2; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+  } catch(e){}
+
+  c.hist.unshift(today()+' 特例承認（一般法人）コード: '+code+' / '+name);
+  if(!c.invoice) c.invoice={type:'commission'};
+  advance(id,'invoice','bypassed',todayISO(),'特例承認 → 請求書へ');
+  toast('特例承認 ✅ 請求書へ進みます');
+}
+
 function offerDone(id) {
   const prop = document.getElementById('s-sale-prop')?.value.trim()||'';
   const price = parseInt(document.getElementById('s-sale-price')?.value)||0;
@@ -1162,7 +1385,7 @@ function reactivate(id) {
 function jumpStep(id, stepId) {
   const c = CASES.find(x=>x.id===id);
   if(!c) return;
-  const steps = c.type==='reLet'?STEPS_RELET:STEPS_RESALE;
+  const steps = c.type==='reLet'?STEPS_RELET:c.type==='sannai'?STEPS_SANNAI:STEPS_RESALE;
   const valid = steps.map(s=>s.id);
   if(!valid.includes(stepId)) return;
   c.step = stepId;
@@ -1194,7 +1417,7 @@ function openNewModal(stageHint) {
     +'</div>'
     +'<div class="fi"><label id="nc-name-lbl">氏名</label><input type="text" id="nc-name" placeholder="田中 太郎"></div>'
     +'<div id="nc-corp-ext" style="display:none"><div class="fi"><label>担当者名</label><input type="text" id="nc-contact" placeholder="田中 一郎"></div></div>'
-    +'<div class="fi"><label>種別</label><select id="nc-type" onchange="toggleAD()"><option value="reLet">🏠 賃貸</option><option value="reSale">🏢 売買</option><option value="hr">👥 人材</option></select></div>'+'<div id="nc-ad-wrap" style="margin-bottom:10px"><label style="display:flex;align-items:center;gap:7px;font-size:11px;cursor:pointer"><input type="checkbox" id="nc-ad"> AD案件（仲介手数料は鍵渡し後入金）</label></div>'
+    +'<div class="fi"><label>種別</label><select id="nc-type" onchange="toggleAD()"><option value="reLet">🏠 賃貸</option><option value="reSale">🏢 売買</option><option value="sannai">🔄 三為</option><option value="hr">👥 人材</option></select></div>'+'<div id="nc-ad-wrap" style="margin-bottom:10px"><label style="display:flex;align-items:center;gap:7px;font-size:11px;cursor:pointer"><input type="checkbox" id="nc-ad"> AD案件（仲介手数料は鍵渡し後入金）</label></div>'
     +'<div class="fi"><label>希望条件</label><input type="text" id="nc-sub" placeholder="渋谷区 1LDK 〜¥150,000"></div>'
     +'<div class="row" style="margin-top:14px"><button class="btn btn-ghost" style="flex:1" onclick="closeModal()">キャンセル</button>'
     +'<button class="btn btn-gold" style="flex:2;justify-content:center" onclick="createCase()">登録</button></div>'
