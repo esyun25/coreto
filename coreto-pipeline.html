@@ -2,6 +2,10 @@
   {id:'N001001', name:'株式会社アルファ不動産', type:'sannai', corp:true, contactName:'山田 課長', agent:'10008',
    sub:'世田谷区 一棟マンション ¥180,000,000', step:'verify', age:1, stale:false,
    salePrice:180000000,
+   sannai:{buyPrice:165000000, sellPrice:180000000, commPayMode:'both',
+     commBuyCo:'東急リバブル', commBuyAmt:3300000,
+     commSellCo:'住友不動産販売', commSellAmt:2200000,
+     delegPay:[{co:'コンサル株式会社', type:'other', amt:550000}]},
    buyer:{name:'有限会社ベータ開発', takkenNum:'東京都知事（3）第12345号', verified:false,
      verifyState:'pending', pendingCode:'K7X9QM'},
    apps:[], dates:{naiken:'2026-02-21'},
@@ -740,6 +744,55 @@ function stepOffer(c) {
 function stepSaleContract(c) {
   const inv = c.invoice||{};
   const fromLabel = inv.saleFrom==='both'?'両手（売主＋買主）':inv.saleFrom==='buyer'?'買主から':'売主から';
+
+  // 三為の場合: 取引概要サマリーを先頭に表示
+  let sannaiCostSummary = '';
+  if (c.type === 'sannai') {
+    const sn = c.sannai || {};
+    const bp = sn.buyPrice || 0;
+    const sp = sn.sellPrice || c.salePrice || 0;
+    const spread = sp - bp;
+    const commBuyAmt  = sn.commBuyAmt  || 0;
+    const commSellAmt = sn.commSellAmt || 0;
+    const delegTotal  = (sn.delegPay||[]).reduce((s,r)=>s+(r.amt||0),0);
+    const totalOut = commBuyAmt + commSellAmt + delegTotal;
+    const profit = spread - totalOut;
+
+    if (bp || sp || totalOut) {
+      sannaiCostSummary = '<div style="margin-bottom:12px;padding:12px;background:rgba(201,168,76,.06);border:1px solid rgba(201,168,76,.2);border-radius:10px;font-size:11px">'
+        +'<div style="font-size:10px;color:var(--gold);font-weight:700;letter-spacing:.8px;margin-bottom:8px">📊 取引概要</div>'
+        +'<div style="display:grid;grid-template-columns:auto 1fr;gap:3px 12px;line-height:1.9">';
+      if(bp) sannaiCostSummary += '<span style="color:var(--muted)">仕入れ価格</span><span class="mono" style="color:var(--sub)">¥'+bp.toLocaleString()+'</span>';
+      if(sp) sannaiCostSummary += '<span style="color:var(--muted)">販売価格</span><span class="mono" style="color:var(--sub)">¥'+sp.toLocaleString()+'</span>';
+      if(bp&&sp) {
+        const sc = spread>=0?'var(--green)':'var(--red)';
+        sannaiCostSummary += '<span style="color:var(--muted)">スプレッド</span><span class="mono" style="color:'+sc+';font-weight:700">'+(spread>=0?'+':'')+'¥'+spread.toLocaleString()+'</span>';
+      }
+      if(sn.commPayMode && sn.commPayMode!=='none') {
+        sannaiCostSummary += '<span style="color:var(--border2);grid-column:1/-1;border-top:1px solid var(--border);margin:3px 0"></span>';
+        if(commBuyAmt) sannaiCostSummary += '<span style="color:var(--muted)">買い側仲介手数料 ('+(sn.commBuyCo||'—')+')</span><span class="mono" style="color:var(--orange)">-¥'+commBuyAmt.toLocaleString()+'</span>';
+        if(commSellAmt) sannaiCostSummary += '<span style="color:var(--muted)">売り側仲介手数料 ('+(sn.commSellCo||'—')+')</span><span class="mono" style="color:var(--orange)">-¥'+commSellAmt.toLocaleString()+'</span>';
+      }
+      if((sn.delegPay||[]).length > 0) {
+        (sn.delegPay||[]).forEach(r => {
+          const typeLabel = r.type==='broker'?'仲介会社':'その他';
+          sannaiCostSummary += '<span style="color:var(--muted)">業務委託 '+typeLabel+' ('+(r.co||'—')+')</span><span class="mono" style="color:var(--purple)">-¥'+(r.amt||0).toLocaleString()+'</span>';
+        });
+      }
+      if(totalOut > 0) {
+        sannaiCostSummary += '<span style="color:var(--border2);grid-column:1/-1;border-top:1px solid var(--border);margin:3px 0"></span>';
+        const pc = profit>=0?'var(--green)':'var(--red)';
+        sannaiCostSummary += '<span style="color:var(--text);font-weight:700">概算粗利</span><span class="mono" style="color:'+pc+';font-weight:700;font-size:13px">'+(profit>=0?'+':'')+'¥'+profit.toLocaleString()+'</span>';
+      }
+      sannaiCostSummary += '</div>'
+        +'<button onclick="open_case(\''+c.id+'\')" style="display:none" id="sn-back-offer"></button>'
+        +'<div style="margin-top:8px;text-align:right">'
+        +'<a href="#" onclick="editSannaiOffer(\''+c.id+'\')" style="font-size:10px;color:var(--muted);text-decoration:none">✏ 取引概要を修正</a>'
+        +'</div>'
+        +'</div>';
+    }
+  }
+
   const invSummary = (inv.issued) ? (
     '<div style="margin-bottom:10px;padding:10px 12px;background:rgba(201,168,76,.06);border:1px solid rgba(201,168,76,.2);border-radius:8px;font-size:11px">'
     +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
@@ -756,7 +809,7 @@ function stepSaleContract(c) {
     +(inv.grandTotal?'<span style="font-weight:700">合計</span><span class="mono" style="color:var(--gold);font-weight:700">¥'+parseInt(inv.grandTotal).toLocaleString()+'</span>':'')
     +'</div></div>'
   ) : '';
-  return '<div class="step-title">✍️ 売買契約</div>'
+  return sannaiCostSummary + '<div class="step-title">✍️ 売買契約</div>'
     +invSummary
     +'<div class="row" style="margin-bottom:12px">'
     +'<button class="btn btn-blue" onclick="window.open(\'coreto-sale-report.html\',\'_blank\')">売買報告書を開く</button>'
@@ -1516,25 +1569,236 @@ function keyDone(id) {
 function stepSannaiOffer(c) {
   const today = new Date().toISOString().slice(0,10);
   const skipLabel = c.dates.naiken ? '' : '<span style="font-size:10px;color:var(--orange);margin-left:8px">内見なし</span>';
+  const sn = c.sannai || {};
+  const commPayMode = sn.commPayMode || 'none'; // none / buy / sell / both
+  const delegRows   = sn.delegPay   || [];
+  const id = c.id;
+
+  // 仲介手数料支払いモードボタン
+  const commModes = [
+    {v:'none', label:'なし'},
+    {v:'buy',  label:'買い側'},
+    {v:'sell', label:'売り側'},
+    {v:'both', label:'両側'},
+  ];
+  const commModeBtns = commModes.map(m => {
+    const active = commPayMode === m.v;
+    const bg = active ? 'background:var(--orange);color:#000' : 'background:var(--card2);color:var(--sub)';
+    return '<button onclick="sannaiSetCommMode(this)" data-cid="'+id+'" data-mode="'+m.v+'" style="flex:1;padding:6px 2px;border:none;cursor:pointer;font-size:11px;font-weight:600;border-radius:6px;'+bg+'">'+m.label+'</button>';
+  }).join('');
+
+  // 仲介手数料入力欄（モードに応じて表示）
+  let commPayFields = '';
+  if (commPayMode === 'buy' || commPayMode === 'both') {
+    commPayFields += '<div style="display:grid;grid-template-columns:1fr auto;gap:6px;align-items:end;margin-top:8px">'
+      +'<div class="fi" style="margin-bottom:0"><label style="color:var(--blue)">買い側 仲介会社名</label>'
+      +'<input type="text" id="sn-comm-buy-co" placeholder="例: 株式会社〇〇不動産" value="'+(sn.commBuyCo||'')+'" style="font-size:12px"></div>'
+      +'<div class="fi" style="margin-bottom:0"><label style="color:var(--blue)">金額（税込）</label>'
+      +'<input type="text" id="sn-comm-buy-amt" class="mono" placeholder="0" value="'+(sn.commBuyAmt?fmtYen(sn.commBuyAmt):'')+'" oninput="invSalePriceInput(this)" style="width:110px;font-size:13px"></div>'
+      +'</div>';
+  }
+  if (commPayMode === 'sell' || commPayMode === 'both') {
+    commPayFields += '<div style="display:grid;grid-template-columns:1fr auto;gap:6px;align-items:end;margin-top:8px">'
+      +'<div class="fi" style="margin-bottom:0"><label style="color:var(--green)">売り側 仲介会社名</label>'
+      +'<input type="text" id="sn-comm-sell-co" placeholder="例: 株式会社〇〇不動産" value="'+(sn.commSellCo||'')+'" style="font-size:12px"></div>'
+      +'<div class="fi" style="margin-bottom:0"><label style="color:var(--green)">金額（税込）</label>'
+      +'<input type="text" id="sn-comm-sell-amt" class="mono" placeholder="0" value="'+(sn.commSellAmt?fmtYen(sn.commSellAmt):'')+'" oninput="invSalePriceInput(this)" style="width:110px;font-size:13px"></div>'
+      +'</div>';
+  }
+
+  // 業務委託手数料行
+  const delegHtml = delegRows.map((r,i) => sannaiDelegRow(i, r)).join('');
+
+  // 粗利プレビュー
+  const profitHtml = sannaiProfitPreview(sn, c.salePrice || sn.sellPrice || 0);
+
   return '<div class="step-title">📄 買付（三為）'+skipLabel+'</div>'
     +'<div class="fi"><label>物件名</label><input type="text" id="s-sale-prop" value="'+(c.dates.naikenProp||'')+'" placeholder="〇〇マンション 101号"></div>'
-    +'<div class="fi"><label>売買価格（円）</label><input type="text" id="s-sale-price" class="mono" placeholder="例: 45,000,000" value="'+(c.salePrice||'')+'" style="font-size:13px"></div>'
     +'<div class="fi"><label>買付日</label><input type="date" id="s-offer-date" class="mono" value="'+today+'"></div>'
-    +'<button class="btn btn-green" style="width:100%;justify-content:center;margin-top:14px" data-cid="'+c.id+'" onclick="sannaiOfferDone(this.dataset.cid)">買付受領 → 請求書へ</button>';
+
+    // ── 取引価格 ──
+    +'<div style="margin:12px 0 8px;padding:12px;background:rgba(201,168,76,.06);border:1px solid rgba(201,168,76,.2);border-radius:10px">'
+    +'<div style="font-size:10px;color:var(--gold);font-weight:700;letter-spacing:.8px;margin-bottom:10px">💴 取引価格</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
+    +'<div class="fi" style="margin-bottom:0"><label>仕入れ価格（円）<br><span style="font-size:9px;color:var(--muted);font-weight:400">売主への支払い</span></label>'
+    +'<input type="text" id="sn-buy-price" class="mono" placeholder="例: 40,000,000" value="'+(sn.buyPrice?fmtYen(sn.buyPrice):'')+'" oninput="sannaiCalcProfit()" style="font-size:13px"></div>'
+    +'<div class="fi" style="margin-bottom:0"><label>販売価格（円）<br><span style="font-size:9px;color:var(--muted);font-weight:400">買主からの受取</span></label>'
+    +'<input type="text" id="sn-sell-price" class="mono" placeholder="例: 45,000,000" value="'+(sn.sellPrice||c.salePrice?fmtYen(sn.sellPrice||c.salePrice):'')+'" oninput="sannaiCalcProfit()" style="font-size:13px"></div>'
+    +'</div>'
+    +'<div id="sn-spread" style="margin-top:8px"></div>'
+    +'</div>'
+
+    // ── 支払い仲介手数料 ──
+    +'<div style="margin:10px 0 8px;padding:12px;background:rgba(251,146,60,.04);border:1px solid rgba(251,146,60,.15);border-radius:10px">'
+    +'<div style="font-size:10px;color:var(--orange);font-weight:700;letter-spacing:.8px;margin-bottom:8px">💸 支払い仲介手数料</div>'
+    +'<div style="display:flex;gap:4px;background:var(--card2);padding:3px;border-radius:7px">'+commModeBtns+'</div>'
+    +commPayFields
+    +'</div>'
+
+    // ── 業務委託手数料（支払い） ──
+    +'<div style="margin:10px 0 8px;padding:12px;background:rgba(167,139,250,.04);border:1px solid rgba(167,139,250,.15);border-radius:10px">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
+    +'<div style="font-size:10px;color:var(--purple);font-weight:700;letter-spacing:.8px">📋 支払い業務委託手数料</div>'
+    +'<button data-cid="'+id+'" onclick="sannaiAddDeleg(this.dataset.cid)" style="background:rgba(167,139,250,.15);border:1px solid rgba(167,139,250,.3);color:var(--purple);border-radius:6px;padding:3px 10px;cursor:pointer;font-size:10px;font-weight:600">＋ 追加</button>'
+    +'</div>'
+    +(delegRows.length === 0
+      ? '<div style="font-size:11px;color:var(--muted);text-align:center;padding:8px">なし（＋ 追加で入力）</div>'
+      : '<div id="sn-deleg-rows">'+delegHtml+'</div>')
+    +'</div>'
+
+    +profitHtml
+    +'<button class="btn btn-green" style="width:100%;justify-content:center;margin-top:14px" data-cid="'+id+'" onclick="sannaiOfferDone(this.dataset.cid)">買付受領 → 請求書へ</button>';
+}
+
+// ── 三為: 業務委託手数料行HTML ──
+function sannaiDelegRow(idx, r) {
+  r = r || {};
+  const typeOpts = [
+    {v:'broker', label:'仲介会社'},
+    {v:'other',  label:'その他'},
+  ];
+  const typeHtml = typeOpts.map(o =>
+    '<option value="'+o.v+'"'+(r.type===o.v?' selected':'')+'>'+o.label+'</option>'
+  ).join('');
+  return '<div class="sn-deleg-row" data-idx="'+idx+'" style="display:grid;grid-template-columns:1fr 90px 100px auto;gap:5px;margin-bottom:6px;align-items:center">'
+    +'<input type="text" placeholder="会社名 / 内容" value="'+(r.co||'')+'" style="font-size:11px">'
+    +'<select style="background:#090b13;border:1px solid var(--border2);border-radius:7px;padding:5px 6px;color:var(--sub);font-size:10px;font-family:inherit">'+typeHtml+'</select>'
+    +'<input type="text" placeholder="金額（税込）" value="'+(r.amt?fmtYen(r.amt):'')+'" class="mono" style="font-size:12px" oninput="invSalePriceInput(this)">'
+    +'<button onclick="sannaiRemoveDeleg(this)" style="background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);color:var(--red);border-radius:6px;width:26px;height:26px;cursor:pointer;font-size:13px;padding:0">×</button>'
+    +'</div>';
+}
+
+function sannaiRemoveDeleg(btn) {
+  btn.closest('.sn-deleg-row')?.remove();
+  sannaiCalcProfit();
+}
+
+function sannaiAddDeleg(id) {
+  const c = CASES.find(x=>x.id===id); if(!c) return;
+  if(!c.sannai) c.sannai = {};
+  if(!c.sannai.delegPay) c.sannai.delegPay = [];
+  c.sannai.delegPay.push({co:'', type:'broker', amt:0});
+  open_case(id);
+}
+
+function sannaiSetCommMode(btn) {
+  const id = btn.dataset.cid, mode = btn.dataset.mode;
+  const c = CASES.find(x=>x.id===id); if(!c) return;
+  if(!c.sannai) c.sannai = {};
+  c.sannai.commPayMode = mode;
+  open_case(id);
+}
+
+function sannaiCalcProfit() {
+  const buyPrice  = parseInt((document.getElementById('sn-buy-price')?.value||'').replace(/,/g,''))||0;
+  const sellPrice = parseInt((document.getElementById('sn-sell-price')?.value||'').replace(/,/g,''))||0;
+  const spread = sellPrice - buyPrice;
+
+  // collect comm costs
+  const commBuy  = parseInt((document.getElementById('sn-comm-buy-amt')?.value||'').replace(/,/g,''))||0;
+  const commSell = parseInt((document.getElementById('sn-comm-sell-amt')?.value||'').replace(/,/g,''))||0;
+
+  // collect deleg costs
+  let delegTotal = 0;
+  document.querySelectorAll('.sn-deleg-row').forEach(row => {
+    const inputs = row.querySelectorAll('input');
+    delegTotal += parseInt((inputs[1]?.value||'').replace(/,/g,''))||0;
+  });
+
+  const totalCost = commBuy + commSell + delegTotal;
+  const profit = spread - totalCost;
+
+  const el = document.getElementById('sn-spread');
+  if (!el) return;
+  if (!buyPrice && !sellPrice) { el.innerHTML = ''; return; }
+
+  let html = '<div style="display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:11px;margin-top:4px">';
+  if(buyPrice>0) html += '<span style="color:var(--muted)">仕入れ</span><span class="mono" style="color:var(--sub)">¥'+buyPrice.toLocaleString()+'</span>';
+  if(sellPrice>0) html += '<span style="color:var(--muted)">販売</span><span class="mono" style="color:var(--sub)">¥'+sellPrice.toLocaleString()+'</span>';
+  if(buyPrice>0 && sellPrice>0) {
+    const spreadColor = spread >= 0 ? 'var(--green)' : 'var(--red)';
+    html += '<span style="color:var(--muted)">スプレッド</span><span class="mono" style="color:'+spreadColor+';font-weight:700">'+(spread>=0?'+':'')+'¥'+spread.toLocaleString()+'</span>';
+  }
+  if(totalCost > 0) {
+    html += '<span style="color:var(--muted)">支払手数料計</span><span class="mono" style="color:var(--orange)">-¥'+totalCost.toLocaleString()+'</span>';
+    const profitColor = profit >= 0 ? 'var(--green)' : 'var(--red)';
+    html += '<span style="color:var(--muted);font-weight:700">概算粗利</span><span class="mono" style="color:'+profitColor+';font-weight:700;font-size:13px">'+(profit>=0?'+':'')+'¥'+profit.toLocaleString()+'</span>';
+  }
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function sannaiProfitPreview(sn, fallbackSell) {
+  const bp = sn.buyPrice || 0;
+  const sp = sn.sellPrice || fallbackSell || 0;
+  if (!bp && !sp) return '';
+  const spread = sp - bp;
+  const commBuy = sn.commBuyAmt || 0;
+  const commSell = sn.commSellAmt || 0;
+  const delegTotal = (sn.delegPay || []).reduce((s, r) => s + (r.amt || 0), 0);
+  const totalCost = commBuy + commSell + delegTotal;
+  const profit = spread - totalCost;
+  const profitColor = profit >= 0 ? 'var(--green)' : 'var(--red)';
+  if (!totalCost) return '';
+  return '<div style="padding:8px 12px;background:rgba(52,211,153,.04);border:1px solid rgba(52,211,153,.15);border-radius:8px;margin-bottom:8px;font-size:11px">'
+    +'<div style="display:flex;justify-content:space-between">'
+    +'<span style="color:var(--muted)">概算粗利</span>'
+    +'<span class="mono" style="color:'+profitColor+';font-weight:700">'+(profit>=0?'+':'')+'¥'+profit.toLocaleString()+'</span>'
+    +'</div></div>';
+}
+
+function sannaiReadOfferForm(id) {
+  const c = CASES.find(x=>x.id===id); if(!c) return;
+  if(!c.sannai) c.sannai = {};
+  const sn = c.sannai;
+
+  const buyPrice  = parseInt((document.getElementById('sn-buy-price')?.value||'').replace(/,/g,''))||0;
+  const sellPrice = parseInt((document.getElementById('sn-sell-price')?.value||'').replace(/,/g,''))||0;
+
+  if(buyPrice)  sn.buyPrice  = buyPrice;
+  if(sellPrice) { sn.sellPrice = sellPrice; c.salePrice = sellPrice; }
+
+  // comm pay
+  const commBuyCo  = document.getElementById('sn-comm-buy-co')?.value.trim()||'';
+  const commBuyAmt = parseInt((document.getElementById('sn-comm-buy-amt')?.value||'').replace(/,/g,''))||0;
+  const commSellCo  = document.getElementById('sn-comm-sell-co')?.value.trim()||'';
+  const commSellAmt = parseInt((document.getElementById('sn-comm-sell-amt')?.value||'').replace(/,/g,''))||0;
+  if(commBuyCo)  sn.commBuyCo  = commBuyCo;
+  if(commBuyAmt) sn.commBuyAmt = commBuyAmt;
+  if(commSellCo)  sn.commSellCo  = commSellCo;
+  if(commSellAmt) sn.commSellAmt = commSellAmt;
+
+  // deleg rows
+  const rows = [];
+  document.querySelectorAll('.sn-deleg-row').forEach(row => {
+    const inputs = row.querySelectorAll('input');
+    const selects = row.querySelectorAll('select');
+    const co  = inputs[0]?.value.trim()||'';
+    const type = selects[0]?.value||'broker';
+    const amt  = parseInt((inputs[1]?.value||'').replace(/,/g,''))||0;
+    if(co || amt) rows.push({co, type, amt});
+  });
+  sn.delegPay = rows;
 }
 
 function sannaiOfferDone(id) {
   try {
     const prop  = document.getElementById('s-sale-prop')?.value.trim()||'';
-    const price = parseInt((document.getElementById('s-sale-price')?.value||'').replace(/,/g,''))||0;
     const d     = document.getElementById('s-offer-date')?.value||todayISO();
     const c = CASES.find(x=>x.id===id); if(!c) return;
     if(!c.dates) c.dates = {};
     if(!c.hist)  c.hist  = [];
-    if(prop)  c.dates.naikenProp = prop;
-    if(price) c.salePrice = price;
+
+    sannaiReadOfferForm(id);
+
+    const sn = c.sannai || {};
+    if(prop) c.dates.naikenProp = prop;
     if(!c.invoice) c.invoice = {type:'commission'};
-    advance(id,'invoice','offer',d,'買付受領 → 請求書へ');
+
+    // Build hist memo
+    const bp = sn.buyPrice ? ' 仕入¥'+sn.buyPrice.toLocaleString() : '';
+    const sp = sn.sellPrice ? ' 販売¥'+sn.sellPrice.toLocaleString() : '';
+    advance(id,'invoice','offer',d,'買付受領'+bp+sp+' → 請求書へ');
   } catch(e) { console.error('sannaiOfferDone:', e); }
 }
 
@@ -1640,6 +1904,13 @@ function sannaiRequestVerify(id) {
   c.hist.unshift(today()+' 業者確認依頼送信 / 買主: '+name+(takken?' ('+takken+')':'（一般法人）'));
   open_case(id);
   toast('確認依頼を送信しました — 本部からコードを受け取ってください');
+}
+
+
+function editSannaiOffer(id) {
+  const c = CASES.find(x=>x.id===id); if(!c) return;
+  c.step = 'offer';
+  open_case(id);
 }
 
 
