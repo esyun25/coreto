@@ -842,6 +842,9 @@ function appRejected(id, appId) {
 }
 
 function stepInvoice(c) {
+  const isSale = c.type==='reSale' || c.type==='sannai';
+  if (isSale) return stepInvoiceSale(c);
+
   const app = c.apps.find(a=>a.status==='approved') || c.apps[c.apps.length-1] || {};
   const now = new Date();
   const due = new Date(now.getTime()+30*864e5).toISOString().slice(0,10);
@@ -877,12 +880,10 @@ function stepInvoice(c) {
   const showRent = prevType==='commission' || prevType==='ad_plus' || (prevType==='ad_only' && prevFmt==='standard');
   const showItems = prevType==='commission' || prevType==='ad_plus' || (prevType==='ad_only' && prevFmt==='standard');
 
-  // 請求書番号
   const invNumHtml = (prevType==='ad_plus' && prevFmt==='standard')
     ? '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="fi"><label>請求書番号（仲介）</label><input type="text" class="mono" value="'+invNumComm+'" readonly style="color:var(--muted);font-size:11px;background:rgba(255,255,255,.02);cursor:not-allowed"></div><div class="fi"><label>請求書番号（業務委託）</label><input type="text" class="mono" value="'+invNumAD+'" readonly style="color:var(--muted);font-size:11px;background:rgba(255,255,255,.02);cursor:not-allowed"></div></div>'
     : '<div class="fi"><label>請求書番号</label><input type="text" class="mono" value="'+invNumSingle+'" readonly style="color:var(--muted);font-size:11px;background:rgba(255,255,255,.02);cursor:not-allowed"></div>';
 
-  // 2枚発行バッジ
   const dualBadge = (prevType==='ad_plus' && prevFmt==='standard') ? (
     '<div style="margin-bottom:10px;padding:10px 12px;background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.25);border-radius:8px;font-size:11px">'
     +'<div style="color:var(--gold);font-weight:700;margin-bottom:5px">📄 請求書2枚発行</div>'
@@ -892,7 +893,6 @@ function stepInvoice(c) {
     +'</div></div>'
   ) : '';
 
-  // 管理会社フォーマット確認
   const adFmtHtml = needsFmtCheck ? (
     '<div style="margin-bottom:10px;padding:12px;background:var(--card2);border:1px solid var(--border2);border-radius:8px">'
     +'<div style="font-size:11px;color:var(--sub);margin-bottom:8px;font-weight:600">📋 管理会社指定フォーマット</div>'
@@ -902,7 +902,6 @@ function stepInvoice(c) {
     +'</div></div>'
   ) : '';
 
-  // 指定フォーマットあり → 口座番号表示
   const customFmtHtml = (needsFmtCheck && prevFmt==='custom') ? (
     '<div style="padding:14px;background:rgba(79,156,249,.08);border:1px solid rgba(79,156,249,.3);border-radius:8px;font-size:11px;margin-bottom:10px">'
     +'<div style="color:var(--blue);font-weight:700;margin-bottom:8px">🏦 振込先口座（GMOバーチャル口座）</div>'
@@ -913,26 +912,22 @@ function stepInvoice(c) {
     +'<span>口座番号</span><span class="mono" style="color:var(--gold);font-size:13px;letter-spacing:.1em">'+invVirtualAcct(id)+'</span>'
     +'<span>口座名義</span><span class="mono" style="color:var(--t)">カ）コレト</span>'
     +'</div>'
-    +'<div style="margin-top:8px;padding:6px 8px;background:rgba(255,255,255,.03);border-radius:5px;color:var(--muted);font-size:10px">※ この口座はこの案件専用のバーチャル口座です。入金確認後自動でシステムに反映されます。</div>'
+    +'<div style="margin-top:8px;padding:6px 8px;background:rgba(255,255,255,.03);border-radius:5px;color:var(--muted);font-size:10px">※ この口座はこの案件専用のバーチャル口座です。</div>'
     +'</div>'
   ) : '';
 
   return '<div class="step-title">🧾 請求書発行</div>'
-    // 1. 種別タブ
     +'<div style="display:flex;gap:6px;margin-bottom:12px;background:var(--card2);padding:4px;border-radius:8px">'+tabHtml+'</div>'
-    // 2. 番号・物件名・日付
     +'<div style="margin-bottom:4px">'+invNumHtml+'</div>'
     +'<div class="fi"><label>物件名</label><input type="text" id="inv-prop" value="'+(app.prop||'')+'" oninput="invCalc()"></div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">'
     +'<div class="fi"><label>発行日</label><input type="date" id="inv-date" class="mono" value="'+now.toISOString().slice(0,10)+'"></div>'
     +'<div class="fi"><label>支払期限</label><input type="date" id="inv-due" class="mono" value="'+due+'"></div>'
     +'</div>'
-    // 3. 家賃（仲介手数料が絡む場合のみ）
     +(showRent ? (
-      '<div class="fi"><label id="inv-rent-label">'+(c.type==='reSale'?'売買価格（円）':'家賃（月額・税込）')+'<span style="color:var(--muted);font-size:10px;margin-left:6px">上限計算の基準額</span></label>'
-      +'<input type="number" id="inv-rent" class="mono" placeholder="'+(c.type==='reSale'?'例: 32000000':'例: 150000')+'" value="'+(prevRent||(c.salePrice?String(c.salePrice):''))+'" oninput="invCalc()" style="font-size:13px"></div>'
+      '<div class="fi"><label>家賃（月額・税込）<span style="color:var(--muted);font-size:10px;margin-left:6px">上限計算の基準額</span></label>'
+      +'<input type="number" id="inv-rent" class="mono" placeholder="例: 150000" value="'+(prevRent||(c.salePrice?String(c.salePrice):''))+'" oninput="invCalc()" style="font-size:13px"></div>'
     ) : '')
-    // 4. AD金額（AD絡む場合 — フォーマット確認前に入力）
     +(hasAD ? (
       '<div style="display:grid;grid-template-columns:1fr auto;gap:6px;align-items:end;margin-bottom:8px">'
       +'<div class="fi" style="margin-bottom:0"><label>業務委託手数料 — 項目名</label>'
@@ -941,27 +936,286 @@ function stepInvoice(c) {
       +'<input type="number" id="inv-ad-amt" class="mono" placeholder="例: 150000" value="'+prevAdAmt+'" oninput="invCalc()" style="font-size:14px"></div>'
       +'</div>'
     ) : '')
-    // 5. 請求項目（仲介手数料が絡む場合のみ）
     +(showItems ? (
       '<div style="margin:10px 0 4px;font-size:11px;color:var(--sub);font-weight:600;letter-spacing:.05em">クライアント向け請求項目<span style="color:var(--muted);font-weight:400;margin-left:6px;font-size:10px">★1行目の仲介手数料のみ宅建業法上限チェック対象</span></div>'
       +'<div id="inv-items">'+itemRowsHtml+'</div>'
       +'<button onclick="invAddItem()" style="width:100%;background:transparent;border:1px dashed var(--border2);color:var(--sub);padding:7px;border-radius:7px;cursor:pointer;font-size:11px;margin-bottom:10px">＋ 項目を追加</button>'
     ) : '')
-    // 6. 管理会社フォーマット確認
     +adFmtHtml
-    // 7. 口座番号（指定フォーマットあり）
     +customFmtHtml
-    // 8. 2枚発行バッジ（指定なし）
     +dualBadge
-    // 9. バリデーション
     +'<div id="inv-validation" style="margin-bottom:8px"></div>'
-    // 10. 理由欄
     +'<div id="inv-reason-wrap" style="display:none;margin-bottom:10px">'
     +'<div class="fi"><label style="color:var(--orange)">⚠ 合計が家賃1ヶ月分未満 — 理由を記入してください</label>'
     +'<textarea id="inv-reason" rows="2" placeholder="例: クライアント交渉の結果、手数料を減額。入居率優先のため。" style="font-size:12px;resize:vertical">'+prevReason+'</textarea></div>'
     +'</div>'
     +'<button class="btn btn-gold" style="width:100%;justify-content:center" data-cid="'+id+'" onclick="issueInvoice(this.dataset.cid)">📄 請求書発行 → 重説・入金へ</button>';
 }
+
+// ── 売買・三為専用請求書 ──
+function saleCommLimit(price) {
+  // 宅建業法: 800万以下は一律330,000円（税込）, 超えると (price×3%+6万)×1.1
+  if(!price||price<=0) return 0;
+  if(price<=8000000) return 330000;
+  return Math.round((price*0.03+60000)*1.1);
+}
+
+function invSetSaleFrom(btn) {
+  const id = btn.dataset.cid;
+  const from = btn.dataset.from;
+  const c = CASES.find(x=>x.id===id); if(!c) return;
+  if(!c.invoice) c.invoice={};
+  c.invoice.saleFrom = from;
+  open_case(id);
+}
+
+function stepInvoiceSale(c) {
+  const now = new Date();
+  const due = new Date(now.getTime()+30*864e5).toISOString().slice(0,10);
+  const ym  = now.getFullYear()+String(now.getMonth()+1).padStart(2,'0');
+  const inv = c.invoice || {};
+  const id  = c.id;
+  const saleFrom  = inv.saleFrom || 'seller';   // seller / both / buyer
+  const prevPrice = inv.salePrice || c.salePrice || '';
+  const prevItems = inv.items || [{desc:'仲介手数料',amt:''}];
+  const prevDelegItems = inv.delegItems || [];
+  const prevReason= inv.underReason || '';
+  const invNum    = 'INV-'+ym+'-'+c.agent;
+  const invNumB   = 'INV-'+ym+'-'+c.agent+'-B';
+
+  // 受領先タブ
+  const fromTabs = [
+    {v:'seller', label:'売主から'},
+    {v:'both',   label:'両手（売主＋買主）'},
+    {v:'buyer',  label:'買主から'},
+  ];
+  const fromTabHtml = fromTabs.map(t=>{
+    const active = saleFrom===t.v;
+    const bg = active ? 'background:var(--gold);color:#000' : 'background:var(--card2);color:var(--sub)';
+    return '<button onclick="invSetSaleFrom(this)" data-cid="'+id+'" data-from="'+t.v+'" style="flex:1;padding:7px 3px;border:none;cursor:pointer;font-size:10px;font-weight:600;border-radius:6px;'+bg+'">'+t.label+'</button>';
+  }).join('');
+
+  // 両手の場合は請求書A（売主）・B（買主）の2枚
+  const dualMsg = saleFrom==='both' ? (
+    '<div style="margin-bottom:10px;padding:10px 12px;background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.25);border-radius:8px;font-size:11px">'
+    +'<div style="color:var(--gold);font-weight:700;margin-bottom:5px">📄 両手: 請求書2枚発行</div>'
+    +'<div style="display:grid;grid-template-columns:auto 1fr;gap:2px 10px;color:var(--sub)">'
+    +'<span style="color:var(--muted)">No.A</span><span>'+invNum+' — 売主向け仲介手数料</span>'
+    +'<span style="color:var(--muted)">No.B</span><span>'+invNumB+' — 買主向け仲介手数料</span>'
+    +'</div></div>'
+  ) : '';
+
+  // 請求項目rows
+  const itemRowsHtml = prevItems.map((it,i)=>invItemRow(i,it.desc,it.amt,i===0)).join('');
+  const itemRowsBHtml = saleFrom==='both'
+    ? (prevDelegItems.length>0 ? prevDelegItems : [{desc:'仲介手数料（買主）',amt:''}]).map((it,i)=>invItemRowB(i,it.desc,it.amt)).join('')
+    : '';
+
+  // 業務委託手数料セクション（上限超え対応）
+  const delegDesc = inv.delegDesc || '業務委託手数料';
+  const delegAmt  = inv.delegAmt  || '';
+  const delegSection = (
+    '<div style="margin-top:10px;padding:12px;background:var(--card2);border:1px solid var(--border2);border-radius:8px">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
+    +'<span style="font-size:11px;color:var(--sub);font-weight:600">💼 業務委託手数料（上限超過分・任意）</span>'
+    +'<span style="font-size:10px;color:var(--muted)">別途請求</span>'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr auto;gap:6px">'
+    +'<input type="text" id="inv-deleg-desc" placeholder="例: 業務委託手数料" value="'+delegDesc+'" style="background:#090b13;border:1px solid var(--border2);border-radius:7px;padding:6px 10px;color:var(--text);font-size:12px;font-family:inherit;outline:none">'
+    +'<input type="number" id="inv-deleg-amt" class="mono" placeholder="金額" value="'+delegAmt+'" oninput="invCalcSale()" style="width:120px;font-size:13px">'
+    +'</div></div>'
+  );
+
+  return '<div class="step-title">🧾 請求書発行（売買）</div>'
+    +'<div style="display:flex;gap:6px;margin-bottom:12px;background:var(--card2);padding:4px;border-radius:8px">'+fromTabHtml+'</div>'
+    +dualMsg
+    +'<div class="fi"><label>請求書番号</label><input type="text" class="mono" value="'+invNum+'" readonly style="color:var(--muted);font-size:11px;background:rgba(255,255,255,.02);cursor:not-allowed"></div>'
+    +'<div class="fi"><label>物件名</label><input type="text" id="inv-prop" value="'+(c.dates.naikenProp||'')+'" oninput="invCalcSale()"></div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">'
+    +'<div class="fi"><label>発行日</label><input type="date" id="inv-date" class="mono" value="'+now.toISOString().slice(0,10)+'"></div>'
+    +'<div class="fi"><label>支払期限</label><input type="date" id="inv-due" class="mono" value="'+due+'"></div>'
+    +'</div>'
+    +'<div class="fi"><label>売買価格（円）<span style="color:var(--muted);font-size:10px;margin-left:6px">上限計算の基準</span></label>'
+    +'<input type="number" id="inv-sale-price" class="mono" placeholder="例: 32000000" value="'+prevPrice+'" oninput="invCalcSale()" style="font-size:13px"></div>'
+    // 売主向け項目
+    +(saleFrom==='both'
+      ? '<div style="margin:8px 0 4px;font-size:11px;color:var(--gold);font-weight:700">📄 A: 売主向け 請求項目</div>'
+      : '<div style="margin:8px 0 4px;font-size:11px;color:var(--sub);font-weight:600">クライアント向け請求項目<span style="color:var(--muted);font-weight:400;margin-left:6px;font-size:10px">★宅建業法上限チェック対象</span></div>'
+    )
+    +'<div id="inv-items">'+itemRowsHtml+'</div>'
+    +'<button onclick="invAddItem()" style="width:100%;background:transparent;border:1px dashed var(--border2);color:var(--sub);padding:6px;border-radius:7px;cursor:pointer;font-size:11px;margin-bottom:8px">＋ 項目を追加</button>'
+    // 買主向け項目（両手のみ）
+    +(saleFrom==='both' ? (
+      '<div style="margin:8px 0 4px;font-size:11px;color:var(--blue);font-weight:700">📄 B: 買主向け 請求項目</div>'
+      +'<div id="inv-items-b">'+itemRowsBHtml+'</div>'
+      +'<button onclick="invAddItemB()" style="width:100%;background:transparent;border:1px dashed rgba(79,156,249,.4);color:var(--blue);padding:6px;border-radius:7px;cursor:pointer;font-size:11px;margin-bottom:8px">＋ 買主向け項目を追加</button>'
+    ) : '')
+    // 業務委託手数料（上限超過分）
+    +delegSection
+    +'<div id="inv-validation" style="margin-bottom:8px"></div>'
+    +'<button class="btn btn-gold" style="width:100%;justify-content:center" data-cid="'+id+'" onclick="issueInvoiceSale(this.dataset.cid)">📄 請求書発行 → 契約へ</button>';
+}
+
+function invItemRowB(idx, desc, amt) {
+  return '<div class="inv-row-b" data-idx="'+idx+'" style="display:grid;grid-template-columns:1fr auto auto;gap:6px;margin-bottom:6px;align-items:center">'
+    +'<input type="text" placeholder="項目名" value="'+desc+'" oninput="invCalcSale()" style="font-size:12px;color:var(--blue)">'
+    +'<input type="number" placeholder="金額" value="'+amt+'" oninput="invCalcSale()" class="mono" style="width:120px;font-size:13px">'
+    +(idx===0
+      ? '<div style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:var(--blue);font-size:14px">★</div>'
+      : '<button onclick="invRemoveItemB('+idx+')" style="background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);color:var(--red);border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:14px;padding:0;line-height:1">×</button>')
+    +'</div>';
+}
+
+let _invItemCountB=1;
+function invAddItemB() {
+  const wrap=document.getElementById('inv-items-b'); if(!wrap) return;
+  const idx=_invItemCountB++;
+  const div=document.createElement('div');
+  div.innerHTML=invItemRowB(idx,'',0);
+  wrap.appendChild(div.firstChild);
+  invCalcSale();
+}
+function invRemoveItemB(idx) {
+  document.querySelectorAll('#inv-items-b .inv-row-b').forEach(r=>{
+    if(parseInt(r.dataset.idx)===idx) r.remove();
+  });
+  invCalcSale();
+}
+function invGetItemsB() {
+  const rows=document.querySelectorAll('#inv-items-b .inv-row-b');
+  const items=[];
+  rows.forEach(r=>{
+    const inputs=r.querySelectorAll('input');
+    const desc=inputs[0]?.value.trim()||'';
+    const amt=parseInt(inputs[1]?.value)||0;
+    if(desc||amt) items.push({desc,amt});
+  });
+  return items;
+}
+
+function invCalcSale() {
+  const price  = parseInt(document.getElementById('inv-sale-price')?.value)||0;
+  const itemsA = invGetItems();
+  const itemsB = invGetItemsB();
+  const totalA = itemsA.reduce((s,it)=>s+it.amt,0);
+  const totalB = itemsB.reduce((s,it)=>s+it.amt,0);
+  const commA  = itemsA.length>0 ? itemsA[0].amt : 0;
+  const commB  = itemsB.length>0 ? itemsB[0].amt : 0;
+  const deleg  = parseInt(document.getElementById('inv-deleg-amt')?.value)||0;
+  const limit  = saleCommLimit(price);
+  const isBoth = !!document.getElementById('inv-items-b');
+
+  let html='';
+  if(price>0) {
+    const limitLabel = price<=8000000
+      ? '800万円以下 特例: ¥330,000'
+      : '¥'+limit.toLocaleString()+'（売買価格×3%+6万）×1.1';
+
+    html += '<div style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:12px">';
+    html += '<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="color:var(--sub)">法定上限（1社あたり）</span><span class="mono" style="color:var(--muted)">¥'+limit.toLocaleString()+'</span></div>';
+
+    // 売主チェック
+    if(totalA>0) {
+      html += '<div style="border-top:1px solid var(--border);margin:5px 0;padding-top:5px">';
+      html += '<div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="color:var(--sub)">'+(isBoth?'A 売主向け合計':'請求合計')+'</span><span class="mono">¥'+totalA.toLocaleString()+'</span></div>';
+      if(commA>limit) {
+        const over = commA-limit;
+        html += '<div style="padding:7px 10px;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.4);border-radius:6px;color:var(--red);font-size:11px;margin-top:4px">'
+          +'⛔ 仲介手数料が上限を ¥'+over.toLocaleString()+' 超過（'+limitLabel+'）<br>'
+          +'<span style="font-size:10px;opacity:.85">超過分 ¥'+over.toLocaleString()+' は「業務委託手数料」として下欄に入力してください</span>'
+          +'</div>';
+      } else if(commA>0) {
+        html += '<div style="padding:5px 10px;background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.3);border-radius:6px;color:var(--green);font-size:11px;margin-top:4px">✅ 仲介手数料 ¥'+commA.toLocaleString()+' — 適正（上限: '+limitLabel+'）</div>';
+      }
+      html += '</div>';
+    }
+
+    // 買主チェック（両手）
+    if(isBoth&&totalB>0) {
+      html += '<div style="border-top:1px solid var(--border);margin:5px 0;padding-top:5px">';
+      html += '<div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="color:var(--blue)">B 買主向け合計</span><span class="mono">¥'+totalB.toLocaleString()+'</span></div>';
+      if(commB>limit) {
+        const overB = commB-limit;
+        html += '<div style="padding:7px 10px;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.4);border-radius:6px;color:var(--red);font-size:11px;margin-top:4px">'
+          +'⛔ 買主向け仲介手数料が上限を ¥'+overB.toLocaleString()+' 超過<br>'
+          +'<span style="font-size:10px;opacity:.85">超過分は別名目ではなく「業務委託手数料」として計上してください</span>'
+          +'</div>';
+      } else if(commB>0) {
+        html += '<div style="padding:5px 10px;background:rgba(79,156,249,.08);border:1px solid rgba(79,156,249,.3);border-radius:6px;color:var(--blue);font-size:11px;margin-top:4px">✅ 買主向け ¥'+commB.toLocaleString()+' — 適正</div>';
+      }
+      html += '</div>';
+    }
+
+    // 業務委託
+    if(deleg>0) {
+      html += '<div style="border-top:1px solid var(--border);margin:5px 0;padding-top:5px;display:flex;justify-content:space-between"><span style="color:var(--sub)">業務委託手数料</span><span class="mono">¥'+deleg.toLocaleString()+'</span></div>';
+    }
+
+    // グランドトータル
+    const grand = totalA+(isBoth?totalB:0)+deleg;
+    if(grand>0) {
+      html += '<div style="border-top:1px solid var(--border);margin:5px 0;padding-top:5px;display:flex;justify-content:space-between"><span style="color:var(--sub);font-weight:700">合計</span><span class="mono" style="color:var(--gold);font-size:13px">¥'+grand.toLocaleString()+'</span></div>';
+    }
+
+    html += '</div>';
+  }
+  const vp=document.getElementById('inv-validation');
+  if(vp) vp.innerHTML=html;
+}
+
+function issueInvoiceSale(id) {
+  const c = CASES.find(x=>x.id===id); if(!c) return;
+  const inv = c.invoice||{};
+  const saleFrom = inv.saleFrom||'seller';
+  const prop  = document.getElementById('inv-prop')?.value.trim()||'';
+  const date  = document.getElementById('inv-date')?.value||todayISO();
+  const due   = document.getElementById('inv-due')?.value||todayISO();
+  const price = parseInt(document.getElementById('inv-sale-price')?.value)||0;
+  if(!prop) {alert('物件名を入力してください');return;}
+  if(!price){alert('売買価格を入力してください');return;}
+
+  const itemsA    = invGetItems();
+  const itemsB    = saleFrom==='both' ? invGetItemsB() : [];
+  const totalA    = itemsA.reduce((s,it)=>s+it.amt,0);
+  const totalB    = itemsB.reduce((s,it)=>s+it.amt,0);
+  const commA     = itemsA.length>0 ? itemsA[0].amt : 0;
+  const commB     = itemsB.length>0 ? itemsB[0].amt : 0;
+  const delegAmt  = parseInt(document.getElementById('inv-deleg-amt')?.value)||0;
+  const delegDesc = document.getElementById('inv-deleg-desc')?.value.trim()||'業務委託手数料';
+  const limit     = saleCommLimit(price);
+  const grandTotal= totalA+totalB+delegAmt;
+
+  if(totalA===0){alert('請求項目を入力してください');return;}
+  if(commA>limit){
+    if(!confirm('仲介手数料（¥'+commA.toLocaleString()+'）が法定上限（¥'+limit.toLocaleString()+'）を超過しています。このまま発行しますか？\n\n超過分は業務委託手数料として別途請求することを検討してください。')) return;
+  }
+  if(saleFrom==='both'&&commB>limit){
+    if(!confirm('買主向け仲介手数料（¥'+commB.toLocaleString()+'）が法定上限（¥'+limit.toLocaleString()+'）を超過しています。このまま発行しますか？')) return;
+  }
+
+  c.salePrice = price;
+  c.invoice = Object.assign(inv, {
+    saleFrom, salePrice:price, items:itemsA, itemsB, commA, commB, totalA, totalB,
+    delegAmt, delegDesc, grandTotal, prop, date, due, issued:true,
+    dualInvoice: saleFrom==='both',
+  });
+
+  const fromLabel = saleFrom==='seller'?'売主から':saleFrom==='both'?'両手':' 買主から';
+  c.hist.unshift(today()+' 請求書発行（売買・'+fromLabel+'） 合計¥'+grandTotal.toLocaleString());
+  invSendSlack(c, grandTotal, delegAmt, delegDesc, saleFrom==='both');
+  const destStep = 'contract';
+  advance(id, destStep, 'invoiced', date, '請求書発行完了');
+}
+
+setTimeout(()=>{
+  if(document.getElementById('inv-sale-price')) {
+    invCalcSale();
+    _invItemCountB=document.querySelectorAll('#inv-items-b .inv-row-b').length;
+  }
+  invCalc();
+  _invItemCount=document.querySelectorAll('#inv-items .inv-row').length;
+},100);
+
 
 function invVirtualAcct(caseId) {
   let h=0;
@@ -1065,7 +1319,7 @@ function invCalc() {
   const vp=document.getElementById('inv-validation');
   if(vp) vp.innerHTML=html;
 }
-setTimeout(()=>{invCalc();_invItemCount=document.querySelectorAll('#inv-items .inv-row').length;},100);
+
 
 function issueInvoice(id) {
   const c=CASES.find(x=>x.id===id); if(!c) return;
