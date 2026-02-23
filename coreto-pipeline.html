@@ -697,15 +697,22 @@ function stepOffer(c) {
 
 function stepSaleContract(c) {
   const inv = c.invoice||{};
+  const fromLabel = inv.saleFrom==='both'?'両手（売主＋買主）':inv.saleFrom==='buyer'?'買主から':'売主から';
   const invSummary = (inv.issued) ? (
     '<div style="margin-bottom:10px;padding:10px 12px;background:rgba(201,168,76,.06);border:1px solid rgba(201,168,76,.2);border-radius:8px;font-size:11px">'
-    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
     +'<span style="color:var(--gold);font-weight:700">🧾 発行済み請求書</span>'
     +'<button onclick="editInvoice(\''+c.id+'\')" style="background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.3);color:var(--gold);border-radius:5px;padding:3px 10px;cursor:pointer;font-size:10px;font-weight:600">✏ 修正</button>'
     +'</div>'
-    +(inv.prop?'<div style="color:var(--sub);font-size:10px">'+inv.prop+'</div>':'')
-    +(inv.grandTotal?'<div class="mono" style="color:var(--gold);font-size:13px;margin-top:3px">¥'+parseInt(inv.grandTotal).toLocaleString()+'</div>':'')
-    +'</div>'
+    +'<div style="display:grid;grid-template-columns:auto 1fr;gap:2px 10px;color:var(--sub);font-size:11px">'
+    +(inv.prop?'<span>物件</span><span style="color:var(--text)">'+inv.prop+'</span>':'')
+    +'<span>受領先</span><span style="color:var(--text)">'+fromLabel+'</span>'
+    +(inv.salePrice?'<span>売買価格</span><span class="mono" style="color:var(--text)">¥'+parseInt(inv.salePrice).toLocaleString()+'</span>':'')
+    +(inv.totalA?'<span>売主向け</span><span class="mono" style="color:var(--text)">¥'+parseInt(inv.totalA).toLocaleString()+'</span>':'')
+    +(inv.totalB?'<span>買主向け</span><span class="mono" style="color:var(--blue)">¥'+parseInt(inv.totalB).toLocaleString()+'</span>':'')
+    +(inv.delegAmt?'<span>業務委託</span><span class="mono" style="color:var(--text)">¥'+parseInt(inv.delegAmt).toLocaleString()+'</span>':'')
+    +(inv.grandTotal?'<span style="font-weight:700">合計</span><span class="mono" style="color:var(--gold);font-weight:700">¥'+parseInt(inv.grandTotal).toLocaleString()+'</span>':'')
+    +'</div></div>'
   ) : '';
   return '<div class="step-title">✍️ 売買契約</div>'
     +invSummary
@@ -1036,7 +1043,7 @@ function stepInvoiceSale(c) {
     +'<div class="fi"><label>支払期限</label><input type="date" id="inv-due" class="mono" value="'+due+'"></div>'
     +'</div>'
     +'<div class="fi"><label>売買価格（円）<span style="color:var(--muted);font-size:10px;margin-left:6px">上限計算の基準</span></label>'
-    +'<input type="text" id="inv-sale-price" class="mono" placeholder="例: 32,000,000" value="'+prevPrice+'" oninput="invCalcSale()" style="font-size:13px"></div>'
+    +'<input type="text" id="inv-sale-price" class="mono" placeholder="例: 32,000,000" value="'+fmtYen(prevPrice)+'" oninput="invSalePriceInput(this)" style="font-size:13px"></div>'
     // 売主向け項目
     +(saleFrom==='both'
       ? '<div style="margin:8px 0 4px;font-size:11px;color:var(--gold);font-weight:700">📄 A: 売主向け 請求項目</div>'
@@ -1209,11 +1216,19 @@ function issueInvoiceSale(id) {
 
 setTimeout(()=>{
   if(document.getElementById('inv-sale-price')) {
+    // フォーマット再適用
+    const priceEl = document.getElementById('inv-sale-price');
+    if(priceEl && priceEl.value) {
+      const raw = parseInt(priceEl.value.replace(/,/g,''));
+      if(!isNaN(raw)) priceEl.value = raw.toLocaleString('ja-JP');
+    }
     invCalcSale();
     _invItemCountB=document.querySelectorAll('#inv-items-b .inv-row-b').length;
   }
-  invCalc();
-  _invItemCount=document.querySelectorAll('#inv-items .inv-row').length;
+  if(document.getElementById('inv-items')) {
+    invCalc();
+    _invItemCount=document.querySelectorAll('#inv-items .inv-row').length;
+  }
 },100);
 
 
@@ -1714,12 +1729,13 @@ function createCase() {
   if(_corpMode&&!contact){alert('担当者名を入力してください');return;}
   const type = document.getElementById('nc-type')?.value;
   const sub  = document.getElementById('nc-sub')?.value.trim()||'—';
-  const prefix = type==='reLet'?'R':type==='reSale'?'S':'H';
+  const prefix = type==='reLet'?'R':type==='reSale'?'S':type==='sannai'?'N':'H';
   const id = prefix+String(Math.floor(Math.random()*90000+10000));
-  const initStep = type==='reLet'?'naiken':type==='reSale'?'offer':'new';
+  const initStep = (type==='reLet'||type==='reSale'||type==='sannai')?'naiken':'new';
   const adOnly = document.getElementById('nc-ad')?.checked && type==='reLet';
   const obj = {id, name, type, corp:_corpMode, agent:'10012', sub, step:initStep, age:0, stale:false, adOnly, taskDone:{paid:false,itsetsu:false}, apps:[], dates:{}, hist:[today()+' 案件登録'+(adOnly?' [AD案件]':'')]};
   if(_corpMode&&contact) obj.contactName = contact;
+  if(type==='sannai') obj.buyer = {name:'', takkenNum:'', verified:false, bypass:false};
   CASES.unshift(obj);
   closeModal();
   render();
