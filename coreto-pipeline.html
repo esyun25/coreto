@@ -459,10 +459,18 @@ function buildStepBar(c) {
     +steps.map((s,i)=>{
       const cls = i<curIdx?'done':i===curIdx?'active':'future';
       const inner = i<curIdx ? '✓' : s.icon;
-      return '<div class="step-node '+cls+'" onclick="jumpStep(\''+c.id+'\',\''+s.id+'\')">'
-        +'<div class="step-circle">'+inner+'</div>'
-        +'<div class="step-label">'+s.label+'</div>'
-        +'</div>';
+      // 完了済みステップはクリック不可（誤って前ステップに戻らないよう）
+      // 未来ステップのみクリックで先送りできる
+      if (i <= curIdx) {
+        return '<div class="step-node '+cls+'" style="cursor:default">'
+          +'<div class="step-circle">'+inner+'</div>'
+          +'<div class="step-label">'+s.label+'</div>'
+          +'</div>';
+      }
+      return '<div class="step-node '+cls+'" style="cursor:pointer" onclick="jumpStep(\''+c.id+'\',\''+s.id+'\')">'
+          +'<div class="step-circle">'+inner+'</div>'
+          +'<div class="step-label">'+s.label+'</div>'
+          +'</div>';
     }).join('')
     +'</div>';
 }
@@ -691,7 +699,8 @@ function saleSkipNaiken(id) {
     if(prop) c.dates.naikenProp = prop;
     c.hist.unshift(today()+' 内見なし・買付へ');
     c.step = 'offer';
-    setTimeout(()=>{ open_case(id); toast('内見なし・買付へスキップ'); }, 0);
+    open_case(id);
+    toast('内見なし・買付へスキップ');
   } catch(e) {
     console.error('saleSkipNaiken error:', e);
   }
@@ -789,8 +798,8 @@ function advance(id, nextStep, dateKey, dateVal, memo) {
     c.age  = 0;
     if (dateKey) c.dates[dateKey] = dateVal || todayISO();
     if (memo) c.hist.unshift(today()+' '+memo);
-    // defer DOM update so current click event completes before innerHTML replacement
-    setTimeout(()=>{ open_case(id); toast(memo||'更新しました'); }, 0);
+    open_case(id);
+    toast(memo||'更新しました');
   } catch(e) {
     console.error('advance error:', e);
     toast('エラーが発生しました: '+e.message);
@@ -1525,9 +1534,9 @@ function stepSannaiVerify(c) {
       +'<div style="color:'+statusClr+';font-weight:700;margin-bottom:4px">'+statusTxt+'</div>'
       +'<div style="color:var(--sub)">買主'+buyerName+'</div>'
       +'</div>'
-      +'<button class="btn btn-green" style="width:100%;justify-content:center" onclick="sannaiVerifyPass(\''+id+'\')">→ 請求書へ</button>'
+      +'<button class="btn btn-green" style="width:100%;justify-content:center" data-cid="'+id+'" onclick="sannaiVerifyPass(this.dataset.cid)">→ 請求書へ</button>'
       +'<div style="margin-top:8px;text-align:right">'
-      +'<button class="btn btn-ghost btn-sm" onclick="sannaiVerifyReset(\''+id+'\')">↩ 再入力</button>'
+      +'<button class="btn btn-ghost btn-sm" data-cid="'+id+'" onclick="sannaiVerifyReset(this.dataset.cid)">↩ 再入力</button>'
       +'</div>';
   }
 
