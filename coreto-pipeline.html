@@ -415,9 +415,13 @@ function cardHTML(c, st) {
 // PANEL
 // ═══════════════════════════════════════════════
 function open_case(id) {
+  try {
   cur = id;
   const c = CASES.find(x=>x.id===id);
-  if(!c) return;
+  if(!c) { console.error('open_case: not found', id); return; }
+  if(!c.dates) c.dates = {};
+  if(!c.hist)  c.hist  = [];
+  if(!c.apps)  c.apps  = [];
 
   document.getElementById('panel').classList.add('open');
 
@@ -437,6 +441,7 @@ function open_case(id) {
 
   buildStepContent(c);
   render();
+  } catch(e) { console.error('open_case error:', e); }
 }
 
 function close_panel() {
@@ -491,24 +496,6 @@ function buildStepContent(c) {
     else if (c.step==='payment') html += stepPayment(c);
     else if (c.step==='itsetsu') html += stepPrekey(c);
     else if (c.step==='key') html += stepKey(c);
-  }
-  // ── 三為フロー ──
-  else if (c.type==='sannai') {
-    if (c.step==='naiken') html += stepSaleNaiken(c);
-    else if (c.step==='offer') html += stepSannaiOffer(c);
-    else if (c.step==='verify') html += stepSannaiVerify(c);
-    else if (c.step==='invoice') html += stepInvoice(c);
-    else if (c.step==='contract') html += stepSaleContract(c);
-    else if (c.step==='settlement') html += stepSettlement(c);
-  }
-  // ── 三為フロー ──
-  else if (c.type==='sannai') {
-    if (c.step==='naiken') html += stepSaleNaiken(c);
-    else if (c.step==='offer') html += stepSannaiOffer(c);
-    else if (c.step==='verify') html += stepSannaiVerify(c);
-    else if (c.step==='invoice') html += stepInvoice(c);
-    else if (c.step==='contract') html += stepSaleContract(c);
-    else if (c.step==='settlement') html += stepSettlement(c);
   }
   // ── 三為フロー ──
   else if (c.type==='sannai') {
@@ -663,26 +650,52 @@ function stepSaleNaiken(c) {
     +'<div class="fi"><label>物件名</label><input type="text" id="s-sale-prop" value="'+(c.dates.naikenProp||'')+'" placeholder="〇〇マンション 101号"></div>'
     +'<div class="fi"><label>内見日</label><input type="date" id="s-naiken-date" class="mono" value="'+val+'"></div>'
     +'<div style="display:flex;gap:8px;margin-top:14px">'
-    +'<button class="btn btn-green" style="flex:1;justify-content:center" onclick="saleNaikenDone(\''+c.id+'\')">内見完了 → 買付へ</button>'
-    +'<button class="btn btn-ghost btn-sm" onclick="saleSkipNaiken(\''+c.id+'\')">内見なし・買付へスキップ</button>'
+    +'<button class="btn btn-green" style="flex:1;justify-content:center" data-cid="'+c.id+'" onclick="saleNaikenDone(this.dataset.cid)">内見完了 → 買付へ</button>'
+    +'<button class="btn btn-ghost btn-sm" data-cid="'+c.id+'" onclick="saleSkipNaiken(this.dataset.cid)">内見なし・買付へスキップ</button>'
     +'</div>';
 }
 
+let _actionInProgress = false;
+function _guardAction(fn) {
+  if (_actionInProgress) return;
+  _actionInProgress = true;
+  try { fn(); } catch(e) { console.error(e); }
+  setTimeout(()=>{ _actionInProgress = false; }, 600);
+}
+
 function saleNaikenDone(id) {
-  const prop = document.getElementById('s-sale-prop')?.value.trim()||'';
-  const d = document.getElementById('s-naiken-date')?.value||todayISO();
-  const c = CASES.find(x=>x.id===id); if(!c) return;
-  if(prop) c.dates.naikenProp = prop;
-  advance(id,'offer','naiken',d,'内見完了 → 買付');
+  _guardAction(()=>{
+  try {
+    const prop = document.getElementById('s-sale-prop')?.value.trim()||'';
+    const d    = document.getElementById('s-naiken-date')?.value||todayISO();
+    const c = CASES.find(x=>x.id===id);
+    if(!c) { console.error('saleNaikenDone: case not found', id); return; }
+    if(!c.dates) c.dates = {};
+    if(!c.hist)  c.hist  = [];
+    if(prop) c.dates.naikenProp = prop;
+    advance(id,'offer','naiken',d,'内見完了 → 買付');
+  } catch(e) {
+    console.error('saleNaikenDone error:', e);
+  }
+  });
 }
 
 function saleSkipNaiken(id) {
-  const prop = document.getElementById('s-sale-prop')?.value.trim()||'';
-  const c = CASES.find(x=>x.id===id); if(!c) return;
-  if(prop) c.dates.naikenProp = prop;
-  c.hist.unshift(today()+' 内見なし・買付へ');
-  c.step = 'offer';
-  open_case(id);
+  _guardAction(()=>{
+  try {
+    const prop = document.getElementById('s-sale-prop')?.value.trim()||'';
+    const c = CASES.find(x=>x.id===id);
+    if(!c) { console.error('saleSkipNaiken: case not found', id); return; }
+    if(!c.dates) c.dates = {};
+    if(!c.hist)  c.hist  = [];
+    if(prop) c.dates.naikenProp = prop;
+    c.hist.unshift(today()+' 内見なし・買付へ');
+    c.step = 'offer';
+    setTimeout(()=>{ open_case(id); toast('内見なし・買付へスキップ'); }, 0);
+  } catch(e) {
+    console.error('saleSkipNaiken error:', e);
+  }
+  });
 }
 
 function stepOffer(c) {
@@ -692,7 +705,7 @@ function stepOffer(c) {
     +'<div class="fi"><label>物件名</label><input type="text" id="s-sale-prop" value="'+(c.dates.naikenProp||'')+'" placeholder="〇〇マンション 101号"></div>'
     +'<div class="fi"><label>売買価格（円）</label><input type="text" id="s-sale-price" class="mono" placeholder="例: 32,000,000" value="'+(fmtYen(c.salePrice)||'')+'" style="font-size:13px" oninput="invSalePriceInput(this)"></div>'
     +'<div class="fi"><label>買付日</label><input type="date" id="s-offer-date" class="mono" value="'+today+'"></div>'
-    +'<button class="btn btn-green" style="width:100%;justify-content:center;margin-top:14px" onclick="offerDone(\''+c.id+'\')">買付受領 → 請求書へ</button>';
+    +'<button class="btn btn-green" style="width:100%;justify-content:center;margin-top:14px" data-cid="'+c.id+'" onclick="offerDone(this.dataset.cid)">買付受領 → 請求書へ</button>';
 }
 
 function stepSaleContract(c) {
@@ -719,7 +732,7 @@ function stepSaleContract(c) {
     +'<div class="row" style="margin-bottom:12px">'
     +'<button class="btn btn-blue" onclick="window.open(\'coreto-sale-report.html\',\'_blank\')">売買報告書を開く</button>'
     +'</div>'
-    +'<button class="btn btn-green" style="width:100%;justify-content:center" onclick="saleContractDone(\''+c.id+'\')">✓ 契約締結 → 決済へ</button>';
+    +'<button class="btn btn-green" style="width:100%;justify-content:center" data-cid="'+c.id+'" onclick="saleContractDone(this.dataset.cid)">✓ 契約締結 → 決済へ</button>';
 }
 
 function stepSettlement(c) {
@@ -727,7 +740,7 @@ function stepSettlement(c) {
   const val = c.dates.settlement || today;
   return '<div class="step-title">💴 決済・引渡し</div>'
     +'<div class="fi"><label>決済日</label><input type="date" id="s-settlement" class="mono" value="'+val+'"></div>'
-    +'<button class="btn btn-green" style="width:100%;justify-content:center;margin-top:12px" onclick="settlementDone(\''+c.id+'\')">✓ 決済完了 → 成約</button>';
+    +'<button class="btn btn-green" style="width:100%;justify-content:center;margin-top:12px" data-cid="'+c.id+'" onclick="settlementDone(this.dataset.cid)">✓ 決済完了 → 成約</button>';
 }
 
 // ── Sub components ──
@@ -767,13 +780,21 @@ function today() { return new Date().toLocaleDateString('ja-JP',{month:'numeric'
 function todayISO() { return new Date().toISOString().slice(0,10); }
 
 function advance(id, nextStep, dateKey, dateVal, memo) {
-  const c = CASES.find(x=>x.id===id); if(!c) return;
-  c.step = nextStep;
-  c.age = 0;
-  if (dateKey) c.dates[dateKey] = dateVal || todayISO();
-  if (memo) c.hist.unshift(today()+' '+memo);
-  open_case(id);
-  toast(memo||'更新しました');
+  try {
+    const c = CASES.find(x=>x.id===id);
+    if(!c) { console.error('advance: case not found', id); return; }
+    if(!c.dates) c.dates = {};
+    if(!c.hist)  c.hist  = [];
+    c.step = nextStep;
+    c.age  = 0;
+    if (dateKey) c.dates[dateKey] = dateVal || todayISO();
+    if (memo) c.hist.unshift(today()+' '+memo);
+    // defer DOM update so current click event completes before innerHTML replacement
+    setTimeout(()=>{ open_case(id); toast(memo||'更新しました'); }, 0);
+  } catch(e) {
+    console.error('advance error:', e);
+    toast('エラーが発生しました: '+e.message);
+  }
 }
 
 function naikenDone(id) {
@@ -1470,7 +1491,7 @@ function stepSannaiOffer(c) {
     +'<div class="fi"><label>物件名</label><input type="text" id="s-sale-prop" value="'+(c.dates.naikenProp||'')+'" placeholder="〇〇マンション 101号"></div>'
     +'<div class="fi"><label>売買価格（円）</label><input type="text" id="s-sale-price" class="mono" placeholder="例: 45,000,000" value="'+(c.salePrice||'')+'" style="font-size:13px"></div>'
     +'<div class="fi"><label>買付日</label><input type="date" id="s-offer-date" class="mono" value="'+today+'"></div>'
-    +'<button class="btn btn-green" style="width:100%;justify-content:center;margin-top:14px" onclick="sannaiOfferDone(\''+c.id+'\')">買付受領 → 業者確認へ</button>';
+    +'<button class="btn btn-green" style="width:100%;justify-content:center;margin-top:14px" data-cid="'+c.id+'" onclick="sannaiOfferDone(this.dataset.cid)">買付受領 → 業者確認へ</button>';
 }
 
 function sannaiOfferDone(id) {
@@ -1631,14 +1652,24 @@ function sannaiBypass(id) {
 }
 
 function offerDone(id) {
-  const prop = document.getElementById('s-sale-prop')?.value.trim()||'';
-  const price = parseInt((document.getElementById('s-sale-price')?.value||'').replace(/,/g,''))||0;
-  const d = document.getElementById('s-offer-date')?.value||todayISO();
-  const c = CASES.find(x=>x.id===id); if(!c) return;
-  if(prop) c.dates.naikenProp = prop;
-  if(price) c.salePrice = price;
-  if(!c.invoice) c.invoice = {type:'commission'};
-  advance(id,'invoice','offer',d,'買付受領 → 請求書へ');
+  _guardAction(()=>{
+  try {
+    const prop  = document.getElementById('s-sale-prop')?.value.trim()||'';
+    const price = parseInt((document.getElementById('s-sale-price')?.value||'').replace(/,/g,''))||0;
+    const d     = document.getElementById('s-offer-date')?.value||todayISO();
+    const c = CASES.find(x=>x.id===id);
+    if(!c) { console.error('offerDone: case not found', id); return; }
+    if(!c.dates) c.dates = {};
+    if(!c.hist)  c.hist  = [];
+    if(prop)  c.dates.naikenProp = prop;
+    if(price) c.salePrice = price;
+    if(!c.invoice) c.invoice = {type:'commission'};
+    advance(id,'invoice','offer',d,'買付受領 → 請求書へ');
+  } catch(e) {
+    console.error('offerDone error:', e);
+    toast('エラー: '+e.message);
+  }
+  });
 }
 function saleContractDone(id) { advance(id,'settlement','contract',todayISO(),'売買契約締結'); }
 function settlementDone(id) {
