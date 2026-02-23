@@ -216,7 +216,7 @@ input[type=date]{color-scheme:dark}
 const STAGES = [
   {id:'new',      label:'新規',     dot:'#4a5270', color:'var(--sub)'},
   {id:'naiken',   label:'内見',     dot:'#4f9cf9', color:'var(--blue)'},
-  {id:'apply',    label:'申込・審査',dot:'#fb923c', color:'var(--orange)'},
+  {id:'apply',    label:'申込・審査',dot:'#fb923c', color:'var(--orange)', labelSale:'買付'},  // label overridden per type
   {id:'contract', label:'契約中',   dot:'#c9a84c', color:'var(--gold)'},
   {id:'payment',  label:'入金待ち', dot:'#a78bfa', color:'var(--purple)'},
   {id:'done',     label:'完了',     dot:'#34d399', color:'var(--green)'},
@@ -372,7 +372,7 @@ function render() {
     const canAdd = st.id!=='done'&&st.id!=='cancel';
     return '<div class="col">'
       +'<div class="col-hdr">'
-      +'<div class="col-title"><div class="col-dot" style="background:'+st.dot+'"></div>'+st.label+'</div>'
+      +'<div class="col-title"><div class="col-dot" style="background:'+st.dot+'"></div>'+(tf!=='reLet'&&tf!=='hr'&&st.labelSale?st.labelSale:st.label)+'</div>'
       +'<span class="col-count" style="background:'+st.dot+'22;color:'+st.color+';border:1px solid '+st.dot+'55">'+cols.length+'</span>'
       +'</div>'
       +'<div class="col-body">'
@@ -392,7 +392,7 @@ function cardHTML(c, st) {
   let badge = '';
   if (c.corp) badge += '<span class="pill pill-purple" style="font-size:7px">法人</span> ';
   if (pendingApps>1) badge += '<span class="pill pill-orange" style="font-size:7px">同時'+pendingApps+'件</span>';
-  if (rejApps>0 && c.step==='screening') badge += ' <span class="pill pill-red" style="font-size:7px">落ち'+rejApps+'</span>';
+  if (rejApps>0 && c.step==='screening' && c.type==='reLet') badge += ' <span class="pill pill-red" style="font-size:7px">落ち'+rejApps+'</span>';
 
   const ageEl = c.age===0
     ? '<span class="age" style="background:rgba(52,211,153,.1);color:var(--green)">本日</span>'
@@ -530,8 +530,8 @@ function buildStepContent(c) {
 
   html += '</div>';
 
-  // 複数申込リスト（screening時）
-  if (c.step==='screening' && c.apps.length>0) {
+  // 複数申込リスト（screening時 = 賃貸のみ）
+  if (c.type==='reLet' && c.step==='screening' && c.apps.length>0) {
     html += '<div style="margin-top:12px">'+appsHTML(c)+'</div>';
   }
 
@@ -688,7 +688,7 @@ function saleSkipNaiken(id) {
 function stepOffer(c) {
   const today = new Date().toISOString().slice(0,10);
   const skipLabel = c.dates.naiken ? '' : '<span style="font-size:10px;color:var(--orange);margin-left:8px">内見なし</span>';
-  return '<div class="step-title">📄 買付申込'+skipLabel+'</div>'
+  return '<div class="step-title">📄 買付'+skipLabel+'</div>'
     +'<div class="fi"><label>物件名</label><input type="text" id="s-sale-prop" value="'+(c.dates.naikenProp||'')+'" placeholder="〇〇マンション 101号"></div>'
     +'<div class="fi"><label>売買価格（円）</label><input type="text" id="s-sale-price" class="mono" placeholder="例: 32,000,000" value="'+(fmtYen(c.salePrice)||'')+'" style="font-size:13px" oninput="invSalePriceInput(this)"></div>'
     +'<div class="fi"><label>買付日</label><input type="date" id="s-offer-date" class="mono" value="'+today+'"></div>'
@@ -1366,8 +1366,11 @@ function issueInvoice(id) {
 
 function invSendSlack(c, grandTotal, adAmt, adDesc, dualInv) {
   const inv = c.invoice || {};
-  const typeLabel = inv.type==='commission' ? '仲介手数料のみ'
-    : inv.type==='ad_plus' ? 'AD＋仲介手数料' : 'ADのみ';
+  const isSaleType = c.type==='reSale' || c.type==='sannai';
+  const saleFromLabel = inv.saleFrom==='both' ? '両手（売主＋買主）' : inv.saleFrom==='buyer' ? '買主から' : '売主から';
+  const typeLabel = isSaleType
+    ? ('売買仲介 / '+saleFromLabel)
+    : (inv.type==='commission' ? '仲介手数料のみ' : inv.type==='ad_plus' ? 'AD＋仲介手数料' : 'ADのみ');
   const fmtLabel = inv.adFmt==='custom' ? '指定フォーマット' : inv.adFmt==='standard' ? 'CORETO標準' : '—';
   const lines = [
     '━━━━━━━━━━━━━━━━━━━━━━',
@@ -1377,13 +1380,16 @@ function invSendSlack(c, grandTotal, adAmt, adDesc, dualInv) {
     `👤 *クライアント*：${c.name}`,
     `🏠 *物件*：${inv.prop||c.sub||'—'}`,
     `📋 *種別*：${typeLabel}`,
-    inv.rent ? `🏷 *家賃*：¥${parseInt(inv.rent).toLocaleString()}` : null,
-    inv.commAmt ? `💴 *仲介手数料*：¥${parseInt(inv.commAmt).toLocaleString()}` : null,
+    isSaleType && inv.salePrice ? `💴 *売買価格*：¥${parseInt(inv.salePrice).toLocaleString()}` : null,
+    !isSaleType && inv.rent ? `🏷 *家賃*：¥${parseInt(inv.rent).toLocaleString()}` : null,
+    inv.commAmt ? `💴 *仲介手数料（売主）*：¥${parseInt(inv.commAmt).toLocaleString()}` : null,
+    inv.commB  ? `💴 *仲介手数料（買主）*：¥${parseInt(inv.commB).toLocaleString()}` : null,
     adAmt ? `💼 *${adDesc||'業務委託手数料'}*：¥${parseInt(adAmt).toLocaleString()}` : null,
     `💰 *合計*：¥${parseInt(grandTotal).toLocaleString()}`,
-    dualInv ? '📄 請求書2枚発行（仲介＋業務委託）' : null,
-    inv.adFmt ? `📋 管理会社フォーマット：${fmtLabel}` : null,
-    inv.underReason ? `⚠ 減額理由：${inv.underReason}` : null,
+    isSaleType && dualInv ? '📄 請求書2枚発行（両手）' : null,
+    !isSaleType && dualInv ? '📄 請求書2枚発行（仲介＋業務委託）' : null,
+    !isSaleType && inv.adFmt ? `📋 管理会社フォーマット：${fmtLabel}` : null,
+    inv.underReason ? `⚠ 減額・理由：${inv.underReason}` : null,
     '━━━━━━━━━━━━━━━━━━━━━━',
     `🕐 ${new Date().toLocaleString('ja-JP')}`,
   ].filter(Boolean).join('\n');
@@ -1671,7 +1677,7 @@ function openNewModal(stageHint) {
     +'<div class="fi"><label id="nc-name-lbl">氏名</label><input type="text" id="nc-name" placeholder="田中 太郎"></div>'
     +'<div id="nc-corp-ext" style="display:none"><div class="fi"><label>担当者名</label><input type="text" id="nc-contact" placeholder="田中 一郎"></div></div>'
     +'<div class="fi"><label>種別</label><select id="nc-type" onchange="toggleAD()"><option value="reLet">🏠 賃貸</option><option value="reSale">🏢 売買</option><option value="sannai">🔄 三為</option><option value="hr">👥 人材</option></select></div>'+'<div id="nc-ad-wrap" style="margin-bottom:10px"><label style="display:flex;align-items:center;gap:7px;font-size:11px;cursor:pointer"><input type="checkbox" id="nc-ad"> AD案件（仲介手数料は鍵渡し後入金）</label></div>'
-    +'<div class="fi"><label>希望条件</label><input type="text" id="nc-sub" placeholder="渋谷区 1LDK 〜¥150,000"></div>'
+    +'<div class="fi"><label>希望条件</label><input type="text" id="nc-sub" placeholder="例: 渋谷区 1LDK / 目黒区 マンション 3,000万"></div>'
     +'<div class="row" style="margin-top:14px"><button class="btn btn-ghost" style="flex:1" onclick="closeModal()">キャンセル</button>'
     +'<button class="btn btn-gold" style="flex:2;justify-content:center" onclick="createCase()">登録</button></div>'
   );
