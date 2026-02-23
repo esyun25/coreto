@@ -516,7 +516,7 @@ function buildStepContent(c) {
     else if (c.step==='verify') html += stepSannaiVerify(c);
     else if (c.step==='offer') html += stepSannaiOffer(c);
     else if (c.step==='invoice') html += stepInvoice(c);
-    else if (c.step==='contract') html += stepSaleContract(c);
+    else if (c.step==='contract') html += stepSannaiContract(c);
     else if (c.step==='settlement') html += stepSettlement(c);
   }
   // ── 売買フロー ──
@@ -739,6 +739,311 @@ function stepOffer(c) {
     +'<div class="fi"><label>売買価格（円）</label><input type="text" id="s-sale-price" class="mono" placeholder="例: 32,000,000" value="'+(fmtYen(c.salePrice)||'')+'" style="font-size:13px" oninput="invSalePriceInput(this)"></div>'
     +'<div class="fi"><label>買付日</label><input type="date" id="s-offer-date" class="mono" value="'+today+'"></div>'
     +'<button class="btn btn-green" style="width:100%;justify-content:center;margin-top:14px" data-cid="'+c.id+'" onclick="offerDone(this.dataset.cid)">買付受領 → 請求書へ</button>';
+}
+
+// ═══════════════════════════════════════════════
+// 三為専用 契約ステップ
+// ═══════════════════════════════════════════════
+function stepSannaiContract(c) {
+  const id  = c.id;
+  const sn  = c.sannai  || {};
+  const inv = c.invoice || {};
+  const sc  = c.sannaiContract || {};
+
+  const bp = sn.buyPrice  || 0;
+  const sp = sn.sellPrice || c.salePrice || 0;
+
+  // 買付・業者確認から引用
+  const defBuyerName = c.buyer?.name    || '';
+  const defBuyerTakken = c.buyer?.takkenNum || '';
+  const defProp = inv.prop || c.dates?.naikenProp || '';
+  const defCommBuyCo  = sn.commBuyCo  || '';
+  const defCommSellCo = sn.commSellCo || '';
+  const defCommBuyAmt  = sn.commBuyAmt  || 0;
+  const defCommSellAmt = sn.commSellAmt || 0;
+
+  // 紹介者リスト（買付の業務委託から引用 or 契約で上書き）
+  const referrers = sc.referrers || (sn.delegPay||[]).map(r=>({
+    name: r.co||'', type: r.type||'other', amt: r.amt||0, note:''
+  }));
+
+  // 発行済み請求書サマリー
+  let invBadge = '';
+  if (inv.issued) {
+    invBadge = '<div style="margin-bottom:12px;padding:8px 12px;background:rgba(201,168,76,.06);border:1px solid rgba(201,168,76,.2);border-radius:8px;font-size:11px;display:flex;justify-content:space-between;align-items:center">'
+      +'<span style="color:var(--gold);font-weight:700">🧾 請求書発行済</span>'
+      +'<span style="display:flex;gap:12px">'
+      +(inv.buyerTotal?'<span style="color:var(--blue)">買主 ¥'+parseInt(inv.buyerTotal).toLocaleString()+'</span>':'')
+      +(inv.hasSellerComm&&inv.sellerTotal?'<span style="color:var(--green)">売主 ¥'+parseInt(inv.sellerTotal).toLocaleString()+'</span>':'')
+      +'</span>'
+      +'<button onclick="editInvoice(\''+id+'\')" style="background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.3);color:var(--gold);border-radius:5px;padding:2px 8px;cursor:pointer;font-size:10px">✏ 修正</button>'
+      +'</div>';
+  }
+
+  // 仲介業者セクション生成
+  function brokerSection(side, label, color, defCo, defAmt, savedCo, savedPerson, savedAmt, toggleKey, savedToggle) {
+    const show = savedToggle !== undefined ? savedToggle : !!defCo;
+    const co   = savedCo     !== undefined ? savedCo     : defCo;
+    const amt  = savedAmt    !== undefined ? savedAmt    : defAmt;
+    return '<div style="border:1px solid rgba('+color+',.2);border-radius:10px;overflow:hidden;margin-bottom:8px">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:rgba('+color+',.05)">'
+      +'<span style="font-size:11px;font-weight:700;color:rgba('+color+',1)">🤝 '+label+'仲介業者</span>'
+      +'<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:10px;color:var(--sub)">'
+      +'<input type="checkbox" id="sn-ct-'+side+'-toggle"'+(show?' checked':'')+' onchange="sannaiCtToggle(\''+id+'\')"> あり'
+      +'</label>'
+      +'</div>'
+      +(show ? (
+        '<div style="padding:10px 12px">'
+        +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px">'
+        +'<div class="fi" style="margin:0"><label>会社名</label><input type="text" id="sn-ct-'+side+'-co" value="'+co+'" placeholder="株式会社〇〇不動産"></div>'
+        +'<div class="fi" style="margin:0"><label>担当者名</label><input type="text" id="sn-ct-'+side+'-person" value="'+(savedPerson||'')+'" placeholder="山田 太郎"></div>'
+        +'</div>'
+        +'<div class="fi" style="margin:0"><label>仲介手数料（税込）</label>'
+        +'<input type="text" id="sn-ct-'+side+'-amt" class="mono" value="'+(amt?fmtYen(amt):'')+'" oninput="invSalePriceInput(this)" placeholder="0" style="font-size:13px"></div>'
+        +'</div>'
+      ) : '<div style="padding:6px 12px 10px;font-size:11px;color:var(--muted)">なし</div>')
+      +'</div>';
+  }
+
+  // 売り側仲介
+  const sellBrokerHtml = brokerSection(
+    'sell', '売り側', '52,211,153',
+    defCommSellCo, defCommSellAmt,
+    sc.sellBrokerCo, sc.sellBrokerPerson, sc.sellBrokerAmt,
+    'sell', sc.hasSellBroker
+  );
+  // 買い側仲介
+  const buyBrokerHtml = brokerSection(
+    'buy', '買い側', '79,156,249',
+    defCommBuyCo, defCommBuyAmt,
+    sc.buyBrokerCo, sc.buyBrokerPerson, sc.buyBrokerAmt,
+    'buy', sc.hasBuyBroker
+  );
+
+  // 紹介者行
+  function referrerRow(i, r) {
+    const typeOpts = [
+      {v:'company', label:'業者'},
+      {v:'person',  label:'個人'},
+    ];
+    return '<div class="sn-referrer-row" data-idx="'+i+'" style="background:rgba(167,139,250,.04);border:1px solid rgba(167,139,250,.15);border-radius:8px;padding:10px 12px;margin-bottom:6px">'
+      +'<div style="display:grid;grid-template-columns:1fr 80px;gap:6px;margin-bottom:6px">'
+      +'<div class="fi" style="margin:0"><label>氏名 / 会社名</label><input type="text" class="sn-ref-name" placeholder="紹介者名" value="'+(r.name||'')+'"></div>'
+      +'<div class="fi" style="margin:0"><label>種別</label><select class="sn-ref-type" style="background:#090b13;border:1px solid var(--border2);border-radius:7px;padding:5px 6px;color:var(--text);font-size:11px;font-family:inherit;width:100%">'
+      +typeOpts.map(o=>'<option value="'+o.v+'"'+(r.type===o.v?' selected':'')+'>'+o.label+'</option>').join('')
+      +'</select></div>'
+      +'</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr auto;gap:6px;align-items:end">'
+      +'<div class="fi" style="margin:0"><label>業務委託費用（税込）</label><input type="text" class="sn-ref-amt mono" placeholder="0" value="'+(r.amt?fmtYen(r.amt):'')+'" oninput="invSalePriceInput(this)" style="font-size:13px"></div>'
+      +'<div class="fi" style="margin:0"><label>備考</label><input type="text" class="sn-ref-note" placeholder="紹介経路など" value="'+(r.note||'')+'"></div>'
+      +'<button onclick="this.closest(\'.sn-referrer-row\').remove()" style="background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);color:var(--red);border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:14px;padding:0;flex-shrink:0;margin-bottom:0">×</button>'
+      +'</div>'
+      +'</div>';
+  }
+
+  const referrerRowsHtml = referrers.map((r,i)=>referrerRow(i,r)).join('');
+
+  // 商流フロー図
+  const flowHtml = sannaiFlowDiagram(c, sc, sn);
+
+  return '<div class="step-title">✍️ 売買契約（三為）</div>'
+    + invBadge
+
+    // 基本情報
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">'
+    +'<div class="fi"><label>契約日</label><input type="date" id="sn-ct-date" class="mono" value="'+(sc.contractDate||todayISO())+'"></div>'
+    +'<div class="fi"><label>決済予定日</label><input type="date" id="sn-ct-settle" class="mono" value="'+(sc.settleDate||'')+'"></div>'
+    +'</div>'
+    +'<div class="fi"><label>物件名</label><input type="text" id="sn-ct-prop" value="'+defProp+'" placeholder="〇〇マンション 101号"></div>'
+
+    // 売主
+    +'<div style="border:1px solid rgba(251,146,60,.2);border-radius:10px;overflow:hidden;margin-bottom:8px">'
+    +'<div style="padding:10px 12px;background:rgba(251,146,60,.05)">'
+    +'<span style="font-size:11px;font-weight:700;color:var(--orange)">🏠 売主</span>'
+    +'<span style="font-size:10px;color:var(--muted);margin-left:8px">仕入れ価格'+(bp?': ¥'+bp.toLocaleString():' — 未入力')+'</span>'
+    +'</div>'
+    +'<div style="padding:10px 12px;display:grid;grid-template-columns:1fr 1fr;gap:6px">'
+    +'<div class="fi" style="margin:0"><label>会社名 / 氏名</label><input type="text" id="sn-ct-seller-name" value="'+(sc.sellerName||'')+'" placeholder="売主名"></div>'
+    +'<div class="fi" style="margin:0"><label>担当者名</label><input type="text" id="sn-ct-seller-person" value="'+(sc.sellerPerson||'')+'" placeholder="担当者"></div>'
+    +'</div>'
+    +'</div>'
+
+    // 売り側仲介
+    + sellBrokerHtml
+
+    // COREBLDG（自社）
+    +'<div style="border:1px solid rgba(201,168,76,.4);border-radius:10px;padding:10px 12px;margin-bottom:8px;background:rgba(201,168,76,.06);text-align:center">'
+    +'<div style="font-size:11px;font-weight:700;color:var(--gold)">🏢 COREBLDG（自社）</div>'
+    +(bp&&sp?'<div style="font-size:10px;color:var(--muted);margin-top:3px">スプレッド: '+(sp-bp>=0?'+':'')+'¥'+(sp-bp).toLocaleString()+'</div>':'')
+    +'</div>'
+
+    // 買い側仲介
+    + buyBrokerHtml
+
+    // 買主
+    +'<div style="border:1px solid rgba(79,156,249,.2);border-radius:10px;overflow:hidden;margin-bottom:8px">'
+    +'<div style="padding:10px 12px;background:rgba(79,156,249,.05)">'
+    +'<span style="font-size:11px;font-weight:700;color:var(--blue)">👤 買主</span>'
+    +'<span style="font-size:10px;color:var(--muted);margin-left:8px">販売価格'+(sp?': ¥'+sp.toLocaleString():' — 未入力')+'</span>'
+    +'</div>'
+    +'<div style="padding:10px 12px">'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px">'
+    +'<div class="fi" style="margin:0"><label>会社名 / 氏名</label><input type="text" id="sn-ct-buyer-name" value="'+(sc.buyerName||defBuyerName)+'" placeholder="買主名"></div>'
+    +'<div class="fi" style="margin:0"><label>担当者名</label><input type="text" id="sn-ct-buyer-person" value="'+(sc.buyerPerson||'')+'" placeholder="担当者"></div>'
+    +'</div>'
+    +(defBuyerTakken?'<div style="font-size:10px;color:var(--muted)">宅建番号: '+defBuyerTakken+'</div>':'')
+    +'</div>'
+    +'</div>'
+
+    // 紹介者
+    +'<div style="border:1px solid rgba(167,139,250,.2);border-radius:10px;overflow:hidden;margin-bottom:12px">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:rgba(167,139,250,.05)">'
+    +'<span style="font-size:11px;font-weight:700;color:var(--purple)">🔗 紹介者</span>'
+    +'<button data-cid="'+id+'" onclick="sannaiAddReferrer(this.dataset.cid)" style="background:rgba(167,139,250,.15);border:1px solid rgba(167,139,250,.3);color:var(--purple);border-radius:6px;padding:3px 10px;cursor:pointer;font-size:10px;font-weight:600">＋ 追加</button>'
+    +'</div>'
+    +'<div id="sn-referrer-list" style="padding:'+(referrers.length?'8px 8px 2px':'0')+' 8px">'
+    + referrerRowsHtml
+    +'</div>'
+    +(referrers.length===0?'<div style="padding:6px 12px 10px;font-size:11px;color:var(--muted)">なし</div>':'')
+    +'</div>'
+
+    // 商流図
+    +'<div style="margin-bottom:12px">'
+    +'<div style="font-size:10px;color:var(--muted);font-weight:600;letter-spacing:.8px;margin-bottom:8px">📊 商流</div>'
+    +'<div id="sn-flow-diagram">' + flowHtml + '</div>'
+    +'</div>'
+
+    +'<button class="btn btn-green" style="width:100%;justify-content:center" data-cid="'+id+'" onclick="sannaiContractDone(this.dataset.cid)">✓ 契約締結 → 決済へ</button>';
+}
+
+// ── 商流ダイアグラム ──
+function sannaiFlowDiagram(c, sc, sn) {
+  const bp = sn.buyPrice  || 0;
+  const sp = sn.sellPrice || c.salePrice || 0;
+
+  const hasSellBroker = document.getElementById('sn-ct-sell-toggle')?.checked
+    ?? (sc.hasSellBroker ?? !!sn.commSellCo);
+  const hasBuyBroker  = document.getElementById('sn-ct-buy-toggle')?.checked
+    ?? (sc.hasBuyBroker  ?? !!sn.commBuyCo);
+  const sellBrokerCo  = sc.sellBrokerCo  || sn.commSellCo || '売り側仲介';
+  const buyBrokerCo   = sc.buyBrokerCo   || sn.commBuyCo  || '買い側仲介';
+  const sellerName    = sc.sellerName    || '売主';
+  const buyerName     = sc.buyerName     || c.buyer?.name || '買主';
+  const referrers     = sc.referrers     || (sn.delegPay||[]).map(r=>({name:r.co||'紹介者',amt:r.amt||0}));
+
+  const node = (label, sub, color, bold) =>
+    '<div style="background:rgba('+color+',.08);border:1px solid rgba('+color+',.35);border-radius:8px;padding:6px 10px;text-align:center;min-width:80px">'
+    +'<div style="font-size:'+(bold?'11':'10')+'px;font-weight:'+(bold?700:600)+';color:rgba('+color+',1)">'+label+'</div>'
+    +(sub?'<div style="font-size:9px;color:var(--muted);margin-top:1px">'+sub+'</div>':'')
+    +'</div>';
+
+  const arrow = (label, color) =>
+    '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;min-width:28px">'
+    +'<div style="font-size:9px;color:rgba('+color+',.8);margin-bottom:2px">'+label+'</div>'
+    +'<div style="height:1px;background:rgba('+color+',.4);width:100%;position:relative">'
+    +'<div style="position:absolute;right:-1px;top:-4px;border-left:6px solid rgba('+color+',.5);border-top:4px solid transparent;border-bottom:4px solid transparent"></div>'
+    +'</div>'
+    +'</div>';
+
+  // メイン商流（横並び）
+  let mainFlow = '<div style="display:flex;align-items:center;gap:4px;margin-bottom:8px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px">';
+  mainFlow += node(sellerName, bp?'¥'+bp.toLocaleString():'', '251,146,60', false);
+  if (hasSellBroker) {
+    mainFlow += arrow('売主→', '52,211,153');
+    mainFlow += node(sellBrokerCo, sn.commSellAmt?'-¥'+sn.commSellAmt.toLocaleString():'', '52,211,153', false);
+  }
+  mainFlow += arrow(hasSellBroker?'→自社':'売主→', '201,168,76');
+  mainFlow += node('COREBLDG', (bp&&sp)?'差¥'+(sp-bp).toLocaleString():'', '201,168,76', true);
+  if (hasBuyBroker) {
+    mainFlow += arrow('→', '79,156,249');
+    mainFlow += node(buyBrokerCo, sn.commBuyAmt?'-¥'+sn.commBuyAmt.toLocaleString():'', '79,156,249', false);
+  }
+  mainFlow += arrow(hasBuyBroker?'→':'→', '79,156,249');
+  mainFlow += node(buyerName, sp?'¥'+sp.toLocaleString():'', '79,156,249', false);
+  mainFlow += '</div>';
+
+  // 紹介者（縦リスト）
+  let refFlow = '';
+  if (referrers.length > 0) {
+    refFlow = '<div style="border-top:1px solid var(--border);padding-top:8px;margin-top:4px">'
+      +'<div style="font-size:9px;color:var(--muted);margin-bottom:6px;font-weight:600">🔗 紹介者（業務委託）</div>'
+      +'<div style="display:flex;flex-wrap:wrap;gap:6px">';
+    referrers.forEach(r => {
+      refFlow += '<div style="display:flex;align-items:center;gap:6px;background:rgba(167,139,250,.06);border:1px solid rgba(167,139,250,.2);border-radius:6px;padding:5px 10px;font-size:10px">'
+        +'<span style="color:var(--purple);font-weight:600">'+(r.name||'—')+'</span>'
+        +(r.amt?'<span style="color:var(--muted)">業務委託</span><span class="mono" style="color:var(--orange)">-¥'+parseInt(r.amt).toLocaleString()+'</span>':'')
+        +'</div>';
+    });
+    refFlow += '</div></div>';
+  }
+
+  return mainFlow + refFlow;
+}
+
+// ── 仲介チェックボックス切替 ──
+function sannaiCtToggle(id) {
+  const c = CASES.find(x=>x.id===id); if(!c) return;
+  sannaiContractSave(c);
+  open_case(id);
+}
+
+// ── 紹介者追加 ──
+function sannaiAddReferrer(id) {
+  const c = CASES.find(x=>x.id===id); if(!c) return;
+  sannaiContractSave(c);
+  if(!c.sannaiContract) c.sannaiContract={};
+  if(!c.sannaiContract.referrers) c.sannaiContract.referrers=[];
+  c.sannaiContract.referrers.push({name:'', type:'company', amt:0, note:''});
+  open_case(id);
+}
+
+// ── フォームデータ保存 ──
+function sannaiContractSave(c) {
+  if(!c.sannaiContract) c.sannaiContract={};
+  const sc = c.sannaiContract;
+
+  sc.contractDate   = document.getElementById('sn-ct-date')?.value   || sc.contractDate  || '';
+  sc.settleDate     = document.getElementById('sn-ct-settle')?.value  || sc.settleDate    || '';
+  sc.prop           = document.getElementById('sn-ct-prop')?.value    || sc.prop          || '';
+  sc.sellerName     = document.getElementById('sn-ct-seller-name')?.value   || sc.sellerName  || '';
+  sc.sellerPerson   = document.getElementById('sn-ct-seller-person')?.value || sc.sellerPerson|| '';
+  sc.buyerName      = document.getElementById('sn-ct-buyer-name')?.value    || sc.buyerName   || '';
+  sc.buyerPerson    = document.getElementById('sn-ct-buyer-person')?.value  || sc.buyerPerson || '';
+
+  sc.hasSellBroker  = document.getElementById('sn-ct-sell-toggle')?.checked ?? sc.hasSellBroker;
+  sc.hasBuyBroker   = document.getElementById('sn-ct-buy-toggle')?.checked  ?? sc.hasBuyBroker;
+  sc.sellBrokerCo   = document.getElementById('sn-ct-sell-co')?.value     || sc.sellBrokerCo   || '';
+  sc.sellBrokerPerson=document.getElementById('sn-ct-sell-person')?.value  || sc.sellBrokerPerson|| '';
+  sc.sellBrokerAmt  = parseInt((document.getElementById('sn-ct-sell-amt')?.value||'').replace(/,/g,''))||sc.sellBrokerAmt||0;
+  sc.buyBrokerCo    = document.getElementById('sn-ct-buy-co')?.value      || sc.buyBrokerCo    || '';
+  sc.buyBrokerPerson= document.getElementById('sn-ct-buy-person')?.value  || sc.buyBrokerPerson || '';
+  sc.buyBrokerAmt   = parseInt((document.getElementById('sn-ct-buy-amt')?.value||'').replace(/,/g,''))||sc.buyBrokerAmt||0;
+
+  // 紹介者
+  const rows = document.querySelectorAll('.sn-referrer-row');
+  if(rows.length > 0) {
+    sc.referrers = [];
+    rows.forEach(row => {
+      const name = row.querySelector('.sn-ref-name')?.value.trim()||'';
+      const type = row.querySelector('.sn-ref-type')?.value||'company';
+      const amt  = parseInt((row.querySelector('.sn-ref-amt')?.value||'').replace(/,/g,''))||0;
+      const note = row.querySelector('.sn-ref-note')?.value.trim()||'';
+      if(name||amt) sc.referrers.push({name, type, amt, note});
+    });
+  }
+}
+
+function sannaiContractDone(id) {
+  try {
+    const c = CASES.find(x=>x.id===id); if(!c) return;
+    sannaiContractSave(c);
+    const sc = c.sannaiContract || {};
+    const d  = sc.contractDate || todayISO();
+    c.hist.unshift(today()+' 売買契約締結'
+      +(sc.sellerName?' 売主:'+sc.sellerName:'')
+      +(sc.buyerName?' 買主:'+sc.buyerName:''));
+    advance(id,'settlement','contract',d,'売買契約締結 → 決済へ');
+  } catch(e){ console.error('sannaiContractDone:',e); }
 }
 
 function stepSaleContract(c) {
