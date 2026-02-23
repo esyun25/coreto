@@ -1688,3 +1688,172 @@ function sannaiEnterCode(id) {
 }
 
 
+
+
+function saleContractDone(id) { advance(id,'settlement','contract',todayISO(),'売買契約締結'); }
+function settlementDone(id) {
+  const d = document.getElementById('s-settlement')?.value||todayISO();
+  advance(id,'done','settlement',d,'決済完了 (決済日: '+d+') → 成約');
+}
+
+function offerDone(id) {
+  try {
+    const prop  = document.getElementById('s-sale-prop')?.value.trim()||'';
+    const price = parseInt((document.getElementById('s-sale-price')?.value||'').replace(/,/g,''))||0;
+    const d     = document.getElementById('s-offer-date')?.value||todayISO();
+    const c = CASES.find(x=>x.id===id);
+    if(!c) { console.error('offerDone: case not found', id); return; }
+    if(!c.dates) c.dates = {};
+    if(!c.hist)  c.hist  = [];
+    if(prop)  c.dates.naikenProp = prop;
+    if(price) c.salePrice = price;
+    if(!c.invoice) c.invoice = {type:'commission'};
+    advance(id,'invoice','offer',d,'買付受領 → 請求書へ');
+  } catch(e) {
+    console.error('offerDone error:', e);
+    toast('エラー: '+e.message);
+  }
+}
+
+
+function cancelCase(id) {
+  if(!confirm('キャンセルしますか？')) return;
+  advance(id,'cancel',null,null,'キャンセル');
+}
+function reactivate(id) {
+  const c = CASES.find(x=>x.id===id);
+  c.step='naiken'; c.hist.unshift(today()+' 案件再開');
+  open_case(id);
+}
+
+function jumpStep(id, stepId) {
+  const c = CASES.find(x=>x.id===id);
+  if(!c) return;
+  const steps = c.type==='reLet'?STEPS_RELET:c.type==='sannai'?STEPS_SANNAI:STEPS_RESALE;
+  const valid = steps.map(s=>s.id);
+  if(!valid.includes(stepId)) return;
+  c.step = stepId;
+  open_case(id);
+}
+
+function addMemo(id) {
+  const inp = document.getElementById('memo-inp');
+  const txt = inp?.value.trim();
+  if(!txt) return;
+  const c = CASES.find(x=>x.id===id);
+  c.hist.unshift(today()+' '+txt);
+  inp.value='';
+  buildStepContent(c);
+}
+
+// ═══════════════════════════════════════════════
+// NEW CASE MODAL
+// ═══════════════════════════════════════════════
+let _corpMode = false;
+
+function openNewModal(stageHint) {
+  _corpMode = false;
+  openModal(
+    '＋ 新規案件'
+    +'<div style="display:flex;gap:6px;margin-bottom:10px">'
+    +'<button id="ct-ind" class="btn btn-ghost btn-sm" style="flex:1;border-color:var(--gold);color:var(--gold)" onclick="setCorp(false)">👤 個人</button>'
+    +'<button id="ct-corp" class="btn btn-ghost btn-sm" style="flex:1" onclick="setCorp(true)">🏢 法人</button>'
+    +'</div>'
+    +'<div class="fi"><label id="nc-name-lbl">氏名</label><input type="text" id="nc-name" placeholder="田中 太郎"></div>'
+    +'<div id="nc-corp-ext" style="display:none"><div class="fi"><label>担当者名</label><input type="text" id="nc-contact" placeholder="田中 一郎"></div></div>'
+    +'<div class="fi"><label>種別</label><select id="nc-type" onchange="toggleAD()"><option value="reLet">🏠 賃貸</option><option value="reSale">🏢 売買</option><option value="sannai">🔄 三為</option><option value="hr">👥 人材</option></select></div>'+'<div id="nc-ad-wrap" style="margin-bottom:10px"><label style="display:flex;align-items:center;gap:7px;font-size:11px;cursor:pointer"><input type="checkbox" id="nc-ad"> AD案件（仲介手数料は鍵渡し後入金）</label></div>'
+    +'<div class="fi"><label>希望条件</label><input type="text" id="nc-sub" placeholder="例: 渋谷区 1LDK / 目黒区 マンション 3,000万"></div>'
+    +'<div class="row" style="margin-top:14px"><button class="btn btn-ghost" style="flex:1" onclick="closeModal()">キャンセル</button>'
+    +'<button class="btn btn-gold" style="flex:2;justify-content:center" onclick="createCase()">登録</button></div>'
+  );
+}
+
+function toggleAD() {
+  const t = document.getElementById('nc-type')?.value;
+  const wrap = document.getElementById('nc-ad-wrap');
+  if(wrap) wrap.style.display = t==='reLet' ? 'block' : 'none';
+}
+
+function setCorp(flag) {
+  _corpMode = flag;
+  const ind  = document.getElementById('ct-ind');
+  const corp = document.getElementById('ct-corp');
+  const ext  = document.getElementById('nc-corp-ext');
+  const lbl  = document.getElementById('nc-name-lbl');
+  const inp  = document.getElementById('nc-name');
+  if(flag) {
+    corp.style.borderColor='var(--purple)'; corp.style.color='var(--purple)';
+    ind.style.borderColor=''; ind.style.color='';
+    ext.style.display='block'; lbl.textContent='法人名'; inp.placeholder='株式会社〇〇';
+  } else {
+    ind.style.borderColor='var(--gold)'; ind.style.color='var(--gold)';
+    corp.style.borderColor=''; corp.style.color='';
+    ext.style.display='none'; lbl.textContent='氏名'; inp.placeholder='田中 太郎';
+  }
+}
+
+function createCase() {
+  const name = document.getElementById('nc-name')?.value.trim();
+  if(!name){alert('名前を入力してください');return;}
+  const contact = document.getElementById('nc-contact')?.value.trim()||'';
+  if(_corpMode&&!contact){alert('担当者名を入力してください');return;}
+  const type = document.getElementById('nc-type')?.value;
+  const sub  = document.getElementById('nc-sub')?.value.trim()||'—';
+  const prefix = type==='reLet'?'R':type==='reSale'?'S':type==='sannai'?'N':'H';
+  const id = prefix+String(Math.floor(Math.random()*90000+10000));
+  const initStep = (type==='reLet'||type==='reSale'||type==='sannai')?'naiken':'new';
+  const adOnly = document.getElementById('nc-ad')?.checked && type==='reLet';
+  const obj = {id, name, type, corp:_corpMode, agent:'10012', sub, step:initStep, age:0, stale:false, adOnly, taskDone:{paid:false,itsetsu:false}, apps:[], dates:{}, hist:[today()+' 案件登録'+(adOnly?' [AD案件]':'')]};
+  if(_corpMode&&contact) obj.contactName = contact;
+  if(type==='sannai') obj.buyer = {name:'', takkenNum:'', verified:false, bypass:false};
+  CASES.unshift(obj);
+  closeModal();
+  render();
+  open_case(id);
+  toast('案件を登録しました');
+}
+
+// ═══════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════
+// 売買価格カンマ区切りフォーマット
+function fmtYen(v) {
+  if (!v && v !== 0) return '';
+  const n = parseInt(String(v).replace(/,/g,''));
+  return isNaN(n) ? '' : n.toLocaleString('ja-JP');
+}
+
+function invSalePriceInput(el) {
+  const raw = el.value.replace(/[^0-9]/g,'');
+  const num = parseInt(raw);
+  const formatted = isNaN(num) ? '' : num.toLocaleString('ja-JP');
+  const pos = el.selectionStart;
+  const oldLen = el.value.length;
+  el.value = formatted;
+  const newLen = formatted.length;
+  const delta = newLen - oldLen;
+  el.setSelectionRange(Math.max(0, pos + delta), Math.max(0, pos + delta));
+  if (document.getElementById('inv-sale-price')) invCalcSale();
+}
+
+function openModal(inner) {
+  document.getElementById('modal-box').innerHTML = inner;
+  document.getElementById('overlay').classList.add('on');
+}
+
+function closeModal() { document.getElementById('overlay').classList.remove('on'); }
+document.getElementById('overlay').addEventListener('click', e=>{if(e.target.id==='overlay')closeModal();});
+
+function toast(msg) {
+  const t=document.getElementById('toast');
+  t.textContent='✓ '+msg; t.style.display='block';
+  clearTimeout(t._t); t._t=setTimeout(()=>t.style.display='none',2200);
+}
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+render();
+</script>
+</body>
+</html>
