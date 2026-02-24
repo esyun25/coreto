@@ -2,9 +2,12 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CORETO — 領収書・請求書発行</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CORETO — 発行管理 HQ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@400;500&family=Noto+Sans+JP:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
+
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Noto+Serif+JP:wght@400;700&family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -83,41 +86,51 @@ html,body{min-height:100%;font-family:'Noto Sans JP',sans-serif;background:var(-
 .stat-row{display:flex;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid rgba(30,34,53,.4);font-size:12px}
 .stat-row:last-child{border:none}
 ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+
+#ref-float-btn{position:fixed;left:0;top:50%;transform:translateY(-50%) translateX(-100%) rotate(-90deg);transform-origin:right bottom;z-index:8000;background:rgba(201,168,76,.18);border:1px solid rgba(201,168,76,.4);border-bottom:none;border-radius:8px 8px 0 0;color:var(--gold);padding:6px 16px;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap;letter-spacing:.5px;transition:background .15s}
+#ref-float-btn:hover{background:rgba(201,168,76,.32)}
+
 </style>
 </head>
 <body>
-<div class="hdr">
-  <div style="display:flex;align-items:center;gap:12px">
-    <div class="logo">CORETO</div>
-    <div style="width:1px;height:18px;background:var(--border2)"></div>
-    <span style="font-size:10px;color:var(--muted);letter-spacing:1px">領収書・請求書</span>
-  </div>
-  <div style="display:flex;gap:8px">
-    <button class="btn btn-ghost btn-sm" onclick="location.href='coreto-hub.html'">🏠 ホーム</button>
-  </div>
-</div>
-
 <div class="layout">
+
 <div class="sidebar">
-  <div class="sb-section">エージェント</div>
-  <div class="sb-item on" id="sb-my"   onclick="showPage('my')">  <span>📄</span>領収書ダウンロード</div>
-  <div class="sb-item" id="sb-req"  onclick="showPage('req')"> <span>📝</span>請求書発行</div>
-  <div class="sb-item" id="sb-fee"  onclick="showPage('fee')"> <span>💰</span>月会費領収書</div>
+  <div class="sb-section">HQ管理</div>
+  <div class="sb-item on" id="sb-hq"  onclick="showPage('hq')"> <span>🏢</span>発行管理・一括出力</div>
+  <div class="sb-item" id="sb-fee" onclick="showPage('fee')"> <span>💰</span>月会費領収書</div>
   <div class="sb-section" style="margin-top:8px">紹介</div>
-  <div class="sb-item" onclick="openRefModal()" style="color:var(--gold)"> <span>🔗</span>紹介リンク発行</div>
+  <div class="sb-item" onclick="openRefModal()" style="color:var(--gold)"><span>🔗</span>紹介リンク発行</div>
 </div>
 
 <div class="main" id="main"></div>
 </div>
 
+<div id="ref-modal-overlay" onclick="if(event.target===this)closeRefModal()">
+  <div id="ref-modal" style="background:var(--card);border:1px solid var(--border2);border-radius:16px;padding:0;width:min(460px,92vw);overflow:hidden">
+    <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+      <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:var(--gold)">🔗 紹介リンク発行</div>
+      <button onclick="closeRefModal()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer">×</button>
+    </div>
+    <div style="padding:20px">
+      <div id="ref-code-selector"></div>
+      <div style="background:var(--card2);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;font-family:'DM Mono',monospace;font-size:11px;color:var(--sub);word-break:break-all;margin:10px 0" id="ref-url-display">—</div>
+      <button style="width:100%;padding:10px;border-radius:8px;border:none;cursor:pointer;font-family:inherit;font-size:13px;font-weight:700;background:var(--gold);color:#0a0c10;margin-top:4px" onclick="copyRefLink()">📋 コピー</button>
+    </div>
+  </div>
+</div>
+
 <script>
-// ══ AUTH GUARD (要ログイン) ════════════════════════════════════
+
+// ══ AUTH GUARD (HQ専用ページ) ══════════════════════════════════
 (function() {
   var s = null;
   try { s = JSON.parse(sessionStorage.getItem('coreto_session') || 'null'); } catch(e) {}
-  if (!s) { location.replace('coreto-hub.html'); }
+  if (!s || s.type !== 'hq') { location.replace('coreto-hub.html'); }
   window._SESSION = s;
 })();
+
 
 // ─── Demo Data ─────────────────────────────────────────────────────
 const ME = {
@@ -147,15 +160,18 @@ const MONTHLY_FEE = [
   { month:'2025年12月',amount:980,  date:'2025-12-01', status:'引落済（Bronze時）',  receipt:'RC-202512-10012' },
 ];
 
-// エージェントデータは本人のみ（_SESSIONから取得）
-const MY_AGENT_ID = (window._SESSION && window._SESSION.userId) || '10012';
-
+const ALL_AGENTS = [
+  { id:'10012', name:'山田 誠',   type:'re', month:'2026年2月', gross:350000, net:261765, status:'確定' },
+  { id:'10008', name:'佐藤 花子', type:'re', month:'2026年2月', gross:180000, net:133047, status:'振込済' },
+  { id:'10023', name:'鈴木 健太', type:'re', month:'2026年2月', gross:420000, net:314118, status:'確定' },
+  { id:'20005', name:'田中 美穂', type:'hr', month:'2026年2月', gross:290000, net:218523, status:'振込済' },
+];
 
 // ─── Page routing ──────────────────────────────────────────────────
 function showPage(p) {
   document.querySelectorAll('.sb-item').forEach(el=>el.classList.remove('on'));
   document.getElementById('sb-'+p).classList.add('on');
-  ({my:pageMy, req:pageReq, fee:pageFee}[p]||pageMy)();
+  ({my:pageMy, req:pageReq, hq:pageHq, fee:pageFee}[p]||pageMy)();
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -374,7 +390,54 @@ function printInvoice() {
 // ══════════════════════════════════════════════════════════════════
 // PAGE: HQ 発行管理
 // ══════════════════════════════════════════════════════════════════
+function pageHq() {
+  document.getElementById('main').innerHTML = `
+    <div class="ptitle">領収書・明細書 発行管理</div>
+    <div class="psub">全エージェントの報酬明細書・領収書の発行・一括出力を管理します</div>
 
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kv">24名</div><div class="kl">対象エージェント数</div></div>
+      <div class="kpi"><div class="kv">¥8,240,000</div><div class="kl">2026年2月 総報酬額</div></div>
+      <div class="kpi"><div class="kv">18名</div><div class="kl">明細書確認済み</div></div>
+      <div class="kpi"><div class="kv">6名</div><div class="kl">未確認（要フォロー）</div></div>
+    </div>
+
+    <div class="card">
+      <div class="ch">
+        <div class="ch-t">エージェント別 発行状況</div>
+        <div style="display:flex;gap:8px">
+          <select style="background:#090b13;border:1px solid var(--border2);color:var(--sub);
+                         padding:5px 10px;border-radius:7px;font-size:11px">
+            <option>2026年2月</option><option>2026年1月</option><option>2025年12月</option>
+          </select>
+          <button class="btn btn-gold btn-sm" onclick="bulkPrint()">📦 全員分まとめて発行</button>
+          <button class="btn btn-ghost btn-sm" onclick="exportAllCSV()">📥 CSV出力</button>
+        </div>
+      </div>
+      <table class="tbl">
+        <thead><tr>
+          <th>ID</th><th>エージェント</th><th>種別</th><th>報酬額（税引前）</th>
+          <th>手取り</th><th>ステータス</th><th>操作</th>
+        </tr></thead>
+        <tbody>
+          ${ALL_AGENTS.map(a=>`<tr>
+            <td class="mono" style="font-size:11px">${a.id}</td>
+            <td style="font-weight:700">${a.name}</td>
+            <td><span class="pill ${a.type==='re'?'pb':'po'}">${a.type==='re'?'賃貸':'HR'}</span></td>
+            <td class="mono">¥${a.gross.toLocaleString()}</td>
+            <td class="mono" style="color:var(--green)">¥${a.net.toLocaleString()}</td>
+            <td><span class="pill ${a.status==='振込済'?'pg':'pb'}">${a.status}</span></td>
+            <td>
+              <div style="display:flex;gap:5px">
+                <button class="btn btn-ghost btn-sm" onclick="printAgentReceipt('${a.id}','${a.name}')">📄 発行</button>
+                <button class="btn btn-ghost btn-sm" onclick="sendEmail('${a.name}')">📧 送信</button>
+              </div>
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
 
 // ══════════════════════════════════════════════════════════════════
 // PAGE: 月会費領収書
@@ -623,22 +686,51 @@ function copyRefLink() {
     document.execCommand('copy'); document.body.removeChild(ta);
   });
 }
-</script>
 
-<div id="ref-modal-overlay" onclick="if(event.target===this)closeRefModal()">
-  <div id="ref-modal">
-    <div class="ref-mhdr">
-      <div class="ref-mhdr-t">🔗 紹介リンク発行</div>
-      <button onclick="closeRefModal()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1">×</button>
-    </div>
-    <div class="ref-mbody">
-      <div style="font-size:11px;color:var(--sub);margin-bottom:14px;line-height:1.8">このリンクから入会すると紹介コードが自動入力されます。</div>
-      <div id="ref-code-selector"></div>
-      <div style="font-size:10px;color:var(--muted);margin-bottom:4px;font-weight:600;letter-spacing:.5px">発行リンク</div>
-      <div class="ref-url" id="ref-url-display">—</div>
-      <button class="ref-copy-btn" onclick="copyRefLink()">📋 コピー</button>
-    </div>
-  </div>
-</div>
+
+// Override showPage to only show HQ pages
+var _origShowPage = showPage;
+function showPage(p) {
+  var allowed = ['hq', 'fee'];
+  if (allowed.indexOf(p) === -1) { showPage('hq'); return; }
+  _origShowPage(p);
+}
+
+// Init
+showPage('hq');
+
+// Referral modal
+var _refCurrentCode = '';
+function openRefModal() {
+  var s = window._SESSION;
+  var agentId = s ? s.userId : '00001';
+  // exec gets special codes
+  var isExec = s && s.hqRole === 'exec';
+  var sel = document.getElementById('ref-code-selector');
+  if (isExec) {
+    var SPECIAL = ['FOUNDER2026','WELCOME2026','GOLD_START','HR_PRO75'];
+    var opts = SPECIAL.map(function(c){ return '<option value="'+c+'">⭐ '+c+'</option>'; }).join('');
+    sel.innerHTML = '<div style="margin-bottom:12px"><select id="ref-code-select" onchange="updateRefLink()" style="width:100%;padding:8px 10px;background:var(--card2);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:12px;font-family:inherit"><option value="'+agentId+'">自分のID（'+agentId+'）</option><optgroup label="── 特別コード ──">'+opts+'</optgroup></select></div>';
+  } else {
+    sel.innerHTML = '<div style="padding:8px 12px;background:rgba(201,168,76,.06);border:1px solid rgba(201,168,76,.2);border-radius:8px;margin-bottom:12px"><span style="font-size:11px;color:var(--muted)">コード：</span><span style="font-family:\'DM Mono\',monospace;font-size:13px;font-weight:700;color:var(--gold)">'+agentId+'</span></div>';
+  }
+  _refCurrentCode = agentId;
+  updateRefLink();
+  document.getElementById('ref-modal-overlay').classList.add('open');
+}
+function updateRefLink() {
+  var sel = document.getElementById('ref-code-select');
+  if (sel) _refCurrentCode = sel.value;
+  var url = location.origin + location.pathname.replace(/[^/]*$/, '') + 'coreto-agent-signup.html?ref=' + _refCurrentCode;
+  document.getElementById('ref-url-display').textContent = url;
+}
+function closeRefModal() { document.getElementById('ref-modal-overlay').classList.remove('open'); }
+function copyRefLink() {
+  navigator.clipboard.writeText(document.getElementById('ref-url-display').textContent).catch(function(){});
+  var btn = document.querySelector('[onclick="copyRefLink()"]');
+  btn.textContent = '✅ コピーしました';
+  setTimeout(function(){ btn.textContent = '📋 コピー'; }, 2000);
+}
+</script>
 </body>
 </html>

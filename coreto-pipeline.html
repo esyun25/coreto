@@ -224,12 +224,7 @@ input[type=date]{color-scheme:dark}
     <option value="sannai">🔄 三為</option>
     <option value="hr">👥 人材</option>
   </select>
-  <select id="f-agent" onchange="render()" style="background:#090b13;border:1px solid var(--border2);border-radius:6px;padding:4px 10px;color:var(--text);font-size:11px;font-family:inherit">
-    <option value="">全担当</option>
-    <option value="10012">山田 誠</option>
-    <option value="10008">鈴木 健太</option>
-    <option value="10023">佐藤 花子</option>
-  </select>
+
   <span id="board-count" style="margin-left:auto;font-size:10px;color:var(--muted)"></span>
 </div>
 
@@ -250,6 +245,14 @@ input[type=date]{color-scheme:dark}
 <div class="toast" id="toast"></div>
 
 <script>
+// ══ AUTH GUARD (要ログイン) ════════════════════════════════════
+(function() {
+  var s = null;
+  try { s = JSON.parse(sessionStorage.getItem('coreto_session') || 'null'); } catch(e) {}
+  if (!s) { location.replace('coreto-hub.html'); }
+  window._SESSION = s;
+})();
+
 // ═══════════════════════════════════════════════
 // CONSTANTS
 // ═══════════════════════════════════════════════
@@ -447,10 +450,11 @@ function render() {
   if(ft && ft.value==='') ft.value='reLet';
 
   const tf = document.getElementById('f-type').value;
-  const af = document.getElementById('f-agent').value;
-  let cs = CASES;
+  // HQロールは全案件表示、エージェントは自分の案件のみ
+  const _s = window._SESSION;
+  const _isHQ = _s && _s.type === 'hq';
+  let cs = _isHQ ? CASES : CASES.filter(c => c.agent === (_s ? _s.userId : '__none__'));
   if (tf) cs = cs.filter(c=>c.type===tf);
-  if (af) cs = cs.filter(c=>c.agent===af);
 
   const board = document.getElementById('board');
   board.innerHTML = STAGES.map(st=>{

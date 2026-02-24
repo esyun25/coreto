@@ -438,6 +438,14 @@ html,body{min-height:100%;font-family:'Noto Sans JP',sans-serif;background:var(-
 </div>
 
 <script>
+// ══ AUTH GUARD (要ログイン) ════════════════════════════════════
+(function() {
+  var s = null;
+  try { s = JSON.parse(sessionStorage.getItem('coreto_session') || 'null'); } catch(e) {}
+  if (!s) { location.replace('coreto-hub.html'); }
+  window._SESSION = s;
+})();
+
 // ════════════════════════════════════════════════════════════
 //  データ
 // ════════════════════════════════════════════════════════════
@@ -815,6 +823,30 @@ function exportCSV() {
 
 // ════ Init ════
 renderTakkenTable();
+
+// Role-based data filtering
+(function() {
+  var s = window._SESSION;
+  if (!s) return;
+  if (s.type !== 'hq') {
+    // For agents: filter AGENTS list to only their own entry
+    AGENTS = AGENTS.filter(function(a) { return a.id === s.userId; });
+    // Also filter JISSEKI
+    if (typeof JISSEKI !== 'undefined') {
+      JISSEKI = JISSEKI.filter(function(j) { return j.agentId === s.userId; });
+    }
+    // Update header to show it's personal view
+    var badge = document.querySelector('.hdr .logo + *');
+    var hdr = document.querySelector('.hdr');
+    if (hdr) {
+      var span = hdr.querySelector('span');
+      if (span) span.textContent = '宅建士情報';
+    }
+    // Re-render if render function exists
+    if (typeof renderAll === 'function') renderAll();
+    else if (typeof showTab === 'function') showTab(0, document.querySelector('.tab'));
+  }
+})();
 </script>
 </body>
 </html>

@@ -102,13 +102,21 @@ html,body{height:100%;font-family:'Noto Sans JP',sans-serif;background:var(--bg)
   <div class="sidebar">
     <div class="sb-sec">メニュー</div>
     <div class="sb-item on" id="sb-my"   onclick="showPage('my')"><span>📋</span>自分の進捗</div>
-    <div class="sb-item"    id="sb-hq"   onclick="showPage('hq')"><span>🏢</span>HQ管理</div>
+    <div class="sb-item" id="sb-hq" onclick="showPage('hq')" style="display:none"><span>🏢</span>HQ管理</div>
 
     <div class="sb-sec" style="margin-top:8px">紹介</div>
     <div class="sb-item" onclick="openRefModal()" style="color:var(--gold)"><span>🔗</span>紹介リンク発行</div>  </div>
   <div class="main" id="main"></div>
 </div>
 <script>
+// ══ AUTH GUARD (要ログイン) ════════════════════════════════════
+(function() {
+  var s = null;
+  try { s = JSON.parse(sessionStorage.getItem('coreto_session') || 'null'); } catch(e) {}
+  if (!s) { location.replace('coreto-hub.html'); }
+  window._SESSION = s;
+})();
+
 const SESSION_KEY = 'coreto_session';
 const s = (() => { try { return JSON.parse(sessionStorage.getItem(SESSION_KEY)||'{}'); } catch(e){return {};} })();
 const ME = { id: s.id||'10012', name: s.name||'山田 誠', type: s.type||'re' };
@@ -356,6 +364,15 @@ function copyRefLink() {
     document.execCommand('copy'); document.body.removeChild(ta);
   });
 }
+
+// Role-based tab visibility
+(function() {
+  var s = window._SESSION;
+  if (s && s.type === 'hq') {
+    var el = document.getElementById('sb-hq');
+    if (el) el.style.display = '';
+  }
+})();
 </script>
 
 <div id="ref-modal-overlay" onclick="if(event.target===this)closeRefModal()">
