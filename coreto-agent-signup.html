@@ -110,8 +110,10 @@ html,body{min-height:100%;font-family:'Noto Sans JP',sans-serif;background:var(-
   <div class="step on"  id="s0"><div class="step-dot">1</div><div class="step-lbl">基本<br>情報</div></div>
   <div class="step"     id="s1"><div class="step-dot">2</div><div class="step-lbl">宅建士<br>確認</div></div>
   <div class="step"     id="s2"><div class="step-dot">3</div><div class="step-lbl">SMS<br>認証</div></div>
-  <div class="step"     id="s3"><div class="step-dot">4</div><div class="step-lbl">決済<br>情報</div></div>
-  <div class="step"     id="s4"><div class="step-dot">5</div><div class="step-lbl">確認<br>送信</div></div>
+  <div class="step"     id="s3"><div class="step-dot">4</div><div class="step-lbl">身分証<br>提出</div></div>
+  <div class="step"     id="s4"><div class="step-dot">5</div><div class="step-lbl">口座<br>情報</div></div>
+  <div class="step"     id="s5"><div class="step-dot">6</div><div class="step-lbl">決済<br>情報</div></div>
+  <div class="step"     id="s6"><div class="step-dot">7</div><div class="step-lbl">確認<br>送信</div></div>
 </div>
 
 <div class="wrap" id="wrap"></div>
@@ -129,6 +131,10 @@ var form = {
   monthlyFee: 980,       // 専任なら0（ブロンズ初期値）
   meishiFee:  2000,      // 名刺（専任なら0）
   meishiWant: true,
+  // KYC
+  kyc_front:'', kyc_back:'',
+  // 口座
+  bankName:'', bankBranch:'', bankBranchCode:'', bankType:'普通', bankNum:'', bankHolder:'',
   // 決済
   cardNo:'', cardExp:'', cardCvv:'', cardName:'',
 };
@@ -140,12 +146,13 @@ var otpSec = 300;
 // ── Step control ─────────────────────────────────────────────
 function goStep(n) {
   step = n;
-  for (var i=0;i<5;i++) {
+  for (var i=0;i<7;i++) {
     var el = document.getElementById('s'+i);
+    if(!el) continue;
     el.className = 'step'+(i<n?' done':i===n?' on':'');
     el.querySelector('.step-dot').textContent = i<n ? '✓' : String(i+1);
   }
-  [step0,step1,step2,step3,step4][n]();
+  [step0,step1,step2,step3,step4,step5,step6][n]();
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
@@ -386,9 +393,123 @@ function resendOtp() {
 }
 
 // ══════════════════════════════════════
-//  STEP 3: 決済情報
+//  STEP 3: 身分証明書アップロード
 // ══════════════════════════════════════
+var kycDocType = -1;  // 0=免許証 1=パスポート 2=マイナンバー
+var kycUploads = {front: null, back: null};
+
 function step3() {
+  var docBtns = ['🪪 運転免許証','🛂 パスポート','💳 マイナンバーカード'].map(function(label, i) {
+    var on = kycDocType === i;
+    return '<button onclick="kycSelDoc('+i+')" style="flex:1;padding:10px 8px;border:1px solid '+(on?'var(--blue)':'var(--border2)')+';border-radius:8px;cursor:pointer;background:'+(on?'rgba(79,156,249,.12)':'var(--card2)')+';color:'+(on?'var(--blue)':'var(--sub)')+';font-size:11px;font-weight:600;font-family:inherit">'+label+'</button>';
+  }).join('');
+
+  var needBack = kycDocType !== 1;
+  var frontDone = !!kycUploads.front;
+  var backDone  = !needBack || !!kycUploads.back;
+
+  function uploadZone(side, label, done) {
+    return '<div onclick="document.getElementById(\'kyc-'+side+'\').click()" style="border:2px dashed '+(done?'var(--green)':'var(--border2)')+';border-radius:10px;padding:20px;text-align:center;cursor:pointer;background:'+(done?'rgba(52,211,153,.04)':'var(--card2)')+';transition:.2s">'
+      +'<div style="font-size:28px;margin-bottom:6px">'+(done?'✅':'📷')+'</div>'
+      +'<div style="font-size:11px;font-weight:600;color:'+(done?'var(--green)':'var(--sub)')+'">'+label+'</div>'
+      +'<div style="font-size:10px;color:var(--muted);margin-top:4px">'+(done?'✓ アップロード済み — クリックで変更':'JPG・PNG・PDF対応')+'</div>'
+      +'<input type="file" id="kyc-'+side+'" accept="image/*,.pdf" style="display:none" onchange="kycUpload(this,\''+side+'\')">'
+      +'</div>';
+  }
+
+  var canNext = kycDocType >= 0 && frontDone && backDone;
+
+  document.getElementById('wrap').innerHTML =
+    '<div class="card"><div class="ch"><div class="ch-t">身分証明書</div><span class="pill pb">4 / 7</span></div><div class="cb">'
+    +'<div style="font-size:11px;color:var(--sub);margin-bottom:14px;line-height:1.8">入会審査のため身分証明書をアップロードしてください。書類は本部スタッフが目視確認します（1〜2営業日）。</div>'
+    +'<div class="field"><label>書類の種類 <span class="req">*</span></label>'
+    +'<div style="display:flex;gap:8px">'+docBtns+'</div></div>'
+    +(kycDocType >= 0 ? (
+      '<div style="display:grid;grid-template-columns:'+(needBack?'1fr 1fr':'1fr')+';gap:10px;margin-top:12px">'
+      + uploadZone('front', needBack?'表面':'証明書','front',frontDone)
+      +(needBack ? uploadZone('back','裏面','back',backDone) : '')
+      +'</div>'
+    ) : '')
+    +'<div style="display:flex;gap:10px;margin-top:20px">'
+    +'<button class="btn btn-ghost" onclick="goStep(2)" style="width:auto;padding:10px 20px">← 戻る</button>'
+    +'<button class="btn btn-gold" '+(canNext?'':'disabled ')+'onclick="goStep(4)" style="flex:1;justify-content:center">次へ: 口座情報 →</button>'
+    +'</div>'
+    +'</div></div>';
+}
+
+function kycSelDoc(n) {
+  kycDocType = n;
+  step3();
+}
+
+function kycUpload(input, side) {
+  if (!input.files[0]) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    kycUploads[side] = { name: input.files[0].name, data: e.target.result };
+    form['kyc_'+side] = input.files[0].name;
+    step3();
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+// ══════════════════════════════════════
+//  STEP 4: 口座情報
+// ══════════════════════════════════════
+function step4() {
+  var sv = function(id) { return (document.getElementById(id)||{}).value||''; };
+  document.getElementById('wrap').innerHTML =
+    '<div class="card"><div class="ch"><div class="ch-t">口座情報</div><span class="pill pb">5 / 7</span></div><div class="cb">'
+    +'<div style="font-size:11px;color:var(--sub);margin-bottom:14px;line-height:1.8">報酬の振込先口座を登録してください。<strong style="color:var(--text)">本人名義の口座のみ</strong>受け付けます。</div>'
+    +'<div class="field"><label>銀行名 <span class="req">*</span></label>'
+    +'<input id="b-bank" type="text" placeholder="例: GMOあおぞらネット銀行" value="'+(form.bankName||'')+'">'
+    +'</div>'
+    +'<div class="g2">'
+    +'<div class="field"><label>支店名 <span class="req">*</span></label>'
+    +'<input id="b-branch" type="text" placeholder="例: ビジネス営業部" value="'+(form.bankBranch||'')+'">'
+    +'</div>'
+    +'<div class="field"><label>支店コード</label>'
+    +'<input id="b-branchcode" type="text" class="mono" placeholder="例: 010" value="'+(form.bankBranchCode||'')+'">'
+    +'</div>'
+    +'</div>'
+    +'<div class="g2">'
+    +'<div class="field"><label>口座種別 <span class="req">*</span></label>'
+    +'<select id="b-type"><option value="普通" '+(form.bankType==='普通'?'selected':'')+'>普通</option><option value="当座" '+(form.bankType==='当座'?'selected':'')+'>当座</option></select>'
+    +'</div>'
+    +'<div class="field"><label>口座番号 <span class="req">*</span></label>'
+    +'<input id="b-num" type="text" class="mono" placeholder="1234567" maxlength="8" value="'+(form.bankNum||'')+'">'
+    +'</div>'
+    +'</div>'
+    +'<div class="field"><label>口座名義（カタカナ） <span class="req">*</span></label>'
+    +'<input id="b-holder" type="text" class="mono" placeholder="例: ヤマダ マコト" value="'+(form.bankHolder||form.nameKana||'')+'">'
+    +'</div>'
+    +'<div style="margin-top:4px;padding:10px 12px;background:rgba(79,156,249,.06);border:1px solid rgba(79,156,249,.2);border-radius:8px;font-size:11px;color:var(--sub)">💡 GMOあおぞらネット銀行の口座をお持ちの場合、振込手数料が無料になります。</div>'
+    +'<div style="display:flex;gap:10px;margin-top:20px">'
+    +'<button class="btn btn-ghost" onclick="goStep(3)" style="width:auto;padding:10px 20px">← 戻る</button>'
+    +'<button class="btn btn-gold" onclick="saveBank()" style="flex:1;justify-content:center">次へ: 決済情報 →</button>'
+    +'</div>'
+    +'</div></div>';
+}
+
+function saveBank() {
+  var bank  = document.getElementById('b-bank').value.trim();
+  var branch= document.getElementById('b-branch').value.trim();
+  var num   = document.getElementById('b-num').value.trim();
+  var holder= document.getElementById('b-holder').value.trim();
+  if (!bank||!branch||!num||!holder) { alert('必須項目をすべて入力してください'); return; }
+  form.bankName      = bank;
+  form.bankBranch    = branch;
+  form.bankBranchCode= document.getElementById('b-branchcode').value.trim();
+  form.bankType      = document.getElementById('b-type').value;
+  form.bankNum       = num;
+  form.bankHolder    = holder;
+  goStep(5);
+}
+
+// ══════════════════════════════════════
+//  STEP 5: 決済情報
+// ══════════════════════════════════════
+function step5() {
   var feeNote = form.takkenSennin
     ? '<div class="fee-highlight"><div style="font-size:11px;color:var(--muted);margin-bottom:4px">専任宅建士 特典</div><div class="fee-free">¥0</div><div style="font-size:11px;color:var(--green);margin-top:4px">月会費・名刺費用 すべて無料</div></div>'
     : '<div class="al al-info">💳 <div>月会費 <strong>¥980</strong>（ブロンズランク）が翌月から請求されます。</div></div>';
@@ -406,7 +527,7 @@ function step3() {
       '<div class="field"><label>カード名義（ローマ字）<span class="req">*</span></label><input id="f-cname" value="'+form.cardName+'" placeholder="MAKOTO YAMADA" style="font-family:\'DM Mono\',monospace;text-transform:uppercase"></div>'
     ) +
     '<div style="display:flex;gap:10px;margin-top:8px">' +
-    '<button class="btn btn-ghost" onclick="goStep(2)" style="width:auto;padding:10px 20px">← 戻る</button>' +
+    '<button class="btn btn-ghost" onclick="goStep(4)" style="width:auto;padding:10px 20px">← 戻る</button>' +
     '<button class="btn btn-blue" onclick="validateStep3()">次へ →</button>' +
     '</div></div></div>';
 }
@@ -430,13 +551,13 @@ function validateStep3() {
     if (!card || !exp || !cvv || !cname) { alert('カード情報をすべて入力してください'); return; }
     form.cardNo=card; form.cardExp=exp; form.cardCvv=cvv; form.cardName=cname;
   }
-  goStep(4);
+  goStep(6);
 }
 
 // ══════════════════════════════════════
-//  STEP 4: 確認・送信
+//  STEP 6: 確認・送信
 // ══════════════════════════════════════
-function step4() {
+function step6() {
   var rows = [
     ['氏名', form.name + '（' + form.nameKana + '）'],
     ['電話番号', form.phone],
@@ -451,13 +572,13 @@ function step4() {
   ].filter(Boolean);
 
   document.getElementById('wrap').innerHTML =
-    '<div class="card"><div class="ch"><div class="ch-t">申込内容の確認</div><span class="pill pb">5 / 5</span></div><div class="cb">' +
+    '<div class="card"><div class="ch"><div class="ch-t">申込内容の確認</div><span class="pill pb">7 / 7</span></div><div class="cb">' +
     (form.takkenSennin ? '<div class="al al-ok">⭐ <div><strong style="color:var(--green)">専任宅建士として登録されます</strong><br>' +
     '月会費・名刺費用が無料になります。IT重説の報酬は本部が設定します。<br>' +
     '<span style="font-size:10px;color:var(--muted)">他社への専任宅建士登録は宅建業法上不可となります。</span></div></div>' : '') +
     rows.map(function(r){ return '<div class="sum-row"><span style="color:var(--sub)">'+r[0]+'</span><span style="font-weight:600">'+r[1]+'</span></div>'; }).join('') +
     '<div style="display:flex;gap:10px;margin-top:20px">' +
-    '<button class="btn btn-ghost" onclick="goStep(3)" style="width:auto;padding:10px 20px">← 戻る</button>' +
+    '<button class="btn btn-ghost" onclick="goStep(5)" style="width:auto;padding:10px 20px">← 戻る</button>' +
     '<button class="btn btn-gold" onclick="submitSignup()">申込を送信する ✓</button>' +
     '</div></div></div>';
 }
