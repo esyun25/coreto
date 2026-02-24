@@ -435,6 +435,49 @@ let CASES = [
    salePrice:28500000,
    apps:[], dates:{naiken:'2026-02-22'},
    hist:['2/22 内見予定'],
+  },
+  // ── 人材紹介 デモ ──
+  {id:'H00341', name:'鈴木 健一', type:'hr', corp:false, agent:'20005',
+   sub:'ITエンジニア / 年収600万〜',
+   step:'apply', age:5, stale:false, apps:[], dates:{},
+   industry:'IT', position:'バックエンドエンジニア', salary:'600',
+   companies:[
+     {id:'CO001', name:'株式会社テクノソリューション', industry:'IT', position:'バックエンドエンジニア',
+      salary:650, status:'interview', interviewCount:2, nextInterview:'2026-02-28',
+      fee:0, startDate:'', notes:'2次面接まで通過。技術試験あり。'},
+     {id:'CO002', name:'デジタルイノベーション株式会社', industry:'IT', position:'フルスタックエンジニア',
+      salary:600, status:'screening', interviewCount:0, nextInterview:'',
+      fee:0, startDate:'', notes:'書類選考中'},
+     {id:'CO003', name:'株式会社クラウドベース', industry:'IT', position:'インフラエンジニア',
+      salary:580, status:'rejected', interviewCount:1, nextInterview:'',
+      fee:0, startDate:'', notes:'1次面接で不採用通知'},
+   ],
+   hist:['2/17 案件登録','2/18 3社に書類提出','2/21 CO001 2次面接通過','2/22 CO003 不採用'],
+  },
+  {id:'H00389', name:'田村 真由', type:'hr', corp:false, agent:'20005',
+   sub:'Webデザイナー / 年収450万〜',
+   step:'contract', age:2, stale:false, apps:[], dates:{},
+   industry:'クリエイティブ', position:'UIデザイナー', salary:'450',
+   companies:[
+     {id:'CO010', name:'クリエイティブスタジオ株式会社', industry:'クリエイティブ', position:'UIデザイナー',
+      salary:480, status:'accepted', interviewCount:3, nextInterview:'',
+      fee:2100000, startDate:'2026-04-01', notes:'内定承諾済み。入社日4/1確定。'},
+     {id:'CO011', name:'株式会社デザインワークス', industry:'クリエイティブ', position:'Webデザイナー',
+      salary:450, status:'withdrawn', interviewCount:2, nextInterview:'',
+      fee:0, startDate:'', notes:'内定後辞退'},
+   ],
+   hist:['2/10 案件登録','2/15 2社に応募','2/20 CO010 内定','2/22 CO010 内定承諾・CO011 辞退'],
+  },
+  {id:'H00412', name:'木村 奈々', type:'hr', corp:false, agent:'20005',
+   sub:'人事 / 年収500万〜',
+   step:'naiken', age:1, stale:false, apps:[], dates:{},
+   industry:'HR・管理', position:'人事', salary:'500',
+   companies:[
+     {id:'CO020', name:'グローバル株式会社', industry:'HR・管理', position:'人事担当',
+      salary:520, status:'screening', interviewCount:0, nextInterview:'',
+      fee:0, startDate:'', notes:'書類提出済み'},
+   ],
+   hist:['2/23 案件登録','2/23 1社に書類提出'],
   },];
 
 let cur = null; // current case id
@@ -649,43 +692,234 @@ function buildStepContent(c) {
 // ── STEP RENDERERS ──
 
 function stepHR(c) {
-  const stepLabels = {naiken:'書類選考',apply:'面接調整',contract:'内定・入社',payment:'在籍確認',done:'完了',new:'新規'};
-  const curLabel = stepLabels[c.step] || c.step;
-  const fmtFee = function(v){ return v ? '¥'+parseInt(v).toLocaleString() : '—'; };
+  if (!c.companies) c.companies = [];
+  const cos = c.companies;
 
-  var html = '<div class="step-title">👥 人材紹介 — '+curLabel+'</div>';
+  const STATUS_LABEL = {
+    screening:'書類選考中', interview:'面接調整中', offered:'内定',
+    accepted:'内定承諾✅', rejected:'不採用', withdrawn:'辞退'
+  };
+  const STATUS_COLOR = {
+    screening:'var(--blue)', interview:'var(--orange)', offered:'var(--gold)',
+    accepted:'var(--green)', rejected:'var(--red)', withdrawn:'var(--muted)'
+  };
+  const fmtFee = function(v){ return v ? '¥'+parseInt(v).toLocaleString() : '未定'; };
 
-  html += '<div style="background:var(--bg);border:1px solid var(--border2);border-radius:8px;padding:12px;margin-bottom:12px;font-size:11px;line-height:1.9">';
+  var html = '<div class="step-title">👥 人材紹介 — 応募先管理</div>';
+
+  // 候補者サマリー
+  html += '<div style="background:var(--bg);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:11px;line-height:1.9">';
   html += '<div><span style="color:var(--muted)">候補者：</span><strong>'+c.name+'</strong></div>';
-  if(c.company)  html += '<div><span style="color:var(--muted)">企業：</span>'+c.company+'</div>';
-  if(c.position) html += '<div><span style="color:var(--muted)">ポジション：</span>'+c.position+'</div>';
-  if(c.salary)   html += '<div><span style="color:var(--muted)">想定年収：</span>'+c.salary+'万円</div>';
-  if(c.startDate)html += '<div><span style="color:var(--muted)">入社予定：</span>'+c.startDate+'</div>';
-  if(c.feeHR)    html += '<div><span style="color:var(--muted)">手数料：</span>'+fmtFee(c.feeHR)+'</div>';
+  if(c.position) html += '<div><span style="color:var(--muted)">希望職種：</span>'+c.position+'</div>';
+  if(c.salary)   html += '<div><span style="color:var(--muted)">希望年収：</span>'+c.salary+'万円〜</div>';
   html += '</div>';
 
-  if (c.step === 'naiken' || c.step === 'new') {
-    html += '<div class="fi"><label>書類選考結果</label><select id="hr-screening-result"><option value="pass">通過</option><option value="ng">不通過</option></select></div>';
-    html += '<div class="fi"><label>次回面接日</label><input type="date" id="hr-interview-date"></div>';
-    html += '<button class="btn btn-green" style="width:100%;justify-content:center;margin-top:10px" data-cid="'+c.id+'" onclick="hrAdvance(this.dataset.cid,\'apply\')">書類通過 → 面接調整へ</button>';
-  } else if (c.step === 'apply') {
-    html += '<div class="fi"><label>面接回数</label><input type="number" id="hr-interview-count" min="1" max="10" placeholder="例: 2"></div>';
-    html += '<div class="fi"><label>面接結果</label><select id="hr-interview-result"><option value="next">次の面接へ</option><option value="offer">内定</option><option value="ng">不採用</option></select></div>';
-    html += '<button class="btn btn-green" style="width:100%;justify-content:center;margin-top:10px" data-cid="'+c.id+'" onclick="hrAdvance(this.dataset.cid,\'contract\')">内定承諾 → 内定・入社へ</button>';
-  } else if (c.step === 'contract') {
-    html += '<div class="fi"><label>入社日（確定）</label><input type="date" id="hr-actual-start"></div>';
-    html += '<div class="fi"><label>手数料確定額（税込）</label><input type="number" id="hr-fee-confirm" placeholder="例: 2100000"></div>';
-    html += '<button class="btn btn-green" style="width:100%;justify-content:center;margin-top:10px" data-cid="'+c.id+'" onclick="hrAdvance(this.dataset.cid,\'payment\')">入社確認 → 在籍確認へ</button>';
-    html += '<a href="coreto-early-quit.html" target="_blank" class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;margin-top:6px">⚠️ 早期退職フォローを記録</a>';
-  } else if (c.step === 'payment') {
-    html += '<div style="background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.25);border-radius:8px;padding:12px;font-size:11px;margin-bottom:12px">';
+  // 応募先リスト
+  html += '<div style="font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:6px">応募先一覧（'+cos.length+'社）</div>';
+
+  if (cos.length === 0) {
+    html += '<div style="background:var(--bg);border:1px dashed var(--border2);border-radius:8px;padding:16px;text-align:center;font-size:11px;color:var(--muted);margin-bottom:10px">まだ応募先が登録されていません</div>';
+  } else {
+    cos.forEach(function(co, i) {
+      const stCol = STATUS_COLOR[co.status] || 'var(--muted)';
+      const stLabel = STATUS_LABEL[co.status] || co.status;
+      const isActive = co.status !== 'rejected' && co.status !== 'withdrawn';
+      html += '<div style="background:var(--bg);border:1px solid '+(isActive?'var(--border2)':'var(--border)')+';border-radius:8px;padding:10px 12px;margin-bottom:8px;opacity:'+(isActive?'1':'.55')+'">';
+      html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">';
+      html += '<strong style="font-size:12px">'+(co.name||'企業名未設定')+'</strong>';
+      html += '<span style="font-size:10px;padding:2px 8px;border-radius:20px;background:'+stCol+'22;color:'+stCol+';border:1px solid '+stCol+'55">'+stLabel+'</span>';
+      html += '</div>';
+      if(co.position) html += '<div style="font-size:11px;color:var(--sub)">'+co.position+(co.salary?' / ¥'+co.salary+'万':'')+'</div>';
+      if(co.interviewCount) html += '<div style="font-size:10px;color:var(--muted)">面接 '+co.interviewCount+'次まで完了</div>';
+      if(co.notes) html += '<div style="font-size:10px;color:var(--muted);margin-top:2px">📝 '+co.notes+'</div>';
+      if(co.status==='accepted') html += '<div style="font-size:10px;color:var(--green);margin-top:2px">入社予定日：'+(co.startDate||'未定')+'　手数料：'+fmtFee(co.fee)+'</div>';
+      // 操作ボタン（終了済み以外）
+      if(isActive) {
+        html += '<div style="display:flex;gap:6px;margin-top:8px">';
+        html += '<button class="btn btn-ghost btn-sm" style="flex:1;justify-content:center;font-size:10px" '
+              + 'data-cid="'+c.id+'" data-coid="'+co.id+'" onclick="hrCoModal(this.dataset.cid,this.dataset.coid)">✏️ ステータス更新</button>';
+        html += '<button class="btn btn-ghost btn-sm" style="color:var(--red);border-color:rgba(248,113,113,.3);font-size:10px" '
+              + 'data-cid="'+c.id+'" data-coid="'+co.id+'" onclick="hrCoRemove(this.dataset.cid,this.dataset.coid)">🗑</button>';
+        html += '</div>';
+      }
+      html += '</div>';
+    });
+  }
+
+  // 応募先追加ボタン
+  html += '<button class="btn btn-ghost" style="width:100%;justify-content:center;margin-bottom:12px;border-style:dashed" '
+        + 'data-cid="'+c.id+'" onclick="hrCoAdd(this.dataset.cid)">＋ 応募先を追加</button>';
+
+  // 在籍確認・成約エリア（内定承諾済みの企業がある場合）
+  var accepted = cos.find(function(x){ return x.status==='accepted'; });
+  if (c.step === 'payment') {
+    html += '<div style="background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.25);border-radius:8px;padding:12px;font-size:11px;margin-bottom:10px">';
     html += '✅ 入社後の在籍確認が必要です。在籍確認完了で第2回報酬が発生します。</div>';
-    html += '<a href="coreto-early-quit.html" target="_blank" class="btn btn-ghost" style="width:100%;justify-content:center">退職・返金の管理 ↗</a>';
-    html += '<button class="btn btn-green" style="width:100%;justify-content:center;margin-top:8px" data-cid="'+c.id+'" onclick="hrAdvance(this.dataset.cid,\'done\')">在籍確認完了 → 成約</button>';
-    html += '<a href="coreto-batch-close.html" target="_blank" class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;margin-top:6px">🎯 成約報告（batch-close）↗</a>';
+    html += '<a href="coreto-early-quit.html" target="_blank" class="btn btn-ghost" style="width:100%;justify-content:center;margin-bottom:6px">退職・返金の管理 ↗</a>';
+    html += '<button class="btn btn-green" style="width:100%;justify-content:center" data-cid="'+c.id+'" onclick="hrAdvance(this.dataset.cid,\'done\')">在籍確認完了 → 成約</button>';
+  } else if (c.step === 'contract' && accepted) {
+    html += '<div style="background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.25);border-radius:8px;padding:12px;font-size:11px;margin-bottom:10px">';
+    html += '<strong style="color:var(--green)">'+accepted.name+'</strong> への内定承諾が確定しています。<br>';
+    html += '入社日：'+(accepted.startDate||'未定')+'　手数料：'+fmtFee(accepted.fee)+'</div>';
+    html += '<button class="btn btn-green" style="width:100%;justify-content:center" data-cid="'+c.id+'" onclick="hrAdvance(this.dataset.cid,\'payment\')">入社確認 → 在籍確認へ</button>';
+    html += '<a href="coreto-early-quit.html" target="_blank" class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;margin-top:6px">⚠️ 早期退職フォローを記録</a>';
   }
 
   return html;
+}
+
+// ── 応募先ステータス更新モーダル ──
+function hrCoModal(cid, coId) {
+  const c = CASES.find(x=>x.id===cid); if(!c) return;
+  if(!c.companies) c.companies=[];
+  const co = c.companies.find(x=>x.id===coId); if(!co) return;
+
+  const STATUS_OPTS = [
+    {v:'screening', l:'📋 書類選考中'},
+    {v:'interview', l:'📅 面接調整中'},
+    {v:'offered',   l:'🎉 内定'},
+    {v:'accepted',  l:'✅ 内定承諾'},
+    {v:'rejected',  l:'❌ 不採用'},
+    {v:'withdrawn', l:'🔙 辞退'},
+  ];
+
+  const overlay = document.createElement('div');
+  overlay.id = 'hr-co-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;z-index:9999;padding:16px';
+  overlay.innerHTML = `
+    <div style="background:#11141f;border:1px solid #2a3050;border-radius:16px;width:min(420px,100%);max-height:90vh;overflow-y:auto;font-family:inherit">
+      <div style="padding:16px 20px;border-bottom:1px solid #1e2235;display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-size:14px;font-weight:700;color:#e8eaf0">${co.name}</div>
+          <div style="font-size:10px;color:#5a6080;margin-top:2px">${co.position||'ポジション未設定'}</div>
+        </div>
+        <button onclick="document.getElementById('hr-co-overlay').remove()" style="background:transparent;border:none;color:#5a6080;cursor:pointer;font-size:18px">✕</button>
+      </div>
+      <div style="padding:18px 20px">
+        <div class="fi">
+          <label>ステータス</label>
+          <select id="hco-status" style="width:100%;background:#090b13;border:1px solid #2a3050;border-radius:8px;padding:9px 10px;color:#e8eaf0;font-family:inherit;font-size:12px">
+            ${STATUS_OPTS.map(o=>'<option value="'+o.v+'"'+(o.v===co.status?' selected':'')+'>'+o.l+'</option>').join('')}
+          </select>
+        </div>
+        <div class="fi">
+          <label>企業名</label>
+          <input type="text" id="hco-name" value="${co.name||''}" placeholder="株式会社テクノ">
+        </div>
+        <div class="fi">
+          <label>ポジション</label>
+          <input type="text" id="hco-position" value="${co.position||''}" placeholder="例: エンジニア">
+        </div>
+        <div class="fi">
+          <label>想定年収（万円）</label>
+          <input type="number" id="hco-salary" value="${co.salary||''}" placeholder="例: 600">
+        </div>
+        <div class="fi">
+          <label>面接回数</label>
+          <input type="number" id="hco-interview-count" value="${co.interviewCount||''}" min="0" max="10" placeholder="例: 2">
+        </div>
+        <div class="fi">
+          <label>次回面接日</label>
+          <input type="date" id="hco-next-interview" value="${co.nextInterview||''}">
+        </div>
+        <div id="hco-accept-area" style="${co.status==='accepted'||co.status==='offered'?'':'display:none'}">
+          <div class="fi">
+            <label>入社予定日</label>
+            <input type="date" id="hco-start-date" value="${co.startDate||''}">
+          </div>
+          <div class="fi">
+            <label>手数料（税込・円）</label>
+            <input type="number" id="hco-fee" value="${co.fee||''}" placeholder="例: 2100000">
+          </div>
+        </div>
+        <div class="fi">
+          <label>メモ</label>
+          <input type="text" id="hco-notes" value="${co.notes||''}" placeholder="面接の所感など">
+        </div>
+        <script>document.getElementById('hco-status').addEventListener('change',function(){
+          document.getElementById('hco-accept-area').style.display=this.value==='accepted'||this.value==='offered'?'':'none';
+        });<\/script>
+        <div style="display:flex;gap:8px;margin-top:4px">
+          <button onclick="document.getElementById('hr-co-overlay').remove()" style="flex:1;background:transparent;border:1px solid #2a3050;color:#a0a8c0;border-radius:8px;padding:10px;cursor:pointer;font-family:inherit">キャンセル</button>
+          <button data-cid="${cid}" data-coid="${coId}" onclick="hrCoSave(this.dataset.cid,this.dataset.coid)" style="flex:2;background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.35);color:#c9a840;border-radius:8px;padding:10px;cursor:pointer;font-family:inherit;font-weight:700">保存</button>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+// 応募先保存
+function hrCoSave(cid, coId) {
+  const c = CASES.find(x=>x.id===cid); if(!c) return;
+  if(!c.companies) c.companies=[];
+  const co = c.companies.find(x=>x.id===coId); if(!co) return;
+
+  const oldStatus = co.status;
+  co.status        = document.getElementById('hco-status')?.value || co.status;
+  co.name          = document.getElementById('hco-name')?.value.trim() || co.name;
+  co.position      = document.getElementById('hco-position')?.value.trim() || '';
+  co.salary        = parseInt(document.getElementById('hco-salary')?.value) || 0;
+  co.interviewCount= parseInt(document.getElementById('hco-interview-count')?.value) || 0;
+  co.nextInterview = document.getElementById('hco-next-interview')?.value || '';
+  co.startDate     = document.getElementById('hco-start-date')?.value || '';
+  co.fee           = parseInt(document.getElementById('hco-fee')?.value) || 0;
+  co.notes         = document.getElementById('hco-notes')?.value.trim() || '';
+
+  if(!c.hist) c.hist=[];
+  if(co.status !== oldStatus) {
+    const STATUS_LABEL={screening:'書類選考中',interview:'面接調整中',offered:'内定',accepted:'内定承諾',rejected:'不採用',withdrawn:'辞退'};
+    c.hist.push(today()+' '+co.name+' → '+STATUS_LABEL[co.status]);
+  }
+
+  // 内定承諾で案件全体を contract へ
+  hrAutoStep(c);
+
+  document.getElementById('hr-co-overlay')?.remove();
+  render();
+  open_case(cid);
+}
+
+// 応募先追加
+function hrCoAdd(cid) {
+  const c = CASES.find(x=>x.id===cid); if(!c) return;
+  if(!c.companies) c.companies=[];
+  // 新規として空のエントリを追加してモーダルを開く
+  const newCo = {
+    id:'CO'+String(Date.now()).slice(-6),
+    name:'', industry:'', position:'', salary:0,
+    status:'screening', interviewCount:0, nextInterview:'',
+    fee:0, startDate:'', notes:''
+  };
+  c.companies.push(newCo);
+  render();
+  open_case(cid);
+  // 少し待ってからモーダルを開く
+  setTimeout(function(){ hrCoModal(cid, newCo.id); }, 50);
+}
+
+// 応募先削除
+function hrCoRemove(cid, coId) {
+  if(!confirm('この応募先を削除しますか？')) return;
+  const c = CASES.find(x=>x.id===cid); if(!c) return;
+  if(!c.companies) return;
+  c.companies = c.companies.filter(x=>x.id!==coId);
+  hrAutoStep(c);
+  render();
+  open_case(cid);
+}
+
+// 案件全体ステップを応募先の状況から自動更新
+function hrAutoStep(c) {
+  if(!c.companies || !c.companies.length) return;
+  const cos = c.companies;
+  const hasAccepted = cos.some(x=>x.status==='accepted');
+  const hasActive   = cos.some(x=>x.status==='interview'||x.status==='offered'||x.status==='screening');
+
+  if(hasAccepted && c.step !== 'payment' && c.step !== 'done') {
+    c.step = 'contract';
+  } else if(!hasAccepted && hasActive && (c.step==='naiken'||c.step==='new')) {
+    c.step = 'apply';
+  }
 }
 
 
@@ -3215,7 +3449,7 @@ function openNewModal(stageHint) {
     +'<div id="nc-corp-ext" style="display:none"><div class="fi"><label>担当者名</label><input type="text" id="nc-contact" placeholder="田中 一郎"></div></div>'
     +'<div class="fi"><label>種別</label><select id="nc-type" onchange="toggleAD()"><option value="reLet">🏠 賃貸</option><option value="reSale">🏢 売買</option><option value="sannai">🔄 三為</option><option value="hr">👥 人材</option></select></div>'+'<div id="nc-ad-wrap" style="margin-bottom:10px"><label style="display:flex;align-items:center;gap:7px;font-size:11px;cursor:pointer"><input type="checkbox" id="nc-ad"> AD案件（仲介手数料は鍵渡し後入金）</label></div>'
     +'<div class="fi"><label>希望条件</label><input type="text" id="nc-sub" placeholder="例: 渋谷区 1LDK / 目黒区 マンション 3,000万"></div>'
-    +'<div id="nc-hr-wrap" style="display:none;border:1px solid var(--border2);border-radius:8px;padding:12px;margin-bottom:10px;background:var(--bg)">'+'<div style="font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:8px">👥 人材紹介 詳細</div>'+'<div class="fi"><label>紹介先企業名</label><input type="text" id="nc-company" placeholder="例: 株式会社テクノ"></div>'+'<div class="fi"><label>業種・ポジション</label><input type="text" id="nc-position" placeholder="例: IT / エンジニア"></div>'+'<div class="fi"><label>想定年収（万円）</label><input type="number" id="nc-salary" placeholder="例: 600"></div>'+'<div class="fi"><label>入社予定日</label><input type="date" id="nc-start-date"></div>'+'<div class="fi"><label>手数料（税込・円）</label><input type="number" id="nc-fee-hr" placeholder="例: 2100000"></div>'+'</div>'+'<div class="row" style="margin-top:14px"><button class="btn btn-ghost" style="flex:1" onclick="closeModal()">キャンセル</button>'
+    +'<div id="nc-hr-wrap" style="display:none;border:1px solid var(--border2);border-radius:8px;padding:12px;margin-bottom:10px;background:var(--bg)">'+'<div style="font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:8px">👥 最初の応募先（任意・後で追加可）</div>'+'<div class="fi"><label>企業名</label><input type="text" id="nc-company" placeholder="例: 株式会社テクノ"></div>'+'<div class="fi"><label>ポジション</label><input type="text" id="nc-position" placeholder="例: エンジニア / 営業"></div>'+'<div class="fi"><label>想定年収（万円）</label><input type="number" id="nc-salary" placeholder="例: 600"></div>'+'</div>'+'<div class="row" style="margin-top:14px"><button class="btn btn-ghost" style="flex:1" onclick="closeModal()">キャンセル</button>'
     +'<button class="btn btn-gold" style="flex:2;justify-content:center" onclick="createCase()">登録</button></div>'
   );
 }
@@ -3269,12 +3503,19 @@ function createCase() {
   if(_corpMode&&contact) obj.contactName = contact;
   if(type==='sannai') obj.buyer = {name:'', takkenNum:'', verified:false, bypass:false};
   if(type==='hr') {
-    obj.company   = document.getElementById('nc-company')?.value.trim()||'—';
-    obj.position  = document.getElementById('nc-position')?.value.trim()||'—';
+    const firstCo = document.getElementById('nc-company')?.value.trim();
+    const firstPos = document.getElementById('nc-position')?.value.trim()||'—';
+    const firstSal = parseInt(document.getElementById('nc-salary')?.value)||0;
+    obj.industry  = firstPos;
+    obj.position  = firstPos;
     obj.salary    = document.getElementById('nc-salary')?.value||'';
-    obj.startDate = document.getElementById('nc-start-date')?.value||'';
-    obj.feeHR     = parseInt(document.getElementById('nc-fee-hr')?.value)||0;
-    obj.step      = 'naiken'; // start at 書類選考
+    obj.companies = firstCo ? [{
+      id: 'CO'+String(Date.now()).slice(-6),
+      name: firstCo, industry:'', position: firstPos,
+      salary: firstSal, status:'screening',
+      interviewCount:0, nextInterview:'', fee:0, startDate:'', notes:''
+    }] : [];
+    obj.step = 'naiken';
   }
   CASES.unshift(obj);
   closeModal();
