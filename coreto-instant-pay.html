@@ -495,7 +495,7 @@ html,body{height:100%;font-family:'Noto Sans JP',sans-serif;background:var(--bg)
             <td><span class="pill pill-blue">📱 SMS 認証済み</span></td>
             <td class="mono" style="font-size:10px">2026/02/20 10:32</td>
             <td>
-              <button class="btn btn-success btn-sm" onclick="processTransfer('IPY-2026-P9W4')">
+              <button class="btn btn-success btn-sm" onclick="processTransfer('IPY-2026-P9W4','山田 誠',263367)">
                 🏦 振込実行
               </button>
             </td>
@@ -510,7 +510,7 @@ html,body{height:100%;font-family:'Noto Sans JP',sans-serif;background:var(--bg)
             <td><span class="pill pill-blue">📱 SMS 認証済み</span></td>
             <td class="mono" style="font-size:10px">2026/02/20 09:18</td>
             <td>
-              <button class="btn btn-success btn-sm" onclick="processTransfer('IPY-2026-A3R7')">
+              <button class="btn btn-success btn-sm" onclick="processTransfer('IPY-2026-A3R7','佐藤 花子',127500)">
                 🏦 振込実行
               </button>
             </td>
@@ -525,7 +525,7 @@ html,body{height:100%;font-family:'Noto Sans JP',sans-serif;background:var(--bg)
             <td><span class="pill pill-blue">📱 SMS 認証済み</span></td>
             <td class="mono" style="font-size:10px">2026/02/19 16:55</td>
             <td>
-              <button class="btn btn-success btn-sm" onclick="processTransfer('IPY-2026-Z6T2')">
+              <button class="btn btn-success btn-sm" onclick="processTransfer('IPY-2026-Z6T2','渡辺 隆',59500)">
                 🏦 振込実行
               </button>
             </td>
@@ -795,6 +795,23 @@ function showSuccess() {
   document.getElementById('success-amount').textContent =
     '振込予定額：¥'+currentNetAmount.toLocaleString();
   document.getElementById('success-id').textContent = currentReqId;
+
+  // 🔔 HQへ即時払い申請の緊急Slack通知
+  const session = JSON.parse(sessionStorage.getItem('coreto_session') || 'null');
+  const agName = (typeof ME !== 'undefined' && ME.name) ? ME.name : (session ? session.userId : 'エージェント');
+  const fee = Math.round(currentNetAmount * 0.15);
+  const payout = currentNetAmount - fee;
+  const now = new Date();
+  const ts = now.getFullYear() + '/' + String(now.getMonth()+1).padStart(2,'0') + '/' + String(now.getDate()).padStart(2,'0') + ' ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+  slackNotifyInstantPay({
+    reqId: currentReqId,
+    agName: agName,
+    agId: session ? session.userId : '—',
+    amount: currentNetAmount,
+    fee: fee,
+    payout: payout,
+    ts: ts,
+  });
 }
 function showLock() {
   document.getElementById('tfa-screen').style.display='none';
@@ -802,9 +819,16 @@ function showLock() {
 }
 
 // ── HQ actions ───────────────────────────────────────────
-function processTransfer(id) {
-  if (!confirm(`申請ID ${id} の振込を実行しますか？`)) return;
-  alert(`✅ 振込を実行しました。\n申請ID：${id}\nGMOバーチャル口座から送金処理が開始されます。`);
+function processTransfer(id, agName, amount) {
+  if (!confirm(`申請ID ${id} の振込を実行しますか？\n\n対象：${agName}\n振込額：¥${Number(amount).toLocaleString()}\n\nこの操作は取り消せません。`)) return;
+  // 振込完了Slack通知
+  const now = new Date();
+  const ts = now.getFullYear() + '/' + String(now.getMonth()+1).padStart(2,'0') + '/' + String(now.getDate()).padStart(2,'0') + ' ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+  slackNotifyTransferDone({ id, agName, amount, ts });
+  // UI更新
+  const btn = event.target.closest('button');
+  if (btn) { btn.textContent = '✅ 振込済み'; btn.disabled = true; btn.style.background = 'var(--green)'; }
+  showToast('✅ 振込を実行しました — ' + id);
 }
 function unlockAccount(id) {
   if (!confirm(`${id} の即時払いロックを解除しますか？\n本人確認が完了していることを確認してください。`)) return;
@@ -863,6 +887,83 @@ function copyRefLink() {
     ta.value = url; document.body.appendChild(ta); ta.select();
     document.execCommand('copy'); document.body.removeChild(ta);
   });
+}
+
+
+// ══════════════════════════════════════════════════════════════════
+// SLACK 通知（即時払い）
+// ══════════════════════════════════════════════════════════════════
+const SLACK_WEBHOOK = 'YOUR_SLACK_WEBHOOK_URL'; // 本番時に設定
+
+function slackPost(payload) {
+  // 本番: fetch(SLACK_WEBHOOK, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+  console.log('[Slack 即時払い通知]', JSON.stringify(payload, null, 2));
+}
+
+// 申請受付通知（HQへ）
+function slackNotifyInstantPay({ reqId, agName, agId, amount, fee, payout, ts }) {
+  const fmt = v => '¥' + Number(v).toLocaleString();
+  slackPost({
+    text: '<!channel> 🚨 *即時払い申請が届きました*',
+    attachments: [{
+      color: '#e67e22',
+      blocks: [
+        { type: 'section', text: { type: 'mrkdwn',
+          text: `*<!channel> 🚨 即時払い申請 — 対応が必要です*` } },
+        { type: 'section', fields: [
+          { type: 'mrkdwn', text: `*申請ID*\n\`${reqId}\`` },
+          { type: 'mrkdwn', text: `*申請日時*\n${ts}` },
+          { type: 'mrkdwn', text: `*エージェント*\n${agName}（${agId}）` },
+          { type: 'mrkdwn', text: `*2FA認証*\n✅ SMS認証済み` },
+          { type: 'mrkdwn', text: `*申請額*\n${fmt(amount)}` },
+          { type: 'mrkdwn', text: `*振込額（手数料15%差引後）*\n*${fmt(payout)}*` },
+        ]},
+        { type: 'section', text: { type: 'mrkdwn',
+          text: `⚡ *即時払い管理画面で振込実行してください*\nhttps://esyun25.github.io/coreto/coreto-instant-pay.html` } },
+        { type: 'context', elements: [
+          { type: 'mrkdwn', text: `手数料（15%）: ${fmt(fee)} | CORETO 即時払いシステム` }
+        ]}
+      ]
+    }]
+  });
+}
+
+// 振込完了通知（エージェントへ）
+function slackNotifyTransferDone({ id, agName, amount, ts }) {
+  const fmt = v => '¥' + Number(v).toLocaleString();
+  slackPost({
+    text: `✅ 即時払い振込完了 — ${agName}`,
+    attachments: [{
+      color: '#2ecc71',
+      blocks: [
+        { type: 'section', text: { type: 'mrkdwn',
+          text: `*✅ 即時払い振込を実行しました*` } },
+        { type: 'section', fields: [
+          { type: 'mrkdwn', text: `*申請ID*\n\`${id}\`` },
+          { type: 'mrkdwn', text: `*実行日時*\n${ts}` },
+          { type: 'mrkdwn', text: `*エージェント*\n${agName}` },
+          { type: 'mrkdwn', text: `*振込額*\n*${fmt(amount)}*` },
+        ]},
+        { type: 'context', elements: [
+          { type: 'mrkdwn', text: `GMOバーチャル口座から送金処理を開始しました | CORETO` }
+        ]}
+      ]
+    }]
+  });
+}
+
+// Toast通知
+function showToast(msg) {
+  let t = document.getElementById('ip-toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'ip-toast';
+    t.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#1e2a1e;border:1px solid var(--green);color:var(--green);padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;z-index:9999;opacity:0;transition:opacity .3s';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1';
+  setTimeout(() => { t.style.opacity = '0'; }, 3000);
 }
 </script>
 
