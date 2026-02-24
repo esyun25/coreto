@@ -101,6 +101,50 @@ html,body{min-height:100%;font-family:'Noto Sans JP',sans-serif;background:var(-
 </head>
 <body>
 
+<!-- ══ トークンゲート ══ -->
+<div id="token-gate" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:9999;align-items:center;justify-content:center;flex-direction:column;gap:0">
+  <div style="width:min(420px,94vw);padding:32px 24px;text-align:center">
+    <div style="font-family:'Syne',sans-serif;font-size:24px;font-weight:900;color:var(--gold);margin-bottom:6px">CORETO</div>
+    <div style="font-size:11px;color:var(--muted);letter-spacing:2px;margin-bottom:28px">MEMBER ONBOARDING</div>
+
+    <!-- invalid token -->
+    <div id="gate-invalid" style="display:none">
+      <div style="font-size:48px;margin-bottom:16px">🔒</div>
+      <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--red);margin-bottom:10px">アクセスできません</div>
+      <div style="font-size:13px;color:var(--sub);line-height:1.8;margin-bottom:24px">
+        このURLは無効または期限切れです。<br>
+        HQから受け取ったURLを正確に開いてください。
+      </div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;font-size:12px;color:var(--muted);margin-bottom:20px">
+        お心当たりのない方・URLが見つからない方は<br>
+        <strong style="color:var(--sub)">CORETO本部（LINE WORKS）</strong>までご連絡ください。
+      </div>
+      <button onclick="location.href='coreto-hub.html'" class="btn btn-ghost" style="width:100%;justify-content:center">← トップに戻る</button>
+    </div>
+
+    <!-- valid token -->
+    <div id="gate-valid" style="display:none">
+      <div style="font-size:48px;margin-bottom:16px">✅</div>
+      <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--green);margin-bottom:6px">URLを確認しました</div>
+      <div style="font-size:13px;color:var(--sub);margin-bottom:20px" id="gate-welcome"></div>
+      <div style="background:var(--card);border:1px solid rgba(201,168,76,.3);border-radius:10px;padding:14px;margin-bottom:20px;text-align:left">
+        <div style="font-size:10px;color:var(--muted);letter-spacing:.5px;margin-bottom:6px">入会手続き概要</div>
+        <div style="font-size:12px;color:var(--sub);line-height:2">
+          ① 基本情報の入力<br>
+          ② 宅建士資格の確認<br>
+          ③ SMS本人認証<br>
+          ④ 身分証（eKYC）提出<br>
+          ⑤ 口座情報の登録<br>
+          ⑥ 決済情報の登録<br>
+          ⑦ LINE登録・確認コード送信<br>
+          ⑧ 最終確認・送信
+        </div>
+      </div>
+      <button onclick="startOnboarding()" class="btn btn-primary" style="width:100%;justify-content:center">入会手続きを開始する →</button>
+    </div>
+  </div>
+</div>
+
 <div class="hdr">
   <div class="logo">CORETO</div>
   <div style="font-size:12px;color:var(--sub)">エージェント 入会申込</div>
@@ -753,8 +797,68 @@ function submitSignup() {
     '</div></div>';
 }
 
-// Init
-step0();
+// ══════════════════════════════════════
+//  TOKEN GATE
+// ══════════════════════════════════════
+
+// デモ用トークンテーブル（本番はKintone APIで検証）
+var VALID_TOKENS = {
+  'DEMO-AG10012': { name: '山田 誠',   agId: '10012', type: 're', label: '不動産エージェント' },
+  'DEMO-AG20005': { name: '田中 美穂', agId: '20005', type: 'hr', label: '人材エージェント' },
+  'DEMO-PT30001': { name: '佐藤 商事', agId: '30001', type: 'pt', label: 'パートナー' },
+};
+
+var tokenInfo = null; // 認証済みトークン情報
+
+function checkToken() {
+  var params = new URLSearchParams(window.location.search);
+  var token = params.get('token');
+  var gate = document.getElementById('token-gate');
+
+  if (!token) {
+    // トークンなし = アクセス不可
+    gate.style.display = 'flex';
+    document.getElementById('gate-invalid').style.display = 'block';
+    // メインコンテンツを隠す
+    document.getElementById('stepbar').style.display = 'none';
+    document.getElementById('wrap').style.display = 'none';
+    return;
+  }
+
+  var info = VALID_TOKENS[token.toUpperCase()];
+  if (!info) {
+    // 無効トークン
+    gate.style.display = 'flex';
+    document.getElementById('gate-invalid').style.display = 'block';
+    document.getElementById('stepbar').style.display = 'none';
+    document.getElementById('wrap').style.display = 'none';
+    return;
+  }
+
+  // 有効トークン
+  tokenInfo = info;
+  form.agentType = info.type;
+  gate.style.display = 'flex';
+  document.getElementById('gate-valid').style.display = 'block';
+  document.getElementById('gate-welcome').textContent =
+    info.name + ' さんの入会手続きページです。（' + info.label + ' / ID: ' + info.agId + '）';
+  document.getElementById('stepbar').style.display = 'none';
+  document.getElementById('wrap').style.display = 'none';
+}
+
+function startOnboarding() {
+  document.getElementById('token-gate').style.display = 'none';
+  document.getElementById('stepbar').style.display = 'flex';
+  document.getElementById('wrap').style.display = 'block';
+  // 氏名が既知の場合はstep0のフィールドに事前入力（本番）
+  if (tokenInfo && tokenInfo.name) {
+    // form.name = tokenInfo.name; // 本番: Kintoneから取得した名前を事前入力
+  }
+  step0();
+}
+
+// ── Init ──
+checkToken();
 </script>
 </body>
 </html>
