@@ -258,12 +258,23 @@ input[type=date]{color-scheme:dark}
 // ═══════════════════════════════════════════════
 const STAGES = [
   {id:'new',      label:'新規',     dot:'#4a5270', color:'var(--sub)'},
-  {id:'naiken',   label:'内見',     dot:'#4f9cf9', color:'var(--blue)'},
-  {id:'apply',    label:'申込・審査',dot:'#fb923c', color:'var(--orange)', labelSale:'買付'},  // label overridden per type
-  {id:'contract', label:'契約中',   dot:'#c9a84c', color:'var(--gold)'},
-  {id:'payment',  label:'入金待ち', dot:'#a78bfa', color:'var(--purple)'},
+  {id:'naiken',   label:'内見',     dot:'#4f9cf9', color:'var(--blue)',    labelHR:'書類選考'},
+  {id:'apply',    label:'申込・審査',dot:'#fb923c', color:'var(--orange)', labelSale:'買付', labelHR:'面接調整'},
+  {id:'contract', label:'契約中',   dot:'#c9a84c', color:'var(--gold)',    labelHR:'内定・入社'},
+  {id:'payment',  label:'入金待ち', dot:'#a78bfa', color:'var(--purple)',  labelHR:'在籍確認'},
   {id:'done',     label:'完了',     dot:'#34d399', color:'var(--green)'},
   {id:'cancel',   label:'取消',     dot:'#f87171', color:'var(--red)'},
+];
+
+// ステップ定義（人材紹介）
+const STEPS_HR = [
+  {id:'screening', label:'書類選考', icon:'📄', stage:'naiken'},
+  {id:'job-check', label:'求人票確認', icon:'🔍', stage:'naiken'},
+  {id:'interview', label:'面接調整',  icon:'📅', stage:'apply'},
+  {id:'offer',     label:'内定',      icon:'🎉', stage:'contract'},
+  {id:'onboard',   label:'入社',      icon:'🏢', stage:'contract'},
+  {id:'zaiki',     label:'在籍確認',  icon:'✅', stage:'payment'},
+  {id:'pay2',      label:'第2回報酬', icon:'💰', stage:'done'},
 ];
 
 // ステップ定義（賃貸）
@@ -462,7 +473,7 @@ function render() {
     const canAdd = st.id!=='done'&&st.id!=='cancel';
     return '<div class="col">'
       +'<div class="col-hdr">'
-      +'<div class="col-title"><div class="col-dot" style="background:'+st.dot+'"></div>'+(tf!=='reLet'&&tf!=='hr'&&st.labelSale?st.labelSale:st.label)+'</div>'
+      +'<div class="col-title"><div class="col-dot" style="background:'+st.dot+'"></div>'+(tf==='hr'&&st.labelHR?st.labelHR:(tf!=='reLet'&&st.labelSale?st.labelSale:st.label))+'</div>'
       +'<span class="col-count" style="background:'+st.dot+'22;color:'+st.color+';border:1px solid '+st.dot+'55">'+cols.length+'</span>'
       +'</div>'
       +'<div class="col-body">'
@@ -541,7 +552,7 @@ function close_panel() {
 }
 
 function buildStepBar(c) {
-  const steps = c.type==='reLet' ? STEPS_RELET : c.type==='reSale' ? STEPS_RESALE : c.type==='sannai' ? STEPS_SANNAI : [];
+  const steps = c.type==='reLet' ? STEPS_RELET : c.type==='reSale' ? STEPS_RESALE : c.type==='sannai' ? STEPS_SANNAI : c.type==='hr' ? STEPS_HR : [];
   if (!steps.length) return '';
   const curIdx = steps.findIndex(s=>s.id===c.step);
 
@@ -613,6 +624,11 @@ function buildStepContent(c) {
     else if (c.step==='settlement'||c.step==='payment') html += stepSettlement(c);
   }
 
+  // ── 人材紹介フロー ──
+  else if (c.type==='hr') {
+    html += stepHR(c);
+  }
+
   html += '</div>';
 
   // 複数申込リスト（screening時 = 賃貸のみ）
@@ -631,6 +647,66 @@ function buildStepContent(c) {
 }
 
 // ── STEP RENDERERS ──
+
+function stepHR(c) {
+  const stepLabels = {naiken:'書類選考',apply:'面接調整',contract:'内定・入社',payment:'在籍確認',done:'完了',new:'新規'};
+  const curLabel = stepLabels[c.step] || c.step;
+  const fmtFee = function(v){ return v ? '¥'+parseInt(v).toLocaleString() : '—'; };
+
+  var html = '<div class="step-title">👥 人材紹介 — '+curLabel+'</div>';
+
+  html += '<div style="background:var(--bg);border:1px solid var(--border2);border-radius:8px;padding:12px;margin-bottom:12px;font-size:11px;line-height:1.9">';
+  html += '<div><span style="color:var(--muted)">候補者：</span><strong>'+c.name+'</strong></div>';
+  if(c.company)  html += '<div><span style="color:var(--muted)">企業：</span>'+c.company+'</div>';
+  if(c.position) html += '<div><span style="color:var(--muted)">ポジション：</span>'+c.position+'</div>';
+  if(c.salary)   html += '<div><span style="color:var(--muted)">想定年収：</span>'+c.salary+'万円</div>';
+  if(c.startDate)html += '<div><span style="color:var(--muted)">入社予定：</span>'+c.startDate+'</div>';
+  if(c.feeHR)    html += '<div><span style="color:var(--muted)">手数料：</span>'+fmtFee(c.feeHR)+'</div>';
+  html += '</div>';
+
+  if (c.step === 'naiken' || c.step === 'new') {
+    html += '<div class="fi"><label>書類選考結果</label><select id="hr-screening-result"><option value="pass">通過</option><option value="ng">不通過</option></select></div>';
+    html += '<div class="fi"><label>次回面接日</label><input type="date" id="hr-interview-date"></div>';
+    html += '<button class="btn btn-green" style="width:100%;justify-content:center;margin-top:10px" data-cid="'+c.id+'" onclick="hrAdvance(this.dataset.cid,\'apply\')">書類通過 → 面接調整へ</button>';
+  } else if (c.step === 'apply') {
+    html += '<div class="fi"><label>面接回数</label><input type="number" id="hr-interview-count" min="1" max="10" placeholder="例: 2"></div>';
+    html += '<div class="fi"><label>面接結果</label><select id="hr-interview-result"><option value="next">次の面接へ</option><option value="offer">内定</option><option value="ng">不採用</option></select></div>';
+    html += '<button class="btn btn-green" style="width:100%;justify-content:center;margin-top:10px" data-cid="'+c.id+'" onclick="hrAdvance(this.dataset.cid,\'contract\')">内定承諾 → 内定・入社へ</button>';
+  } else if (c.step === 'contract') {
+    html += '<div class="fi"><label>入社日（確定）</label><input type="date" id="hr-actual-start"></div>';
+    html += '<div class="fi"><label>手数料確定額（税込）</label><input type="number" id="hr-fee-confirm" placeholder="例: 2100000"></div>';
+    html += '<button class="btn btn-green" style="width:100%;justify-content:center;margin-top:10px" data-cid="'+c.id+'" onclick="hrAdvance(this.dataset.cid,\'payment\')">入社確認 → 在籍確認へ</button>';
+    html += '<a href="coreto-early-quit.html" target="_blank" class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;margin-top:6px">⚠️ 早期退職フォローを記録</a>';
+  } else if (c.step === 'payment') {
+    html += '<div style="background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.25);border-radius:8px;padding:12px;font-size:11px;margin-bottom:12px">';
+    html += '✅ 入社後の在籍確認が必要です。在籍確認完了で第2回報酬が発生します。</div>';
+    html += '<a href="coreto-early-quit.html" target="_blank" class="btn btn-ghost" style="width:100%;justify-content:center">退職・返金の管理 ↗</a>';
+    html += '<button class="btn btn-green" style="width:100%;justify-content:center;margin-top:8px" data-cid="'+c.id+'" onclick="hrAdvance(this.dataset.cid,\'done\')">在籍確認完了 → 成約</button>';
+    html += '<a href="coreto-batch-close.html" target="_blank" class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;margin-top:6px">🎯 成約報告（batch-close）↗</a>';
+  }
+
+  return html;
+}
+
+
+function hrAdvance(id, nextStep) {
+  const c = CASES.find(x=>x.id===id); if(!c) return;
+  if(!c.dates) c.dates = {};
+  if(!c.hist)  c.hist  = [];
+  const stepLabels = {apply:'面接調整',contract:'内定・入社',payment:'在籍確認',done:'完了'};
+  c.step = nextStep;
+  c.hist.push(today()+' → '+stepLabels[nextStep]);
+  // Update HR-specific fields if provided
+  const startInput = document.getElementById('hr-actual-start');
+  if(startInput && startInput.value) c.startDate = startInput.value;
+  const feeInput = document.getElementById('hr-fee-confirm');
+  if(feeInput && feeInput.value) c.feeHR = parseInt(feeInput.value);
+  render(); open_case(id);
+}
+
+function hrBatchClose(id) {
+  location.href = 'coreto-batch-close.html';
+}
 
 function stepNaiken(c) {
   const today = new Date().toISOString().slice(0,10);
@@ -2943,7 +3019,7 @@ function openNewModal(stageHint) {
     +'<div id="nc-corp-ext" style="display:none"><div class="fi"><label>担当者名</label><input type="text" id="nc-contact" placeholder="田中 一郎"></div></div>'
     +'<div class="fi"><label>種別</label><select id="nc-type" onchange="toggleAD()"><option value="reLet">🏠 賃貸</option><option value="reSale">🏢 売買</option><option value="sannai">🔄 三為</option><option value="hr">👥 人材</option></select></div>'+'<div id="nc-ad-wrap" style="margin-bottom:10px"><label style="display:flex;align-items:center;gap:7px;font-size:11px;cursor:pointer"><input type="checkbox" id="nc-ad"> AD案件（仲介手数料は鍵渡し後入金）</label></div>'
     +'<div class="fi"><label>希望条件</label><input type="text" id="nc-sub" placeholder="例: 渋谷区 1LDK / 目黒区 マンション 3,000万"></div>'
-    +'<div class="row" style="margin-top:14px"><button class="btn btn-ghost" style="flex:1" onclick="closeModal()">キャンセル</button>'
+    +'<div id="nc-hr-wrap" style="display:none;border:1px solid var(--border2);border-radius:8px;padding:12px;margin-bottom:10px;background:var(--bg)">'+'<div style="font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:8px">👥 人材紹介 詳細</div>'+'<div class="fi"><label>紹介先企業名</label><input type="text" id="nc-company" placeholder="例: 株式会社テクノ"></div>'+'<div class="fi"><label>業種・ポジション</label><input type="text" id="nc-position" placeholder="例: IT / エンジニア"></div>'+'<div class="fi"><label>想定年収（万円）</label><input type="number" id="nc-salary" placeholder="例: 600"></div>'+'<div class="fi"><label>入社予定日</label><input type="date" id="nc-start-date"></div>'+'<div class="fi"><label>手数料（税込・円）</label><input type="number" id="nc-fee-hr" placeholder="例: 2100000"></div>'+'</div>'+'<div class="row" style="margin-top:14px"><button class="btn btn-ghost" style="flex:1" onclick="closeModal()">キャンセル</button>'
     +'<button class="btn btn-gold" style="flex:2;justify-content:center" onclick="createCase()">登録</button></div>'
   );
 }
@@ -2952,6 +3028,16 @@ function toggleAD() {
   const t = document.getElementById('nc-type')?.value;
   const wrap = document.getElementById('nc-ad-wrap');
   if(wrap) wrap.style.display = t==='reLet' ? 'block' : 'none';
+  // HR fields
+  const hrWrap = document.getElementById('nc-hr-wrap');
+  const reProp = document.getElementById('nc-re-prop');
+  if(hrWrap) hrWrap.style.display = t==='hr' ? 'block' : 'none';
+  if(reProp) reProp.style.display = t==='hr' ? 'none' : 'block';
+  // Update placeholder for condition field
+  const sub = document.getElementById('nc-sub');
+  if(sub) sub.placeholder = t==='hr' ? '例: ITエンジニア / Webデザイナー / 希望年収700万' : '例: 渋谷区 1LDK / 目黒区 マンション 3,000万';
+  const nameLbl = document.getElementById('nc-name-lbl');
+  if(nameLbl) nameLbl.textContent = t==='hr' ? '候補者名' : '氏名';
 }
 
 function setCorp(flag) {
@@ -2986,6 +3072,14 @@ function createCase() {
   const obj = {id, name, type, corp:_corpMode, agent:'10012', sub, step:initStep, age:0, stale:false, adOnly, taskDone:{paid:false,itsetsu:false}, apps:[], dates:{}, hist:[today()+' 案件登録'+(adOnly?' [AD案件]':'')]};
   if(_corpMode&&contact) obj.contactName = contact;
   if(type==='sannai') obj.buyer = {name:'', takkenNum:'', verified:false, bypass:false};
+  if(type==='hr') {
+    obj.company   = document.getElementById('nc-company')?.value.trim()||'—';
+    obj.position  = document.getElementById('nc-position')?.value.trim()||'—';
+    obj.salary    = document.getElementById('nc-salary')?.value||'';
+    obj.startDate = document.getElementById('nc-start-date')?.value||'';
+    obj.feeHR     = parseInt(document.getElementById('nc-fee-hr')?.value)||0;
+    obj.step      = 'naiken'; // start at 書類選考
+  }
   CASES.unshift(obj);
   closeModal();
   render();
@@ -2997,6 +3091,8 @@ function createCase() {
     '📁 *案件ID*：'+id,
     '👤 *クライアント*：'+name+(_corpMode&&contact?' （担当: '+contact+'）':''),
     '🏷 *種別*：'+typeLabel2+(_corpMode?' / 法人':''),
+    type==='hr' ? '🏢 *企業*：'+(document.getElementById('nc-company')?.value||'—') : null,
+    type==='hr' ? '💼 *ポジション*：'+(document.getElementById('nc-position')?.value||'—') : null,
     adOnly ? '💡 AD案件' : null,
     '👨‍💼 *担当エージェント*：'+obj.agent,
     sub&&sub!=='—' ? '📝 *備考*：'+sub : null,

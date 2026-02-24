@@ -2,638 +2,68 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CORETO — LINE連携</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CORETO — LINE 公式アカウント</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&family=Shippori+Mincho:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap');
-*{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#07090f;--card:#0f1119;--card2:#141720;--border:#1e2235;--border2:#252a3d;
-  --gold:#c9a84c;--gold-dim:#7a5f22;--blue:#4f9cf9;--green:#34d399;--red:#f87171;
-  --orange:#fb923c;--purple:#a78bfa;--line:#00b900;
-  --muted:#4a5270;--sub:#7a849e;--text:#e2e6f3;
+  --bg:#090b13;--card:#11141f;--border:#1e2235;--border2:#2a3050;
+  --text:#e8eaf0;--sub:#a0a8c0;--muted:#5a6080;
+  --gold:#c9a840;--blue:#4f9cf9;--green:#34d399;--red:#f87171;
+  --re:#1d4e6b;--re-bg:rgba(29,78,107,.12);
+  --card-r:16px;
 }
-html,body{min-height:100%;font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text)}
-.hdr{height:54px;display:flex;align-items:center;justify-content:space-between;
-  padding:0 26px;border-bottom:1px solid var(--border);
-  background:rgba(7,9,15,.95);position:sticky;top:0;z-index:100}
-.logo{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:var(--gold);letter-spacing:3px}
-/* Tab bar */
-.tabs{display:flex;border-bottom:1px solid var(--border);background:var(--card);
-  padding:0 24px;position:sticky;top:54px;z-index:90}
-.tab{padding:14px 22px;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;
-  border-bottom:2px solid transparent;transition:.15s;margin-bottom:-1px}
-.tab:hover{color:var(--sub)}
-.tab.on{color:var(--blue);border-bottom-color:var(--blue)}
-/* Layout */
-.main{max-width:900px;margin:0 auto;padding:28px 24px 80px}
-/* Cards */
-.card{background:var(--card);border:1px solid var(--border);border-radius:14px;margin-bottom:16px}
-.ch{padding:13px 20px;border-bottom:1px solid var(--border);
-  display:flex;align-items:center;justify-content:space-between}
-.ch-t{font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;
-  display:flex;align-items:center;gap:8px}
-.ch-t::before{content:'';width:3px;height:11px;border-radius:2px;background:var(--line)}
-.cb{padding:18px 20px}
-/* Pills */
-.pill{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;
-  border-radius:6px;font-size:9px;font-weight:700}
-.pg{background:rgba(52,211,153,.13);color:var(--green);border:1px solid rgba(52,211,153,.3)}
-.pb{background:rgba(79,156,249,.12);color:var(--blue);border:1px solid rgba(79,156,249,.25)}
-.pr{background:rgba(248,113,113,.12);color:var(--red);border:1px solid rgba(248,113,113,.3)}
-.pm{background:rgba(74,82,112,.15);color:var(--sub);border:1px solid var(--border2)}
-.pl{background:rgba(0,185,0,.12);color:var(--line);border:1px solid rgba(0,185,0,.3)}
-/* Buttons */
-.btn{padding:9px 18px;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;
-  font-family:'Noto Sans JP',sans-serif;transition:.15s;border:none;
-  display:inline-flex;align-items:center;gap:6px}
-.btn-line{background:#00b900;color:#fff}
-.btn-line:hover{filter:brightness(1.1)}
-.btn-blue{background:linear-gradient(135deg,var(--blue),#3070c0);color:#fff}
-.btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--sub)}
-.btn-ghost:hover{color:var(--text);border-color:var(--sub)}
-.btn-ok{background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);color:var(--green)}
-.btn-danger{background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.3);color:var(--red)}
-.btn-sm{padding:5px 12px;font-size:10px;border-radius:7px}
-.btn:disabled{opacity:.4;cursor:not-allowed}
-/* Code display */
-.code-box{
-  background:var(--card2);border:2px solid var(--border2);border-radius:16px;
-  padding:28px 24px;text-align:center;position:relative;overflow:hidden
-}
-.code-box::before{
-  content:'';position:absolute;inset:0;
-  background:linear-gradient(135deg,rgba(0,185,0,.05) 0%,transparent 60%);
-  pointer-events:none
-}
-.code-digits{
-  display:flex;gap:10px;justify-content:center;margin:16px 0
-}
-.code-digit{
-  width:52px;height:64px;background:#090b13;border:2px solid var(--border2);
-  border-radius:12px;display:flex;align-items:center;justify-content:center;
-  font-family:'DM Mono',monospace;font-size:28px;font-weight:700;
-  color:var(--gold);letter-spacing:0;transition:.3s
-}
-.code-digit.revealed{border-color:var(--line);background:rgba(0,185,0,.05);color:#00d900}
-/* Timer ring */
-.timer-wrap{display:flex;align-items:center;justify-content:center;gap:10px;margin:12px 0}
-.timer-ring{width:40px;height:40px;position:relative}
-.timer-ring svg{transform:rotate(-90deg)}
-.timer-ring circle{fill:none;stroke-width:3}
-.timer-ring .bg{stroke:var(--border2)}
-.timer-ring .fg{stroke:var(--line);stroke-linecap:round;transition:stroke-dashoffset 1s linear}
-.timer-ring .expired{stroke:var(--red)}
-/* Table */
-.tbl{width:100%;border-collapse:collapse}
-.tbl th{padding:9px 14px;font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.5px;
-  text-transform:uppercase;border-bottom:1px solid var(--border);background:var(--card2);text-align:left}
-.tbl td{padding:10px 14px;border-bottom:1px solid rgba(30,34,53,.5);font-size:12px;vertical-align:middle}
-.tbl tr:last-child td{border:none}
-.tbl tr:hover td{background:rgba(255,255,255,.013)}
-.mono{font-family:'DM Mono',monospace}
-/* KPI */
-.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
-.kpi{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
-.kv{font-family:'DM Mono',monospace;font-size:24px;font-weight:500;margin-bottom:3px}
-.kl{font-size:10px;color:var(--muted)}
-/* Input */
-.field{margin-bottom:12px}
-.field label{display:block;font-size:10px;color:var(--sub);margin-bottom:5px;font-weight:600}
-.field input,.field select{width:100%;background:#090b13;border:1px solid var(--border2);
-  border-radius:9px;padding:9px 13px;color:var(--text);font-size:13px;
-  font-family:'Noto Sans JP',sans-serif;outline:none;transition:.15s}
-.field input:focus,.field select:focus{border-color:var(--blue)}
-/* Alert */
-.al{display:flex;align-items:flex-start;gap:10px;padding:12px 16px;border-radius:10px;
-  margin-bottom:14px;font-size:12px;line-height:1.7}
-.al-info{background:rgba(79,156,249,.07);border:1px solid rgba(79,156,249,.2)}
-.al-ok{background:rgba(52,211,153,.07);border:1px solid rgba(52,211,153,.2)}
-.al-line{background:rgba(0,185,0,.07);border:1px solid rgba(0,185,0,.25)}
-/* Status dot */
-.dot-live{width:8px;height:8px;border-radius:50%;background:var(--green);
-  display:inline-block;box-shadow:0 0 0 3px rgba(52,211,153,.2);margin-right:5px}
-.dot-none{width:8px;height:8px;border-radius:50%;background:var(--muted);
-  display:inline-block;margin-right:5px}
-::-webkit-scrollbar{width:4px}
-::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Shippori Mincho',serif;min-height:100vh;display:flex;flex-direction:column}
+.hdr{display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--border);background:var(--card)}
+.logo{font-family:'Syne',sans-serif;font-size:18px;font-weight:900;color:var(--gold);letter-spacing:1px}
+.back-btn{font-size:12px;color:var(--muted);text-decoration:none;margin-right:auto}
+.back-btn:hover{color:var(--sub)}
+.main{flex:1;display:flex;align-items:center;justify-content:center;padding:32px 16px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--card-r);padding:32px 28px;width:min(480px,100%);text-align:center}
+.icon{font-size:56px;margin-bottom:20px}
+.title{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;margin-bottom:8px}
+.subtitle{font-size:13px;color:var(--sub);line-height:1.8;margin-bottom:28px}
+.line-btn{display:inline-flex;align-items:center;gap:10px;background:#06C755;color:#fff;border:none;border-radius:12px;padding:14px 28px;font-size:15px;font-weight:700;cursor:pointer;text-decoration:none;margin-bottom:20px;transition:opacity .2s}
+.line-btn:hover{opacity:.88}
+.info-box{background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:16px;font-size:12px;color:var(--muted);line-height:1.9;text-align:left}
+.info-box strong{color:var(--sub)}
 </style>
 </head>
 <body>
 
 <div class="hdr">
-  <div style="display:flex;align-items:center;gap:12px">
-    <div class="logo">CORETO</div>
-    <div style="width:1px;height:18px;background:var(--border2)"></div>
-    <span style="font-size:10px;color:var(--muted);letter-spacing:1px">LINE連携管理</span>
-  </div>
-  <div style="display:flex;align-items:center;gap:8px">
-    <span style="font-size:11px;color:var(--sub)" id="hdr-user">山田 誠（10012）</span>
-    <button class="btn btn-ghost btn-sm" onclick="location.href='coreto-hub.html'">🏠 ホーム</button>
-  </div>
-</div>
-
-<div class="tabs">
-  <div class="tab on" id="tab-agent" onclick="showView('agent')">💬 LINE連携する</div>
-  <div class="tab" id="tab-hq"    onclick="showView('hq')">🏢 HQ 紐付け管理</div>
+  <a href="coreto-hub.html" class="back-btn">← ホーム</a>
+  <div class="logo">CORETO</div>
+  <div style="font-size:11px;color:var(--muted)">公式LINE</div>
 </div>
 
 <div class="main">
-
-<!-- ══════════════════════════════════════════
-     VIEW: エージェント側 LINE連携
-══════════════════════════════════════════ -->
-<div id="view-agent">
-
-  <!-- 現在の連携状況 -->
   <div class="card">
-    <div class="ch">
-      <div class="ch-t">現在の連携状況</div>
-      <span class="pill" id="status-pill" style="background:rgba(74,82,112,.15);color:var(--sub);border:1px solid var(--border2)">未連携</span>
+    <div class="icon">📲</div>
+    <div class="title">CORETO 公式LINEを友達追加</div>
+    <div class="subtitle">
+      CORETO本部からの一斉アナウンス・お知らせを<br>
+      LINEで受け取れるようになります。<br>
+      友達追加するだけで完了です。個人識別は不要です。
     </div>
-    <div class="cb" id="status-body">
-      <!-- JS で描画 -->
-    </div>
-  </div>
 
-  <!-- 連携手順 -->
-  <div class="card" id="link-card">
-    <div class="ch"><div class="ch-t">LINE連携の手順</div></div>
-    <div class="cb">
+    <a class="line-btn" href="https://line.me/R/ti/p/@coreto" target="_blank">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63h2.386c.346 0 .627.285.627.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63.346 0 .628.285.628.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.281.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/></svg>
+      友達追加する
+    </a>
 
-      <!-- Step 1 -->
-      <div style="display:flex;gap:14px;margin-bottom:20px;align-items:flex-start">
-        <div style="width:28px;height:28px;border-radius:50%;background:var(--line);flex-shrink:0;
-                    display:flex;align-items:center;justify-content:center;font-size:12px;
-                    font-weight:700;color:#fff">1</div>
-        <div style="flex:1">
-          <div style="font-size:13px;font-weight:700;margin-bottom:6px">CORETO公式LINEを友達追加する</div>
-          <div style="font-size:11px;color:var(--sub);margin-bottom:12px;line-height:1.8">
-            まだ追加していない場合は、下のボタンから友達追加してください。
-          </div>
-          <a href="https://line.me/R/ti/p/@coreto_official" target="_blank"
-             style="display:inline-flex;align-items:center;gap:8px;padding:10px 20px;
-                    background:#00b900;color:#fff;border-radius:10px;font-size:12px;
-                    font-weight:700;text-decoration:none;font-family:'Noto Sans JP',sans-serif">
-            <svg width="18" height="18" viewBox="0 0 48 48" fill="white">
-              <path d="M24 4C12.95 4 4 11.86 4 21.5c0 5.8 3.27 10.95 8.4 14.24-.37 1.36-1.34 4.94-1.54 5.7-.24.94.35.93.73.68.3-.19 4.73-3.14 6.64-4.41.88.12 1.78.19 2.77.19 11.05 0 20-7.86 20-17.5S35.05 4 24 4z"/>
-            </svg>
-            CORETO公式LINEを友達追加する
-          </a>
-        </div>
-      </div>
-
-      <!-- Divider -->
-      <div style="width:2px;height:24px;background:var(--border2);margin-left:13px;margin-bottom:20px"></div>
-
-      <!-- Step 2 -->
-      <div style="display:flex;gap:14px;margin-bottom:20px;align-items:flex-start">
-        <div style="width:28px;height:28px;border-radius:50%;background:var(--blue);flex-shrink:0;
-                    display:flex;align-items:center;justify-content:center;font-size:12px;
-                    font-weight:700;color:#fff">2</div>
-        <div style="flex:1">
-          <div style="font-size:13px;font-weight:700;margin-bottom:6px">連携コードを発行する</div>
-          <div style="font-size:11px;color:var(--sub);margin-bottom:12px;line-height:1.8">
-            ボタンを押すと6桁のコードが発行されます（有効期限：30分）。
-          </div>
-
-          <div id="code-area">
-            <button class="btn btn-blue" onclick="generateCode()" id="gen-btn">
-              🔑 連携コードを発行する
-            </button>
-          </div>
-
-          <!-- コード表示（発行後） -->
-          <div id="code-display" style="display:none;margin-top:14px">
-            <div class="code-box">
-              <div style="font-size:10px;color:var(--muted);letter-spacing:1.5px;
-                          text-transform:uppercase;margin-bottom:8px">連携コード</div>
-              <div class="code-digits" id="code-digits">
-                <!-- JS で描画 -->
-              </div>
-              <div class="timer-wrap">
-                <div class="timer-ring">
-                  <svg width="40" height="40" viewBox="0 0 40 40">
-                    <circle class="bg" cx="20" cy="20" r="17" stroke-dasharray="107" stroke-dashoffset="0"/>
-                    <circle class="fg" id="timer-ring-fg" cx="20" cy="20" r="17"
-                            stroke-dasharray="107" stroke-dashoffset="0"/>
-                  </svg>
-                </div>
-                <div>
-                  <div style="font-family:'DM Mono',monospace;font-size:16px;font-weight:700" id="timer-text">30:00</div>
-                  <div style="font-size:9px;color:var(--muted)">有効期限</div>
-                </div>
-              </div>
-              <div style="font-size:11px;color:var(--muted)">有効期限が切れたら再発行してください</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div style="width:2px;height:24px;background:var(--border2);margin-left:13px;margin-bottom:20px"></div>
-
-      <!-- Step 3 -->
-      <div style="display:flex;gap:14px;align-items:flex-start">
-        <div style="width:28px;height:28px;border-radius:50%;background:var(--line);flex-shrink:0;
-                    display:flex;align-items:center;justify-content:center;font-size:12px;
-                    font-weight:700;color:#fff">3</div>
-        <div style="flex:1">
-          <div style="font-size:13px;font-weight:700;margin-bottom:6px">LINEでコードを送信する</div>
-          <div style="font-size:11px;color:var(--sub);line-height:1.9">
-            CORETO公式LINEのトークを開き、上の6桁のコードをそのまま送信してください。<br>
-            例：「<span style="font-family:'DM Mono',monospace;color:var(--gold)">381924</span>」と送信する<br><br>
-            ✅ ボットが「山田 誠（10012）様、LINE連携が完了しました」と返信したら完了です。
-          </div>
-        </div>
-      </div>
-
+    <div class="info-box">
+      <strong>公式LINEについて</strong><br>
+      ・本部からのお知らせ・イベント案内の受信<br>
+      ・個人情報の入力・本人認証は一切不要<br>
+      ・案件の個別連絡はLINE WORKSで行います<br>
+      <br>
+      <strong>LINE ID：</strong>@coreto（本番登録後に更新）
     </div>
   </div>
+</div>
 
-  <!-- 連携完了済み表示（連携後に表示） -->
-  <div class="card" id="linked-card" style="display:none">
-    <div class="ch">
-      <div class="ch-t">LINE連携情報</div>
-      <button class="btn btn-danger btn-sm" onclick="unlinkLine()">連携を解除する</button>
-    </div>
-    <div class="cb">
-      <div class="al al-ok" style="margin-bottom:16px">
-        <span class="dot-live"></span>
-        <div>LINE連携が完了しています。認証コードや通知はこのLINEに届きます。</div>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:0">
-        <div style="display:flex;justify-content:space-between;padding:10px 0;
-                    border-bottom:1px solid rgba(30,34,53,.4);font-size:12px">
-          <span style="color:var(--sub)">連携アカウント</span>
-          <span style="color:var(--line);font-weight:700">@yamada_makoto</span>
-        </div>
-        <div style="display:flex;justify-content:space-between;padding:10px 0;
-                    border-bottom:1px solid rgba(30,34,53,.4);font-size:12px">
-          <span style="color:var(--sub)">LINE表示名</span>
-          <span>山田誠🏠</span>
-        </div>
-        <div style="display:flex;justify-content:space-between;padding:10px 0;font-size:12px">
-          <span style="color:var(--sub)">連携日時</span>
-          <span class="mono" style="font-size:11px">2026/01/15 14:32</span>
-        </div>
-      </div>
-    </div>
-  </div>
-
-</div><!-- /view-agent -->
-
-
-<!-- ══════════════════════════════════════════
-     VIEW: HQ 紐付け管理
-══════════════════════════════════════════ -->
-<div id="view-hq" style="display:none">
-
-  <div class="kpi-row">
-    <div class="kpi"><div class="kv" style="color:var(--line)">18</div><div class="kl">LINE連携済み</div></div>
-    <div class="kpi"><div class="kv" style="color:var(--orange)">6</div><div class="kl">未連携</div></div>
-    <div class="kpi"><div class="kv" style="color:var(--blue)">3</div><div class="kl">コード発行中（有効期限内）</div></div>
-    <div class="kpi"><div class="kv" style="color:var(--muted)">2</div><div class="kl">コード期限切れ</div></div>
-  </div>
-
-  <!-- 連携済み一覧 -->
-  <div class="card">
-    <div class="ch">
-      <div class="ch-t">連携済みエージェント</div>
-      <div style="display:flex;gap:8px">
-        <input type="text" id="hq-search" placeholder="ID・氏名で検索..."
-               oninput="filterTable()"
-               style="background:#090b13;border:1px solid var(--border2);color:var(--text);
-                      padding:5px 12px;border-radius:7px;font-size:11px;outline:none;width:160px">
-        <button class="btn btn-ghost btn-sm" onclick="exportCSV()">📥 CSV</button>
-      </div>
-    </div>
-    <div style="overflow-x:auto">
-      <table class="tbl" id="linked-table">
-        <thead><tr>
-          <th>エージェントID</th><th>氏名</th><th>種別</th><th>LINE表示名</th>
-          <th>LINE User ID</th><th>連携日時</th><th>状態</th><th>操作</th>
-        </tr></thead>
-        <tbody id="linked-tbody">
-          <!-- JS で描画 -->
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- 未連携エージェント -->
-  <div class="card">
-    <div class="ch">
-      <div class="ch-t">未連携エージェント</div>
-      <button class="btn btn-ghost btn-sm" onclick="remindAll()">📨 全員にSlackで連携依頼</button>
-    </div>
-    <div style="overflow-x:auto">
-      <table class="tbl">
-        <thead><tr>
-          <th>エージェントID</th><th>氏名</th><th>種別</th><th>入会日</th>
-          <th>コード状態</th><th>操作</th>
-        </tr></thead>
-        <tbody id="unlinked-tbody">
-          <!-- JS で描画 -->
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- 手動紐付け（HQ操作） -->
-  <div class="card">
-    <div class="ch"><div class="ch-t">手動紐付け（HQ操作）</div></div>
-    <div class="cb">
-      <div class="al al-info" style="margin-bottom:16px">
-        ℹ️ <div>エージェントが自力で連携できない場合や、管理上の理由でHQが直接紐付けを行う場合に使用します。<br>
-        LINE User IDはLINE Official Account Managerの友達リストから確認できます。</div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:12px;align-items:end">
-        <div class="field" style="margin:0">
-          <label>エージェントID</label>
-          <input type="text" id="manual-agent-id" placeholder="例：10012"
-                 style="font-family:'DM Mono',monospace">
-        </div>
-        <div class="field" style="margin:0">
-          <label>LINE User ID</label>
-          <input type="text" id="manual-line-uid" placeholder="例：U3f2a8c1d..."
-                 style="font-family:'DM Mono',monospace;font-size:11px">
-        </div>
-        <div class="field" style="margin:0">
-          <label>LINE 表示名（確認用）</label>
-          <input type="text" id="manual-line-name" placeholder="例：山田誠🏠">
-        </div>
-        <button class="btn btn-blue" onclick="manualLink()" style="height:40px;white-space:nowrap">
-          🔗 紐付け実行
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- コード発行履歴 -->
-  <div class="card">
-    <div class="ch">
-      <div class="ch-t">連携コード 発行ログ</div>
-      <span class="pill pm">直近7日</span>
-    </div>
-    <div style="overflow-x:auto">
-      <table class="tbl">
-        <thead><tr>
-          <th>コード</th><th>エージェント</th><th>発行日時</th><th>有効期限</th><th>状態</th>
-        </tr></thead>
-        <tbody>
-          <tr>
-            <td class="mono" style="color:var(--gold);letter-spacing:3px">381924</td>
-            <td>山田 誠（10012）</td>
-            <td class="mono" style="font-size:10px">2026/02/21 14:32</td>
-            <td class="mono" style="font-size:10px">2026/02/21 15:02</td>
-            <td><span class="pill pg">✓ 連携済み</span></td>
-          </tr>
-          <tr>
-            <td class="mono" style="color:var(--orange);letter-spacing:3px">729041</td>
-            <td>鈴木 健太（10023）</td>
-            <td class="mono" style="font-size:10px">2026/02/20 09:15</td>
-            <td class="mono" style="font-size:10px">2026/02/20 09:45</td>
-            <td><span class="pill pb">発行中</span></td>
-          </tr>
-          <tr>
-            <td class="mono" style="color:var(--muted);letter-spacing:3px">504817</td>
-            <td>渡辺 隆（10041）</td>
-            <td class="mono" style="font-size:10px">2026/02/19 16:44</td>
-            <td class="mono" style="font-size:10px">2026/02/19 17:14</td>
-            <td><span class="pill pr">期限切れ</span></td>
-          </tr>
-          <tr>
-            <td class="mono" style="color:var(--green);letter-spacing:3px">163082</td>
-            <td>佐藤 花子（10008）</td>
-            <td class="mono" style="font-size:10px">2026/02/18 11:20</td>
-            <td class="mono" style="font-size:10px">2026/02/18 11:50</td>
-            <td><span class="pill pg">✓ 連携済み</span></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-</div><!-- /view-hq -->
-</div><!-- /main -->
-
-<script>
-// ── Demo data ──────────────────────────────────────────────────────
-var LINKED = [
-  { id:'10012', name:'山田 誠',   type:'RE', lineDisplay:'山田誠🏠',      lineUid:'Uab12cd34ef', linkedAt:'2026/01/15 14:32', active:true },
-  { id:'10008', name:'佐藤 花子', type:'RE', lineDisplay:'はなちゃん💐',  lineUid:'U56gh78ij90', linkedAt:'2026/01/10 09:20', active:true },
-  { id:'20005', name:'田中 美穂', type:'HR', lineDisplay:'美穂田中',      lineUid:'Ukl12mn34op', linkedAt:'2026/01/08 16:55', active:true },
-  { id:'30007', name:'佐藤 美咲', type:'PT', lineDisplay:'Misaki🌸',     lineUid:'Uqr56st78uv', linkedAt:'2026/01/05 13:10', active:true },
-];
-var UNLINKED = [
-  { id:'10023', name:'鈴木 健太', type:'RE', joinedAt:'2026/01/20', codeStatus:'発行中' },
-  { id:'10041', name:'渡辺 隆',   type:'RE', joinedAt:'2026/01/25', codeStatus:'期限切れ' },
-  { id:'20009', name:'高橋 一郎', type:'HR', joinedAt:'2026/02/01', codeStatus:'未発行' },
-];
-
-// Current agent LINE status (demo: check if 10012 is linked)
-var agentIsLinked = false; // toggle for demo
-
-// ── View switching ─────────────────────────────────────────────────
-function showView(v) {
-  document.getElementById('tab-agent').className = 'tab'+(v==='agent'?' on':'');
-  document.getElementById('tab-hq').className    = 'tab'+(v==='hq'?' on':'');
-  document.getElementById('view-agent').style.display = v==='agent'?'block':'none';
-  document.getElementById('view-hq').style.display    = v==='hq'?'block':'none';
-}
-
-// ── Agent view init ────────────────────────────────────────────────
-function initAgentView() {
-  var pill = document.getElementById('status-pill');
-  var body = document.getElementById('status-body');
-  var linkCard = document.getElementById('link-card');
-  var linkedCard = document.getElementById('linked-card');
-
-  if (agentIsLinked) {
-    pill.className = 'pill pl';
-    pill.textContent = '✓ 連携済み';
-    body.innerHTML = '<div style="display:flex;align-items:center;gap:10px;font-size:12px">' +
-      '<span class="dot-live"></span><span style="color:var(--green)">LINE連携が完了しています</span></div>';
-    linkCard.style.display = 'none';
-    linkedCard.style.display = 'block';
-  } else {
-    pill.className = 'pill pm';
-    pill.textContent = '未連携';
-    body.innerHTML = '<div style="display:flex;align-items:center;gap:10px;font-size:12px">' +
-      '<span class="dot-none"></span><span style="color:var(--muted)">まだLINE連携が完了していません。下の手順に沿って設定してください。</span></div>';
-    linkCard.style.display = 'block';
-    linkedCard.style.display = 'none';
-  }
-}
-
-// ── Code generation ────────────────────────────────────────────────
-var _code = '';
-var _codeTimer = null;
-var _codeSec = 1800; // 30分
-
-function generateCode() {
-  // 6桁ランダムコード
-  _code = String(Math.floor(100000 + Math.random() * 900000));
-  _codeSec = 1800;
-  clearInterval(_codeTimer);
-
-  document.getElementById('code-display').style.display = 'block';
-  document.getElementById('gen-btn').textContent = '🔄 コードを再発行する';
-
-  renderCodeDigits();
-  startCodeTimer();
-}
-
-function renderCodeDigits() {
-  var html = '';
-  for (var i = 0; i < 6; i++) {
-    html += '<div class="code-digit revealed" id="cd-' + i + '">' + _code[i] + '</div>';
-  }
-  document.getElementById('code-digits').innerHTML = html;
-}
-
-function startCodeTimer() {
-  clearInterval(_codeTimer);
-  var total = 1800;
-  var circumference = 107; // 2*π*17
-
-  _codeTimer = setInterval(function() {
-    _codeSec--;
-    var m = Math.floor(_codeSec / 60);
-    var s = _codeSec % 60;
-    var timerText = document.getElementById('timer-text');
-    var ringFg = document.getElementById('timer-ring-fg');
-    if (!timerText) return;
-
-    timerText.textContent = m + ':' + String(s).padStart(2, '0');
-    var offset = circumference - (circumference * _codeSec / total);
-    if (ringFg) {
-      ringFg.style.strokeDashoffset = offset;
-      if (_codeSec < 300) {
-        ringFg.classList.add('expired');
-        timerText.style.color = 'var(--red)';
-      }
-    }
-
-    if (_codeSec <= 0) {
-      clearInterval(_codeTimer);
-      timerText.textContent = '期限切れ';
-      timerText.style.color = 'var(--red)';
-      // 桁を灰色に
-      for (var i = 0; i < 6; i++) {
-        var el = document.getElementById('cd-' + i);
-        if (el) { el.style.color = 'var(--muted)'; el.style.borderColor = 'var(--border2)'; el.style.background = 'transparent'; }
-      }
-    }
-  }, 1000);
-}
-
-function unlinkLine() {
-  if (!confirm('LINE連携を解除しますか？\n解除後は認証コードがLINEに届かなくなります。')) return;
-  agentIsLinked = false;
-  initAgentView();
-}
-
-// ── HQ view functions ──────────────────────────────────────────────
-function renderHqTables() {
-  // 連携済み
-  var tbody = document.getElementById('linked-tbody');
-  tbody.innerHTML = LINKED.map(function(r) {
-    return '<tr>' +
-      '<td class="mono" style="font-size:11px;color:var(--gold)">' + r.id + '</td>' +
-      '<td style="font-weight:700">' + r.name + '</td>' +
-      '<td><span class="pill ' + (r.type==='RE'?'pb':r.type==='HR'?'po':'pl') + '">' + r.type + '</span></td>' +
-      '<td style="color:var(--line)">' + r.lineDisplay + '</td>' +
-      '<td class="mono" style="font-size:10px;color:var(--muted)">' + r.lineUid + '</td>' +
-      '<td class="mono" style="font-size:10px">' + r.linkedAt + '</td>' +
-      '<td><span class="pill pg"><span class="dot-live" style="width:5px;height:5px"></span>連携中</span></td>' +
-      '<td><button class="btn btn-danger btn-sm" onclick="hqUnlink(\'' + r.id + '\',\'' + r.name + '\')">解除</button></td>' +
-      '</tr>';
-  }).join('');
-
-  // 未連携
-  var utbody = document.getElementById('unlinked-tbody');
-  utbody.innerHTML = UNLINKED.map(function(r) {
-    var statusPill = r.codeStatus === '発行中'
-      ? '<span class="pill pb">🔑 発行中</span>'
-      : r.codeStatus === '期限切れ'
-      ? '<span class="pill pr">期限切れ</span>'
-      : '<span class="pill pm">未発行</span>';
-    return '<tr>' +
-      '<td class="mono" style="font-size:11px;color:var(--muted)">' + r.id + '</td>' +
-      '<td style="font-weight:700">' + r.name + '</td>' +
-      '<td><span class="pill ' + (r.type==='RE'?'pb':r.type==='HR'?'po':'pl') + '">' + r.type + '</span></td>' +
-      '<td class="mono" style="font-size:11px">' + r.joinedAt + '</td>' +
-      '<td>' + statusPill + '</td>' +
-      '<td><div style="display:flex;gap:5px">' +
-        '<button class="btn btn-ghost btn-sm" onclick="remindOne(\'' + r.id + '\',\'' + r.name + '\')">📨 連携依頼</button>' +
-      '</div></td>' +
-      '</tr>';
-  }).join('');
-}
-
-function filterTable() {
-  var q = document.getElementById('hq-search').value.toLowerCase();
-  var rows = document.querySelectorAll('#linked-tbody tr');
-  rows.forEach(function(row) {
-    row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
-  });
-}
-
-function hqUnlink(id, name) {
-  if (!confirm(name + '（' + id + '）のLINE連携を解除しますか？\n次回の認証コードがLINEに届かなくなります。')) return;
-  LINKED = LINKED.filter(function(r) { return r.id !== id; });
-  UNLINKED.push({ id:id, name:name, type:'RE', joinedAt:'—', codeStatus:'未発行' });
-  renderHqTables();
-  alert('✅ ' + name + ' のLINE連携を解除しました。\nSlackで本人に通知が届きます。');
-}
-
-function manualLink() {
-  var agentId = document.getElementById('manual-agent-id').value.trim();
-  var lineUid  = document.getElementById('manual-line-uid').value.trim();
-  var lineName = document.getElementById('manual-line-name').value.trim();
-  if (!agentId || !lineUid) { alert('エージェントIDとLINE User IDは必須です'); return; }
-  // デモ: 未連携から連携済みへ移動
-  var target = UNLINKED.find(function(r) { return r.id === agentId; });
-  if (!target) {
-    if (!confirm('ID ' + agentId + ' は未連携リストにありません。新規で紐付けを追加しますか？')) return;
-    target = { id:agentId, name:'（ID: '+agentId+'）', type:'RE' };
-  }
-  LINKED.push({
-    id: target.id, name: target.name, type: target.type,
-    lineDisplay: lineName || '（表示名未取得）',
-    lineUid: lineUid,
-    linkedAt: new Date().toLocaleString('ja-JP').replace(/\//g,'/').slice(0,-3),
-    active: true
-  });
-  UNLINKED = UNLINKED.filter(function(r) { return r.id !== agentId; });
-  document.getElementById('manual-agent-id').value = '';
-  document.getElementById('manual-line-uid').value = '';
-  document.getElementById('manual-line-name').value = '';
-  renderHqTables();
-  alert('✅ 手動紐付けを実行しました。\nエージェントID: ' + agentId + '\nLINE User ID: ' + lineUid);
-}
-
-function remindOne(id, name) {
-  alert('📨 ' + name + '（' + id + '）にSlackでLINE連携依頼を送信しました。');
-}
-function remindAll() {
-  alert('📨 未連携の全エージェント（' + UNLINKED.length + '名）にSlackでLINE連携依頼を送信しました。');
-}
-function exportCSV() {
-  var rows = [['エージェントID','氏名','種別','LINE表示名','LINE UserID','連携日時']].concat(
-    LINKED.map(function(r){ return [r.id,r.name,r.type,r.lineDisplay,r.lineUid,r.linkedAt]; })
-  );
-  var csv = rows.map(function(r){ return r.join(','); }).join('\n');
-  var a = document.createElement('a');
-  a.href = 'data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
-  a.download = 'coreto_line_links.csv';
-  a.click();
-}
-
-// ── Init ──────────────────────────────────────────────────────────
-initAgentView();
-renderHqTables();
-</script>
 </body>
 </html>
