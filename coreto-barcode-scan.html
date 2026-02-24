@@ -301,22 +301,26 @@ code{background:var(--hover);padding:1px 6px;border-radius:3px;font-size:11px;co
     <!-- 書類種別 -->
     <div class="rcv-field-label">STEP 2 — 到着した書類の種別（複数選択可）</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px" id="doc-type-grid">
-      <div class="doc-type-btn" id="dt-contract" onclick="rcvToggleDocType('contract')">
+      <div class="doc-type-btn" id="dt-contract" onclick="rcvToggleDocType('contract')" style="position:relative">
+        <div class="dt-check" style="display:none;position:absolute;top:6px;right:6px;width:18px;height:18px;border-radius:50%;background:var(--gold);color:#0d0f14;font-size:10px;font-weight:900;align-items:center;justify-content:center">✓</div>
         <div style="font-size:22px">📄</div>
         <div style="font-size:12px;font-weight:700">契約書</div>
         <div style="font-size:10px;color:var(--muted)">スキャン必須</div>
       </div>
-      <div class="doc-type-btn" id="dt-key" onclick="rcvToggleDocType('key')">
+      <div class="doc-type-btn" id="dt-key" onclick="rcvToggleDocType('key')" style="position:relative">
+        <div class="dt-check" style="display:none;position:absolute;top:6px;right:6px;width:18px;height:18px;border-radius:50%;background:var(--gold);color:#0d0f14;font-size:10px;font-weight:900;align-items:center;justify-content:center">✓</div>
         <div style="font-size:22px">🔑</div>
         <div style="font-size:12px;font-weight:700">鍵</div>
         <div style="font-size:10px;color:var(--muted)">写真で記録</div>
       </div>
-      <div class="doc-type-btn" id="dt-additional" onclick="rcvToggleDocType('additional')">
+      <div class="doc-type-btn" id="dt-additional" onclick="rcvToggleDocType('additional')" style="position:relative">
+        <div class="dt-check" style="display:none;position:absolute;top:6px;right:6px;width:18px;height:18px;border-radius:50%;background:var(--gold);color:#0d0f14;font-size:10px;font-weight:900;align-items:center;justify-content:center">✓</div>
         <div style="font-size:22px">📁</div>
         <div style="font-size:12px;font-weight:700">追加書類</div>
         <div style="font-size:10px;color:var(--muted)">スキャン推奨</div>
       </div>
-      <div class="doc-type-btn" id="dt-other" onclick="rcvToggleDocType('other')">
+      <div class="doc-type-btn" id="dt-other" onclick="rcvToggleDocType('other')" style="position:relative">
+        <div class="dt-check" style="display:none;position:absolute;top:6px;right:6px;width:18px;height:18px;border-radius:50%;background:var(--gold);color:#0d0f14;font-size:10px;font-weight:900;align-items:center;justify-content:center">✓</div>
         <div style="font-size:22px">📦</div>
         <div style="font-size:12px;font-weight:700">その他</div>
         <div style="font-size:10px;color:var(--muted)">メモを記入</div>
@@ -1276,7 +1280,13 @@ function showTab(t) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-'+t).classList.add('active');
-  event.target.classList.add('active');
+  // event may not exist when called programmatically (hash routing)
+  const btn = [...document.querySelectorAll('.tab')].find(b => {
+    const oc = b.getAttribute('onclick') || '';
+    return oc.includes("showTab('" + t + "')");
+  });
+  if (btn) btn.classList.add('active');
+  else if (typeof event !== 'undefined' && event && event.target) event.target.classList.add('active');
 }
 
 // ===== トースト =====
@@ -1484,8 +1494,23 @@ function rcvClearCase() {
 
 function rcvToggleDocType(type) {
   const btn = document.getElementById('dt-' + type);
-  if (RCV.docTypes.has(type)) { RCV.docTypes.delete(type); btn.classList.remove('selected'); }
-  else { RCV.docTypes.add(type); btn.classList.add('selected'); }
+  if (RCV.docTypes.has(type)) {
+    RCV.docTypes.delete(type);
+    btn.classList.remove('selected');
+    btn.style.borderColor = 'var(--border)';
+    btn.style.background  = 'var(--hover)';
+    btn.style.boxShadow   = 'none';
+    btn.style.color       = '';
+    btn.querySelector('.dt-check').style.display = 'none';
+  } else {
+    RCV.docTypes.add(type);
+    btn.classList.add('selected');
+    btn.style.borderColor = 'var(--gold)';
+    btn.style.background  = 'rgba(201,168,76,.15)';
+    btn.style.boxShadow   = '0 0 0 1px var(--gold), inset 0 0 12px rgba(201,168,76,.08)';
+    btn.style.color       = 'var(--gold)';
+    btn.querySelector('.dt-check').style.display = 'flex';
+  }
   rcvCheckStep0Ready();
 }
 
