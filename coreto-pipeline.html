@@ -714,7 +714,8 @@ function stepNaiken(c) {
   return '<div class="step-title">🏠 内見</div>'
     +'<div class="fi"><label>内見日</label><input type="date" id="s-naiken-date" class="mono" value="'+dateVal+'"></div>'
     +'<div class="fi"><label>物件名</label><input type="text" id="s-naiken-prop" placeholder="〇〇マンション 1LDK" value="'+(c.dates.naikenProp||'')+'"></div>'
-    +'<div class="row" style="margin-top:14px">'
+    +'<button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:10px;border-color:var(--gold);color:var(--gold)" onclick="openNaikenDoc(\''+c.id+'\')">📄 内見依頼書を発行（FAX印刷）</button>'
+    +'<div class="row" style="margin-top:8px">'
     +'<button class="btn btn-green" onclick="naikenDone(\''+c.id+'\')">✓ 内見完了 → 申込へ</button>'
     +'<button class="btn btn-red" onclick="naikenSkip(\''+c.id+'\')">見送り</button>'
     +'</div>';
@@ -823,7 +824,8 @@ function stepSaleNaiken(c) {
   return '<div class="step-title">🏠 内見（売買）</div>'
     +'<div class="fi"><label>物件名</label><input type="text" id="s-sale-prop" value="'+(c.dates.naikenProp||'')+'" placeholder="〇〇マンション 101号"></div>'
     +'<div class="fi"><label>内見日</label><input type="date" id="s-naiken-date" class="mono" value="'+val+'"></div>'
-    +'<div style="display:flex;gap:8px;margin-top:14px">'
+    +'<button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:10px;border-color:var(--gold);color:var(--gold)" onclick="openNaikenDoc(\''+c.id+'\')">📄 内見依頼書を発行（FAX印刷）</button>'
+    +'<div style="display:flex;gap:8px;margin-top:8px">'
     +(c.type==='sannai'
       ? '<button class="btn btn-green" style="flex:1;justify-content:center" data-cid="'+c.id+'" onclick="sannaiNaikenDone(this.dataset.cid)">内見完了 → 業者確認へ</button>'
         +'<button class="btn btn-ghost btn-sm" data-cid="'+c.id+'" onclick="sannaiSkipNaiken(this.dataset.cid)">内見なし・業者確認へ</button>'
@@ -1502,6 +1504,190 @@ function naikenSkip(id) {
   if(!confirm('見送りにしますか？')) return;
   advance(id, 'cancel', null, null, '見送り（内見後）');
 }
+
+// ══════════════════════════════════════════
+// 内見依頼書発行モーダル
+// ══════════════════════════════════════════
+function openNaikenDoc(cid) {
+  const c = CASES.find(x => x.id === cid);
+  const u = window._SESSION || {};
+
+  // 物件名を現在の入力値 or case から取得
+  const propVal = (document.getElementById('s-sale-prop') || document.getElementById('s-naiken-prop'))?.value || c?.sub || '';
+  const dateVal = document.getElementById('s-naiken-date')?.value || new Date().toISOString().slice(0,10);
+
+  // 時刻デフォルト
+  const h = '10', m = '00';
+
+  const overlay = document.createElement('div');
+  overlay.id = 'naiken-doc-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;z-index:9999;padding:16px';
+
+  overlay.innerHTML = `
+    <div style="background:#11141f;border:1px solid #2a3050;border-radius:16px;width:min(460px,100%);max-height:90vh;overflow-y:auto;font-family:inherit">
+      <div style="padding:18px 20px;border-bottom:1px solid #1e2235;display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:#e8eaf0">📄 内見依頼書</div>
+          <div style="font-size:10px;color:#5a6080;margin-top:2px">FAX送付用フォーマット</div>
+        </div>
+        <button onclick="document.getElementById('naiken-doc-overlay').remove()" style="background:transparent;border:none;color:#5a6080;cursor:pointer;font-size:18px;padding:4px 8px">✕</button>
+      </div>
+      <div style="padding:20px">
+        <div class="fi">
+          <label>管理会社名 <span style="color:#f87171">*</span></label>
+          <input type="text" id="nd-mgmt" placeholder="〇〇不動産株式会社">
+        </div>
+        <div class="fi">
+          <label>物件名 <span style="color:#f87171">*</span></label>
+          <input type="text" id="nd-prop" value="${propVal}" placeholder="〇〇マンション 101号">
+        </div>
+        <div class="fi">
+          <label>内見日</label>
+          <input type="date" id="nd-date" class="mono" value="${dateVal}">
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <div style="flex:1">
+            <label style="font-size:11px;color:#a0a8c0;display:block;margin-bottom:4px">時（時間）</label>
+            <select id="nd-hour" style="width:100%;background:#090b13;border:1px solid #2a3050;border-radius:8px;padding:8px 10px;color:#e8eaf0;font-family:inherit;font-size:12px">
+              ${[...Array(13)].map((_,i)=>'<option value="'+(i+8)+'"'+(i+8===10?' selected':'')+'>'+String(i+8).padStart(2,'0')+'</option>').join('')}
+            </select>
+          </div>
+          <div style="flex:1">
+            <label style="font-size:11px;color:#a0a8c0;display:block;margin-bottom:4px">分</label>
+            <select id="nd-min" style="width:100%;background:#090b13;border:1px solid #2a3050;border-radius:8px;padding:8px 10px;color:#e8eaf0;font-family:inherit;font-size:12px">
+              <option value="00" selected>00</option>
+              <option value="15">15</option>
+              <option value="30">30</option>
+              <option value="45">45</option>
+            </select>
+          </div>
+        </div>
+        <div class="fi">
+          <label>集合場所（任意）</label>
+          <input type="text" id="nd-place" placeholder="物件前・管理会社前など">
+        </div>
+        <div style="background:#090b13;border:1px solid #1e2235;border-radius:8px;padding:12px;margin-bottom:16px;font-size:11px;color:#a0a8c0;line-height:1.8">
+          <div style="font-size:10px;color:#5a6080;letter-spacing:1px;margin-bottom:6px">担当エージェント（自動入力）</div>
+          <strong style="color:#e8eaf0">${u.name || '—'}</strong>　ID: ${u.userId || '—'}<br>
+          携帯: ${u.mobile || '080-XXXX-XXXX'}
+        </div>
+        <div style="display:flex;gap:8px">
+          <button onclick="document.getElementById('naiken-doc-overlay').remove()" style="flex:1;background:transparent;border:1px solid #2a3050;color:#a0a8c0;border-radius:8px;padding:11px;cursor:pointer;font-family:inherit">キャンセル</button>
+          <button onclick="printNaikenDoc()" style="flex:2;background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.35);color:#c9a840;border-radius:8px;padding:11px;cursor:pointer;font-family:inherit;font-weight:700">📄 発行・印刷（FAX）</button>
+        </div>
+      </div>
+    </div>`;
+
+  document.body.appendChild(overlay);
+  // フォーカス
+  setTimeout(() => document.getElementById('nd-mgmt')?.focus(), 100);
+}
+
+function printNaikenDoc() {
+  const mgmt  = document.getElementById('nd-mgmt')?.value.trim();
+  const prop  = document.getElementById('nd-prop')?.value.trim();
+  if (!mgmt) { alert('管理会社名を入力してください'); document.getElementById('nd-mgmt')?.focus(); return; }
+  if (!prop) { alert('物件名を入力してください'); document.getElementById('nd-prop')?.focus(); return; }
+
+  const dateV = document.getElementById('nd-date')?.value;
+  const hour  = document.getElementById('nd-hour')?.value || '10';
+  const min   = document.getElementById('nd-min')?.value  || '00';
+  const place = document.getElementById('nd-place')?.value || '';
+  const u     = window._SESSION || {};
+
+  let month = '　', day = '　';
+  if (dateV) { const d = new Date(dateV); month = d.getMonth()+1; day = d.getDate(); }
+
+  const html = buildNaikenPrintHTML({ mgmt, prop, month, day, hour, min, place, agent: u });
+  const w = window.open('', '_blank', 'width=820,height=1100');
+  w.document.write(html);
+  w.document.close();
+  w.onload = () => w.print();
+
+  document.getElementById('naiken-doc-overlay')?.remove();
+}
+
+function buildNaikenPrintHTML({ mgmt, prop, month, day, hour, min, place, agent }) {
+  const agentName    = agent.name    || '担当者名';
+  const agentMobile  = agent.mobile  || '080-XXXX-XXXX';
+  const agentLicense = agent.license || '東京都知事(X)第XXXXX号';
+
+  return `<!DOCTYPE html>
+<html lang="ja"><head><meta charset="UTF-8">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans JP',sans-serif;background:#fff;color:#000;padding:20mm 18mm}
+.title{font-size:22px;font-weight:700;text-align:center;border:2px solid #000;padding:8px 0;margin-bottom:24px;letter-spacing:4px}
+.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px}
+.to-company{font-size:18px;font-weight:700;border-bottom:2px solid #000;padding-bottom:4px;min-width:220px;display:inline-block}
+.from{font-size:11px;line-height:1.8}
+.field-row{display:flex;align-items:center;margin-bottom:20px;border-bottom:1.5px solid #555;padding-bottom:14px}
+.field-label{font-size:14px;font-weight:700;width:80px}
+.field-value{font-size:20px;font-weight:700;flex:1;padding-left:16px}
+.body-text{font-size:13px;margin-bottom:8px;font-weight:500}
+.note{font-size:13px;font-weight:700;margin-top:16px}
+.card{border:3px solid #1a2744;margin-top:32px;display:flex;min-height:110px}
+.card-left{background:#1a2744;padding:16px 20px;flex:1}
+.card-name{color:#fff;font-size:28px;font-weight:700;letter-spacing:2px;margin-bottom:8px}
+.card-info{color:#d0d8e8;font-size:11px;line-height:1.9}
+.card-info .label{color:#c9a84c;font-size:10px}
+.card-right{padding:16px 20px;display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;min-width:160px}
+.card-logo{font-size:22px;color:#1a2744;font-weight:900;letter-spacing:2px;font-family:monospace}
+.card-mobile{font-size:13px;font-weight:700;color:#1a2744;font-family:monospace}
+.card-license{font-size:10px;color:#666;text-align:right}
+</style></head><body>
+<div class="title">内　見　依　頼　書</div>
+<div class="header">
+  <div>
+    <div class="to-company">${mgmt}</div>
+    <div style="font-size:13px;font-weight:700;margin-top:4px">御中</div>
+  </div>
+  <div class="from">
+    <strong>株式会社CORETO</strong><br>
+    〒150-0000　東京都○○区○○ 1-1-1<br>
+    <strong>Tel：03-XXXX-XXXX</strong>　<strong>Fax：03-XXXX-XXXX</strong>
+  </div>
+</div>
+<div class="field-row">
+  <div class="field-label">物件名</div>
+  <div class="field-value">${prop}</div>
+</div>
+<div class="field-row">
+  <div class="field-label">日時</div>
+  <div class="field-value" style="font-size:22px">${month}　月　${day}　日</div>
+</div>
+<div class="field-row">
+  <div class="field-label">時間</div>
+  <div class="field-value" style="font-size:22px">${hour}　時　${min}　分</div>
+</div>
+${place ? '<div class="field-row"><div class="field-label">集合場所</div><div class="field-value" style="font-size:16px">' + place + '</div></div>' : ''}
+<p class="body-text">上記物件を内見させて頂きます。</p>
+<p class="body-text">宜しくお願い致します。</p>
+<p class="note">※　下記携帯までご連絡下さい</p>
+<div class="card">
+  <div class="card-left">
+    <div class="card-name">${agentName}</div>
+    <div class="card-info">
+      <div>株式会社CORETO</div>
+      <div>〒150-0000　東京都○○区○○ 1-1-1</div>
+      <div><span class="label">Tel：</span>03-XXXX-XXXX</div>
+      <div><span class="label">Fax：</span>03-XXXX-XXXX</div>
+      <div><span class="label" style="color:#f59e0b">携帯：</span><strong style="color:#f0c040;font-size:13px">${agentMobile}</strong></div>
+    </div>
+  </div>
+  <div class="card-right">
+    <div class="card-logo">CORETO</div>
+    <div>
+      <div class="card-mobile">${agentMobile}</div>
+      <div class="card-license">${agentLicense}</div>
+    </div>
+  </div>
+</div>
+</body></html>`;
+}
+
+
 
 function submitApply(id) {
   const prop = document.getElementById('s-prop')?.value.trim();
