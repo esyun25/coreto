@@ -1598,7 +1598,7 @@ function printNaikenDoc() {
   let month = '　', day = '　';
   if (dateV) { const d = new Date(dateV); month = d.getMonth()+1; day = d.getDate(); }
 
-  const html = buildNaikenPrintHTML({ mgmt, prop, month, day, hour, min, place, agent: u });
+  const html = buildNaikenPrintHTML({ mgmt, prop, month, day, hour, min, place, agent: u, agentId: u.userId || '——' });
   const w = window.open('', '_blank', 'width=820,height=1100');
   w.document.write(html);
   w.document.close();
@@ -1607,7 +1607,7 @@ function printNaikenDoc() {
   document.getElementById('naiken-doc-overlay')?.remove();
 }
 
-function buildNaikenPrintHTML({ mgmt, prop, month, day, hour, min, place, agent }) {
+function buildNaikenPrintHTML({ mgmt, prop, month, day, hour, min, place, agent, agentId }) {
   const agentName    = agent.name    || '担当者名';
   const agentMobile  = agent.mobile  || '080-XXXX-XXXX';
   const agentLicense = agent.license || '東京都知事(X)第XXXXX号';
@@ -1627,15 +1627,19 @@ body{font-family:'Noto Sans JP',sans-serif;background:#fff;color:#000;padding:20
 .field-value{font-size:20px;font-weight:700;flex:1;padding-left:16px}
 .body-text{font-size:13px;margin-bottom:8px;font-weight:500}
 .note{font-size:13px;font-weight:700;margin-top:16px}
-.card{border:3px solid #1a2744;margin-top:32px;display:flex;min-height:110px}
-.card-left{background:#1a2744;padding:16px 20px;flex:1}
-.card-name{color:#fff;font-size:28px;font-weight:700;letter-spacing:2px;margin-bottom:8px}
-.card-info{color:#d0d8e8;font-size:11px;line-height:1.9}
-.card-info .label{color:#c9a84c;font-size:10px}
-.card-right{padding:16px 20px;display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;min-width:160px}
-.card-logo{font-size:22px;color:#1a2744;font-weight:900;letter-spacing:2px;font-family:monospace}
-.card-mobile{font-size:13px;font-weight:700;color:#1a2744;font-family:monospace}
-.card-license{font-size:10px;color:#666;text-align:right}
+.card-wrap{margin-top:28px}
+.card-label{font-size:11px;color:#888;margin-bottom:6px;font-weight:700}
+.card{border:2px solid #1a2744;display:flex;width:91mm;height:55mm;overflow:hidden}
+.card-left{background:#1a2744;padding:9mm 8mm;flex:1;display:flex;flex-direction:column;justify-content:space-between}
+.card-name{color:#fff;font-size:15px;font-weight:700;letter-spacing:1.5px;margin-bottom:3px}
+.card-kana{color:#a0b8d0;font-size:8px;letter-spacing:1px;margin-bottom:8px}
+.card-info{color:#d0d8e8;font-size:8px;line-height:1.85}
+.card-info .lbl{color:#c9a84c;font-size:7.5px}
+.card-id{color:#7090b0;font-size:7.5px;margin-top:6px;letter-spacing:.5px}
+.card-right{padding:8mm 7mm;display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;min-width:28mm;background:#fff}
+.card-logo{font-size:13px;color:#1a2744;font-weight:900;letter-spacing:2px;font-family:monospace}
+.card-mobile-lg{font-size:10px;font-weight:700;color:#1a2744;font-family:monospace;margin-bottom:2px}
+.card-license{font-size:6.5px;color:#777;text-align:right;line-height:1.5}
 </style></head><body>
 <div class="title">内　見　依　頼　書</div>
 <div class="header">
@@ -1665,22 +1669,28 @@ ${place ? '<div class="field-row"><div class="field-label">集合場所</div><di
 <p class="body-text">上記物件を内見させて頂きます。</p>
 <p class="body-text">宜しくお願い致します。</p>
 <p class="note">※　下記携帯までご連絡下さい</p>
-<div class="card">
-  <div class="card-left">
-    <div class="card-name">${agentName}</div>
-    <div class="card-info">
-      <div>株式会社CORETO</div>
-      <div>〒150-0000　東京都○○区○○ 1-1-1</div>
-      <div><span class="label">Tel：</span>03-XXXX-XXXX</div>
-      <div><span class="label">Fax：</span>03-XXXX-XXXX</div>
-      <div><span class="label" style="color:#f59e0b">携帯：</span><strong style="color:#f0c040;font-size:13px">${agentMobile}</strong></div>
+<div class="card-wrap">
+  <div class="card-label">担当者名刺</div>
+  <div class="card">
+    <div class="card-left">
+      <div>
+        <div class="card-name">${agentName}</div>
+        <div class="card-kana">不動産エージェント</div>
+        <div class="card-info">
+          <div>株式会社CORETO</div>
+          <div>〒150-0000　東京都○○区○○ 1-1-1</div>
+          <div><span class="lbl">Tel：</span>03-XXXX-XXXX　<span class="lbl">Fax：</span>03-XXXX-XXXX</div>
+          <div><span class="lbl" style="color:#f59e0b">携帯：</span><strong style="color:#f0c040">${agentMobile}</strong></div>
+        </div>
+      </div>
+      <div class="card-id">ID：${agentId}</div>
     </div>
-  </div>
-  <div class="card-right">
-    <div class="card-logo">CORETO</div>
-    <div>
-      <div class="card-mobile">${agentMobile}</div>
-      <div class="card-license">${agentLicense}</div>
+    <div class="card-right">
+      <div class="card-logo">CORETO</div>
+      <div style="text-align:right">
+        <div class="card-mobile-lg">${agentMobile}</div>
+        <div class="card-license">${agentLicense}<br>東京都知事免許</div>
+      </div>
     </div>
   </div>
 </div>
