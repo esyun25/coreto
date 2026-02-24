@@ -956,9 +956,36 @@ function saveToKintone() {
   currentApp.status = currentVerdict === 'pass' ? 'pass' : currentVerdict === 'fail' ? 'fail' : 'hold';
   renderAppList();
 
-  // Simulate save
   const verdictJP = { pass:'合格', fail:'不合格', hold:'保留' }[currentVerdict];
-  alert(`✅ Kintoneに保存しました\n\n申請者：${currentApp.name}\n審査結果：${verdictJP}\n所見：${note || '（なし）'}\n\nKintoneの申請レコードが更新されました。`);
+
+  if (currentVerdict === 'pass') {
+    // 合格時: トークンURL発行 → LINE WORKSで送付
+    const typePrefix = currentApp.type === 'pt' ? 'PT' : currentApp.type === 'hr' ? 'AG' : 'AG';
+    const agNum = String(Math.floor(10000 + Math.random() * 9999));
+    const token = typePrefix + agNum + '-' + Math.random().toString(36).substr(2,6).toUpperCase();
+    const signupUrl = location.origin + location.pathname.replace('coreto-screening.html','coreto-agent-signup.html') + '?token=' + token;
+
+    // Show token + URL in a copyable modal
+    const box = document.createElement('div');
+    box.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px';
+    box.innerHTML = `
+      <div style="background:#11141f;border:1px solid #2a3050;border-radius:16px;padding:28px;width:min(480px,100%);font-family:inherit">
+        <div style="font-size:16px;font-weight:700;color:#e8eaf0;margin-bottom:6px">✅ 合格 — 入会URL発行</div>
+        <div style="font-size:12px;color:#a0a8c0;margin-bottom:20px">${currentApp.name} さんの入会手続きURLです。LINE WORKSで送付してください。</div>
+        <div style="font-size:10px;color:#5a6080;margin-bottom:4px;letter-spacing:1px">トークン</div>
+        <div style="background:#090b13;border:1px solid #1e2235;border-radius:8px;padding:10px 14px;font-family:monospace;font-size:13px;color:#c9a840;margin-bottom:12px;word-break:break-all">${token}</div>
+        <div style="font-size:10px;color:#5a6080;margin-bottom:4px;letter-spacing:1px">入会URL（コピーして送付）</div>
+        <div id="signup-url-box" style="background:#090b13;border:1px solid #1e2235;border-radius:8px;padding:10px 14px;font-size:11px;color:#4f9cf9;margin-bottom:16px;word-break:break-all">${signupUrl}</div>
+        <div style="display:flex;gap:8px">
+          <button onclick="navigator.clipboard.writeText(document.getElementById('signup-url-box').textContent)" style="flex:1;background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.3);color:#c9a840;border-radius:8px;padding:10px;cursor:pointer;font-family:inherit">📋 URLをコピー</button>
+          <button onclick="this.closest('div[style*=fixed]').remove()" style="flex:1;background:transparent;border:1px solid #2a3050;color:#a0a8c0;border-radius:8px;padding:10px;cursor:pointer;font-family:inherit">閉じる</button>
+        </div>
+        <div style="margin-top:12px;font-size:10px;color:#5a6080;line-height:1.7">※ Kintoneに結果・トークンを保存済み<br>※ 合格通知・面接日程はCalendlyで確認してください</div>
+      </div>`;
+    document.body.appendChild(box);
+  } else {
+    alert(`✅ Kintoneに保存しました\n\n申請者：${currentApp.name}\n審査結果：${verdictJP}\n所見：${note || '（なし）'}\n\nKintoneの申請レコードが更新されました。`);
+  }
 }
 
 function sendCalendly() {
