@@ -473,6 +473,62 @@ html,body{height:100%;font-family:'Noto Sans JP',sans-serif;background:var(--bg)
     </div>
   </div>
 
+  <!-- 全銀バッチ出力 -->
+  <div class="card" style="margin-bottom:16px;border-color:rgba(201,168,76,.4)">
+    <div class="card-hdr" style="background:rgba(201,168,76,.06)">
+      <div class="ch-title" style="color:var(--gold)">🏦 全銀データ一括出力</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:11px;color:var(--muted)" id="batch-schedule">
+          次回バッチ：<span id="next-batch-time" style="color:var(--gold);font-weight:700"></span>
+        </span>
+        <button class="btn btn-gold btn-sm" onclick="exportZengin()" id="zengin-export-btn">
+          📥 全銀ファイル出力
+        </button>
+      </div>
+    </div>
+    <div class="card-body">
+
+      <!-- バッチ状況 -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
+        <div style="background:var(--card2);border-radius:8px;padding:10px 12px;text-align:center">
+          <div style="font-size:20px;font-weight:900;color:var(--orange);font-family:'DM Mono',monospace" id="zg-pending-count">3</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px">未処理件数</div>
+        </div>
+        <div style="background:var(--card2);border-radius:8px;padding:10px 12px;text-align:center">
+          <div style="font-size:16px;font-weight:900;color:var(--gold);font-family:'DM Mono',monospace" id="zg-total-amt">¥833,498</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px">合計振込額</div>
+        </div>
+        <div style="background:var(--card2);border-radius:8px;padding:10px 12px;text-align:center">
+          <div style="font-size:20px;font-weight:900;color:var(--green);font-family:'DM Mono',monospace" id="zg-done-today">0</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px">本日出力済み</div>
+        </div>
+        <div style="background:var(--card2);border-radius:8px;padding:10px 12px;text-align:center">
+          <div style="font-size:16px;font-weight:900;color:var(--sub);font-family:'DM Mono',monospace" id="zg-last-export">—</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px">前回出力</div>
+        </div>
+      </div>
+
+      <!-- 出力プレビュー -->
+      <div style="margin-bottom:12px">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px;font-weight:600;letter-spacing:.5px">出力対象（未処理申請）</div>
+        <div id="zg-preview-list" style="display:flex;flex-direction:column;gap:6px"></div>
+      </div>
+
+      <!-- 全銀フォーマット説明 -->
+      <div style="background:rgba(0,0,0,.2);border-radius:8px;padding:10px 14px;font-size:11px;color:var(--muted);line-height:1.8">
+        📋 <strong style="color:var(--sub)">全銀フォーマット（固定長120文字/行）</strong><br>
+        ヘッダー → データレコード × N件 → トレーラー → エンドの順で出力。<br>
+        ネットバンキングの「総合振込」画面からアップロードして一括送金できます。
+      </div>
+
+      <!-- 出力ログ -->
+      <div style="margin-top:12px" id="zg-log-wrap" style="display:none">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:600">出力ログ</div>
+        <div id="zg-log" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--green);background:rgba(0,0,0,.3);border-radius:6px;padding:10px;line-height:1.8;max-height:120px;overflow-y:auto"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Pending transfers -->
   <div class="card">
     <div class="card-hdr">
@@ -965,6 +1021,286 @@ function showToast(msg) {
   t.style.opacity = '1';
   setTimeout(() => { t.style.opacity = '0'; }, 3000);
 }
+
+// ══════════════════════════════════════════════════════════════════
+// 全銀バッチ出力
+// ══════════════════════════════════════════════════════════════════
+
+// 振込待ちデータ（本番はKintoneから取得）
+const PENDING_TRANSFERS = [
+  {
+    reqId: 'IPY-2026-A3R7', agId: '10008', agName: '佐藤 花子', agKana: 'サトウ ハナコ',
+    reqAmt: 500000, payoutAmt: 438945,
+    bankCode: '0005', bankName: 'ミツビシUFJギンコウ', branchCode: '001', branchName: 'ホンテン',
+    accountType: 1, accountNo: '1234567', accountName: 'サトウ ハナコ',
+    requestedAt: '2026/02/20 09:18', status: 'pending'
+  },
+  {
+    reqId: 'IPY-2026-P9W4', agId: '10012', agName: '山田 誠', agKana: 'ヤマダ マコト',
+    reqAmt: 300000, payoutAmt: 263367,
+    bankCode: '0310', bankName: 'GMOアオゾラネットギンコウ', branchCode: '101', branchName: 'ホンテン',
+    accountType: 1, accountNo: '7654321', accountName: 'ヤマダ マコト',
+    requestedAt: '2026/02/20 10:32', status: 'pending'
+  },
+  {
+    reqId: 'IPY-2026-Z6T2', agId: '20005', agName: '田中 美穂', agKana: 'タナカ ミホ',
+    reqAmt: 150000, payoutAmt: 131186,
+    bankCode: '0033', bankName: 'ペイペイギンコウ', branchCode: '001', branchName: 'ホンテン',
+    accountType: 1, accountNo: '9876543', accountName: 'タナカ ミホ',
+    requestedAt: '2026/02/19 16:55', status: 'pending'
+  },
+];
+
+// 依頼人情報（本番はKintone/設定から取得）
+const REQUESTER = {
+  code:       '1234567890',      // 依頼人コード（10桁）
+  name:       'テイコクカイハツ', // 依頼人名（カナ20文字以内）
+  bankCode:   '0310',            // 依頼人銀行コード
+  bankName:   'GMOアオゾラ',
+  branchCode: '101',
+  branchName: 'ホンテン',
+  accountType: 1,                // 1=普通 2=当座
+  accountNo:  '1111111',
+};
+
+// ── 全銀フォーマット生成 ────────────────────────────────────────
+function buildZenginRecord(fields) {
+  // 全銀標準フォーマット 固定長120文字
+  return fields.map(([val, len, type]) => {
+    const s = String(val === null || val === undefined ? '' : val);
+    if (type === 'N') return s.replace(/[^0-9]/g, '').padStart(len, '0').slice(-len);
+    // 英数カナ（半角）
+    const zen2han = str => str
+      .replace(/[Ａ-Ｚａ-ｚ０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
+      .replace(/　/g, ' ');
+    return zen2han(s).padEnd(len, ' ').slice(0, len);
+  }).join('');
+}
+
+function generateZenginFile(transfers, valueDate) {
+  const lines = [];
+  const dateStr = valueDate.replace(/\//g, '').slice(2); // YYMMDD→MMDD（全銀は4桁MMDD）
+  const fullDate = valueDate.replace(/\//g, '').slice(0); // YYYYMMDD
+  const zenginDate = fullDate.slice(4); // MMDD
+
+  // ── ヘッダーレコード ──
+  lines.push(buildZenginRecord([
+    ['21',                    2,  'C'],  // 種別コード（総合振込=21）
+    ['0',                     1,  'N'],  // コード区分（0=銀行番号）
+    [REQUESTER.code,         10,  'N'],  // 依頼人コード
+    [REQUESTER.name,         40,  'C'],  // 依頼人名
+    [zenginDate,              4,  'N'],  // 振込日（MMDD）
+    [REQUESTER.bankCode,      4,  'N'],  // 依頼人銀行番号
+    [REQUESTER.bankName,     15,  'C'],  // 依頼人銀行名
+    [REQUESTER.branchCode,    3,  'N'],  // 依頼人支店番号
+    [REQUESTER.branchName,   15,  'C'],  // 依頼人支店名
+    ['',                      4,  'C'],  // 預金種目（新規format省略）
+    [REQUESTER.accountType,   1,  'N'],  // 預金種目 1=普通
+    [REQUESTER.accountNo,     7,  'N'],  // 口座番号
+    ['',                     17,  'C'],  // ダミー
+  ]));
+
+  // ── データレコード ──
+  transfers.forEach(t => {
+    lines.push(buildZenginRecord([
+      ['02',                    2,  'C'],  // 種別コード
+      [t.bankCode,              4,  'N'],  // 銀行番号
+      [t.bankName,             15,  'C'],  // 銀行名
+      [t.branchCode,            3,  'N'],  // 支店番号
+      [t.branchName,           15,  'C'],  // 支店名
+      ['',                      4,  'C'],  // ダミー
+      [t.accountType,           1,  'N'],  // 預金種目 1=普通
+      [t.accountNo,             7,  'N'],  // 口座番号
+      [t.accountName,          30,  'C'],  // 受取人名
+      [t.payoutAmt,            10,  'N'],  // 振込金額
+      ['Y',                     1,  'C'],  // 新規コード（Y=新規）
+      ['',                      0,  'C'],  // EDI情報省略 → pad rest
+    ].filter((_, i) => i < 11)));
+    // 残り7文字パディング
+    const last = lines[lines.length - 1];
+    if (last.length < 120) lines[lines.length - 1] = last.padEnd(120, ' ');
+  });
+
+  // ── トレーラーレコード ──
+  const totalAmt = transfers.reduce((s, t) => s + t.payoutAmt, 0);
+  lines.push(buildZenginRecord([
+    ['08',                    2,  'C'],  // 種別コード
+    [transfers.length,        6,  'N'],  // 合計件数
+    [totalAmt,               12,  'N'],  // 合計金額
+    ['',                    100,  'C'],  // ダミー
+  ]));
+
+  // ── エンドレコード ──
+  lines.push('9'.padEnd(120, ' '));
+
+  return lines.join('\r\n'); // Windows改行（銀行システム対応）
+}
+
+// ── 次回バッチ時刻表示 ────────────────────────────────────────
+function updateNextBatchTime() {
+  const now = new Date();
+  const h = now.getHours();
+  let nextBatch;
+  if (h < 8) {
+    nextBatch = new Date(now); nextBatch.setHours(8,0,0,0);
+  } else if (h < 17) {
+    nextBatch = new Date(now); nextBatch.setHours(17,0,0,0);
+  } else {
+    nextBatch = new Date(now); nextBatch.setDate(nextBatch.getDate()+1); nextBatch.setHours(8,0,0,0);
+  }
+  const diff = nextBatch - now;
+  const hh = Math.floor(diff/3600000);
+  const mm = Math.floor((diff%3600000)/60000);
+  const el = document.getElementById('next-batch-time');
+  if (el) {
+    const label = nextBatch.getHours() === 8 ? '朝バッチ（8:00）' : '夕バッチ（17:00）';
+    el.textContent = label + ' まで ' + hh + '時間' + mm + '分';
+  }
+}
+
+// ── プレビューリスト描画 ────────────────────────────────────────
+function renderZenginPreview() {
+  const el = document.getElementById('zg-preview-list');
+  if (!el) return;
+  const pending = PENDING_TRANSFERS.filter(t => t.status === 'pending');
+  if (!pending.length) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:8px">未処理の申請はありません</div>';
+    return;
+  }
+  el.innerHTML = pending.map(t => `
+    <div style="display:flex;align-items:center;justify-content:space-between;
+                background:var(--card2);border-radius:7px;padding:8px 12px;font-size:11px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <input type="checkbox" class="zg-chk" data-id="${t.reqId}" checked
+               style="accent-color:var(--gold);width:14px;height:14px;cursor:pointer"
+               onchange="updateZenginSummary()">
+        <div>
+          <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--gold)">${t.reqId}</span>
+          <span style="margin-left:8px;font-weight:600">${t.agName}</span>
+          <span style="margin-left:6px;color:var(--muted)">${t.bankName.slice(0,8)}… ···${t.accountNo.slice(-4)}</span>
+        </div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-weight:700;color:var(--green);font-family:'DM Mono',monospace">¥${t.payoutAmt.toLocaleString()}</div>
+        <div style="font-size:9px;color:var(--muted)">${t.requestedAt}</div>
+      </div>
+    </div>
+  `).join('');
+  updateZenginSummary();
+}
+
+function updateZenginSummary() {
+  const checked = Array.from(document.querySelectorAll('.zg-chk:checked'));
+  const ids = checked.map(c => c.dataset.id);
+  const selected = PENDING_TRANSFERS.filter(t => ids.includes(t.reqId));
+  const total = selected.reduce((s, t) => s + t.payoutAmt, 0);
+  const cntEl = document.getElementById('zg-pending-count');
+  const amtEl = document.getElementById('zg-total-amt');
+  if (cntEl) cntEl.textContent = selected.length;
+  if (amtEl) amtEl.textContent = '¥' + total.toLocaleString();
+}
+
+// ── 全銀ファイル出力メイン ────────────────────────────────────────
+function exportZengin() {
+  const checked = Array.from(document.querySelectorAll('.zg-chk:checked'));
+  const ids = checked.map(c => c.dataset.id);
+  const targets = PENDING_TRANSFERS.filter(t => ids.includes(t.reqId));
+
+  if (!targets.length) {
+    alert('出力対象の申請を選択してください。');
+    return;
+  }
+
+  if (!confirm(`【全銀ファイル出力確認】\n\n出力件数：${targets.length}件\n合計振込額：¥${targets.reduce((s,t)=>s+t.payoutAmt,0).toLocaleString()}\n\nネットバンキングにアップロードして送金を実行してください。\n\n出力しますか？`)) return;
+
+  // 振込日＝翌営業日（簡易計算）
+  const now = new Date();
+  const next = new Date(now); next.setDate(next.getDate()+1);
+  if (next.getDay()===0) next.setDate(next.getDate()+1);
+  if (next.getDay()===6) next.setDate(next.getDate()+2);
+  const valueDate = next.getFullYear()+'/'+(next.getMonth()+1).toString().padStart(2,'0')+'/'+next.getDate().toString().padStart(2,'0');
+
+  // 全銀ファイル生成
+  const content = generateZenginFile(targets, valueDate);
+
+  // ダウンロード（Shift-JIS変換は本番で実装、今はUTF-8）
+  const ts = now.getFullYear().toString().slice(2)+(now.getMonth()+1).toString().padStart(2,'0')+now.getDate().toString().padStart(2,'0')+now.getHours().toString().padStart(2,'0')+now.getMinutes().toString().padStart(2,'0');
+  const filename = 'CORETO_ZENGN_' + ts + '.txt';
+  const blob = new Blob([content], {type:'text/plain;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+
+  // ログ表示
+  const logWrap = document.getElementById('zg-log-wrap');
+  const logEl = document.getElementById('zg-log');
+  if (logWrap) logWrap.style.display = 'block';
+  const nowStr = now.getFullYear()+'/'+(now.getMonth()+1).toString().padStart(2,'0')+'/'+now.getDate().toString().padStart(2,'0')+' '+now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
+  if (logEl) {
+    logEl.innerHTML += `[${nowStr}] ✅ 全銀ファイル出力: ${filename} / ${targets.length}件 / ¥${targets.reduce((s,t)=>s+t.payoutAmt,0).toLocaleString()}\n`;
+  }
+
+  // 出力済みカウント更新
+  const doneEl = document.getElementById('zg-done-today');
+  const lastEl = document.getElementById('zg-last-export');
+  if (doneEl) doneEl.textContent = parseInt(doneEl.textContent||'0') + targets.length;
+  if (lastEl) lastEl.textContent = nowStr.slice(11);
+
+  // ステータス更新（出力済み）
+  targets.forEach(t => { t.status = 'exported'; });
+  renderZenginPreview();
+  updateZenginSummary();
+
+  // Slack通知
+  slackNotifyZenginExport({ count: targets.length, total: targets.reduce((s,t)=>s+t.payoutAmt,0), filename, valueDate, ts: nowStr });
+
+  showToast('✅ 全銀ファイルをダウンロードしました — ' + filename);
+}
+
+// ── Slack通知（全銀出力）────────────────────────────────────────
+function slackNotifyZenginExport({ count, total, filename, valueDate, ts }) {
+  slackPost({
+    text: `📥 全銀ファイル出力完了 — ${count}件 ¥${total.toLocaleString()}`,
+    attachments: [{
+      color: '#c9a840',
+      blocks: [
+        { type: 'section', text: { type: 'mrkdwn',
+          text: '*📥 全銀ファイルが出力されました — ネットバンキングへのアップロードをお願いします*' }},
+        { type: 'section', fields: [
+          { type: 'mrkdwn', text: `*出力日時*\n${ts}` },
+          { type: 'mrkdwn', text: `*ファイル名*\n\`${filename}\`` },
+          { type: 'mrkdwn', text: `*件数*\n${count}件` },
+          { type: 'mrkdwn', text: `*合計振込額*\n*¥${total.toLocaleString()}*` },
+          { type: 'mrkdwn', text: `*振込日*\n${valueDate}（翌営業日）` },
+        ]},
+        { type: 'section', text: { type: 'mrkdwn',
+          text: '⚠️ *ネットバンキングの「総合振込」画面からファイルをアップロードして送金を実行してください。*' }},
+      ]
+    }]
+  });
+}
+
+// ── 初期化 ────────────────────────────────────────────────────
+(function initZengin() {
+  // タブ切り替え後に描画するため遅延
+  setTimeout(() => {
+    updateNextBatchTime();
+    renderZenginPreview();
+    setInterval(updateNextBatchTime, 60000); // 1分毎に更新
+  }, 100);
+
+  // タブクリック時にも描画
+  const tab = document.querySelector('.vt:nth-child(3)');
+  if (tab) {
+    const orig = tab.onclick;
+    tab.onclick = function(e) {
+      if (orig) orig.call(this, e);
+      setTimeout(() => { updateNextBatchTime(); renderZenginPreview(); }, 150);
+    };
+  }
+})();
 </script>
 
 <div id="ref-modal-overlay" onclick="if(event.target===this)closeRefModal()">
