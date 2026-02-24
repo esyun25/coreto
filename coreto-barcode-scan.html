@@ -247,9 +247,126 @@ code{background:var(--hover);padding:1px 6px;border-radius:3px;font-size:11px;co
 
 <div class="tabs">
   <button class="tab active" onclick="showTab('scan')">📡 スキャンデスク</button>
+  <button class="tab" onclick="showTab('receive')">📬 書類受取</button>
   <button class="tab" onclick="showTab('label')">🏷 ラベルプレビュー</button>
   <button class="tab" onclick="showTab('tracking')">📦 追跡一覧</button>
+  <button class="tab" onclick="showTab('postal')">🚚 郵便追跡API</button>
   <button class="tab" onclick="showTab('setup')">⚙️ 導入手順</button>
+</div>
+
+
+<!-- ================================================================ -->
+<!-- TAB: 書類受取 -->
+<!-- ================================================================ -->
+<div id="tab-receive" class="page">
+
+  <div class="grid2">
+
+    <!-- 左：受取フロー -->
+    <div>
+      <div class="s-label" style="margin-bottom:12px">📬 書類受取フロー</div>
+
+      <!-- ステップ1: 書類待ち案件一覧から選択 -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">Step 1 ― 書類待ち案件を選択</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:12px">管理会社から届いた封筒の物件名・クライアント名で案件を特定してください</div>
+
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <input id="rcv-search" type="text" placeholder="物件名 / クライアント名 / 管理会社名 で絞り込み..."
+            oninput="filterReceiveList()"
+            style="flex:1;background:var(--hover);border:1px solid var(--border);border-radius:7px;padding:8px 12px;color:#e8eaf0;font-size:12px;font-family:'Noto Sans JP',sans-serif;outline:none">
+          <button onclick="filterReceiveList()" style="background:var(--gold);color:#0d0f14;border:none;border-radius:7px;padding:8px 14px;cursor:pointer;font-size:12px;font-weight:700;font-family:inherit">🔍</button>
+        </div>
+
+        <div id="receive-list" style="max-height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:6px">
+          <!-- JS動的生成 -->
+        </div>
+      </div>
+
+      <!-- ステップ2: 選択済み案件確認 -->
+      <div class="card" id="rcv-selected-card" style="margin-bottom:16px;display:none;border-color:var(--gold);background:rgba(201,168,76,.05)">
+        <div class="card-title" style="color:var(--gold)">✅ 選択した案件</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px" id="rcv-selected-info"></div>
+        <button onclick="clearReceiveSelection()" style="margin-top:12px;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 12px;cursor:pointer;font-size:11px;font-family:inherit">✕ 選択解除</button>
+      </div>
+    </div>
+
+    <!-- 右：アクション -->
+    <div>
+      <div class="s-label" style="margin-bottom:12px">📋 アクション</div>
+
+      <!-- アクション1: ラベル印刷 -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">Step 2 ― 宛名ラベル印刷</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:14px">往路（クライアント宛）＋ 返送用（本部宛）の2枚セットを印刷します</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+          <div style="background:var(--hover);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center">
+            <div style="font-size:20px;margin-bottom:4px">📤</div>
+            <div style="font-size:11px;font-weight:700;color:var(--sub)">往路ラベル</div>
+            <div style="font-size:10px;color:var(--muted)">クライアント宛</div>
+          </div>
+          <div style="background:var(--hover);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center">
+            <div style="font-size:20px;margin-bottom:4px">↩️</div>
+            <div style="font-size:11px;font-weight:700;color:var(--sub)">返送用ラベル</div>
+            <div style="font-size:10px;color:var(--muted)">本部宛（同封）</div>
+          </div>
+        </div>
+        <button id="btn-print-labels" onclick="printContractLabels()" disabled
+          style="width:100%;padding:12px;background:var(--gold);color:#0d0f14;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;opacity:.4;transition:opacity .2s">
+          🖨️ 2枚セットを印刷
+        </button>
+      </div>
+
+      <!-- アクション2: レターパック追跡番号登録 -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">Step 3 ― レターパック追跡番号を登録</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:12px">スリップのバーコードをスキャン、または12桁番号を手入力</div>
+
+        <div style="margin-bottom:10px">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:6px;letter-spacing:.5px">往路（クライアント宛）レターパック</div>
+          <div style="display:flex;gap:8px">
+            <div class="scan-input-area" id="outbound-scan-area" style="flex:1;min-height:44px;padding:8px 12px;cursor:text"
+              onclick="document.getElementById('outbound-tracking').focus()">
+              <input id="outbound-tracking" type="text" maxlength="12" placeholder="スキャンまたは12桁入力..."
+                oninput="handleTrackingInput('outbound')" onkeydown="handleTrackingKey(event,'outbound')"
+                style="width:100%;background:transparent;border:none;color:#e8eaf0;font-family:'DM Mono',monospace;font-size:13px;outline:none">
+            </div>
+            <button onclick="clearTracking('outbound')" style="background:var(--hover);border:1px solid var(--border);color:var(--muted);border-radius:7px;padding:0 10px;cursor:pointer;font-size:12px">✕</button>
+          </div>
+          <div id="outbound-tracking-status" style="font-size:10px;color:var(--muted);margin-top:4px;height:14px"></div>
+        </div>
+
+        <div style="margin-bottom:14px">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:6px;letter-spacing:.5px">返送用レターパック追跡番号（あれば）</div>
+          <div style="display:flex;gap:8px">
+            <div class="scan-input-area" id="return-scan-area" style="flex:1;min-height:44px;padding:8px 12px;cursor:text"
+              onclick="document.getElementById('return-tracking').focus()">
+              <input id="return-tracking" type="text" maxlength="12" placeholder="スキャンまたは12桁入力..."
+                oninput="handleTrackingInput('return')" onkeydown="handleTrackingKey(event,'return')"
+                style="width:100%;background:transparent;border:none;color:#e8eaf0;font-family:'DM Mono',monospace;font-size:13px;outline:none">
+            </div>
+            <button onclick="clearTracking('return')" style="background:var(--hover);border:1px solid var(--border);color:var(--muted);border-radius:7px;padding:0 10px;cursor:pointer;font-size:12px">✕</button>
+          </div>
+        </div>
+
+        <button id="btn-register-tracking" onclick="registerTracking()" disabled
+          style="width:100%;padding:10px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;opacity:.4;transition:opacity .2s">
+          📡 追跡番号を案件に登録 → ステータス更新
+        </button>
+      </div>
+
+      <!-- アクション3: 完了 -->
+      <div class="card" id="rcv-complete-card" style="display:none;border-color:var(--green)">
+        <div style="text-align:center;padding:8px 0">
+          <div style="font-size:28px;margin-bottom:8px">✅</div>
+          <div style="font-weight:700;color:var(--green);margin-bottom:4px">登録完了</div>
+          <div style="font-size:11px;color:var(--muted)" id="rcv-complete-msg"></div>
+          <button onclick="resetReceiveFlow()" style="margin-top:12px;background:transparent;border:1px solid var(--border);color:var(--sub);border-radius:6px;padding:6px 16px;cursor:pointer;font-size:12px;font-family:inherit">次の書類を受け取る</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
 </div>
 
 <!-- ================================================================ -->
@@ -637,6 +754,105 @@ code{background:var(--hover);padding:1px 6px;border-radius:3px;font-size:11px;co
   </div>
 </div>
 
+
+<!-- ================================================================ -->
+<!-- TAB: 郵便追跡API -->
+<!-- ================================================================ -->
+<div id="tab-postal" class="page">
+
+  <div class="grid2">
+
+    <!-- 左：API設定 & 手動追跡 -->
+    <div>
+      <div class="s-label" style="margin-bottom:12px">🚚 郵便局 e-お知らせAPI 連携</div>
+
+      <!-- API接続状態 -->
+      <div class="card" style="margin-bottom:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div class="card-title" style="margin:0">API接続状態</div>
+          <div id="api-connection-badge" style="font-size:11px;padding:3px 10px;border-radius:20px;background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3)">● 未接続</div>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:14px">
+          日本郵便「e-お知らせシステム」のお問い合わせ番号照会APIに接続します。<br>
+          APIキーはKintone環境変数から自動読み込みされます。
+        </div>
+        <div style="margin-bottom:10px">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:5px">APIエンドポイント</div>
+          <div style="background:var(--hover);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-family:'DM Mono',monospace;font-size:11px;color:var(--sub)">
+            https://trackings.post.japanpost.jp/services/srv/search/
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <button onclick="testApiConnection()" style="padding:8px;background:var(--hover);border:1px solid var(--border);color:var(--sub);border-radius:6px;cursor:pointer;font-size:11px;font-family:inherit">🔌 接続テスト</button>
+          <button onclick="refreshAllTracking()" style="padding:8px;background:var(--gold);color:#0d0f14;border:none;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;font-family:inherit">🔄 全件更新</button>
+        </div>
+      </div>
+
+      <!-- 単体追跡 -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">手動 追跡番号照会</div>
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <input id="manual-track-no" type="text" maxlength="12" placeholder="12桁の追跡番号を入力またはスキャン"
+            onkeydown="if(event.key==='Enter')lookupTracking()"
+            style="flex:1;background:var(--hover);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:#e8eaf0;font-family:'DM Mono',monospace;font-size:13px;outline:none">
+          <button onclick="lookupTracking()" style="background:var(--gold);color:#0d0f14;border:none;border-radius:6px;padding:8px 14px;cursor:pointer;font-size:12px;font-weight:700;font-family:inherit">照会</button>
+        </div>
+        <div id="manual-track-result" style="font-size:12px;color:var(--muted);min-height:40px"></div>
+      </div>
+
+      <!-- 自動更新設定 -->
+      <div class="card">
+        <div class="card-title">自動更新設定</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div style="font-size:12px">追跡自動更新</div>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="checkbox" id="auto-refresh-toggle" onchange="toggleAutoRefresh()" style="width:14px;height:14px;accent-color:var(--gold)">
+            <span style="font-size:11px;color:var(--muted)">ON</span>
+          </label>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="font-size:12px;color:var(--muted)">更新間隔</div>
+          <select id="refresh-interval" style="background:var(--hover);border:1px solid var(--border);border-radius:6px;padding:4px 10px;color:#e8eaf0;font-size:12px;font-family:inherit">
+            <option value="300">5分</option>
+            <option value="600" selected>10分</option>
+            <option value="1800">30分</option>
+            <option value="3600">1時間</option>
+          </select>
+        </div>
+        <div style="margin-top:10px;font-size:10px;color:var(--muted)" id="auto-refresh-status">自動更新: 停止中</div>
+      </div>
+    </div>
+
+    <!-- 右：追跡対象一覧 -->
+    <div>
+      <div class="s-label" style="margin-bottom:12px">📋 追跡対象一覧</div>
+
+      <!-- フィルター -->
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <select id="postal-filter-status" onchange="renderPostalList()" style="background:var(--hover);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:#e8eaf0;font-size:11px;font-family:inherit">
+          <option value="">全ステータス</option>
+          <option value="transit">配送中</option>
+          <option value="delivered">配達完了</option>
+          <option value="waiting">返送待ち</option>
+          <option value="returned">返送受取済</option>
+          <option value="absent">不在持戻り</option>
+        </select>
+        <select id="postal-filter-dir" onchange="renderPostalList()" style="background:var(--hover);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:#e8eaf0;font-size:11px;font-family:inherit">
+          <option value="">往路・返路</option>
+          <option value="outbound">往路（→クライアント）</option>
+          <option value="return">返路（→本部）</option>
+        </select>
+      </div>
+
+      <!-- 追跡一覧 -->
+      <div id="postal-list" style="display:flex;flex-direction:column;gap:8px;max-height:500px;overflow-y:auto">
+        <!-- JS動的生成 -->
+      </div>
+    </div>
+
+  </div>
+</div>
+
 <!-- ================================================================ -->
 <!-- TAB: SETUP -->
 <!-- ================================================================ -->
@@ -957,9 +1173,403 @@ function buildTrackingTable() {
 window.addEventListener('load', () => {
   generateBarcodes();
   buildTrackingTable();
-  // スキャン入力にフォーカス
+  renderReceiveList(WAITING_DOCS);
+  renderPostalList();
   document.getElementById('scan-input').focus();
 });
+
+
+// ═══════════════════════════════════════════════════════════════
+// 書類受取フロー
+// ═══════════════════════════════════════════════════════════════
+
+// 書類待ち案件データ（本番はAPIから取得）
+const WAITING_DOCS = [
+  { caseId:'R042857', clientName:'田中 雄介', prop:'渋谷区桜丘 2LDK', mgmt:'東急リバブル管理', agent:'山田 誠', agentId:'10012', zip:'150-0001', addr:'東京都渋谷区桜丘町5-3-2 サクラハイツ302', step:'screening' },
+  { caseId:'R039102', clientName:'木村 彩香', prop:'品川区大崎 1K',    mgmt:'大崎管理',        agent:'山田 誠', agentId:'10012', zip:'141-0031', addr:'東京都品川区西五反田1-2-3 グリーンコート201', step:'contract_wait' },
+  { caseId:'R041003', clientName:'斎藤 亮',   prop:'新宿区西新宿 1LDK', mgmt:'三井住友管理',    agent:'鈴木 健太', agentId:'10023', zip:'160-0023', addr:'東京都新宿区西新宿3-7-1 パークビュー805', step:'contract_wait' },
+  { caseId:'R038215', clientName:'佐々木 恵', prop:'豊島区南池袋 2LDK', mgmt:'池袋不動産管理',   agent:'佐藤 花子', agentId:'10008', zip:'171-0022', addr:'東京都豊島区南池袋2-25-5 メゾン池袋410', step:'contract_wait' },
+  { caseId:'R044782', clientName:'中野 博',   prop:'目黒区中目黒 1LDK', mgmt:'東急コミュニティ', agent:'渡辺 隆', agentId:'10041', zip:'153-0051', addr:'東京都目黒区上目黒3-6-7 中目黒テラス302', step:'contract_wait' },
+];
+
+let selectedReceiveCase = null;
+
+function filterReceiveList() {
+  const q = (document.getElementById('rcv-search').value || '').toLowerCase();
+  const filtered = q
+    ? WAITING_DOCS.filter(d =>
+        d.clientName.includes(q) || d.prop.toLowerCase().includes(q) ||
+        d.mgmt.includes(q) || d.caseId.toLowerCase().includes(q) ||
+        d.agent.includes(q)
+      )
+    : WAITING_DOCS;
+  renderReceiveList(filtered);
+}
+
+function renderReceiveList(list) {
+  const el = document.getElementById('receive-list');
+  if (!list.length) {
+    el.innerHTML = '<div style="text-align:center;padding:24px;color:var(--muted);font-size:12px">条件に一致する案件がありません</div>';
+    return;
+  }
+  el.innerHTML = list.map(d => `
+    <div onclick="selectReceiveCase('${d.caseId}')"
+      style="background:${selectedReceiveCase && selectedReceiveCase.caseId===d.caseId ? 'rgba(201,168,76,.1)' : 'var(--hover)'};border:1px solid ${selectedReceiveCase && selectedReceiveCase.caseId===d.caseId ? 'var(--gold)' : 'var(--border)'};border-radius:8px;padding:12px;cursor:pointer;transition:all .15s">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--gold)">${d.caseId}</div>
+        <div style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(59,130,246,.15);color:var(--blue)">${d.step === 'contract_wait' ? '📋 契約書待ち' : '📄 審査中'}</div>
+      </div>
+      <div style="font-weight:700;font-size:13px;margin-bottom:3px">${d.clientName} 様</div>
+      <div style="font-size:11px;color:var(--sub);margin-bottom:3px">🏠 ${d.prop}</div>
+      <div style="display:flex;gap:12px;font-size:10px;color:var(--muted)">
+        <span>🏢 ${d.mgmt}</span>
+        <span>👤 ${d.agent}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function selectReceiveCase(caseId) {
+  selectedReceiveCase = WAITING_DOCS.find(d => d.caseId === caseId);
+  filterReceiveList(); // re-render with selection highlight
+
+  // 選択情報表示
+  const card = document.getElementById('rcv-selected-card');
+  const info = document.getElementById('rcv-selected-info');
+  card.style.display = 'block';
+  info.innerHTML = `
+    <div><div style="font-size:9px;color:var(--muted);margin-bottom:2px">案件ID</div><div style="font-family:'DM Mono',monospace;font-size:12px;color:var(--gold)">${selectedReceiveCase.caseId}</div></div>
+    <div><div style="font-size:9px;color:var(--muted);margin-bottom:2px">クライアント</div><div style="font-size:12px;font-weight:700">${selectedReceiveCase.clientName} 様</div></div>
+    <div><div style="font-size:9px;color:var(--muted);margin-bottom:2px">物件</div><div style="font-size:12px">${selectedReceiveCase.prop}</div></div>
+    <div><div style="font-size:9px;color:var(--muted);margin-bottom:2px">担当AG</div><div style="font-size:12px">${selectedReceiveCase.agent}</div></div>
+  `;
+
+  // ラベル印刷ボタン有効化
+  const printBtn = document.getElementById('btn-print-labels');
+  printBtn.disabled = false;
+  printBtn.style.opacity = '1';
+}
+
+function clearReceiveSelection() {
+  selectedReceiveCase = null;
+  document.getElementById('rcv-selected-card').style.display = 'none';
+  document.getElementById('btn-print-labels').disabled = true;
+  document.getElementById('btn-print-labels').style.opacity = '.4';
+  filterReceiveList();
+}
+
+function printContractLabels() {
+  if (!selectedReceiveCase) return;
+  const d = selectedReceiveCase;
+
+  // バーコード値（案件ID + ラベル種別）
+  const outboundCode = d.caseId + '-CONTRACT';
+  const returnCode   = d.caseId + '-RETURN';
+
+  // barcode SVG（Code128 シンプルストライプ代替表示 ※実装ではJsBarcode使用）
+  const barcodeBar = (code) =>
+    `<div style="display:flex;align-items:flex-end;gap:1px;height:40px;justify-content:center;margin:6px 0">
+      ${[...code].map((c, i) => `<div style="width:${(c.charCodeAt(0)%3)+1}px;height:${30+(i%5)*2}px;background:#000"></div>`).join('')}
+    </div>
+    <div style="font-size:9px;font-family:'DM Mono',monospace;text-align:center;letter-spacing:2px">${code}</div>`;
+
+  // ラベルHTML生成
+  const labelHtml = (title, toName, toZip, toAddr, fromInfo, code, bg) => `
+    <div style="width:90mm;border:2px solid #000;padding:6mm;background:${bg};font-family:'Noto Sans JP',sans-serif;margin-bottom:8mm;page-break-inside:avoid">
+      <div style="font-size:9px;font-weight:700;letter-spacing:1px;border-bottom:1px solid #000;padding-bottom:3px;margin-bottom:6px;color:#333">${title}</div>
+      <div style="margin-bottom:8px">
+        ${barcodeBar(code)}
+      </div>
+      <div style="margin-bottom:10px">
+        <div style="font-size:9px;color:#555;margin-bottom:2px">〒 ${toZip}</div>
+        <div style="font-size:9px;color:#555;margin-bottom:4px;white-space:pre-line">${toAddr}</div>
+        <div style="font-size:16px;font-weight:700">${toName}</div>
+      </div>
+      <div style="border-top:1px dashed #ccc;padding-top:6px;font-size:8px;color:#777">${fromInfo}</div>
+    </div>
+  `;
+
+  const HQ_ZIP   = '101-0021';
+HQ_ADDR  = '東京都千代田区外神田1-1-1 CORETO本部';Q_NAME  = '株式会社CORETO 本部';
+
+  const outboundLabel = labelHtml(
+    `📤 往路ラベル  ${d.caseId} | 担当:${d.agent}`,
+    d.clientName + ' 様', d.zip, d.addr,
+    `差出人: ${HQ_NAME}  〒${HQ_ZIP} ${HQ_ADDR}`,
+    outboundCode, '#fff'
+  );
+
+  const returnLabel = labelHtml(
+    `↩️ 返送用ラベル  ${d.caseId} | クライアントに同封`,
+    HQ_NAME, HQ_ZIP, HQ_ADDR,
+    `返信用: ${d.clientName} 様よりご返送ください`,
+    returnCode, '#f5f5f5'
+  );
+
+  const win = window.open('', '_blank', 'width=700,height=600');
+  win.document.write(`<!DOCTYPE html><html><head>
+    <meta charset="UTF-8">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&family=DM+Mono&display=swap" rel="stylesheet">
+    <title>ラベル印刷 - ${d.caseId}</title>
+    <style>
+      body{background:#e0e0e0;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:20px;font-family:'Noto Sans JP',sans-serif}
+      .label-wrap{background:#fff;border-radius:4px;box-shadow:0 2px 8px rgba(0,0,0,.2);padding:10mm;margin-bottom:10px}
+      @media print{body{background:#fff;padding:0} .label-wrap{box-shadow:none;padding:0;margin:0} .no-print{display:none}}
+    </style>
+  </head><body>
+    <div class="no-print" style="margin-bottom:16px;display:flex;gap:12px;align-items:center">
+      <strong>ラベル印刷 — ${d.caseId} ${d.clientName}様</strong>
+      <button onclick="window.print()" style="background:#1a1a2e;color:#c9a84c;border:1px solid #c9a84c;border-radius:6px;padding:6px 16px;cursor:pointer;font-size:12px">🖨️ 印刷する</button>
+      <button onclick="window.close()" style="background:transparent;border:1px solid #ccc;border-radius:6px;padding:6px 16px;cursor:pointer;font-size:12px">✕ 閉じる</button>
+    </div>
+    <div class="label-wrap">${outboundLabel}</div>
+    <div class="label-wrap">${returnLabel}</div>
+  </body></html>`);
+  win.document.close();
+
+  showToast(`✅ ${d.caseId} のラベルを2枚印刷中...`);
+}
+
+function handleTrackingInput(dir) {
+  const input = document.getElementById(dir + '-tracking');
+  const val = input.value.replace(/\s/g, '');
+  input.value = val;
+  // 12桁入力完了で自動確認
+  if (val.length === 12) {
+    document.getElementById(dir + '-tracking-status').textContent = `✅ ${val} — 登録準備完了`;
+    document.getElementById(dir + '-tracking-status').style.color = 'var(--green)';
+    checkRegisterBtn();
+  } else if (val.length > 0) {
+    document.getElementById(dir + '-tracking-status') && (document.getElementById(dir + '-tracking-status').textContent = `${val.length}/12桁`);
+  }
+}
+
+function handleTrackingKey(e, dir) {
+  if (e.key === 'Enter') {
+    const val = document.getElementById(dir + '-tracking').value;
+    if (val.length >= 10) checkRegisterBtn();
+  }
+}
+
+function clearTracking(dir) {
+  document.getElementById(dir + '-tracking').value = '';
+  const st = document.getElementById(dir + '-tracking-status');
+  if (st) st.textContent = '';
+  checkRegisterBtn();
+}
+
+function checkRegisterBtn() {
+  const outVal = document.getElementById('outbound-tracking').value;
+  const btn = document.getElementById('btn-register-tracking');
+  const enabled = selectedReceiveCase && outVal.length >= 10;
+  btn.disabled = !enabled;
+  btn.style.opacity = enabled ? '1' : '.4';
+}
+
+function registerTracking() {
+  if (!selectedReceiveCase) return;
+  const outVal = document.getElementById('outbound-tracking').value;
+  const retVal = document.getElementById('return-tracking').value;
+
+  // 追跡データに追加
+  POSTAL_TRACKING.push({
+    caseId: selectedReceiveCase.caseId,
+    clientName: selectedReceiveCase.clientName,
+    prop: selectedReceiveCase.prop,
+    agent: selectedReceiveCase.agent,
+    outboundNo: outVal,
+    returnNo: retVal || null,
+    outboundStatus: 'transit',
+    returnStatus: retVal ? 'waiting' : null,
+    registeredAt: new Date().toLocaleString('ja-JP'),
+    lastChecked: new Date().toLocaleString('ja-JP'),
+  });
+
+  // 完了表示
+  document.getElementById('rcv-complete-card').style.display = 'block';
+  document.getElementById('rcv-complete-msg').textContent =
+    `${selectedReceiveCase.caseId} | 往路:${outVal}${retVal ? ' / 返送用:'+retVal : ''}`;
+
+  showToast(`✅ ${selectedReceiveCase.caseId} 追跡登録完了 → ステータス「契約書送付済」に更新`);
+  renderPostalList();
+}
+
+function resetReceiveFlow() {
+  clearReceiveSelection();
+  clearTracking('outbound');
+  clearTracking('return');
+  document.getElementById('rcv-complete-card').style.display = 'none';
+  document.getElementById('rcv-search').value = '';
+  filterReceiveList();
+  checkRegisterBtn();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 郵便追跡API
+// ═══════════════════════════════════════════════════════════════
+
+// 追跡データストア（本番はDB/Kintoneから取得）
+let POSTAL_TRACKING = [
+  { caseId:'R042857', clientName:'田中 雄介', prop:'渋谷区桜丘 2LDK', agent:'山田 誠',
+    outboundNo:'123456789012', returnNo:'234567890123',
+    outboundStatus:'delivered', returnStatus:'transit',
+    registeredAt:'2026/2/22 10:30', lastChecked:'2026/2/24 09:00' },
+  { caseId:'R041003', clientName:'斎藤 亮', prop:'新宿区西新宿 1LDK', agent:'鈴木 健太',
+    outboundNo:'345678901234', returnNo:null,
+    outboundStatus:'transit', returnStatus:null,
+    registeredAt:'2026/2/23 14:15', lastChecked:'2026/2/24 08:45' },
+  { caseId:'R038215', clientName:'佐々木 恵', prop:'豊島区南池袋 2LDK', agent:'佐藤 花子',
+    outboundNo:'456789012345', returnNo:'567890123456',
+    outboundStatus:'delivered', returnStatus:'returned',
+    registeredAt:'2026/2/20 11:00', lastChecked:'2026/2/24 09:00' },
+];
+
+const POSTAL_STATUS_MAP = {
+  transit:   { label:'🚚 配送中',    color:'var(--blue)',   bg:'rgba(59,130,246,.12)'  },
+  delivered: { label:'📬 配達完了',  color:'var(--green)',  bg:'rgba(34,197,94,.12)'   },
+  waiting:   { label:'⏳ 返送待ち',  color:'var(--orange)', bg:'rgba(245,158,11,.12)'  },
+  returned:  { label:'✅ 返送受取済', color:'#a855f7',       bg:'rgba(168,85,247,.12)'  },
+  absent:    { label:'🔔 不在持戻り', color:'var(--red)',    bg:'rgba(239,68,68,.12)'   },
+};
+
+let autoRefreshTimer = null;
+
+function renderPostalList() {
+  const filterStatus = document.getElementById('postal-filter-status').value;
+  const filterDir    = document.getElementById('postal-filter-dir').value;
+
+  let list = POSTAL_TRACKING.filter(t => {
+    if (filterStatus) {
+      const match = t.outboundStatus === filterStatus || t.returnStatus === filterStatus;
+      if (!match) return false;
+    }
+    if (filterDir === 'outbound') return true;
+    if (filterDir === 'return')   return t.returnNo;
+    return true;
+  });
+
+  const el = document.getElementById('postal-list');
+  if (!list.length) {
+    el.innerHTML = '<div style="text-align:center;padding:24px;color:var(--muted);font-size:12px">追跡対象なし</div>';
+    return;
+  }
+
+  el.innerHTML = list.map(t => {
+    const ob = POSTAL_STATUS_MAP[t.outboundStatus] || {};
+    const rt = t.returnStatus ? (POSTAL_STATUS_MAP[t.returnStatus] || {}) : null;
+    return `
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div>
+            <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--gold)">${t.caseId}</span>
+            <span style="font-size:12px;font-weight:700;margin-left:10px">${t.clientName} 様</span>
+          </div>
+          <button onclick="refreshSingleTracking('${t.caseId}')"
+            style="background:var(--hover);border:1px solid var(--border);color:var(--sub);border-radius:5px;padding:3px 10px;cursor:pointer;font-size:10px;font-family:inherit">
+            🔄 更新
+          </button>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:10px">🏠 ${t.prop} | 👤 ${t.agent}</div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <!-- 往路 -->
+          <div style="background:var(--hover);border-radius:7px;padding:10px">
+            <div style="font-size:9px;color:var(--muted);margin-bottom:5px;letter-spacing:.5px">📤 往路（→クライアント）</div>
+            <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--sub);margin-bottom:6px">${t.outboundNo}</div>
+            <div style="display:inline-block;font-size:11px;padding:2px 10px;border-radius:12px;background:${ob.bg||'var(--hover)'};color:${ob.color||'var(--muted)'}">${ob.label||'—'}</div>
+          </div>
+          <!-- 返路 -->
+          <div style="background:var(--hover);border-radius:7px;padding:10px">
+            <div style="font-size:9px;color:var(--muted);margin-bottom:5px;letter-spacing:.5px">↩️ 返路（→本部）</div>
+            <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--sub);margin-bottom:6px">${t.returnNo || '―'}</div>
+            ${rt ? `<div style="display:inline-block;font-size:11px;padding:2px 10px;border-radius:12px;background:${rt.bg||'var(--hover)'};color:${rt.color||'var(--muted)'}">${rt.label}</div>` : '<div style="font-size:11px;color:var(--muted)">未登録</div>'}
+          </div>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted)">
+          <span>登録: ${t.registeredAt}</span>
+          <span>最終確認: ${t.lastChecked}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function lookupTracking() {
+  const no = document.getElementById('manual-track-no').value.trim();
+  const el = document.getElementById('manual-track-result');
+  if (!no || no.length < 10) {
+    el.innerHTML = '<span style="color:var(--red)">❌ 10桁以上の追跡番号を入力してください</span>';
+    return;
+  }
+
+  // 日本郵便API照会（CORS制限のためKintone経由、ここではシミュレーション）
+  el.innerHTML = '<span style="color:var(--muted)">⟳ 照会中...</span>';
+  setTimeout(() => {
+    const mockResults = {
+      '123456789012': '配達完了 — 2026/02/23 12:35 渋谷区 配達済',
+      '234567890123': '配送中 — 2026/02/24 08:00 品川支店 通過',
+      '345678901234': '配送中 — 2026/02/24 09:15 新宿支店 通過',
+    };
+    const res = mockResults[no] || `照会結果: 番号 ${no} は現在移送中です（2026/02/24 更新）`;
+    el.innerHTML = `<div style="background:var(--hover);border:1px solid var(--border);border-radius:6px;padding:10px;font-size:12px">
+      <div style="color:var(--gold);margin-bottom:4px;font-family:'DM Mono',monospace">${no}</div>
+      <div style="color:#e8eaf0">${res}</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:6px">出典: 日本郵便 e-お知らせシステム（シミュレーション）</div>
+    </div>`;
+  }, 800);
+}
+
+function testApiConnection() {
+  const badge = document.getElementById('api-connection-badge');
+  badge.textContent = '● 接続テスト中...';
+  badge.style.background = 'rgba(245,158,11,.15)';
+  badge.style.color = 'var(--orange)';
+  badge.style.borderColor = 'rgba(245,158,11,.3)';
+  setTimeout(() => {
+    // 本番: 日本郵便APIエンドポイントへのPing
+    badge.textContent = '● 接続OK（シミュレーション）';
+    badge.style.background = 'rgba(34,197,94,.15)';
+    badge.style.color = 'var(--green)';
+    badge.style.borderColor = 'rgba(34,197,94,.3)';
+    showToast('✅ 郵便局APIに接続しました（Kintone Proxy経由）');
+  }, 1200);
+}
+
+function refreshSingleTracking(caseId) {
+  const t = POSTAL_TRACKING.find(p => p.caseId === caseId);
+  if (!t) return;
+  showToast(`⟳ ${caseId} を更新中...`);
+  setTimeout(() => {
+    t.lastChecked = new Date().toLocaleString('ja-JP');
+    renderPostalList();
+    showToast(`✅ ${caseId} 更新完了`);
+  }, 800);
+}
+
+function refreshAllTracking() {
+  showToast('⟳ 全件更新中...');
+  setTimeout(() => {
+    POSTAL_TRACKING.forEach(t => { t.lastChecked = new Date().toLocaleString('ja-JP'); });
+    renderPostalList();
+    showToast(`✅ ${POSTAL_TRACKING.length}件を更新しました`);
+  }, 1200);
+}
+
+function toggleAutoRefresh() {
+  const on = document.getElementById('auto-refresh-toggle').checked;
+  const interval = parseInt(document.getElementById('refresh-interval').value);
+  const statusEl = document.getElementById('auto-refresh-status');
+  if (on) {
+    autoRefreshTimer = setInterval(refreshAllTracking, interval * 1000);
+    statusEl.textContent = `自動更新: 実行中（${interval/60}分ごと）`;
+    statusEl.style.color = 'var(--green)';
+  } else {
+    clearInterval(autoRefreshTimer);
+    statusEl.textContent = '自動更新: 停止中';
+    statusEl.style.color = 'var(--muted)';
+  }
+}
 </script>
 </body>
 </html>
