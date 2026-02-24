@@ -479,6 +479,15 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
   <div class="step-title">ご希望の<br>活動タイプを選択</div>
   <div class="step-desc">あなたのご経験・ご希望に合ったタイプをお選びください。後から変更することもできます。</div>
 
+  <!-- 紹介コードバナー（URLパラメータから自動表示） -->
+  <div id="referral-banner" style="display:none;align-items:center;gap:10px;background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.3);border-radius:10px;padding:12px 14px;margin-bottom:16px">
+    <div style="font-size:18px">🤝</div>
+    <div style="font-size:12px;color:#a0a8c0;line-height:1.6">
+      パートナー紹介コード <strong style="color:#c9a840" id="referral-banner-code"></strong> が適用されています。<br>
+      ご希望の活動タイプをお選びください。
+    </div>
+  </div>
+
   <div class="type-grid">
     <div class="type-card" data-type="re" onclick="selectType('re',this)">
       <div class="type-icon">🏠</div>
@@ -1194,22 +1203,27 @@ document.getElementById('prog-bar').style.width = '25%';
 
   // 紹介コードを自動入力
   if (code) {
+    form.referral = code.toUpperCase();
     const refInput = document.getElementById('f-referral');
     if (refInput) {
       refInput.value = code.toUpperCase();
-      form.referral = code.toUpperCase();
-      // ハイライト表示
       refInput.style.borderColor = 'var(--gold)';
       refInput.style.background = 'rgba(201,168,76,.06)';
     }
+    // 紹介コードバナーを表示
+    const banner = document.getElementById('referral-banner');
+    if (banner) {
+      banner.style.display = 'flex';
+      const codeSpan = document.getElementById('referral-banner-code');
+      if (codeSpan) codeSpan.textContent = code.toUpperCase();
+    }
   }
 
-  // タイプを自動選択
-  if (type) {
+  // タイプを自動選択（type=re / hr のみ。パートナー紹介リンクはタイプ指定しない）
+  if (type && type !== 'pt') {
     const card = document.querySelector('.type-card[data-type="' + type + '"]');
     if (card) {
       card.click();
-      // スムーズスクロールで選択済みを示す
       setTimeout(function() {
         card.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }, 100);
