@@ -113,7 +113,8 @@ html,body{min-height:100%;font-family:'Noto Sans JP',sans-serif;background:var(-
   <div class="step"     id="s3"><div class="step-dot">4</div><div class="step-lbl">身分証<br>提出</div></div>
   <div class="step"     id="s4"><div class="step-dot">5</div><div class="step-lbl">口座<br>情報</div></div>
   <div class="step"     id="s5"><div class="step-dot">6</div><div class="step-lbl">決済<br>情報</div></div>
-  <div class="step"     id="s6"><div class="step-dot">7</div><div class="step-lbl">確認<br>送信</div></div>
+  <div class="step"     id="s6"><div class="step-dot">7</div><div class="step-lbl">LINE<br>登録</div></div>
+  <div class="step"     id="s7"><div class="step-dot">8</div><div class="step-lbl">確認<br>送信</div></div>
 </div>
 
 <div class="wrap" id="wrap"></div>
@@ -146,13 +147,13 @@ var otpSec = 300;
 // ── Step control ─────────────────────────────────────────────
 function goStep(n) {
   step = n;
-  for (var i=0;i<7;i++) {
+  for (var i=0;i<8;i++) {
     var el = document.getElementById('s'+i);
     if(!el) continue;
     el.className = 'step'+(i<n?' done':i===n?' on':'');
     el.querySelector('.step-dot').textContent = i<n ? '✓' : String(i+1);
   }
-  [step0,step1,step2,step3,step4,step5,step6][n]();
+  [step0,step1,step2,step3,step4,step5,stepWorks,step6][n]();
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
@@ -567,72 +568,129 @@ function validateStep3() {
 //  STEP 6: LINE WORKS 登録
 // ══════════════════════════════════════
 function stepWorks() {
-  var WORKS_ID = 'coreto-hq'; // 本番時に実際のID設定
-  var WORKS_QR = 'https://qr.worksmobile.com/coreto-hq'; // 本番QR URL
-  document.getElementById('wrap').innerHTML =
-    '<div class="card"><div class="ch"><div class="ch-t">LINE WORKS 友達登録</div><span class="pill pb">7 / 8</span></div><div class="cb">' +
-    '<div style="background:rgba(6,199,85,.08);border:1px solid rgba(6,199,85,.25);border-radius:10px;padding:14px;margin-bottom:16px">' +
-    '<div style="font-size:13px;font-weight:700;color:#06c755;margin-bottom:6px">📱 案件グループへの参加に必要です</div>' +
-    '<div style="font-size:12px;color:#a0a8c0;line-height:1.8">案件がマッチングした際、CORETO本部よりLINE WORKSグループにご招待します。<br>' +
-    '事前に<strong style="color:#e4e7f0">CORETO公式アカウントを友達登録</strong>しておく必要があります。</div>' +
-    '</div>' +
-    '<div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">' +
-    '<div style="flex:1;min-width:200px">' +
-    '<div style="font-size:11px;color:#4a4f68;margin-bottom:10px;font-weight:600;letter-spacing:.5px">登録方法</div>' +
-    '<div style="display:flex;flex-direction:column;gap:10px">' +
+  // ワンタイムコード生成: CRT-{4桁ランダム}-{エージェントID相当}
+  if (!form.worksCode) {
+    var rand = Math.random().toString(36).substr(2,4).toUpperCase();
+    var agSuffix = form.phone ? form.phone.slice(-4) : '0000';
+    form.worksCode = 'CRT-' + rand + '-' + agSuffix;
+  }
+  var WORKS_ID = 'coreto-hq';
+  var code = form.worksCode;
+  var LINE_OA_ID = '@coreto';  // 本番設定
 
-    '<div style="background:#191e28;border:1px solid #252c3d;border-radius:8px;padding:12px">' +
-    '<div style="font-size:11px;color:#06c755;font-weight:700;margin-bottom:6px">① ID検索</div>' +
-    '<div style="font-size:12px;color:#a0a8c0;margin-bottom:8px">LINEアプリでID検索して友達追加</div>' +
-    '<div style="display:flex;align-items:center;gap:8px">' +
-    '<div style="font-size:18px;font-weight:700;color:#c9a840;letter-spacing:1px">' + WORKS_ID + '</div>' +
-    '<button onclick="copyWorksIdSignup()" style="font-size:10px;padding:4px 10px;border:1px solid rgba(201,168,76,.3);border-radius:5px;background:transparent;color:#c9a840;cursor:pointer;font-family:inherit">コピー</button>' +
+  document.getElementById('wrap').innerHTML =
+    '<div class="card"><div class="ch"><div class="ch-t">LINE 登録</div><span class="pill pb">7 / 8</span></div><div class="cb">' +
+
+    // ── 公式LINE ──
+    '<div style="margin-bottom:20px">' +
+    '<div style="font-size:13px;font-weight:700;color:#e4e7f0;margin-bottom:10px">① 公式LINE 友達登録</div>' +
+    '<div style="background:#191e28;border:1px solid #252c3d;border-radius:10px;padding:14px;display:flex;gap:14px;align-items:center">' +
+    '<div style="font-size:32px">📢</div>' +
+    '<div style="flex:1">' +
+    '<div style="font-size:12px;color:#a0a8c0;line-height:1.8;margin-bottom:10px">お知らせ・キャンペーン情報を受け取れます。<br>個人識別は不要です。友達登録だけでOKです。</div>' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+    '<a href="https://line.me/R/ti/p/' + LINE_OA_ID + '" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#06c755;color:#fff;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none">📲 公式LINEを追加</a>' +
+    '<button onclick="copyLineOA()" style="padding:8px 14px;border:1px solid rgba(6,199,85,.3);border-radius:8px;background:transparent;color:#06c755;font-size:12px;cursor:pointer;font-family:inherit">ID: ' + LINE_OA_ID + ' をコピー</button>' +
+    '</div></div></div></div>' +
+
+    '<div style="border-top:1px solid #1e2435;margin-bottom:20px"></div>' +
+
+    // ── LINE WORKS ──
+    '<div>' +
+    '<div style="font-size:13px;font-weight:700;color:#e4e7f0;margin-bottom:10px">② LINE WORKS 友達登録＋確認コード送信</div>' +
+    '<div style="background:rgba(201,168,76,.06);border:1px solid rgba(201,168,76,.3);border-radius:10px;padding:14px;margin-bottom:12px">' +
+    '<div style="font-size:11px;color:#c9a840;font-weight:700;margin-bottom:6px">⚠️ 案件グループへの参加に必須です</div>' +
+    '<div style="font-size:12px;color:#a0a8c0;line-height:1.8">CORETO WORKS（ID: <strong style="color:#c9a840">' + WORKS_ID + '</strong>）を友達登録後、<br>' +
+    '下記の<strong style="color:#e4e7f0">確認コード</strong>をトークに送信してください。<br>' +
+    '送信後、本部がアカウントを紐付けて登録が完了します。</div>' +
+    '</div>' +
+
+    // コード表示エリア
+    '<div style="background:#191e28;border:1px solid #252c3d;border-radius:10px;padding:16px;margin-bottom:12px">' +
+    '<div style="font-size:10px;color:#4a4f68;letter-spacing:.5px;font-weight:600;margin-bottom:8px">あなたの確認コード</div>' +
+    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">' +
+    '<div style="font-size:28px;font-weight:900;color:#c9a840;letter-spacing:3px">' + code + '</div>' +
+    '<button onclick="copyWorksCode()" style="padding:6px 12px;border:1px solid rgba(201,168,76,.4);border-radius:6px;background:rgba(201,168,76,.1);color:#c9a840;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">コピー</button>' +
+    '</div>' +
+    '<div style="background:#141820;border-radius:6px;padding:10px 12px;font-size:11px;color:#a0a8c0;line-height:1.8">' +
+    '📋 <strong style="color:#e4e7f0">WORKSに送るメッセージ（コピーして貼り付け）</strong><br>' +
+    '<span id="works-copy-msg" style="color:#c9a840">【CORETO登録】' + form.name + ' / ' + code + '</span>' +
+    '<button onclick="copyWorksMsg()" style="margin-left:10px;padding:3px 8px;border:1px solid #252c3d;border-radius:4px;background:transparent;color:#4a4f68;font-size:10px;cursor:pointer;font-family:inherit">コピー</button>' +
     '</div></div>' +
 
-    '<div style="background:#191e28;border:1px solid #252c3d;border-radius:8px;padding:12px">' +
-    '<div style="font-size:11px;color:#06c755;font-weight:700;margin-bottom:6px">② QRコードを読み取る</div>' +
-    '<div style="font-size:12px;color:#a0a8c0">LINEアプリのQRスキャンで追加</div>' +
-    '<div style="width:120px;height:120px;background:#252c3d;border-radius:8px;margin-top:8px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#4a4f68">QR画像<br>（本番設定）</div>' +
+    // WORKS追加ボタン
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">' +
+    '<a href="https://talk.worksmobile.com/" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#00b900;color:#fff;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none">💬 LINE WORKSを開く</a>' +
+    '<button onclick="copyWorksId2()" style="padding:8px 14px;border:1px solid rgba(201,168,76,.3);border-radius:8px;background:transparent;color:#c9a840;font-size:12px;cursor:pointer;font-family:inherit">WORKS ID: ' + WORKS_ID + ' をコピー</button>' +
     '</div>' +
 
-    '</div></div>' + // end flex methods
-
-    '<div style="flex:0 0 auto">' +
-    '<div style="font-size:11px;color:#4a4f68;margin-bottom:10px;font-weight:600;letter-spacing:.5px">確認状況</div>' +
-    '<div id="works-check-status" style="background:#191e28;border:1px solid #252c3d;border-radius:8px;padding:14px;text-align:center;min-width:160px">' +
-    '<div style="font-size:24px;margin-bottom:8px">⏳</div>' +
-    '<div style="font-size:11px;color:#a0a8c0">未確認</div>' +
-    '</div>' +
-    '<button onclick="confirmWorksAdded()" style="margin-top:10px;width:100%;padding:10px;border:1px solid rgba(6,199,85,.4);border-radius:8px;background:rgba(6,199,85,.1);color:#06c755;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">✅ 友達追加しました</button>' +
+    // 送信確認チェック
+    '<div id="works-sent-area">' +
+    '<button onclick="markWorksSent()" style="width:100%;padding:11px;border:1px solid rgba(201,168,76,.35);border-radius:8px;background:rgba(201,168,76,.08);color:#c9a840;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">' +
+    '✅ 確認コードを送信しました</button>' +
     '</div>' +
 
-    '</div>' + // end flex
+    '</div>' + // end LINE WORKS
 
     '<div style="display:flex;gap:10px;margin-top:20px">' +
-    '<button class="btn btn-ghost" onclick="goStep(6)" style="width:auto;padding:10px 20px">← 戻る</button>' +
+    '<button class="btn btn-ghost" onclick="goStep(5)" style="width:auto;padding:10px 20px">← 戻る</button>' +
     '<button class="btn btn-primary" id="works-next-btn" onclick="validateWorksStep()" disabled style="opacity:.4">次へ →</button>' +
     '</div>' +
     '</div></div>';
 }
 
-function copyWorksIdSignup() {
+function copyLineOA() {
+  var ta = document.createElement('textarea');
+  ta.value = '@coreto'; document.body.appendChild(ta); ta.select();
+  document.execCommand('copy'); document.body.removeChild(ta);
+  showSignupToast('公式LINE IDをコピーしました');
+}
+
+function copyWorksCode() {
+  var ta = document.createElement('textarea');
+  ta.value = form.worksCode; document.body.appendChild(ta); ta.select();
+  document.execCommand('copy'); document.body.removeChild(ta);
+  showSignupToast('確認コードをコピーしました');
+}
+
+function copyWorksMsg() {
+  var el = document.getElementById('works-copy-msg');
+  var ta = document.createElement('textarea');
+  ta.value = el ? el.textContent : form.worksCode; document.body.appendChild(ta); ta.select();
+  document.execCommand('copy'); document.body.removeChild(ta);
+  showSignupToast('メッセージをコピーしました');
+}
+
+function copyWorksId2() {
   var ta = document.createElement('textarea');
   ta.value = 'coreto-hq'; document.body.appendChild(ta); ta.select();
   document.execCommand('copy'); document.body.removeChild(ta);
   showSignupToast('WORKS IDをコピーしました');
 }
 
-function confirmWorksAdded() {
-  document.getElementById('works-check-status').innerHTML =
-    '<div style="font-size:24px;margin-bottom:8px">✅</div>' +
-    '<div style="font-size:11px;color:#06c755;font-weight:700">友達登録済み</div>';
-  var btn = document.getElementById('works-next-btn');
-  if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
-  showSignupToast('友達登録を確認しました ✅');
+function copyWorksIdSignup() {
+  copyWorksId2();
 }
 
+function markWorksSent() {
+  form.worksCode_sent = true;
+  document.getElementById('works-sent-area').innerHTML =
+    '<div style="background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.3);border-radius:8px;padding:12px;display:flex;align-items:center;gap:10px">' +
+    '<div style="font-size:20px">✅</div>' +
+    '<div style="font-size:12px;color:#c9a840;font-weight:700">確認コードを送信済み<br><span style="color:#a0a8c0;font-weight:400;font-size:11px">本部が紐付けを完了後、登録完了メールをお送りします</span></div>' +
+    '</div>';
+  var btn = document.getElementById('works-next-btn');
+  if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+  showSignupToast('確認コードの送信を記録しました ✅');
+
+  // Slack通知: 本番ではWORKSボットが受信して自動照合
+  console.log('[Slack] WORKS登録待ち:', form.name, form.worksCode);
+}
+
+function confirmWorksAdded() { markWorksSent(); }
+
 function validateWorksStep() {
-  form.worksAdded = true;
+  if (!form.worksCode_sent) { alert('確認コードを送信してから次へ進んでください。'); return; }
   goStep(7);
 }
 
@@ -647,6 +705,7 @@ function showSignupToast(msg) {
   t.textContent = msg; t.style.opacity = '1';
   setTimeout(function() { t.style.opacity = '0'; }, 2500);
 }
+
 
 
 function step6() {
@@ -670,7 +729,7 @@ function step6() {
     '<span style="font-size:10px;color:var(--muted)">他社への専任宅建士登録は宅建業法上不可となります。</span></div></div>' : '') +
     rows.map(function(r){ return '<div class="sum-row"><span style="color:var(--sub)">'+r[0]+'</span><span style="font-weight:600">'+r[1]+'</span></div>'; }).join('') +
     '<div style="display:flex;gap:10px;margin-top:20px">' +
-    '<button class="btn btn-ghost" onclick="goStep(5)" style="width:auto;padding:10px 20px">← 戻る</button>' +
+    '<button class="btn btn-ghost" onclick="goStep(6)" style="width:auto;padding:10px 20px">← 戻る</button>' +
     '<button class="btn btn-gold" onclick="submitSignup()">申込を送信する ✓</button>' +
     '</div></div></div>';
 }
