@@ -176,8 +176,14 @@ function step0() {
     '<div class="field"><label>エージェント種別<span class="req">*</span></label>' +
     '<select id="f-type"><option value="re"'+(form.agentType==='re'?' selected':'')+'>不動産エージェント（RE）</option>' +
     '<option value="hr"'+(form.agentType==='hr'?' selected':'')+'>人材エージェント（HR）</option></select></div>' +
-    '<div class="field"><label>紹介コード（任意）</label><input id="f-ref" value="'+form.referral+'" placeholder="CORE-XXXXXX" style="font-family:\'DM Mono\',monospace"></div>' +
-    '</div>' +
+    (form._refLocked
+      ? '<div class="field"><label>紹介コード</label>'
+        +'<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.25);border-radius:8px">'
+        +'<span style="font-family:\'DM Mono\',monospace;font-size:13px;color:var(--green);font-weight:700">'+form.referral+'</span>'
+        +'<span style="font-size:10px;color:var(--green)">✓ 紹介リンクから自動入力</span>'
+        +'</div></div>'
+      : '<div class="field"><label>紹介コード（任意）</label><input id="f-ref" value="'+form.referral+'" placeholder="例: 10012 または WELCOME2026" style="font-family:\'DM Mono\',monospace"></div>'
+    )+
     '<button class="btn btn-blue" onclick="validateStep0()">次へ →</button>' +
     '</div></div>';
 }
@@ -193,7 +199,7 @@ function validateStep0() {
   form.zip       = document.getElementById('f-zip').value.trim();
   form.addr      = document.getElementById('f-addr').value.trim();
   form.agentType = document.getElementById('f-type').value;
-  form.referral  = document.getElementById('f-ref').value.trim();
+  if (!form._refLocked) form.referral = (document.getElementById('f-ref')||{value:''}).value.trim();
   goStep(1);
 }
 

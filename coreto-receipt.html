@@ -94,6 +94,7 @@ html,body{min-height:100%;font-family:'Noto Sans JP',sans-serif;background:var(-
   </div>
   <div style="display:flex;gap:8px">
     <button class="btn btn-ghost btn-sm" onclick="location.href='coreto-hub.html'">🏠 ホーム</button>
+    <button onclick="openRefModal()" style="background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.35);color:var(--gold);border-radius:7px;padding:4px 12px;cursor:pointer;font-size:11px;font-weight:700;font-family:inherit;white-space:nowrap">🔗 紹介リンク</button>
   </div>
 </div>
 
@@ -472,7 +473,18 @@ function openPrintWindow(html, title) {
       .ctrl button{padding:9px 20px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;margin:0 5px;border:none}
       .print-btn{background:#c9a84c;color:#fff} .close-btn{background:white;border:1px solid #ccc!important;color:#666}
       @media print{.ctrl{display:none}@page{size:A4;margin:15mm}}
-    </style></head><body>
+    
+/* ── 紹介リンクモーダル ── */
+#ref-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9000;align-items:center;justify-content:center}
+#ref-modal-overlay.open{display:flex}
+#ref-modal{background:var(--card);border:1px solid var(--border2);border-radius:16px;padding:0;width:min(460px,92vw);overflow:hidden}
+.ref-mhdr{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.ref-mhdr-t{font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:var(--gold)}
+.ref-mbody{padding:20px}
+.ref-url{background:var(--card2);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;font-family:'DM Mono',monospace;font-size:11px;color:var(--sub);word-break:break-all;margin:10px 0;min-height:36px}
+.ref-copy-btn{width:100%;padding:10px;border-radius:8px;border:none;cursor:pointer;font-family:inherit;font-size:13px;font-weight:700;background:var(--gold);color:#0a0c10;margin-top:4px}
+.ref-copy-btn:hover{opacity:.9}
+</style></head><body>
     <div class="ctrl">
       <button class="print-btn" onclick="window.print()">📄 印刷・PDFに保存</button>
       <button class="close-btn" onclick="window.close()">閉じる</button>
@@ -600,6 +612,76 @@ function printAllReceipts() { alert('📦 全期間分の領収書をまとめ�
 
 // Init
 showPage('my');
+
+// ── 紹介リンクモーダル ──────────────────────────────────────
+var _refCurrentCode = '';
+function openRefModal() {
+  var overlay = document.getElementById('ref-modal-overlay');
+  var selector = document.getElementById('ref-code-selector');
+  var isExec = (typeof session !== 'undefined' && session && session.hqRole === 'exec')
+            || (typeof CURRENT_USER !== 'undefined' && CURRENT_USER && CURRENT_USER.hqRole === 'exec');
+  var agentId = (typeof session !== 'undefined' && session && session.userId) ? session.userId
+              : (typeof ME !== 'undefined' && ME && ME.id) ? ME.id
+              : (typeof AGENT !== 'undefined' && AGENT && AGENT.id) ? AGENT.id : '10012';
+  if (isExec) {
+    var SPECIAL = ['FOUNDER2026','WELCOME2026','GOLD_START','HR_PRO75'];
+    var opts = SPECIAL.map(function(c){ return '<option value="'+c+'">⭐ '+c+'</option>'; }).join('');
+    selector.innerHTML =
+      '<div style="margin-bottom:12px"><div style="font-size:10px;color:var(--sub);font-weight:600;margin-bottom:5px">コード種別</div>'
+      +'<select id="ref-code-select" onchange="updateRefLink()" style="width:100%;padding:8px 10px;background:var(--card2);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:12px;font-family:inherit">'
+      +'<option value="'+agentId+'">自分のID（'+agentId+'）</option>'
+      +'<optgroup label="── 特別コード ──">'+opts+'</optgroup>'
+      +'</select></div>';
+    _refCurrentCode = agentId;
+  } else {
+    selector.innerHTML =
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:8px 12px;background:rgba(201,168,76,.06);border:1px solid rgba(201,168,76,.2);border-radius:8px">'
+      +'<span style="font-size:11px;color:var(--muted)">紹介コード：</span>'
+      +'<span style="font-family:\'DM Mono\',monospace;font-size:13px;font-weight:700;color:var(--gold)">'+agentId+'</span>'
+      +'</div>';
+    _refCurrentCode = agentId;
+  }
+  updateRefLink();
+  overlay.classList.add('open');
+}
+function updateRefLink() {
+  var sel = document.getElementById('ref-code-select');
+  if (sel) _refCurrentCode = sel.value;
+  var base = location.origin + location.pathname.replace(/[^/]*$/, '') + 'coreto-agent-signup.html';
+  var url = base + '?ref=' + encodeURIComponent(_refCurrentCode);
+  document.getElementById('ref-url-display').textContent = url;
+}
+function closeRefModal() {
+  document.getElementById('ref-modal-overlay').classList.remove('open');
+}
+function copyRefLink() {
+  var url = document.getElementById('ref-url-display').textContent;
+  navigator.clipboard.writeText(url).then(function() {
+    var btn = document.querySelector('.ref-copy-btn');
+    btn.textContent = '✅ コピーしました';
+    setTimeout(function(){ btn.textContent = '📋 コピー'; }, 2000);
+  }).catch(function() {
+    var ta = document.createElement('textarea');
+    ta.value = url; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+  });
+}
 </script>
+
+<div id="ref-modal-overlay" onclick="if(event.target===this)closeRefModal()">
+  <div id="ref-modal">
+    <div class="ref-mhdr">
+      <div class="ref-mhdr-t">🔗 紹介リンク発行</div>
+      <button onclick="closeRefModal()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1">×</button>
+    </div>
+    <div class="ref-mbody">
+      <div style="font-size:11px;color:var(--sub);margin-bottom:14px;line-height:1.8">このリンクから入会すると紹介コードが自動入力されます。</div>
+      <div id="ref-code-selector"></div>
+      <div style="font-size:10px;color:var(--muted);margin-bottom:4px;font-weight:600;letter-spacing:.5px">発行リンク</div>
+      <div class="ref-url" id="ref-url-display">—</div>
+      <button class="ref-copy-btn" onclick="copyRefLink()">📋 コピー</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
