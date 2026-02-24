@@ -1110,17 +1110,149 @@ function confirmMatch(caseId, agName, agId) {
   if(confirm(`「${c.title}」を\n${agName}（${agId}）に確定しますか？\n\n確定後、顧客情報が${agName}に開示されます。`)){
     c.status = 'matched';
     c.assignedAg = `${agName}（${agId}）`;
-    // 顧客情報を開示
     c.customerName = '田中 一郎（サンプル）';
     c.customerPhone = '090-1234-5678';
     c.customerEmail = 'ichiro.tanaka@example.com';
 
-    document.getElementById('badge-mgmt').textContent = 
+    document.getElementById('badge-mgmt').textContent =
       parseInt(document.getElementById('badge-mgmt').textContent) - 1;
 
-    alert(`✅ マッチング確定！\n\n${agName} に顧客情報を開示しました。\nSlack DM・メールで通知を送りました。`);
+    // Slack通知
+    notifyMatchToSlack({ c, agName, agId });
+
+    // LINE WORKSトークルーム作成モーダルを表示
+    showWorksModal({ c, agName, agId });
+
     switchTab('board');
   }
+}
+
+// ── Slack通知（マッチング確定）────────────────────────────────
+function notifyMatchToSlack({ c, agName, agId }) {
+  const today = new Date();
+  const dateStr = today.getFullYear()+'/'+(today.getMonth()+1).toString().padStart(2,'0')+'/'+today.getDate().toString().padStart(2,'0');
+  const roomName = `【案件】${c.title.slice(0,12)}_${dateStr.slice(5).replace('/','')}_${agId}`;
+  const payload = {
+    text: '🔔 案件マッチング確定 — LINE WORKSトークルームを作成してください',
+    attachments: [{
+      color: '#c9a840',
+      blocks: [
+        { type:'section', text:{ type:'mrkdwn',
+          text:`*🔔 案件マッチング確定 — トークルーム作成をお願いします*` }},
+        { type:'section', fields:[
+          { type:'mrkdwn', text:`*案件*\n${c.title}` },
+          { type:'mrkdwn', text:`*案件ID*\n\`${c.id}\`` },
+          { type:'mrkdwn', text:`*エージェント*\n${agName}（${agId}）` },
+          { type:'mrkdwn', text:`*パートナー*\n${c.ptName||'—'}（${c.ptId||'—'}）` },
+          { type:'mrkdwn', text:`*種別*\n${c.bizLabel} / ${c.srcLabel}` },
+          { type:'mrkdwn', text:`*エリア*\n${c.area||'—'}` },
+        ]},
+        { type:'section', text:{ type:'mrkdwn',
+          text:`*📱 LINE WORKSトークルーム作成手順*\n1. LINE WORKSを開く\n2. *${agName}* と *${c.ptName||'パートナー'}* をトークルームに追加\n3. トークルーム名：\`${roomName}\`\n4. 最初のメッセージを送信（下記テンプレートをコピー）` }},
+        { type:'section', text:{ type:'mrkdwn',
+          text:`*💬 最初のメッセージ（コピー用）*\n\`\`\`${agName}さん、${c.ptName||'パートナー'}さん\nCORETO本部です。案件「${c.title}」のマッチングが確定しました。\nこちらのルームで連絡を取り合ってください。よろしくお願いします。\`\`\`` }},
+      ]
+    }]
+  };
+  // 本番: fetch(SLACK_WEBHOOK, {method:'POST', body:JSON.stringify(payload)});
+  console.log('[Slack マッチング通知]', JSON.stringify(payload, null, 2));
+}
+
+// ── LINE WORKSトークルーム作成支援モーダル ──────────────────
+function showWorksModal({ c, agName, agId }) {
+  const today = new Date();
+  const dateStr = today.getFullYear()+'/'+(today.getMonth()+1).toString().padStart(2,'0')+'/'+today.getDate().toString().padStart(2,'0');
+  const roomName = `【案件】${c.title.slice(0,12)}_${dateStr.slice(5).replace('/','')}_${agId}`;
+  const firstMsg = `${agName}さん、${c.ptName||'パートナー'}さん\nCORETO本部です。案件「${c.title}」のマッチングが確定しました。\nこちらのルームで連絡を取り合ってください。よろしくお願いします。`;
+
+  let modal = document.getElementById('works-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'works-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+    modal.innerHTML = `
+      <div style="background:#141820;border:1px solid rgba(201,168,76,.4);border-radius:16px;width:min(520px,100%);max-height:90vh;overflow-y:auto">
+        <div style="padding:18px 20px;border-bottom:1px solid #1e2435;display:flex;align-items:center;justify-content:space-between">
+          <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:#c9a840">📱 LINE WORKSトークルーム作成</div>
+          <button onclick="document.getElementById('works-modal').remove()" style="background:none;border:none;color:#4a4f68;font-size:20px;cursor:pointer">×</button>
+        </div>
+        <div style="padding:20px;display:flex;flex-direction:column;gap:14px">
+
+          <div style="background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.25);border-radius:10px;padding:12px 14px;font-size:12px;color:#e4e7f0;line-height:1.8">
+            ✅ マッチングが確定しました。Slackに通知を送りました。<br>
+            下記の情報をもとに<strong style="color:#c9a840">LINE WORKSでトークルームを作成</strong>してください。
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div id="wm-room" style="background:#191e28;border:1px solid #252c3d;border-radius:8px;padding:10px 14px">
+              <div style="font-size:10px;color:#4a4f68;margin-bottom:5px;font-weight:600;letter-spacing:.5px">トークルーム名</div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <div style="font-family:'DM Mono',monospace;font-size:12px;color:#c9a840;flex:1" id="wm-room-name"></div>
+                <button onclick="copyWM('wm-room-name')" style="font-size:10px;padding:3px 8px;border:1px solid #252c3d;border-radius:5px;background:transparent;color:#7a82a0;cursor:pointer">コピー</button>
+              </div>
+            </div>
+
+            <div style="background:#191e28;border:1px solid #252c3d;border-radius:8px;padding:10px 14px">
+              <div style="font-size:10px;color:#4a4f68;margin-bottom:8px;font-weight:600;letter-spacing:.5px">招待メンバー</div>
+              <div id="wm-members" style="display:flex;flex-direction:column;gap:6px;font-size:12px"></div>
+            </div>
+
+            <div style="background:#191e28;border:1px solid #252c3d;border-radius:8px;padding:10px 14px">
+              <div style="font-size:10px;color:#4a4f68;margin-bottom:5px;font-weight:600;letter-spacing:.5px">最初のメッセージ（コピーして貼り付け）</div>
+              <div style="font-size:12px;color:#e4e7f0;line-height:1.8;white-space:pre-wrap;margin-bottom:8px" id="wm-msg"></div>
+              <button onclick="copyWM('wm-msg')" style="font-size:10px;padding:4px 10px;border:1px solid #252c3d;border-radius:5px;background:transparent;color:#7a82a0;cursor:pointer">メッセージをコピー</button>
+            </div>
+          </div>
+
+          <a href="https://talk.worksmobile.com/" target="_blank"
+             style="display:block;text-align:center;padding:12px;background:#c9a840;color:#0d0f14;border-radius:10px;font-weight:800;font-size:14px;text-decoration:none">
+            📱 LINE WORKSを開く →
+          </a>
+          <button onclick="document.getElementById('works-modal').remove()"
+                  style="padding:10px;border:1px solid #252c3d;border-radius:8px;background:transparent;color:#7a82a0;font-size:13px;cursor:pointer;font-family:inherit">
+            閉じる
+          </button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+  }
+
+  document.getElementById('wm-room-name').textContent = roomName;
+  document.getElementById('wm-msg').textContent = firstMsg.replace(/\n/g, '\n');
+  document.getElementById('wm-members').innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:#141820;border-radius:6px">
+      <span style="font-size:14px">🏢</span>
+      <div><div style="font-weight:700;color:#e4e7f0">CORETO本部</div><div style="color:#4a4f68;font-size:10px">LINE WORKSアカウント（自分）</div></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:#141820;border-radius:6px">
+      <span style="font-size:14px">🧑‍💼</span>
+      <div><div style="font-weight:700;color:#e4e7f0">${agName} <span style="font-size:10px;color:#4a4f68">${agId}</span></div><div style="color:#4a4f68;font-size:10px">エージェント — LINE WORKSまたはLINEで招待</div></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:#141820;border-radius:6px">
+      <span style="font-size:14px">🤝</span>
+      <div><div style="font-weight:700;color:#e4e7f0">${c.ptName||'パートナー'} <span style="font-size:10px;color:#4a4f68">${c.ptId||'—'}</span></div><div style="color:#4a4f68;font-size:10px">パートナー — LINEで招待</div></div>
+    </div>`;
+}
+
+function copyWM(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const ta = document.createElement('textarea');
+  ta.value = el.textContent; document.body.appendChild(ta); ta.select();
+  document.execCommand('copy'); document.body.removeChild(ta);
+  showMatchToast('コピーしました ✅');
+}
+
+function showMatchToast(msg) {
+  let t = document.getElementById('match-toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'match-toast';
+    t.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#1e2a1e;border:1px solid #34d399;color:#34d399;padding:10px 18px;border-radius:8px;font-size:12px;font-weight:600;z-index:99999;opacity:0;transition:opacity .3s;font-family:inherit';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg; t.style.opacity = '1';
+  setTimeout(() => { t.style.opacity = '0'; }, 2000);
 }
 
 // ── 案件詳細（管理テーブルから） ──
