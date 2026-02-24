@@ -437,7 +437,7 @@ function pageFee() {
             <td class="mono" style="font-size:11px">${f.date}</td>
             <td><span class="pill pg">${f.status}</span></td>
             <td>
-              <button class="btn btn-ghost btn-sm" onclick="printFeeReceipt('${f.month}','${f.receipt}')">
+              <button class="btn btn-ghost btn-sm" onclick="printFeeReceipt('${f.month}','${f.receipt}',${f.amount})">
                 📄 ${f.receipt}
               </button>
             </td>
@@ -449,7 +449,7 @@ function pageFee() {
     <div class="card" style="max-width:700px">
       <div class="ch"><div class="ch-t">月会費について</div></div>
       <div class="cb" style="font-size:12px;color:var(--sub);line-height:2">
-        月額会費：<strong style="color:var(--text)">¥980〜¥0（税込）</strong><br>
+        月額会費：<strong style="color:var(--text)">¥980 / ¥0（Goldランク以上は無料）（税込）</strong><br>
         引き落とし日：毎月1日（登録カードから自動決済）<br>
         領収書：引き落とし完了後、翌日よりダウンロード可能<br>
         インボイス対応：適格請求書発行事業者（登録番号 T1234567890123）
@@ -562,7 +562,10 @@ function printGensen() {
   openPrintWindow(html, `源泉徴収票_2025_${ME.name}`);
 }
 
-function printFeeReceipt(month, rcNum) {
+function printFeeReceipt(month, rcNum, amount) {
+  amount = amount || 980;
+  const tax = Math.round(amount - amount / 1.1);
+  const excl = amount - tax;
   const html = `
     <div style="max-width:500px;margin:0 auto;text-align:center">
       <div style="font-family:'Noto Serif JP',serif;font-size:22px;font-weight:700;
@@ -571,8 +574,8 @@ function printFeeReceipt(month, rcNum) {
         <strong>${ME.name}（${ME.nameKana}）</strong> 殿
       </div>
       <div style="background:#f9f9f9;border-radius:8px;padding:20px;margin-bottom:16px">
-        <div style="font-size:32px;font-weight:700;font-family:'Noto Serif JP',serif">¥980〜¥0</div>
-        <div style="font-size:10px;color:#999;margin-top:4px">（税込：消費税 ¥500）</div>
+        <div style="font-size:32px;font-weight:700;font-family:'Noto Serif JP',serif">¥${amount.toLocaleString()}</div>
+        <div style="font-size:10px;color:#999;margin-top:4px">（税込 / 消費税 ¥${tax.toLocaleString()} / 税抜 ¥${excl.toLocaleString()}）</div>
       </div>
       <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:16px;text-align:left">
         <tr><td style="padding:7px;border-bottom:0.5px solid #eee;color:#666">品目</td>
