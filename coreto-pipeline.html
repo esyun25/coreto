@@ -247,6 +247,52 @@ const STEPS_RESALE = [
   {id:'settlement',label:'決済',  icon:'💴', stage:'done'},
 ];
 
+
+// ═══════════════════════════════════════════════
+// Slack チャンネル設定
+// ═══════════════════════════════════════════════
+const SLACK_CH = {
+  新規案件:   '新規案件',
+  内見:       '内見',
+  審査:       '審査',
+  三為確認:   '三為確認',   // 業者確認依頼 + 認証完了
+  請求書:     '請求書',
+  契約:       '契約',
+  決済:       '決済',
+  重説:       '重説',
+  入金:       '入金',
+};
+
+// 汎用Slack送信（モック: クリップボードコピー + console.log）
+function slackSend(channel, lines) {
+  const text = lines.filter(Boolean).join('\n');
+  console.log(`[Slack #${channel}]\n`, text);
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+  } catch(e) {}
+  // 本番: fetch(SLACK_WEBHOOK_URL, {method:'POST', body: JSON.stringify({text, channel:'#'+channel})})
+}
+
+function slackHeader(emoji, title) {
+  return ['━━━━━━━━━━━━━━━━━━━━━━', emoji+' *'+title+'*', '━━━━━━━━━━━━━━━━━━━━━━'];
+}
+
+function slackFooter() {
+  return ['━━━━━━━━━━━━━━━━━━━━━━', '🕐 '+new Date().toLocaleString('ja-JP')];
+}
+
+function slackCase(c) {
+  const typeLabel = c.type==='sannai'?'三為':c.type==='reSale'?'売買':'賃貸';
+  return [
+    '📁 *案件ID*：'+c.id,
+    '👤 *クライアント*：'+c.name,
+    '🏷 *種別*：'+typeLabel,
+    '👨‍💼 *担当*：'+c.agent,
+  ];
+}
+
 // ステップ定義（三為）
 const STEPS_SANNAI = [
   {id:'naiken',    label:'内見',     icon:'🏠', stage:'naiken'},
@@ -680,6 +726,13 @@ function sannaiNaikenDone(id) {
     if(!c.hist)  c.hist  = [];
     if(!c.buyer) c.buyer = {verifyState:'input'};
     if(prop) c.dates.naikenProp = prop;
+    slackSend(SLACK_CH.内見, [
+      ...slackHeader('🏠','内見完了（三為）'),
+      ...slackCase(c),
+      '🏠 *物件*：'+(prop||'—'),
+      '📅 *内見日*：'+d,
+      ...slackFooter(),
+    ]);
     advance(id,'verify','naiken',d,'内見完了 → 業者確認へ');
   } catch(e) { console.error('sannaiNaikenDone:', e); }
 }
@@ -708,6 +761,13 @@ function saleNaikenDone(id) {
     if(!c.dates) c.dates = {};
     if(!c.hist)  c.hist  = [];
     if(prop) c.dates.naikenProp = prop;
+    slackSend(SLACK_CH.内見, [
+      ...slackHeader('🏠','内見完了（'+( c.type==='sannai'?'三為':'売買')+'）'),
+      ...slackCase(c),
+      '🏠 *物件*：'+(prop||'—'),
+      '📅 *内見日*：'+d,
+      ...slackFooter(),
+    ]);
     advance(id,'offer','naiken',d,'内見完了 → 買付');
   } catch(e) {
     console.error('saleNaikenDone error:', e);
@@ -1138,6 +1198,18 @@ function sannaiContractDone(id) {
     c.hist.unshift(today()+' 売買契約締結'
       +(sc.sellerName?' 売主:'+sc.sellerName:'')
       +(sc.buyerName?' 買主:'+sc.buyerName:''));
+    const sn12 = c.sannai||{};
+    slackSend(SLACK_CH.契約, [
+      ...slackHeader('✍️','売買契約締結（三為）'),
+      ...slackCase(c),
+      '🏠 *物件*：'+(sc.prop||c.dates?.naikenProp||'—'),
+      sc.sellerName ? '🏠 *売主*：'+sc.sellerName : null,
+      sc.buyerName  ? '👤 *買主*：'+sc.buyerName  : null,
+      sn12.buyPrice  ? '💴 *仕入れ*：¥'+sn12.buyPrice.toLocaleString()  : null,
+      sn12.sellPrice ? '💴 *販売*：¥'+sn12.sellPrice.toLocaleString() : null,
+      sc.settleDate ? '📅 *決済予定*：'+sc.settleDate : null,
+      ...slackFooter(),
+    ]);
     advance(id,'settlement','contract',d,'売買契約締結 → 決済へ');
   } catch(e){ console.error('sannaiContractDone:',e); }
 }
@@ -1304,6 +1376,13 @@ function naikenDone(id) {
   const p = document.getElementById('s-naiken-prop')?.value.trim() || '';
   c.dates.naiken = d;
   if(p) c.dates.naikenProp = p;
+  slackSend(SLACK_CH.内見, [
+    ...slackHeader('🏠','内見完了（賃貸）'),
+    ...slackCase(c),
+    '🏠 *物件*：'+(p||'—'),
+    '📅 *内見日*：'+d,
+    ...slackFooter(),
+  ]);
   advance(id, 'apply', null, null, '内見完了');
 }
 function naikenSkip(id) {
@@ -1319,6 +1398,14 @@ function submitApply(id) {
   const c = CASES.find(x=>x.id===id);
   c.apps.push({id:'A'+Date.now().toString().slice(-5), prop, mgmt, date, status:'reviewing'});
   c.dates.applied = date;
+  slackSend(SLACK_CH.審査, [
+    ...slackHeader('📋','申込提出'),
+    ...slackCase(c),
+    '🏠 *物件*：'+prop,
+    '🏢 *管理会社*：'+mgmt,
+    '📅 *申込日*：'+date,
+    ...slackFooter(),
+  ]);
   advance(id, 'screening', null, null, prop+' 申込');
 }
 
@@ -1356,6 +1443,13 @@ function appPassed(id, appId) {
   // cancel other reviewing apps
   c.apps.filter(x=>x.id!==appId&&(x.status==='reviewing'||x.status==='submitted')).forEach(x=>{x.status='cancelled';});
   if(!c.taskDone) c.taskDone={paid:false,itsetsu:false};
+  slackSend(SLACK_CH.審査, [
+    ...slackHeader('✅','審査通過'),
+    ...slackCase(c),
+    '🏠 *物件*：'+a.prop,
+    '🏢 *管理会社*：'+(a.mgmt||'—'),
+    ...slackFooter(),
+  ]);
   advance(id, 'invoice', 'approved', todayISO(), a.prop+' 審査通過 → 請求書発行へ');
 }
 
@@ -1367,6 +1461,14 @@ function appRejected(id, appId) {
   c.hist.unshift(today()+' '+a.prop+' 審査落ち');
   const remaining = c.apps.filter(x=>x.status==='reviewing'||x.status==='submitted');
   if(remaining.length===0) c.hist.unshift(today()+' 全物件落ち → 別物件追加してください');
+  slackSend(SLACK_CH.審査, [
+    ...slackHeader('❌','審査落ち'),
+    ...slackCase(c),
+    '🏠 *物件*：'+a.prop,
+    '🏢 *管理会社*：'+(a.mgmt||'—'),
+    remaining.length===0 ? '⚠ *全物件落ち* — 別物件追加が必要です' : '📋 残審査中: '+remaining.length+'件',
+    ...slackFooter(),
+  ]);
   open_case(id);
 }
 
@@ -1758,11 +1860,9 @@ function issueInvoiceSannai(id) {
   const invNumBuyer  = 'INV-'+ym+'-'+c.agent+'-BUY';
   const invNumSeller = 'INV-'+ym+'-'+c.agent+'-SEL';
 
-  const lines = [
-    '━━━━━━━━━━━━━━━━━━━━━━',
-    '🧾 *三為 請求書発行通知*',
-    '━━━━━━━━━━━━━━━━━━━━━━',
-    '📁 *案件ID*：'+id,
+  slackSend(SLACK_CH.請求書, [
+    ...slackHeader('🧾','三為 請求書発行'),
+    ...slackCase(c),
     '🏠 *物件*：'+prop,
     '💴 *仕入れ*：¥'+(buyPrice?buyPrice.toLocaleString():'—'),
     '💴 *販売*：¥'+(sellPrice?sellPrice.toLocaleString():'—'),
@@ -1770,15 +1870,8 @@ function issueInvoiceSannai(id) {
     '📄 '+invNumBuyer+' 買主向け合計：¥'+buyerTotal.toLocaleString(),
     ...(inv.hasSellerComm?['📄 '+invNumSeller+' 売主向け合計：¥'+sellerTotal.toLocaleString()]:[]),
     '💰 *請求総計*：¥'+grandTotal.toLocaleString(),
-    '━━━━━━━━━━━━━━━━━━━━━━',
-    '🕐 '+new Date().toLocaleString('ja-JP'),
-  ].join('\n');
-  console.log('[Slack #請求書]\n', lines);
-  try {
-    const ta=document.createElement('textarea');
-    ta.value=lines; document.body.appendChild(ta); ta.select();
-    document.execCommand('copy'); document.body.removeChild(ta);
-  } catch(e){}
+    ...slackFooter(),
+  ]);
 
   c.hist.unshift(today()+' 三為請求書発行 買主¥'+buyerTotal.toLocaleString()+(inv.hasSellerComm?' 売主¥'+sellerTotal.toLocaleString():''));
   advance(id,'contract','invoiced',date,'請求書発行完了 → 契約へ');
@@ -2263,7 +2356,13 @@ function paymentCheck(id) {
   c.taskDone.paid = true;
   c.dates.paid = todayISO();
   c.hist.unshift(today()+' 入金確認済');
-  // If both done, auto-advance step display
+  slackSend(SLACK_CH.入金, [
+    ...slackHeader('💰','入金確認'),
+    ...slackCase(c),
+    '🏠 *物件*：'+((c.apps.find(a=>a.status==='approved')||{}).prop||c.sub||'—'),
+    '📅 *確認日*：'+todayISO(),
+    ...slackFooter(),
+  ]);
   open_case(id); toast('入金確認しました');
 }
 function itsetsuCheck(id) {
@@ -2272,6 +2371,13 @@ function itsetsuCheck(id) {
   c.taskDone.itsetsu = true;
   c.dates.itsetsu = todayISO();
   c.hist.unshift(today()+' IT重説完了');
+  slackSend(SLACK_CH.重説, [
+    ...slackHeader('📝','IT重説・契約完了'),
+    ...slackCase(c),
+    '🏠 *物件*：'+((c.apps.find(a=>a.status==='approved')||{}).prop||c.sub||'—'),
+    '📅 *重説日*：'+todayISO(),
+    ...slackFooter(),
+  ]);
   open_case(id); toast('重説完了しました');
 }
 
@@ -2280,6 +2386,15 @@ function keyDone(id) {
   const d = document.getElementById('s-chinkaku')?.value || todayISO();
   const c = CASES.find(x=>x.id===id);
   c.dates.chinkaku = d;
+  const approvedApp = c.apps?.find(a=>a.status==='approved')||{};
+  slackSend(SLACK_CH.決済, [
+    ...slackHeader('🔑','鍵渡し完了 → 成約（賃貸）'),
+    ...slackCase(c),
+    '🏠 *物件*：'+(approvedApp.prop||c.sub||'—'),
+    '🏢 *管理会社*：'+(approvedApp.mgmt||'—'),
+    '📅 *賃発日*：'+d,
+    ...slackFooter(),
+  ]);
   advance(id,'done',null,null,'鍵渡し完了 (賃発日: '+d+') → 成約');
 }
 
@@ -2678,6 +2793,15 @@ function sannaiEnterCode(id) {
   c.buyer.verified    = true;
   c.buyer.verifyState = 'verified';
   c.hist.unshift(today()+' 業者確認完了 / '+c.buyer.name+(c.buyer.takkenNum?' ('+c.buyer.takkenNum+')':'（一般法人承認）'));
+  slackSend(SLACK_CH.三為確認, [
+    ...slackHeader('✅','三為 業者確認コード認証完了'),
+    ...slackCase(c),
+    '🏠 *物件*：'+(c.dates?.naikenProp||c.sub||'—'),
+    '🏢 *買主*：'+c.buyer.name,
+    c.buyer.takkenNum ? '📋 *宅建番号*：'+c.buyer.takkenNum : '📋 *宅建番号*：（一般法人）',
+    '🔑 *認証*：完了',
+    ...slackFooter(),
+  ]);
   open_case(id);
   toast('✅ 業者確認完了 — 買付入力へ進んでください');
 }
@@ -2685,9 +2809,33 @@ function sannaiEnterCode(id) {
 
 
 
-function saleContractDone(id) { advance(id,'settlement','contract',todayISO(),'売買契約締結'); }
+function saleContractDone(id) {
+  const c = CASES.find(x=>x.id===id); if(!c) return;
+  const inv = c.invoice||{};
+  slackSend(SLACK_CH.契約, [
+    ...slackHeader('✍️','売買契約締結'),
+    ...slackCase(c),
+    '🏠 *物件*：'+(inv.prop||c.dates?.naikenProp||c.sub||'—'),
+    inv.salePrice ? '💴 *売買価格*：¥'+parseInt(inv.salePrice).toLocaleString() : null,
+    inv.grandTotal ? '💰 *請求合計*：¥'+parseInt(inv.grandTotal).toLocaleString() : null,
+    ...slackFooter(),
+  ]);
+  advance(id,'settlement','contract',todayISO(),'売買契約締結');
+}
 function settlementDone(id) {
+  const c = CASES.find(x=>x.id===id); if(!c) return;
   const d = document.getElementById('s-settlement')?.value||todayISO();
+  const inv = c.invoice||{};
+  const sn  = c.sannai||{};
+  slackSend(SLACK_CH.決済, [
+    ...slackHeader('💴','決済完了 → 成約'),
+    ...slackCase(c),
+    '🏠 *物件*：'+(inv.prop||c.dates?.naikenProp||c.sub||'—'),
+    '📅 *決済日*：'+d,
+    sn.sellPrice ? '💴 *販売価格*：¥'+sn.sellPrice.toLocaleString() : (inv.salePrice ? '💴 *売買価格*：¥'+parseInt(inv.salePrice).toLocaleString() : null),
+    inv.grandTotal ? '💰 *請求合計*：¥'+parseInt(inv.grandTotal).toLocaleString() : null,
+    ...slackFooter(),
+  ]);
   advance(id,'done','settlement',d,'決済完了 (決済日: '+d+') → 成約');
 }
 
@@ -2805,6 +2953,18 @@ function createCase() {
   closeModal();
   render();
   open_case(id);
+  // Slack #新規案件
+  const typeLabel2 = type==='sannai'?'三為':type==='reSale'?'売買':type==='reLet'?'賃貸':'その他';
+  slackSend(SLACK_CH.新規案件, [
+    ...slackHeader('🆕','新規案件登録'),
+    '📁 *案件ID*：'+id,
+    '👤 *クライアント*：'+name+(_corpMode&&contact?' （担当: '+contact+'）':''),
+    '🏷 *種別*：'+typeLabel2+(_corpMode?' / 法人':''),
+    adOnly ? '💡 AD案件' : null,
+    '👨‍💼 *担当エージェント*：'+obj.agent,
+    sub&&sub!=='—' ? '📝 *備考*：'+sub : null,
+    ...slackFooter(),
+  ]);
   toast('案件を登録しました');
 }
 
