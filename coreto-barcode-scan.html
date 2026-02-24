@@ -255,119 +255,290 @@ code{background:var(--hover);padding:1px 6px;border-radius:3px;font-size:11px;co
 </div>
 
 
+
 <!-- ================================================================ -->
-<!-- TAB: 書類受取 -->
+<!-- TAB: 書類受取・管理ウィザード -->
 <!-- ================================================================ -->
 <div id="tab-receive" class="page">
+<div style="display:grid;grid-template-columns:1fr 340px;gap:20px;align-items:start">
 
-  <div class="grid2">
+<!-- ═══ 左: ウィザード ═══ -->
+<div id="rcv-wizard">
 
-    <!-- 左：受取フロー -->
-    <div>
-      <div class="s-label" style="margin-bottom:12px">📬 書類受取フロー</div>
-
-      <!-- ステップ1: 書類待ち案件一覧から選択 -->
-      <div class="card" style="margin-bottom:16px">
-        <div class="card-title">Step 1 ― 書類待ち案件を選択</div>
-        <div style="font-size:11px;color:var(--muted);margin-bottom:12px">管理会社から届いた封筒の物件名・クライアント名で案件を特定してください</div>
-
-        <div style="display:flex;gap:8px;margin-bottom:12px">
-          <input id="rcv-search" type="text" placeholder="物件名 / クライアント名 / 管理会社名 で絞り込み..."
-            oninput="filterReceiveList()"
-            style="flex:1;background:var(--hover);border:1px solid var(--border);border-radius:7px;padding:8px 12px;color:#e8eaf0;font-size:12px;font-family:'Noto Sans JP',sans-serif;outline:none">
-          <button onclick="filterReceiveList()" style="background:var(--gold);color:#0d0f14;border:none;border-radius:7px;padding:8px 14px;cursor:pointer;font-size:12px;font-weight:700;font-family:inherit">🔍</button>
-        </div>
-
-        <div id="receive-list" style="max-height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:6px">
-          <!-- JS動的生成 -->
-        </div>
-      </div>
-
-      <!-- ステップ2: 選択済み案件確認 -->
-      <div class="card" id="rcv-selected-card" style="margin-bottom:16px;display:none;border-color:var(--gold);background:rgba(201,168,76,.05)">
-        <div class="card-title" style="color:var(--gold)">✅ 選択した案件</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px" id="rcv-selected-info"></div>
-        <button onclick="clearReceiveSelection()" style="margin-top:12px;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 12px;cursor:pointer;font-size:11px;font-family:inherit">✕ 選択解除</button>
-      </div>
-    </div>
-
-    <!-- 右：アクション -->
-    <div>
-      <div class="s-label" style="margin-bottom:12px">📋 アクション</div>
-
-      <!-- アクション1: ラベル印刷 -->
-      <div class="card" style="margin-bottom:16px">
-        <div class="card-title">Step 2 ― 宛名ラベル印刷</div>
-        <div style="font-size:11px;color:var(--muted);margin-bottom:14px">往路（クライアント宛）＋ 返送用（本部宛）の2枚セットを印刷します</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
-          <div style="background:var(--hover);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center">
-            <div style="font-size:20px;margin-bottom:4px">📤</div>
-            <div style="font-size:11px;font-weight:700;color:var(--sub)">往路ラベル</div>
-            <div style="font-size:10px;color:var(--muted)">クライアント宛</div>
-          </div>
-          <div style="background:var(--hover);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center">
-            <div style="font-size:20px;margin-bottom:4px">↩️</div>
-            <div style="font-size:11px;font-weight:700;color:var(--sub)">返送用ラベル</div>
-            <div style="font-size:10px;color:var(--muted)">本部宛（同封）</div>
-          </div>
-        </div>
-        <button id="btn-print-labels" onclick="printContractLabels()" disabled
-          style="width:100%;padding:12px;background:var(--gold);color:#0d0f14;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;opacity:.4;transition:opacity .2s">
-          🖨️ 2枚セットを印刷
-        </button>
-      </div>
-
-      <!-- アクション2: レターパック追跡番号登録 -->
-      <div class="card" style="margin-bottom:16px">
-        <div class="card-title">Step 3 ― レターパック追跡番号を登録</div>
-        <div style="font-size:11px;color:var(--muted);margin-bottom:12px">スリップのバーコードをスキャン、または12桁番号を手入力</div>
-
-        <div style="margin-bottom:10px">
-          <div style="font-size:10px;color:var(--muted);margin-bottom:6px;letter-spacing:.5px">往路（クライアント宛）レターパック</div>
-          <div style="display:flex;gap:8px">
-            <div class="scan-input-area" id="outbound-scan-area" style="flex:1;min-height:44px;padding:8px 12px;cursor:text"
-              onclick="document.getElementById('outbound-tracking').focus()">
-              <input id="outbound-tracking" type="text" maxlength="12" placeholder="スキャンまたは12桁入力..."
-                oninput="handleTrackingInput('outbound')" onkeydown="handleTrackingKey(event,'outbound')"
-                style="width:100%;background:transparent;border:none;color:#e8eaf0;font-family:'DM Mono',monospace;font-size:13px;outline:none">
-            </div>
-            <button onclick="clearTracking('outbound')" style="background:var(--hover);border:1px solid var(--border);color:var(--muted);border-radius:7px;padding:0 10px;cursor:pointer;font-size:12px">✕</button>
-          </div>
-          <div id="outbound-tracking-status" style="font-size:10px;color:var(--muted);margin-top:4px;height:14px"></div>
-        </div>
-
-        <div style="margin-bottom:14px">
-          <div style="font-size:10px;color:var(--muted);margin-bottom:6px;letter-spacing:.5px">返送用レターパック追跡番号（あれば）</div>
-          <div style="display:flex;gap:8px">
-            <div class="scan-input-area" id="return-scan-area" style="flex:1;min-height:44px;padding:8px 12px;cursor:text"
-              onclick="document.getElementById('return-tracking').focus()">
-              <input id="return-tracking" type="text" maxlength="12" placeholder="スキャンまたは12桁入力..."
-                oninput="handleTrackingInput('return')" onkeydown="handleTrackingKey(event,'return')"
-                style="width:100%;background:transparent;border:none;color:#e8eaf0;font-family:'DM Mono',monospace;font-size:13px;outline:none">
-            </div>
-            <button onclick="clearTracking('return')" style="background:var(--hover);border:1px solid var(--border);color:var(--muted);border-radius:7px;padding:0 10px;cursor:pointer;font-size:12px">✕</button>
-          </div>
-        </div>
-
-        <button id="btn-register-tracking" onclick="registerTracking()" disabled
-          style="width:100%;padding:10px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;opacity:.4;transition:opacity .2s">
-          📡 追跡番号を案件に登録 → ステータス更新
-        </button>
-      </div>
-
-      <!-- アクション3: 完了 -->
-      <div class="card" id="rcv-complete-card" style="display:none;border-color:var(--green)">
-        <div style="text-align:center;padding:8px 0">
-          <div style="font-size:28px;margin-bottom:8px">✅</div>
-          <div style="font-weight:700;color:var(--green);margin-bottom:4px">登録完了</div>
-          <div style="font-size:11px;color:var(--muted)" id="rcv-complete-msg"></div>
-          <button onclick="resetReceiveFlow()" style="margin-top:12px;background:transparent;border:1px solid var(--border);color:var(--sub);border-radius:6px;padding:6px 16px;cursor:pointer;font-size:12px;font-family:inherit">次の書類を受け取る</button>
-        </div>
-      </div>
-    </div>
-
+  <!-- ── ステップインジケーター ── -->
+  <div id="rcv-steps" style="display:flex;align-items:center;gap:0;margin-bottom:20px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 16px;overflow-x:auto">
+    <div class="rcv-step active" id="rstep-0" onclick="rcvGoStep(0)">① 到着登録</div>
+    <div class="rcv-step-arrow">›</div>
+    <div class="rcv-step" id="rstep-1">② スキャン</div>
+    <div class="rcv-step-arrow">›</div>
+    <div class="rcv-step" id="rstep-2">③ AG連絡</div>
+    <div class="rcv-step-arrow">›</div>
+    <div class="rcv-step" id="rstep-3">④ 対応</div>
+    <div class="rcv-step-arrow">›</div>
+    <div class="rcv-step" id="rstep-4">⑤ 完了</div>
   </div>
+
+  <!-- ══ STEP 0: 到着登録 ══ -->
+  <div id="rcv-s0" class="rcv-panel">
+    <div class="rcv-panel-title">📬 書類到着登録</div>
+
+    <!-- 案件検索 -->
+    <div class="rcv-field-label">STEP 1 — 案件を特定</div>
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <input id="rcv-search" type="text" placeholder="物件名 / クライアント名 / 管理会社名 / 案件ID"
+        oninput="rcvFilterList()"
+        style="flex:1;background:var(--hover);border:1px solid var(--border);border-radius:7px;padding:9px 12px;color:#e8eaf0;font-size:12px;font-family:'Noto Sans JP',sans-serif;outline:none">
+    </div>
+    <div id="rcv-case-list" style="max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:5px;margin-bottom:14px"></div>
+
+    <!-- 選択済み案件 -->
+    <div id="rcv-case-selected" style="display:none;background:rgba(201,168,76,.07);border:1px solid rgba(201,168,76,.35);border-radius:8px;padding:12px;margin-bottom:14px">
+      <div style="font-size:10px;color:var(--gold);font-weight:700;margin-bottom:6px">✅ 選択した案件</div>
+      <div id="rcv-case-selected-info" style="font-size:12px;display:grid;grid-template-columns:1fr 1fr;gap:6px"></div>
+      <button onclick="rcvClearCase()" style="margin-top:8px;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:5px;padding:3px 10px;cursor:pointer;font-size:10px;font-family:inherit">✕ 解除</button>
+    </div>
+
+    <!-- 書類種別 -->
+    <div class="rcv-field-label">STEP 2 — 到着した書類の種別（複数選択可）</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px" id="doc-type-grid">
+      <div class="doc-type-btn" id="dt-contract" onclick="rcvToggleDocType('contract')">
+        <div style="font-size:22px">📄</div>
+        <div style="font-size:12px;font-weight:700">契約書</div>
+        <div style="font-size:10px;color:var(--muted)">スキャン必須</div>
+      </div>
+      <div class="doc-type-btn" id="dt-key" onclick="rcvToggleDocType('key')">
+        <div style="font-size:22px">🔑</div>
+        <div style="font-size:12px;font-weight:700">鍵</div>
+        <div style="font-size:10px;color:var(--muted)">写真で記録</div>
+      </div>
+      <div class="doc-type-btn" id="dt-additional" onclick="rcvToggleDocType('additional')">
+        <div style="font-size:22px">📁</div>
+        <div style="font-size:12px;font-weight:700">追加書類</div>
+        <div style="font-size:10px;color:var(--muted)">スキャン推奨</div>
+      </div>
+      <div class="doc-type-btn" id="dt-other" onclick="rcvToggleDocType('other')">
+        <div style="font-size:22px">📦</div>
+        <div style="font-size:12px;font-weight:700">その他</div>
+        <div style="font-size:10px;color:var(--muted)">メモを記入</div>
+      </div>
+    </div>
+
+    <!-- メモ -->
+    <div class="rcv-field-label">備考・管理会社からの通知事項</div>
+    <textarea id="rcv-memo" rows="2" placeholder="例: 管理会社より「2部送付」との連絡あり"
+      style="width:100%;background:var(--hover);border:1px solid var(--border);border-radius:7px;padding:8px 12px;color:#e8eaf0;font-size:12px;font-family:'Noto Sans JP',sans-serif;resize:vertical;outline:none;margin-bottom:14px"></textarea>
+
+    <button id="rcv-next-0" onclick="rcvStep0Next()" disabled
+      style="width:100%;padding:12px;background:var(--gold);color:#0d0f14;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;opacity:.4;transition:opacity .2s">
+      次へ：スキャン →
+    </button>
+  </div>
+
+  <!-- ══ STEP 1: スキャン・撮影 ══ -->
+  <div id="rcv-s1" class="rcv-panel" style="display:none">
+    <div class="rcv-panel-title">📷 書類スキャン・撮影</div>
+
+    <div id="scan-doc-list" style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px"></div>
+
+    <!-- スキャナー入力エリア -->
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-title" style="font-size:12px">スキャナー / カメラ入力</div>
+      <div style="border:2px dashed var(--border);border-radius:8px;padding:20px;text-align:center;cursor:pointer;transition:border-color .2s"
+        id="scan-drop-zone" onclick="triggerScanUpload()" ondragover="event.preventDefault()" ondrop="handleScanDrop(event)">
+        <div style="font-size:28px;margin-bottom:8px">📄</div>
+        <div style="font-size:12px;color:var(--sub);margin-bottom:6px">クリックしてファイルを選択、またはドロップ</div>
+        <div style="font-size:10px;color:var(--muted)">PDF / JPEG / PNG 対応 — スキャナーから直接保存可</div>
+        <input type="file" id="scan-file-input" multiple accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="handleScanFiles(event)">
+      </div>
+      <div id="scan-file-list" style="margin-top:10px;font-size:11px;color:var(--sub)"></div>
+    </div>
+
+    <div style="display:flex;gap:8px">
+      <button onclick="rcvGoStep(0)" style="flex:1;padding:10px;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:8px;cursor:pointer;font-size:12px;font-family:inherit">← 戻る</button>
+      <button id="rcv-next-1" onclick="rcvStep1Next()"
+        style="flex:2;padding:10px;background:var(--gold);color:#0d0f14;border:none;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit">
+        次へ：AG連絡 →
+      </button>
+    </div>
+    <div style="text-align:center;margin-top:8px">
+      <button onclick="rcvStep1Skip()" style="background:transparent;border:none;color:var(--muted);font-size:11px;cursor:pointer;font-family:inherit;text-decoration:underline">スキャンをスキップして進む</button>
+    </div>
+  </div>
+
+  <!-- ══ STEP 2: AG連絡（Slack） ══ -->
+  <div id="rcv-s2" class="rcv-panel" style="display:none">
+    <div class="rcv-panel-title">💬 エージェントへSlack通知</div>
+
+    <!-- 通知プレビュー -->
+    <div id="slack-preview" style="background:#1e1f26;border:1px solid #3f3f46;border-radius:10px;padding:14px;margin-bottom:14px;font-size:12px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <div style="width:32px;height:32px;border-radius:6px;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:16px">C</div>
+        <div>
+          <div style="font-weight:700;font-size:12px">CORETO Bot</div>
+          <div style="font-size:10px;color:var(--muted)">今日</div>
+        </div>
+      </div>
+      <div id="slack-msg-preview" style="line-height:1.7;color:#dcddde"></div>
+    </div>
+
+    <!-- 送信先 -->
+    <div class="rcv-field-label">通知先エージェント</div>
+    <div id="rcv-agent-target" style="background:var(--hover);border:1px solid var(--border);border-radius:7px;padding:10px 12px;font-size:12px;margin-bottom:14px;color:var(--sub)">—</div>
+
+    <!-- 回答期限 -->
+    <div class="rcv-field-label">回答期限（この時間を超えると自動郵送）</div>
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      <select id="rcv-deadline" style="flex:1;background:var(--hover);border:1px solid var(--border);border-radius:7px;padding:8px 12px;color:#e8eaf0;font-size:12px;font-family:inherit">
+        <option value="2">2時間後</option>
+        <option value="4" selected>4時間後</option>
+        <option value="24">翌日まで</option>
+        <option value="48">2日後まで</option>
+      </select>
+    </div>
+
+    <button onclick="rcvSendSlack()" id="btn-send-slack"
+      style="width:100%;padding:12px;background:#4a154b;color:#fff;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;margin-bottom:8px">
+      📤 Slackで通知を送信
+    </button>
+    <div style="display:flex;gap:8px">
+      <button onclick="rcvGoStep(1)" style="flex:1;padding:8px;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:7px;cursor:pointer;font-size:11px;font-family:inherit">← 戻る</button>
+      <button onclick="rcvForceMailMode()" style="flex:1;padding:8px;background:transparent;border:1px solid rgba(59,130,246,.4);color:var(--blue);border-radius:7px;cursor:pointer;font-size:11px;font-family:inherit">確認せず郵送する</button>
+    </div>
+  </div>
+
+  <!-- ══ STEP 3: 対応フロー（分岐） ══ -->
+  <div id="rcv-s3" class="rcv-panel" style="display:none">
+    <div class="rcv-panel-title" id="s3-title">④ 対応</div>
+
+    <!-- --- 3a: 郵送フロー --- -->
+    <div id="s3-mail" style="display:none">
+      <div style="background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.3);border-radius:8px;padding:12px;margin-bottom:14px;font-size:12px;color:var(--blue)">
+        📤 郵送モード<span id="s3-mail-reason" style="color:var(--muted);margin-left:8px"></span>
+      </div>
+
+      <div class="rcv-field-label">往路レターパック追跡番号</div>
+      <div style="display:flex;gap:8px;margin-bottom:6px">
+        <div style="flex:1;background:var(--hover);border:1px solid var(--border);border-radius:7px;padding:8px 12px;cursor:text" onclick="this.querySelector('input').focus()">
+          <input id="mail-outbound-no" type="text" maxlength="12" placeholder="スキャンまたは12桁手入力"
+            oninput="rcvCheckMailReady()"
+            style="width:100%;background:transparent;border:none;color:#e8eaf0;font-family:'DM Mono',monospace;font-size:13px;outline:none">
+        </div>
+        <button onclick="rcvPrintLabels('mail')" style="background:var(--gold);color:#0d0f14;border:none;border-radius:7px;padding:0 12px;cursor:pointer;font-size:11px;font-weight:700;font-family:inherit;white-space:nowrap">🖨 ラベル印刷</button>
+      </div>
+
+      <!-- 返送用封筒 -->
+      <div class="rcv-field-label" style="margin-top:12px">返送用封筒の同封が必要ですか？</div>
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <button id="btn-return-yes" onclick="rcvSetReturnEnvelope(true)"
+          style="flex:1;padding:9px;background:var(--hover);border:1px solid var(--border);color:var(--sub);border-radius:7px;cursor:pointer;font-size:12px;font-family:inherit;transition:all .15s">
+          ✅ 必要（同封）
+        </button>
+        <button id="btn-return-no" onclick="rcvSetReturnEnvelope(false)"
+          style="flex:1;padding:9px;background:var(--hover);border:1px solid var(--border);color:var(--sub);border-radius:7px;cursor:pointer;font-size:12px;font-family:inherit;transition:all .15s">
+          不要
+        </button>
+      </div>
+
+      <div id="mail-return-tracking" style="display:none;margin-bottom:14px">
+        <div class="rcv-field-label">返送用レターパック追跡番号</div>
+        <div style="background:var(--hover);border:1px solid var(--border);border-radius:7px;padding:8px 12px;cursor:text" onclick="this.querySelector('input').focus()">
+          <input id="mail-return-no" type="text" maxlength="12" placeholder="スキャンまたは12桁手入力"
+            oninput="rcvCheckMailReady()"
+            style="width:100%;background:transparent;border:none;color:#e8eaf0;font-family:'DM Mono',monospace;font-size:13px;outline:none">
+        </div>
+      </div>
+
+      <button id="btn-mail-complete" onclick="rcvMailComplete()" disabled
+        style="width:100%;padding:12px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;opacity:.4;transition:opacity .2s">
+        📡 発送登録 → 追跡開始
+      </button>
+    </div>
+
+    <!-- --- 3b: 受取フロー --- -->
+    <div id="s3-pickup" style="display:none">
+      <div style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.3);border-radius:8px;padding:12px;margin-bottom:14px;font-size:12px;color:var(--green)">
+        🏢 受取モード — エージェントが事務所に来た際に処理します
+      </div>
+
+      <div class="rcv-field-label">エージェント来店時のスキャン / 検索</div>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <div style="flex:1;background:var(--hover);border:1px solid var(--border);border-radius:7px;padding:8px 12px;cursor:text" onclick="this.querySelector('input').focus()">
+          <input id="pickup-agent-search" type="text" placeholder="AG名 / 案件ID / バーコードスキャン"
+            oninput="rcvPickupSearch()"
+            style="width:100%;background:transparent;border:none;color:#e8eaf0;font-size:12px;font-family:'Noto Sans JP',sans-serif;outline:none">
+        </div>
+        <button onclick="rcvPickupSearch()" style="background:var(--gold);color:#0d0f14;border:none;border-radius:7px;padding:0 12px;cursor:pointer;font-size:12px;font-weight:700;font-family:inherit">検索</button>
+      </div>
+      <div id="pickup-search-results" style="margin-bottom:12px;font-size:11px;color:var(--muted)"></div>
+
+      <!-- 返送用封筒確認 -->
+      <div class="rcv-field-label" style="margin-top:4px">返送用封筒を手渡しますか？</div>
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <button id="btn-pickup-return-yes" onclick="rcvPickupSetReturn(true)"
+          style="flex:1;padding:9px;background:var(--hover);border:1px solid var(--border);color:var(--sub);border-radius:7px;cursor:pointer;font-size:12px;font-family:inherit">
+          ✅ 手渡し（ラベル印刷）
+        </button>
+        <button id="btn-pickup-return-no" onclick="rcvPickupSetReturn(false)"
+          style="flex:1;padding:9px;background:var(--hover);border:1px solid var(--border);color:var(--sub);border-radius:7px;cursor:pointer;font-size:12px;font-family:inherit">
+          不要
+        </button>
+      </div>
+
+      <!-- 受取確認サイン欄 -->
+      <div class="rcv-field-label">受取確認（AGがタブレットにサイン）</div>
+      <div style="background:var(--hover);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:14px">
+        <canvas id="pickup-signature" width="480" height="100" style="width:100%;display:block;cursor:crosshair;touch-action:none"></canvas>
+        <div style="display:flex;justify-content:space-between;padding:6px 10px;border-top:1px solid var(--border)">
+          <span style="font-size:10px;color:var(--muted)">サイン欄（指またはマウスで署名）</span>
+          <button onclick="clearSignature()" style="background:transparent;border:none;color:var(--muted);font-size:10px;cursor:pointer;font-family:inherit">✕ クリア</button>
+        </div>
+      </div>
+
+      <button id="btn-pickup-complete" onclick="rcvPickupComplete()"
+        style="width:100%;padding:12px;background:var(--green);color:#0d0f14;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">
+        ✅ 手渡し完了・記録
+      </button>
+    </div>
+  </div>
+
+  <!-- ══ STEP 4: 完了 ══ -->
+  <div id="rcv-s4" class="rcv-panel" style="display:none">
+    <div style="text-align:center;padding:20px 0">
+      <div style="font-size:40px;margin-bottom:12px">✅</div>
+      <div style="font-size:18px;font-weight:700;color:var(--green);margin-bottom:8px">処理完了</div>
+      <div id="rcv-complete-summary" style="font-size:12px;color:var(--muted);line-height:1.8;margin-bottom:20px"></div>
+      <div style="display:flex;gap:8px;justify-content:center">
+        <button onclick="rcvReset()" style="padding:10px 24px;background:var(--gold);color:#0d0f14;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">次の書類を処理</button>
+        <button onclick="showTab('tracking',{target:{closest:()=>null}})" style="padding:10px 24px;background:var(--hover);border:1px solid var(--border);color:var(--sub);border-radius:8px;font-size:12px;cursor:pointer;font-family:inherit">追跡一覧を確認</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /rcv-wizard -->
+
+<!-- ═══ 右: 待機中書類一覧 ═══ -->
+<div>
+  <div style="font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:10px">📋 待機中・処理中の書類</div>
+
+  <!-- フィルター -->
+  <div style="display:flex;gap:6px;margin-bottom:10px">
+    <select id="queue-filter" onchange="rcvRenderQueue()" style="flex:1;background:var(--hover);border:1px solid var(--border);border-radius:6px;padding:5px 8px;color:#e8eaf0;font-size:10px;font-family:inherit">
+      <option value="">全ステータス</option>
+      <option value="arrived">到着済・未連絡</option>
+      <option value="waiting_reply">AG回答待ち</option>
+      <option value="pickup_scheduled">受取予定</option>
+      <option value="in_transit">郵送中</option>
+      <option value="delivered">配達完了</option>
+      <option value="returned">返送受取済</option>
+    </select>
+  </div>
+
+  <div id="rcv-queue-list" style="display:flex;flex-direction:column;gap:8px;max-height:560px;overflow-y:auto"></div>
 </div>
+
+</div><!-- /grid -->
+</div><!-- /tab-receive -->
+
 
 <!-- ================================================================ -->
 <!-- TAB: SCAN DESK -->
@@ -1173,236 +1344,518 @@ function buildTrackingTable() {
 window.addEventListener('load', () => {
   generateBarcodes();
   buildTrackingTable();
-  renderReceiveList(WAITING_DOCS);
+  rcvFilterList();
+  rcvRenderQueue();
   renderPostalList();
   document.getElementById('scan-input').focus();
 });
 
 
+
 // ═══════════════════════════════════════════════════════════════
-// 書類受取フロー
+// 書類受取・管理ウィザード
 // ═══════════════════════════════════════════════════════════════
 
-// 書類待ち案件データ（本番はAPIから取得）
-const WAITING_DOCS = [
-  { caseId:'R042857', clientName:'田中 雄介', prop:'渋谷区桜丘 2LDK', mgmt:'東急リバブル管理', agent:'山田 誠', agentId:'10012', zip:'150-0001', addr:'東京都渋谷区桜丘町5-3-2 サクラハイツ302', step:'screening' },
-  { caseId:'R039102', clientName:'木村 彩香', prop:'品川区大崎 1K',    mgmt:'大崎管理',        agent:'山田 誠', agentId:'10012', zip:'141-0031', addr:'東京都品川区西五反田1-2-3 グリーンコート201', step:'contract_wait' },
-  { caseId:'R041003', clientName:'斎藤 亮',   prop:'新宿区西新宿 1LDK', mgmt:'三井住友管理',    agent:'鈴木 健太', agentId:'10023', zip:'160-0023', addr:'東京都新宿区西新宿3-7-1 パークビュー805', step:'contract_wait' },
-  { caseId:'R038215', clientName:'佐々木 恵', prop:'豊島区南池袋 2LDK', mgmt:'池袋不動産管理',   agent:'佐藤 花子', agentId:'10008', zip:'171-0022', addr:'東京都豊島区南池袋2-25-5 メゾン池袋410', step:'contract_wait' },
-  { caseId:'R044782', clientName:'中野 博',   prop:'目黒区中目黒 1LDK', mgmt:'東急コミュニティ', agent:'渡辺 隆', agentId:'10041', zip:'153-0051', addr:'東京都目黒区上目黒3-6-7 中目黒テラス302', step:'contract_wait' },
+const WAITING_CASES = [
+  { caseId:'R042857', clientName:'田中 雄介', prop:'渋谷区桜丘 2LDK', mgmt:'東急リバブル管理', agent:'山田 誠', agentId:'10012', agentSlack:'@yamada-makoto', zip:'150-0001', addr:'東京都渋谷区桜丘町5-3-2 サクラハイツ302', step:'contract_wait' },
+  { caseId:'R039102', clientName:'木村 彩香', prop:'品川区大崎 1K',    mgmt:'大崎管理',        agent:'鈴木 健太', agentId:'10023', agentSlack:'@suzuki-kenta', zip:'141-0031', addr:'東京都品川区西五反田1-2-3 グリーンコート201', step:'contract_wait' },
+  { caseId:'R041003', clientName:'斎藤 亮',   prop:'新宿区西新宿 1LDK', mgmt:'三井住友管理',   agent:'渡辺 隆', agentId:'10041', agentSlack:'@watanabe-takashi', zip:'160-0023', addr:'東京都新宿区西新宿3-7-1 パークビュー805', step:'contract_wait' },
+  { caseId:'R038215', clientName:'佐々木 恵', prop:'豊島区南池袋 2LDK', mgmt:'池袋不動産管理',  agent:'佐藤 花子', agentId:'10008', agentSlack:'@sato-hanako', zip:'171-0022', addr:'東京都豊島区南池袋2-25-5 メゾン池袋410', step:'contract_wait' },
+  { caseId:'R044782', clientName:'中野 博',   prop:'目黒区中目黒 1LDK', mgmt:'東急コミュニティ', agent:'渡辺 隆', agentId:'10041', agentSlack:'@watanabe-takashi', zip:'153-0051', addr:'東京都目黒区上目黒3-6-7 中目黒テラス302', step:'contract_wait' },
 ];
 
-let selectedReceiveCase = null;
+// 待機中書類ストア（受取登録後に追加）
+let DOC_QUEUE = [
+  { id:'DQ-001', caseId:'R042857', clientName:'田中 雄介', prop:'渋谷区桜丘 2LDK', agent:'山田 誠', agentId:'10012',
+    docTypes:['contract','key'], memo:'', arrivedAt:'2026/2/24 10:30',
+    status:'waiting_reply', mode:null, deadline:'2026/2/24 14:30',
+    outboundNo:null, returnNo:null, scanFiles:[] },
+  { id:'DQ-002', caseId:'R039102', clientName:'木村 彩香', prop:'品川区大崎 1K', agent:'鈴木 健太', agentId:'10023',
+    docTypes:['contract'], memo:'', arrivedAt:'2026/2/23 15:10',
+    status:'pickup_scheduled', mode:'pickup', deadline:null,
+    outboundNo:null, returnNo:null, scanFiles:[] },
+  { id:'DQ-003', caseId:'R041003', clientName:'斎藤 亮', prop:'新宿区西新宿 1LDK', agent:'渡辺 隆', agentId:'10041',
+    docTypes:['contract','additional'], memo:'', arrivedAt:'2026/2/23 11:00',
+    status:'in_transit', mode:'mail', deadline:null,
+    outboundNo:'123456789012', returnNo:'234567890123', scanFiles:[] },
+];
 
-function filterReceiveList() {
+const DOC_TYPE_LABELS = { contract:'📄 契約書', key:'🔑 鍵', additional:'📁 追加書類', other:'📦 その他' };
+const QUEUE_STATUS_MAP = {
+  arrived:          { label:'📬 到着済・未連絡',  color:'var(--orange)', bg:'rgba(245,158,11,.12)' },
+  waiting_reply:    { label:'⏳ AG回答待ち',      color:'var(--gold)',   bg:'rgba(201,168,76,.12)' },
+  pickup_scheduled: { label:'🏢 受取予定',        color:'var(--blue)',   bg:'rgba(59,130,246,.12)' },
+  in_transit:       { label:'🚚 郵送中',          color:'var(--sub)',    bg:'rgba(156,163,175,.1)' },
+  delivered:        { label:'📬 配達完了',        color:'var(--green)',  bg:'rgba(34,197,94,.12)'  },
+  returned:         { label:'✅ 返送受取済',       color:'#a855f7',      bg:'rgba(168,85,247,.12)' },
+  complete:         { label:'✅ 完了',            color:'var(--green)',  bg:'rgba(34,197,94,.12)'  },
+};
+
+// ウィザード状態
+let RCV = {
+  step: 0,
+  caseData: null,
+  docTypes: new Set(),
+  memo: '',
+  scanFiles: [],
+  mode: null,        // 'mail' | 'pickup'
+  returnEnvelope: null,
+  outboundNo: '',
+  returnNo: '',
+  dqId: null,
+};
+
+// ─── ステップ制御 ───────────────────────────────────────────
+function rcvGoStep(n) {
+  for (let i = 0; i <= 4; i++) {
+    const panel = document.getElementById('rcv-s' + i);
+    if (panel) panel.style.display = i === n ? '' : 'none';
+    const step = document.getElementById('rstep-' + i);
+    if (step) {
+      step.classList.remove('active', 'done');
+      if (i < n) step.classList.add('done');
+      else if (i === n) step.classList.add('active');
+    }
+  }
+  RCV.step = n;
+}
+
+// ─── STEP 0: 到着登録 ────────────────────────────────────────
+function rcvFilterList() {
   const q = (document.getElementById('rcv-search').value || '').toLowerCase();
   const filtered = q
-    ? WAITING_DOCS.filter(d =>
+    ? WAITING_CASES.filter(d =>
         d.clientName.includes(q) || d.prop.toLowerCase().includes(q) ||
-        d.mgmt.includes(q) || d.caseId.toLowerCase().includes(q) ||
-        d.agent.includes(q)
-      )
-    : WAITING_DOCS;
-  renderReceiveList(filtered);
+        d.mgmt.includes(q) || d.caseId.toLowerCase().includes(q) || d.agent.includes(q))
+    : WAITING_CASES;
+  rcvRenderCaseList(filtered);
 }
 
-function renderReceiveList(list) {
-  const el = document.getElementById('receive-list');
-  if (!list.length) {
-    el.innerHTML = '<div style="text-align:center;padding:24px;color:var(--muted);font-size:12px">条件に一致する案件がありません</div>';
-    return;
-  }
+function rcvRenderCaseList(list) {
+  const el = document.getElementById('rcv-case-list');
+  if (!list.length) { el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);font-size:11px">該当案件なし</div>'; return; }
   el.innerHTML = list.map(d => `
-    <div onclick="selectReceiveCase('${d.caseId}')"
-      style="background:${selectedReceiveCase && selectedReceiveCase.caseId===d.caseId ? 'rgba(201,168,76,.1)' : 'var(--hover)'};border:1px solid ${selectedReceiveCase && selectedReceiveCase.caseId===d.caseId ? 'var(--gold)' : 'var(--border)'};border-radius:8px;padding:12px;cursor:pointer;transition:all .15s">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-        <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--gold)">${d.caseId}</div>
-        <div style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(59,130,246,.15);color:var(--blue)">${d.step === 'contract_wait' ? '📋 契約書待ち' : '📄 審査中'}</div>
+    <div class="rcv-case-row ${RCV.caseData && RCV.caseData.caseId===d.caseId ? 'selected':''}"
+      onclick="rcvSelectCase('${d.caseId}')">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--gold)">${d.caseId}</span>
+        <span style="font-size:10px;color:var(--muted)">👤 ${d.agent}</span>
       </div>
-      <div style="font-weight:700;font-size:13px;margin-bottom:3px">${d.clientName} 様</div>
-      <div style="font-size:11px;color:var(--sub);margin-bottom:3px">🏠 ${d.prop}</div>
-      <div style="display:flex;gap:12px;font-size:10px;color:var(--muted)">
-        <span>🏢 ${d.mgmt}</span>
-        <span>👤 ${d.agent}</span>
+      <div style="font-weight:700;margin-bottom:2px">${d.clientName} 様</div>
+      <div style="display:flex;gap:10px;font-size:10px;color:var(--muted)">
+        <span>🏠 ${d.prop}</span><span>🏢 ${d.mgmt}</span>
       </div>
-    </div>
-  `).join('');
+    </div>`).join('');
 }
 
-function selectReceiveCase(caseId) {
-  selectedReceiveCase = WAITING_DOCS.find(d => d.caseId === caseId);
-  filterReceiveList(); // re-render with selection highlight
-
-  // 選択情報表示
-  const card = document.getElementById('rcv-selected-card');
-  const info = document.getElementById('rcv-selected-info');
+function rcvSelectCase(caseId) {
+  RCV.caseData = WAITING_CASES.find(d => d.caseId === caseId);
+  rcvFilterList();
+  const card = document.getElementById('rcv-case-selected');
+  const info = document.getElementById('rcv-case-selected-info');
   card.style.display = 'block';
-  info.innerHTML = `
-    <div><div style="font-size:9px;color:var(--muted);margin-bottom:2px">案件ID</div><div style="font-family:'DM Mono',monospace;font-size:12px;color:var(--gold)">${selectedReceiveCase.caseId}</div></div>
-    <div><div style="font-size:9px;color:var(--muted);margin-bottom:2px">クライアント</div><div style="font-size:12px;font-weight:700">${selectedReceiveCase.clientName} 様</div></div>
-    <div><div style="font-size:9px;color:var(--muted);margin-bottom:2px">物件</div><div style="font-size:12px">${selectedReceiveCase.prop}</div></div>
-    <div><div style="font-size:9px;color:var(--muted);margin-bottom:2px">担当AG</div><div style="font-size:12px">${selectedReceiveCase.agent}</div></div>
-  `;
-
-  // ラベル印刷ボタン有効化
-  const printBtn = document.getElementById('btn-print-labels');
-  printBtn.disabled = false;
-  printBtn.style.opacity = '1';
+  const d = RCV.caseData;
+  info.innerHTML = [
+    ['案件ID', `<span style="font-family:'DM Mono',monospace;color:var(--gold)">${d.caseId}</span>`],
+    ['クライアント', `<strong>${d.clientName} 様</strong>`],
+    ['物件', d.prop],
+    ['担当AG', d.agent],
+    ['管理会社', d.mgmt],
+  ].map(([k,v]) => `<div><div style="font-size:9px;color:var(--muted);margin-bottom:1px">${k}</div><div style="font-size:12px">${v}</div></div>`).join('');
+  rcvCheckStep0Ready();
 }
 
-function clearReceiveSelection() {
-  selectedReceiveCase = null;
-  document.getElementById('rcv-selected-card').style.display = 'none';
-  document.getElementById('btn-print-labels').disabled = true;
-  document.getElementById('btn-print-labels').style.opacity = '.4';
-  filterReceiveList();
+function rcvClearCase() {
+  RCV.caseData = null;
+  document.getElementById('rcv-case-selected').style.display = 'none';
+  rcvFilterList();
+  rcvCheckStep0Ready();
 }
 
-function printContractLabels() {
-  if (!selectedReceiveCase) return;
-  const d = selectedReceiveCase;
+function rcvToggleDocType(type) {
+  const btn = document.getElementById('dt-' + type);
+  if (RCV.docTypes.has(type)) { RCV.docTypes.delete(type); btn.classList.remove('selected'); }
+  else { RCV.docTypes.add(type); btn.classList.add('selected'); }
+  rcvCheckStep0Ready();
+}
 
-  // バーコード値（案件ID + ラベル種別）
+function rcvCheckStep0Ready() {
+  const ready = RCV.caseData && RCV.docTypes.size > 0;
+  const btn = document.getElementById('rcv-next-0');
+  btn.disabled = !ready;
+  btn.style.opacity = ready ? '1' : '.4';
+}
+
+function rcvStep0Next() {
+  RCV.memo = document.getElementById('rcv-memo').value;
+  // スキャンステップが必要か（契約書または追加書類）
+  const needScan = RCV.docTypes.has('contract') || RCV.docTypes.has('additional');
+  rcvBuildScanPanel();
+  rcvGoStep(1);
+}
+
+// ─── STEP 1: スキャン ─────────────────────────────────────────
+function rcvBuildScanPanel() {
+  const list = document.getElementById('scan-doc-list');
+  const types = [...RCV.docTypes];
+  list.innerHTML = types.map(t => `
+    <div style="background:var(--hover);border:1px solid var(--border);border-radius:8px;padding:10px 12px;display:flex;align-items:center;gap:10px">
+      <span style="font-size:18px">${t==='contract'?'📄':t==='key'?'🔑':t==='additional'?'📁':'📦'}</span>
+      <div style="flex:1">
+        <div style="font-size:12px;font-weight:700">${DOC_TYPE_LABELS[t]}</div>
+        <div style="font-size:10px;color:var(--muted)">${t==='contract'?'スキャン必須':t==='key'?'写真で記録':t==='additional'?'スキャン推奨':'任意'}</div>
+      </div>
+      <div id="scan-status-${t}" style="font-size:10px;color:var(--muted)">未スキャン</div>
+    </div>`).join('');
+}
+
+function triggerScanUpload() { document.getElementById('scan-file-input').click(); }
+function handleScanDrop(e) { e.preventDefault(); handleScanFiles({ target: { files: e.dataTransfer.files } }); }
+function handleScanFiles(e) {
+  const files = [...e.target.files];
+  RCV.scanFiles = [...RCV.scanFiles, ...files];
+  const listEl = document.getElementById('scan-file-list');
+  listEl.innerHTML = RCV.scanFiles.map((f, i) =>
+    `<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+      <span style="color:var(--green)">✓</span>
+      <span>${f.name}</span>
+      <span style="color:var(--muted);font-size:10px">(${(f.size/1024).toFixed(0)}KB)</span>
+      <button onclick="rcvRemoveScanFile(${i})" style="background:transparent;border:none;color:var(--red);cursor:pointer;font-size:10px">✕</button>
+    </div>`).join('');
+  // Update per-type status
+  RCV.docTypes.forEach(t => {
+    const el = document.getElementById('scan-status-' + t);
+    if (el) { el.textContent = '✅ スキャン済'; el.style.color = 'var(--green)'; }
+  });
+}
+function rcvRemoveScanFile(i) {
+  RCV.scanFiles.splice(i, 1);
+  handleScanFiles({ target: { files: [] } });
+}
+
+function rcvStep1Next() { rcvBuildSlackPreview(); rcvGoStep(2); }
+function rcvStep1Skip() { rcvBuildSlackPreview(); rcvGoStep(2); }
+
+// ─── STEP 2: Slack通知 ──────────────────────────────────────
+function rcvBuildSlackPreview() {
+  const d = RCV.caseData;
+  const docStr = [...RCV.docTypes].map(t => DOC_TYPE_LABELS[t]).join('、');
+  const deadline = document.getElementById('rcv-deadline') ? document.getElementById('rcv-deadline').value : '4';
+  const now = new Date();
+  const deadlineTime = new Date(now.getTime() + parseInt(deadline) * 3600000);
+  const timeStr = deadlineTime.getHours() + ':' + String(deadlineTime.getMinutes()).padStart(2,'0');
+
+  document.getElementById('rcv-agent-target').textContent = `${d.agent}（${d.agentSlack}）`;
+  document.getElementById('slack-msg-preview').innerHTML = `
+    <div style="margin-bottom:8px">📬 <strong>${d.agent}</strong> さん、以下の書類が本部に届きました。</div>
+    <div style="background:#2a2a35;border-left:3px solid var(--gold);padding:8px 12px;border-radius:0 6px 6px 0;margin-bottom:8px;font-size:11px">
+      <div>案件: <strong>${d.caseId}</strong> ${d.clientName} 様 | ${d.prop}</div>
+      <div>書類: ${docStr}</div>
+      ${RCV.memo ? `<div>備考: ${RCV.memo}</div>` : ''}
+    </div>
+    <div style="margin-bottom:8px">受取方法を選択してください（期限: <strong>本日${timeStr}</strong>まで）</div>
+    <div style="display:flex;gap:8px">
+      <div style="background:#1d6fa4;border-radius:4px;padding:6px 14px;font-size:11px;cursor:pointer">📮 郵送希望</div>
+      <div style="background:#2d6a4f;border-radius:4px;padding:6px 14px;font-size:11px;cursor:pointer">🏢 受け取りに行く</div>
+    </div>
+    <div style="margin-top:8px;font-size:10px;color:#72767d">期限を過ぎると自動的に郵送対応となります</div>`;
+}
+
+function rcvSendSlack() {
+  const d = RCV.caseData;
+  document.getElementById('btn-send-slack').textContent = '⟳ 送信中...';
+  setTimeout(() => {
+    // Slack API送信（本番実装）
+    document.getElementById('btn-send-slack').textContent = '✅ 送信済み';
+    document.getElementById('btn-send-slack').style.background = '#27ae60';
+
+    // DQに追加
+    const dqEntry = {
+      id: 'DQ-' + String(DOC_QUEUE.length + 1).padStart(3,'0'),
+      caseId: d.caseId, clientName: d.clientName, prop: d.prop,
+      agent: d.agent, agentId: d.agentId,
+      docTypes: [...RCV.docTypes], memo: RCV.memo,
+      arrivedAt: new Date().toLocaleString('ja-JP'),
+      status: 'waiting_reply', mode: null, deadline: null,
+      outboundNo: null, returnNo: null, scanFiles: RCV.scanFiles.map(f=>f.name),
+    };
+    DOC_QUEUE.unshift(dqEntry);
+    RCV.dqId = dqEntry.id;
+    rcvRenderQueue();
+
+    // Simulate agent reply after 3s (demo)
+    setTimeout(() => showToast('💬 山田 誠さんから返答: 受け取りに行きます'), 3000);
+
+    // Move to step 3 with waiting mode UI
+    rcvGoStep(3);
+    document.getElementById('s3-title').textContent = '④ エージェントの回答を待っています';
+    document.getElementById('s3-mail').style.display = 'none';
+    document.getElementById('s3-pickup').style.display = 'none';
+
+    // Show mode selector
+    const s3panel = document.getElementById('rcv-s3');
+    let modeSelector = document.getElementById('s3-mode-selector');
+    if (!modeSelector) {
+      modeSelector = document.createElement('div');
+      modeSelector.id = 's3-mode-selector';
+      s3panel.querySelector('.rcv-panel').insertBefore(modeSelector, s3panel.querySelector('.rcv-panel').firstChild.nextSibling);
+    }
+    modeSelector.innerHTML = `
+      <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);border-radius:8px;padding:12px;margin-bottom:16px;font-size:12px;color:var(--orange)">
+        ⏳ Slackを送信しました。エージェントの返答を待っています...<br>
+        <span style="font-size:10px;color:var(--muted)">下記から手動でモードを選択することもできます</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <button onclick="rcvSetMode('pickup')" style="padding:14px;background:rgba(34,197,94,.1);border:2px solid rgba(34,197,94,.4);color:var(--green);border-radius:10px;cursor:pointer;font-size:13px;font-weight:700;font-family:inherit">
+          🏢 受取モードに切替
+        </button>
+        <button onclick="rcvSetMode('mail')" style="padding:14px;background:rgba(59,130,246,.1);border:2px solid rgba(59,130,246,.4);color:var(--blue);border-radius:10px;cursor:pointer;font-size:13px;font-weight:700;font-family:inherit">
+          📮 郵送モードに切替
+        </button>
+      </div>`;
+  }, 800);
+}
+
+function rcvForceMailMode() { rcvSetMode('mail'); }
+
+function rcvSetMode(mode) {
+  RCV.mode = mode;
+  const modeSelector = document.getElementById('s3-mode-selector');
+  if (modeSelector) modeSelector.style.display = 'none';
+  document.getElementById('s3-mail').style.display = mode === 'mail' ? '' : 'none';
+  document.getElementById('s3-pickup').style.display = mode === 'pickup' ? '' : 'none';
+  document.getElementById('s3-title').textContent = mode === 'mail' ? '④ 郵送対応' : '④ 受取対応';
+  // Update queue status
+  const dq = DOC_QUEUE.find(d => d.id === RCV.dqId);
+  if (dq) { dq.mode = mode; dq.status = mode === 'mail' ? 'in_transit' : 'pickup_scheduled'; rcvRenderQueue(); }
+
+  if (mode === 'pickup') { rcvInitSignature(); }
+}
+
+// ─── 郵送フロー ──────────────────────────────────────────────
+let RCV_returnEnvelope = null;
+
+function rcvSetReturnEnvelope(needed) {
+  RCV_returnEnvelope = needed;
+  document.getElementById('btn-return-yes').style.borderColor = needed ? 'var(--green)' : 'var(--border)';
+  document.getElementById('btn-return-yes').style.color = needed ? 'var(--green)' : 'var(--sub)';
+  document.getElementById('btn-return-no').style.borderColor = !needed ? 'var(--muted)' : 'var(--border)';
+  document.getElementById('btn-return-no').style.color = !needed ? 'var(--sub)' : 'var(--sub)';
+  document.getElementById('mail-return-tracking').style.display = needed ? '' : 'none';
+  rcvCheckMailReady();
+}
+
+function rcvCheckMailReady() {
+  const outVal = (document.getElementById('mail-outbound-no') || {}).value || '';
+  const ready = outVal.length >= 10 && RCV_returnEnvelope !== null;
+  const btn = document.getElementById('btn-mail-complete');
+  if (btn) { btn.disabled = !ready; btn.style.opacity = ready ? '1' : '.4'; }
+}
+
+function rcvPrintLabels(mode) {
+  if (!RCV.caseData) return;
+  const d = RCV.caseData;
   const outboundCode = d.caseId + '-CONTRACT';
   const returnCode   = d.caseId + '-RETURN';
+  const HQ_ZIP = '101-0021';
+  const HQ_NAME = '株式会社CORETO 本部';
+  const HQ_ADDR = '東京都千代田区外神田1-1-1 CORETO本部';
 
-  // barcode SVG（Code128 シンプルストライプ代替表示 ※実装ではJsBarcode使用）
-  const barcodeBar = (code) =>
-    `<div style="display:flex;align-items:flex-end;gap:1px;height:40px;justify-content:center;margin:6px 0">
-      ${[...code].map((c, i) => `<div style="width:${(c.charCodeAt(0)%3)+1}px;height:${30+(i%5)*2}px;background:#000"></div>`).join('')}
-    </div>
-    <div style="font-size:9px;font-family:'DM Mono',monospace;text-align:center;letter-spacing:2px">${code}</div>`;
+  const barcodeBar = code => `<div style="display:flex;align-items:flex-end;gap:1px;height:36px;justify-content:center;margin:5px 0">
+    ${[...code].map((c,i) => `<div style="width:${(c.charCodeAt(0)%3)+1}px;height:${28+(i%5)*2}px;background:#000"></div>`).join('')}
+  </div><div style="font-size:8px;font-family:'DM Mono',monospace;text-align:center;letter-spacing:1px">${code}</div>`;
 
-  // ラベルHTML生成
-  const labelHtml = (title, toName, toZip, toAddr, fromInfo, code, bg) => `
-    <div style="width:90mm;border:2px solid #000;padding:6mm;background:${bg};font-family:'Noto Sans JP',sans-serif;margin-bottom:8mm;page-break-inside:avoid">
-      <div style="font-size:9px;font-weight:700;letter-spacing:1px;border-bottom:1px solid #000;padding-bottom:3px;margin-bottom:6px;color:#333">${title}</div>
-      <div style="margin-bottom:8px">
-        ${barcodeBar(code)}
-      </div>
-      <div style="margin-bottom:10px">
-        <div style="font-size:9px;color:#555;margin-bottom:2px">〒 ${toZip}</div>
-        <div style="font-size:9px;color:#555;margin-bottom:4px;white-space:pre-line">${toAddr}</div>
-        <div style="font-size:16px;font-weight:700">${toName}</div>
-      </div>
-      <div style="border-top:1px dashed #ccc;padding-top:6px;font-size:8px;color:#777">${fromInfo}</div>
-    </div>
-  `;
+  const lbl = (title,toN,toZ,toA,fromInfo,code,bg) =>
+    `<div style="width:90mm;border:2px solid #000;padding:5mm;background:${bg};font-family:'Noto Sans JP',sans-serif;margin-bottom:6mm;page-break-inside:avoid">
+      <div style="font-size:8px;font-weight:700;border-bottom:1px solid #000;padding-bottom:2px;margin-bottom:5px">${title}</div>
+      ${barcodeBar(code)}
+      <div style="margin-bottom:8px"><div style="font-size:8px;color:#555">〒${toZ}</div><div style="font-size:8px;color:#555;margin-bottom:3px">${toA}</div><div style="font-size:15px;font-weight:700">${toN}</div></div>
+      <div style="border-top:1px dashed #ccc;padding-top:4px;font-size:7px;color:#777">${fromInfo}</div>
+    </div>`;
 
-  const HQ_ZIP   = '101-0021';
-HQ_ADDR  = '東京都千代田区外神田1-1-1 CORETO本部';Q_NAME  = '株式会社CORETO 本部';
-
-  const outboundLabel = labelHtml(
-    `📤 往路ラベル  ${d.caseId} | 担当:${d.agent}`,
-    d.clientName + ' 様', d.zip, d.addr,
-    `差出人: ${HQ_NAME}  〒${HQ_ZIP} ${HQ_ADDR}`,
-    outboundCode, '#fff'
-  );
-
-  const returnLabel = labelHtml(
-    `↩️ 返送用ラベル  ${d.caseId} | クライアントに同封`,
-    HQ_NAME, HQ_ZIP, HQ_ADDR,
-    `返信用: ${d.clientName} 様よりご返送ください`,
-    returnCode, '#f5f5f5'
-  );
-
-  const win = window.open('', '_blank', 'width=700,height=600');
-  win.document.write(`<!DOCTYPE html><html><head>
-    <meta charset="UTF-8">
+  const docStr = [...RCV.docTypes].map(t=>DOC_TYPE_LABELS[t]).join(' + ');
+  const win = window.open('','_blank','width=700,height=600');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&family=DM+Mono&display=swap" rel="stylesheet">
-    <title>ラベル印刷 - ${d.caseId}</title>
-    <style>
-      body{background:#e0e0e0;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:20px;font-family:'Noto Sans JP',sans-serif}
-      .label-wrap{background:#fff;border-radius:4px;box-shadow:0 2px 8px rgba(0,0,0,.2);padding:10mm;margin-bottom:10px}
-      @media print{body{background:#fff;padding:0} .label-wrap{box-shadow:none;padding:0;margin:0} .no-print{display:none}}
-    </style>
+    <style>body{background:#e0e0e0;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:20px;font-family:'Noto Sans JP',sans-serif}
+    .lw{background:#fff;border-radius:4px;box-shadow:0 2px 8px rgba(0,0,0,.2);padding:10mm;margin-bottom:10px}
+    @media print{body{background:#fff;padding:0}.lw{box-shadow:none;padding:0;margin:0}.np{display:none}}</style>
   </head><body>
-    <div class="no-print" style="margin-bottom:16px;display:flex;gap:12px;align-items:center">
-      <strong>ラベル印刷 — ${d.caseId} ${d.clientName}様</strong>
-      <button onclick="window.print()" style="background:#1a1a2e;color:#c9a84c;border:1px solid #c9a84c;border-radius:6px;padding:6px 16px;cursor:pointer;font-size:12px">🖨️ 印刷する</button>
+    <div class="np" style="margin-bottom:16px;display:flex;gap:12px;align-items:center">
+      <strong>ラベル印刷 — ${d.caseId} ${d.clientName}様（${docStr}）</strong>
+      <button onclick="window.print()" style="background:#1a1a2e;color:#c9a84c;border:1px solid #c9a84c;border-radius:6px;padding:6px 16px;cursor:pointer;font-size:12px">🖨️ 印刷</button>
       <button onclick="window.close()" style="background:transparent;border:1px solid #ccc;border-radius:6px;padding:6px 16px;cursor:pointer;font-size:12px">✕ 閉じる</button>
     </div>
-    <div class="label-wrap">${outboundLabel}</div>
-    <div class="label-wrap">${returnLabel}</div>
+    <div class="lw">${lbl('📤 往路（クライアント宛）'+d.caseId+' 担当:'+d.agent, d.clientName+' 様', d.zip, d.addr, '差出人: '+HQ_NAME+' 〒'+HQ_ZIP+' '+HQ_ADDR, outboundCode, '#fff')}</div>
+    ${RCV_returnEnvelope !== false ? `<div class="lw">${lbl('↩️ 返送用（本部宛）同封 '+d.caseId, HQ_NAME, HQ_ZIP, HQ_ADDR, '返信用: '+d.clientName+' 様よりご返送ください', returnCode, '#f5f5f5')}</div>` : ''}
   </body></html>`);
   win.document.close();
-
-  showToast(`✅ ${d.caseId} のラベルを2枚印刷中...`);
+  showToast('🖨️ ラベルを印刷中...');
 }
 
-function handleTrackingInput(dir) {
-  const input = document.getElementById(dir + '-tracking');
-  const val = input.value.replace(/\s/g, '');
-  input.value = val;
-  // 12桁入力完了で自動確認
-  if (val.length === 12) {
-    document.getElementById(dir + '-tracking-status').textContent = `✅ ${val} — 登録準備完了`;
-    document.getElementById(dir + '-tracking-status').style.color = 'var(--green)';
-    checkRegisterBtn();
-  } else if (val.length > 0) {
-    document.getElementById(dir + '-tracking-status') && (document.getElementById(dir + '-tracking-status').textContent = `${val.length}/12桁`);
-  }
-}
+function rcvMailComplete() {
+  const outVal = document.getElementById('mail-outbound-no').value;
+  const retVal = RCV_returnEnvelope ? (document.getElementById('mail-return-no') || {}).value || '' : '';
+  RCV.outboundNo = outVal;
+  RCV.returnNo = retVal;
 
-function handleTrackingKey(e, dir) {
-  if (e.key === 'Enter') {
-    const val = document.getElementById(dir + '-tracking').value;
-    if (val.length >= 10) checkRegisterBtn();
-  }
-}
+  // 追跡データ更新
+  const dq = DOC_QUEUE.find(d => d.id === RCV.dqId);
+  if (dq) { dq.outboundNo = outVal; dq.returnNo = retVal || null; dq.status = 'in_transit'; }
 
-function clearTracking(dir) {
-  document.getElementById(dir + '-tracking').value = '';
-  const st = document.getElementById(dir + '-tracking-status');
-  if (st) st.textContent = '';
-  checkRegisterBtn();
-}
-
-function checkRegisterBtn() {
-  const outVal = document.getElementById('outbound-tracking').value;
-  const btn = document.getElementById('btn-register-tracking');
-  const enabled = selectedReceiveCase && outVal.length >= 10;
-  btn.disabled = !enabled;
-  btn.style.opacity = enabled ? '1' : '.4';
-}
-
-function registerTracking() {
-  if (!selectedReceiveCase) return;
-  const outVal = document.getElementById('outbound-tracking').value;
-  const retVal = document.getElementById('return-tracking').value;
-
-  // 追跡データに追加
+  // 郵便追跡ストアにも追加
   POSTAL_TRACKING.push({
-    caseId: selectedReceiveCase.caseId,
-    clientName: selectedReceiveCase.clientName,
-    prop: selectedReceiveCase.prop,
-    agent: selectedReceiveCase.agent,
-    outboundNo: outVal,
-    returnNo: retVal || null,
-    outboundStatus: 'transit',
-    returnStatus: retVal ? 'waiting' : null,
+    caseId: RCV.caseData.caseId, clientName: RCV.caseData.clientName,
+    prop: RCV.caseData.prop, agent: RCV.caseData.agent,
+    outboundNo: outVal, returnNo: retVal || null,
+    outboundStatus: 'transit', returnStatus: retVal ? 'waiting' : null,
     registeredAt: new Date().toLocaleString('ja-JP'),
     lastChecked: new Date().toLocaleString('ja-JP'),
   });
 
-  // 完了表示
-  document.getElementById('rcv-complete-card').style.display = 'block';
-  document.getElementById('rcv-complete-msg').textContent =
-    `${selectedReceiveCase.caseId} | 往路:${outVal}${retVal ? ' / 返送用:'+retVal : ''}`;
-
-  showToast(`✅ ${selectedReceiveCase.caseId} 追跡登録完了 → ステータス「契約書送付済」に更新`);
-  renderPostalList();
+  rcvShowComplete('mail', outVal, retVal);
 }
 
-function resetReceiveFlow() {
-  clearReceiveSelection();
-  clearTracking('outbound');
-  clearTracking('return');
-  document.getElementById('rcv-complete-card').style.display = 'none';
+// ─── 受取フロー ──────────────────────────────────────────────
+function rcvPickupSearch() {
+  const q = (document.getElementById('pickup-agent-search').value || '').toLowerCase();
+  const el = document.getElementById('pickup-search-results');
+  if (!q) { el.innerHTML = ''; return; }
+  const matches = DOC_QUEUE.filter(d =>
+    d.status === 'pickup_scheduled' && (
+      d.agent.toLowerCase().includes(q) || d.caseId.toLowerCase().includes(q) ||
+      d.clientName.includes(q) || d.agentId === q
+    ));
+  if (!matches.length) { el.innerHTML = '<div style="color:var(--muted);padding:8px">該当なし</div>'; return; }
+  el.innerHTML = matches.map(m => `
+    <div style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.3);border-radius:7px;padding:10px;margin-bottom:6px;cursor:pointer" onclick="rcvPickupSelect('${m.id}')">
+      <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--gold)">${m.caseId}</div>
+      <div style="font-size:12px;font-weight:700">${m.clientName} 様 — ${m.agent}</div>
+      <div style="font-size:10px;color:var(--muted)">${m.prop} | ${m.docTypes.map(t=>DOC_TYPE_LABELS[t]).join(' ')}</div>
+    </div>`).join('');
+}
+
+function rcvPickupSelect(dqId) {
+  const dq = DOC_QUEUE.find(d => d.id === dqId);
+  if (!dq) return;
+  RCV.dqId = dqId;
+  document.getElementById('pickup-agent-search').value = dq.agent + ' / ' + dq.caseId;
+  document.getElementById('pickup-search-results').innerHTML =
+    `<div style="color:var(--green);font-size:11px;padding:6px">✅ ${dq.caseId} ${dq.clientName}様 を選択しました</div>`;
+}
+
+let RCV_pickupReturn = null;
+function rcvPickupSetReturn(needed) {
+  RCV_pickupReturn = needed;
+  document.getElementById('btn-pickup-return-yes').style.borderColor = needed ? 'var(--green)' : 'var(--border)';
+  document.getElementById('btn-pickup-return-no').style.borderColor = !needed ? 'var(--muted)' : 'var(--border)';
+  if (needed && RCV.caseData) rcvPrintLabels('pickup');
+}
+
+// ─── サイン欄 ────────────────────────────────────────────────
+let sigCanvas, sigCtx, sigDrawing = false;
+function rcvInitSignature() {
+  setTimeout(() => {
+    sigCanvas = document.getElementById('pickup-signature');
+    if (!sigCanvas) return;
+    sigCtx = sigCanvas.getContext('2d');
+    sigCtx.strokeStyle = '#c9a84c';
+    sigCtx.lineWidth = 2;
+    sigCtx.lineCap = 'round';
+    sigCanvas.onmousedown = e => { sigDrawing = true; sigCtx.beginPath(); sigCtx.moveTo(e.offsetX, e.offsetY); };
+    sigCanvas.onmousemove = e => { if(!sigDrawing) return; sigCtx.lineTo(e.offsetX, e.offsetY); sigCtx.stroke(); };
+    sigCanvas.onmouseup = sigCanvas.onmouseleave = () => sigDrawing = false;
+    sigCanvas.ontouchstart = e => { e.preventDefault(); const t=e.touches[0],r=sigCanvas.getBoundingClientRect(); sigDrawing=true; sigCtx.beginPath(); sigCtx.moveTo(t.clientX-r.left,t.clientY-r.top); };
+    sigCanvas.ontouchmove = e => { e.preventDefault(); if(!sigDrawing) return; const t=e.touches[0],r=sigCanvas.getBoundingClientRect(); sigCtx.lineTo(t.clientX-r.left,t.clientY-r.top); sigCtx.stroke(); };
+    sigCanvas.ontouchend = () => sigDrawing = false;
+  }, 100);
+}
+function clearSignature() { if(sigCtx&&sigCanvas) sigCtx.clearRect(0,0,sigCanvas.width,sigCanvas.height); }
+
+function rcvPickupComplete() {
+  const dq = DOC_QUEUE.find(d => d.id === RCV.dqId);
+  if (dq) { dq.status = 'complete'; rcvRenderQueue(); }
+  rcvShowComplete('pickup', '', '');
+}
+
+// ─── 完了 ────────────────────────────────────────────────────
+function rcvShowComplete(mode, outNo, retNo) {
+  const d = RCV.caseData || {};
+  const docStr = [...(RCV.docTypes||[])].map(t=>DOC_TYPE_LABELS[t]).join(' + ');
+  const modeStr = mode === 'mail' ? '郵送発送' : '事務所受取';
+  document.getElementById('rcv-complete-summary').innerHTML = [
+    `案件: ${d.caseId} ${d.clientName} 様`,
+    `書類: ${docStr}`,
+    `対応: ${modeStr}`,
+    outNo ? `往路追跡番号: ${outNo}` : '',
+    retNo ? `返送用追跡番号: ${retNo}` : '',
+    `担当AG: ${d.agent} に記録を通知しました`,
+  ].filter(Boolean).join('\n');
+  rcvGoStep(4);
+  rcvRenderQueue();
+  showToast(`✅ ${d.caseId} の処理が完了しました`);
+}
+
+function rcvReset() {
+  RCV = { step:0, caseData:null, docTypes:new Set(), memo:'', scanFiles:[], mode:null, returnEnvelope:null, outboundNo:'', returnNo:'', dqId:null };
+  RCV_returnEnvelope = null;
+  RCV_pickupReturn = null;
   document.getElementById('rcv-search').value = '';
-  filterReceiveList();
-  checkRegisterBtn();
+  document.getElementById('rcv-memo').value = '';
+  document.getElementById('rcv-case-selected').style.display = 'none';
+  document.getElementById('scan-file-list').innerHTML = '';
+  ['contract','key','additional','other'].forEach(t => document.getElementById('dt-'+t).classList.remove('selected'));
+  const modeSelector = document.getElementById('s3-mode-selector');
+  if (modeSelector) modeSelector.innerHTML = '';
+  document.getElementById('btn-send-slack').textContent = '📤 Slackで通知を送信';
+  document.getElementById('btn-send-slack').style.background = '#4a154b';
+  rcvFilterList();
+  rcvGoStep(0);
 }
+
+// ─── 待機中キュー一覧 ────────────────────────────────────────
+function rcvRenderQueue() {
+  const filterStatus = (document.getElementById('queue-filter') || {}).value || '';
+  const list = filterStatus ? DOC_QUEUE.filter(d => d.status === filterStatus) : DOC_QUEUE;
+  const el = document.getElementById('rcv-queue-list');
+  if (!el) return;
+  if (!list.length) { el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:11px">待機中の書類なし</div>'; return; }
+  el.innerHTML = list.map(d => {
+    const st = QUEUE_STATUS_MAP[d.status] || {};
+    const docStr = (d.docTypes||[]).map(t=>DOC_TYPE_LABELS[t]).join(' ');
+    return `<div class="queue-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--gold)">${d.caseId}</span>
+        <span class="queue-badge" style="background:${st.bg};color:${st.color}">${st.label||d.status}</span>
+      </div>
+      <div style="font-weight:700;font-size:12px;margin-bottom:3px">${d.clientName} 様</div>
+      <div style="font-size:10px;color:var(--muted);margin-bottom:4px">👤 ${d.agent} | ${d.prop}</div>
+      <div style="font-size:10px;color:var(--sub);margin-bottom:6px">${docStr}</div>
+      ${d.outboundNo ? `<div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--muted)">📤 ${d.outboundNo}${d.returnNo?' | ↩️ '+d.returnNo:''}</div>` : ''}
+      <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:9px;color:var(--muted)">
+        <span>到着: ${d.arrivedAt}</span>
+        ${d.status==='pickup_scheduled' ? `<button onclick="rcvGoToPickup('${d.id}')" style="background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);color:var(--green);border-radius:4px;padding:2px 8px;cursor:pointer;font-size:9px;font-family:inherit">来店処理 →</button>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function rcvGoToPickup(dqId) {
+  const dq = DOC_QUEUE.find(d => d.id === dqId);
+  if (!dq) return;
+  // 案件を自動セット
+  const caseData = WAITING_CASES.find(c => c.caseId === dq.caseId);
+  if (caseData) RCV.caseData = caseData;
+  RCV.dqId = dqId;
+  RCV.docTypes = new Set(dq.docTypes);
+  rcvGoStep(3);
+  rcvSetMode('pickup');
+  document.getElementById('pickup-agent-search').value = dq.agent + ' / ' + dq.caseId;
+  document.getElementById('pickup-search-results').innerHTML =
+    `<div style="color:var(--green);font-size:11px;padding:6px">✅ ${dq.caseId} ${dq.clientName}様 が来店しました</div>`;
+}
+
+
 
 // ═══════════════════════════════════════════════════════════════
 // 郵便追跡API
@@ -1570,6 +2023,7 @@ function toggleAutoRefresh() {
     statusEl.style.color = 'var(--muted)';
   }
 }
+
 </script>
 </body>
 </html>
