@@ -84,6 +84,36 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans-seri
   background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;width:100%;margin-top:2px}
 .add-wish-btn:hover{border-color:var(--orange);color:var(--orange)}
 .req-note{font-size:10px;color:var(--muted);margin-top:8px}
+/* Calendar grid */
+.cal-toggle{width:100%;margin-top:12px;padding:10px 0;background:transparent;
+  border:1px dashed var(--border2);border-radius:8px;color:var(--muted);
+  cursor:pointer;font-size:11px;font-family:inherit;transition:.15s}
+.cal-toggle:hover{border-color:var(--gold);color:var(--gold)}
+.cal-section{margin-top:14px;display:none}
+.cal-section.open{display:block}
+.cal-month-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.cal-month-lbl{font-size:13px;font-weight:700;color:var(--text)}
+.cal-nav-btn{background:transparent;border:1px solid var(--border2);color:var(--sub);
+  border-radius:6px;padding:4px 10px;cursor:pointer;font-size:11px;font-family:inherit}
+.cal-nav-btn:hover{border-color:var(--gold);color:var(--gold)}
+.cal-grid{width:100%;border-collapse:collapse;font-size:11px}
+.cal-grid th{padding:5px 2px;font-size:9px;color:var(--muted);font-weight:600;
+  text-align:center;white-space:nowrap;border-bottom:1px solid var(--border2)}
+.cal-grid td{padding:3px 2px;text-align:center;vertical-align:middle;
+  border-right:1px solid var(--border);min-width:28px}
+.cal-grid td:first-child{text-align:right;padding-right:6px;color:var(--muted);
+  font-size:10px;font-family:'DM Mono',monospace;white-space:nowrap;min-width:44px}
+.cal-grid tr{border-bottom:1px solid var(--border)}
+.cal-cell-avail{cursor:pointer;border-radius:50%;width:22px;height:22px;
+  display:inline-flex;align-items:center;justify-content:center;
+  border:1.5px solid var(--gold);color:var(--gold);font-size:14px;font-weight:700;
+  transition:.12s}
+.cal-cell-avail:hover,.cal-cell-avail.selected{background:var(--gold);color:#0b0d12}
+.cal-cell-none{color:var(--border2);font-size:12px}
+.cal-cell-past{color:var(--border);font-size:10px}
+.col-sun{color:var(--red)!important}
+.col-sat{color:var(--blue)!important}
+.col-today{background:rgba(201,168,64,.06)}
 .date-inp{background:var(--card2);border:1px solid var(--border2);border-radius:7px;
   padding:7px 8px;color:var(--text);font-family:'DM Mono',monospace;font-size:11px;outline:none;min-width:110px}
 .date-inp:focus{border-color:var(--gold)}
@@ -261,6 +291,151 @@ function removeWish(i) {
   renderWishRows();
 }
 
+// ── Calendar grid for "other slots" ──
+var calWeekOffset = 0;
+
+function toggleCalendar() {
+  var sec = document.getElementById('cal-section');
+  if (!sec) return;
+  var isOpen = sec.classList.contains('open');
+  sec.classList.toggle('open', !isOpen);
+  var btn = document.getElementById('cal-toggle-btn');
+  if (btn) btn.textContent = isOpen ? '▼ その他の日程を見る' : '▲ カレンダーを閉じる';
+  if (!isOpen) { calWeekOffset = 0; renderCalGrid(); }
+}
+
+function getWeekDates(offset) {
+  var now = new Date();
+  var day = now.getDay();
+  var monday = new Date(now);
+  monday.setDate(now.getDate() - day + 1 + offset * 7);
+  var dates = [];
+  for (var i = 0; i < 7; i++) {
+    var d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    dates.push(d);
+  }
+  return dates;
+}
+
+function fmtIso(d) {
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function renderCalGrid() {
+  var cont = document.getElementById('cal-grid-wrap');
+  if (!cont) return;
+  var slots = sortedAvailableSlots();
+  // Build slot lookup: date -> [slot, ...]
+  var slotMap = {};
+  slots.forEach(function(s) {
+    if (!slotMap[s.date]) slotMap[s.date] = [];
+    slotMap[s.date].push(s);
+  });
+
+  var weekDates = getWeekDates(calWeekOffset);
+  var today = new Date(); today.setHours(0,0,0,0);
+
+  // Collect all unique time labels from available slots in this week + next 3 weeks
+  var allDates = [];
+  for (var w = 0; w < 4; w++) getWeekDates(calWeekOffset + w).forEach(function(d){ allDates.push(fmtIso(d)); });
+  var timesSet = {};
+  allDates.forEach(function(ds) {
+    (slotMap[ds] || []).forEach(function(s) { timesSet[s.start] = true; });
+  });
+  var times = Object.keys(timesSet).sort();
+  if (!times.length) {
+    // Show all 30-min slots 8:00-20:30 if no data
+    for (var h = 8; h < 21; h++) {
+      times.push((h<10?'0':'')+h+':00');
+      times.push((h<10?'0':'')+h+':30');
+    }
+  }
+
+  var WD = ['日','月','火','水','木','金','土'];
+  var months = {};
+  weekDates.forEach(function(d){ months[d.getMonth()+1] = true; });
+  var monthLabel = Object.keys(months).map(function(m){ return weekDates[0].getFullYear()+'年'+m+'月'; }).join('・');
+
+  // Month/week nav
+  var navHtml = '<div class="cal-month-nav">'
+    +'<button class="cal-nav-btn" onclick="shiftCalWeek(-1)">◀ 前の週</button>'
+    +'<span class="cal-month-lbl">'+monthLabel+'</span>'
+    +'<button class="cal-nav-btn" onclick="shiftCalWeek(1)">次の週 ▶</button>'
+    +'</div>';
+
+  // Header row
+  var headCols = '<th></th>' + weekDates.map(function(d, i) {
+    var iso = fmtIso(d);
+    var isPast = d < today;
+    var isToday = iso === fmtIso(today);
+    var col = (d.getDay()===0)?'col-sun':(d.getDay()===6)?'col-sat':'';
+    var bg = isToday ? 'background:rgba(201,168,64,.08)' : (isPast ? 'opacity:.35' : '');
+    return '<th style="'+bg+'" class="'+col+'">'
+      +'<div>'+d.getDate()+'</div>'
+      +'<div style="font-size:9px">('+WD[d.getDay()]+')</div>'
+      +'</th>';
+  }).join('');
+
+  // Body rows
+  var bodyRows = times.map(function(t) {
+    var cells = weekDates.map(function(d, i) {
+      var iso = fmtIso(d);
+      var isPast = d < today;
+      var col = (d.getDay()===0)?'col-sun':(d.getDay()===6)?'col-sat':'';
+      var isToday = iso === fmtIso(today);
+      var bg = isToday ? 'background:rgba(201,168,64,.04)' : '';
+      if (isPast) return '<td style="'+bg+'" class="'+col+'"><span class="cal-cell-past">—</span></td>';
+      var matching = (slotMap[iso]||[]).filter(function(s){ return s.start <= t && s.end > t; });
+      if (matching.length) {
+        // Use first matching slot (already priority-sorted)
+        var slot = matching[0];
+        var isSel = slot.id === selectedSlotId;
+        var cidAttr = ' data-sid="'+slot.id+'"';
+        return '<td style="'+bg+'" class="'+col+'">'+(isSel
+          ? '<span class="cal-cell-avail selected"'+cidAttr+' onclick="selSlotCal(this.dataset.sid)">◎</span>'
+          : '<span class="cal-cell-avail"'+cidAttr+' onclick="selSlotCal(this.dataset.sid)">◎</span>')
+          +'</td>';
+      }
+      return '<td style="'+bg+'" class="'+col+'"><span class="cal-cell-none">×</span></td>';
+    }).join('');
+    return '<tr><td>'+t+'</td>'+cells+'</tr>';
+  }).join('');
+
+  cont.innerHTML = navHtml
+    +'<div style="overflow-x:auto">'
+    +'<table class="cal-grid"><thead><tr>'+headCols+'</tr></thead>'
+    +'<tbody>'+bodyRows+'</tbody></table></div>';
+}
+
+function shiftCalWeek(d) {
+  calWeekOffset += d;
+  if (calWeekOffset < 0) calWeekOffset = 0;
+  renderCalGrid();
+}
+
+function selSlotCal(slotId) {
+  selectedSlotId = slotId;
+  // Re-render calendar to show selection
+  renderCalGrid();
+  // Also update confirm button
+  var btn = document.getElementById('confirm-btn');
+  if (btn) { btn.disabled = false; }
+  // Show selection info
+  var slot = loadSlots().find(function(s){ return s.id === slotId; });
+  if (slot) {
+    var info = document.getElementById('cal-sel-info');
+    if (info) {
+      info.innerHTML = '<div style="margin-top:8px;padding:8px 11px;background:rgba(201,168,64,.08);'
+        +'border:1px solid rgba(201,168,64,.25);border-radius:7px;font-size:11px">'
+        +'✅ 選択: '+fmtDate(slot.date)+' '+slot.start+' / '+slot.agentName+'</div>';
+    }
+    // Scroll to confirm btn
+    var confirmBtn = document.getElementById('confirm-btn-cal');
+    if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.scrollIntoView({behavior:'smooth',block:'nearest'}); }
+  }
+}
+
 function submitRequest() {
   // Sync all wish fields first
   wishList.forEach(function(w, i) { syncWish(i); });
@@ -311,10 +486,13 @@ function renderNew() {
   var existingReq = loadRequests().find(function(r){ return r.caseId===caseId && r.status==='open'; });
   if (existingReq) { renderRequestSent(existingReq); return; }
   var slotsHtml = '';
-  if (!slots.length) {
+  var hasSlots = slots.length > 0;
+  var topSlots = slots.slice(0, 3);
+  var hasMore  = slots.length > 3;
+  if (!hasSlots) {
     slotsHtml = '<div class="no-slots">😔 現在、空き日程がございません。</div>';
   } else {
-    slotsHtml = slots.map(function(s){
+    slotsHtml = topSlots.map(function(s){
       var isPriority = (s.agentId === dedicatedId);
       var cls = 'slot-item' + (isPriority ? ' priority' : '') + (s.id === selectedSlotId ? ' selected' : '');
       return '<div class="'+cls+'" onclick="selSlot(\'' + s.id + '\',this)">'
@@ -326,12 +504,22 @@ function renderNew() {
         +(isPriority ? '<span class="priority-badge">専任担当</span>' : '')
         +'</div></div>';
     }).join('');
+    // Calendar section for all other slots
+    if (hasMore) {
+      slotsHtml += '<button class="cal-toggle" id="cal-toggle-btn" onclick="toggleCalendar()">▼ その他の日程を見る（'+(slots.length - 3)+'枠）</button>'
+        +'<div class="cal-section" id="cal-section">'
+        +'<div id="cal-grid-wrap"></div>'
+        +'<div id="cal-sel-info"></div>'
+        +'<div class="btns" style="margin-top:10px">'
+        +'<button class="btn btn-gold" id="confirm-btn-cal" onclick="doBook()" disabled>この日程で予約する</button>'
+        +'</div></div>';
+    }
   }
   var requestSection = caseId ? (
     '<div class="req-section">'
     +'<div class="req-title">📨 ご希望の日時をリクエストする</div>'
     +'<div class="req-desc">上記の日程が合わない場合、ご希望の日時を最大3件ご提出ください。<br>'
-    +'専任宅建士に通知が届き、対応可能な方が空き枠を追加してマッチングします。</div>'
+    +'対応可能なスタッフをお探しします。通常48時間以内に日程は確定されます。</div>'
     +'<div id="wish-rows"></div>'
     +'<button class="add-wish-btn" id="add-wish-btn" onclick="addWish()">＋ 希望日時を追加（最大3件）</button>'
     +'<div class="req-note">※ 終了時刻は開始より後の時刻にしてください</div>'

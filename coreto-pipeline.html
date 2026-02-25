@@ -152,6 +152,11 @@ input[type=date]{color-scheme:dark}
 #overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(3px);z-index:200;align-items:center;justify-content:center}
 #overlay.on{display:flex}
 .modal{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:22px;max-width:400px;width:90%}
+.warn-agree-box{background:rgba(248,113,113,.06);border:1px solid rgba(248,113,113,.25);
+  border-radius:10px;padding:14px;font-size:11px;color:var(--sub);line-height:1.9;margin-bottom:14px}
+.warn-agree-box strong{color:var(--red)}
+.warn-chk-row{display:flex;align-items:flex-start;gap:8px;margin-top:10px;cursor:pointer}
+.warn-chk-row input{margin-top:2px;accent-color:var(--gold);width:14px;height:14px;flex-shrink:0;cursor:pointer}
 .modal-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:var(--gold);margin-bottom:14px}
 
 /* ── Toast ── */
@@ -1150,6 +1155,7 @@ function stepScreening(c) {
   html += '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border2)">'
     +'<button class="btn btn-ghost" style="width:100%;justify-content:center;border-color:var(--gold);color:var(--gold);font-size:11px" data-cid="'+c.id+'" onclick="launchNaikenFromStep(this.dataset.cid)">📄 別物件の内見依頼書を発行</button>'
     +'</div>';
+  html += bookingLinkBlock(c);
   return html;
 }
 
@@ -1245,6 +1251,7 @@ function stepPrekey(c) {
       + h;
   }
 
+  h += bookingLinkBlock(c);
   return h;
 }
 function stepPayment(c) { return stepPrekey(c); }
@@ -2276,22 +2283,6 @@ function appPassed(id, appId) {
   c.apps.filter(x=>x.id!==appId&&(x.status==='reviewing'||x.status==='submitted')).forEach(x=>{x.status='cancelled';});
   if(!c.taskDone) c.taskDone={paid:false,itsetsu:false};
 
-  // 重説日程調整リンクを生成
-  const u = window._SESSION || {};
-  // dedicatedId = 案件の担当エージェント (専任宅建士として最優先マッチング)
-  const dedicatedId = c.agent || u.userId || '';
-  const bookingParams = new URLSearchParams({
-    caseId:      c.id,
-    client:      encodeURIComponent(c.name),
-    prop:        encodeURIComponent(a.prop||c.sub||''),
-    agent:       encodeURIComponent(u.name||u.userId||''),
-    agentId:     u.userId||'',
-    dedicatedId: dedicatedId,
-  });
-  const bookingUrl = location.origin + location.pathname.replace(/[^/]+$/, '')
-    + 'coreto-itsetsu-booking.html?' + bookingParams.toString();
-  c.bookingUrl = bookingUrl;
-
   // 審査通過 Slack
   slackSend(SLACK_CH.審査, [
     ...slackHeader('✅','審査通過'),
@@ -2301,25 +2292,158 @@ function appPassed(id, appId) {
     ...slackFooter(),
   ]);
 
-  // 重説日程調整 Slack（エージェントへ送付用URL付き）
+  advance(id, 'invoice', 'approved', todayISO(), a.prop+' 審査通過 → 請求書発行へ');
+}
+
+// ═══════════════════════════════════════════════
+//  重説リンク発行 共通ロジック
+// ═══════════════════════════════════════════════
+function buildBookingUrl(c) {
+  const u = window._SESSION || {};
+  const app = (c.apps || []).find(function(a){ return a.status === 'approved'; })
+    || (c.apps || [])[c.apps.length - 1] || {};
+  const dedicatedId = c.agent || u.userId || '';
+  const params = new URLSearchParams({
+    caseId:      c.id,
+    client:      encodeURIComponent(c.name || ''),
+    prop:        encodeURIComponent(app.prop || c.sub || ''),
+    agent:       encodeURIComponent(u.name || u.userId || ''),
+    agentId:     u.userId || '',
+    dedicatedId: dedicatedId,
+  });
+  return location.origin + location.pathname.replace(/[^/]+$/, '')
+    + 'coreto-itsetsu-booking.html?' + params.toString();
+}
+
+// 警告ダイアログ付き発行フロー
+function bookingLinkBlock(c) {
+  const sent = c.contractSent;
+  const sentDate = c.contractSentDate ? ' （'+c.contractSentDate+'）' : '';
+  let html = '<div style="margin-top:12px;padding-top:12px;border-top:1px dashed var(--border2)">';
+  html += '<div style="font-size:10px;color:var(--gold-dim,#7a5f22);font-weight:700;margin-bottom:8px;letter-spacing:.05em">📅 重説日程調整リンク</div>';
+
+  if (sent) {
+    html += '<div style="background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.2);border-radius:7px;padding:7px 10px;font-size:10px;color:var(--green);margin-bottom:8px">📨 契約書発送済み'+sentDate+'</div>';
+  } else {
+    html += '<div style="background:rgba(201,168,64,.05);border:1px solid rgba(201,168,64,.15);border-radius:7px;padding:7px 10px;font-size:10px;color:var(--muted);margin-bottom:8px">📦 契約書が未発送です。発送後のリンク発行を推奨しますが、申込後はいつでも発行できます。</div>';
+  }
+
+  // bookingUrl 表示（既に発行済みの場合）
+  if (c.bookingUrl) {
+    html += '<div style="background:var(--card2);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;font-size:10px;word-break:break-all;font-family:monospace;color:var(--blue);margin-bottom:8px">' + c.bookingUrl + '</div>';
+    html += '<div style="display:flex;gap:6px">';
+    html += '<button class="btn btn-ghost btn-sm" style="flex:1;justify-content:center" data-url="'+c.bookingUrl+'" onclick="copyBookingUrl(this)">📋 コピー</button>';
+    html += '<button class="btn btn-ghost btn-sm" style="flex:1;justify-content:center" data-cid="'+c.id+'" onclick="launchBookingLink(this.dataset.cid)">🔄 再発行</button>';
+    if (!sent) {
+      html += '<button class="btn btn-ghost btn-sm" style="flex:1;justify-content:center;border-color:var(--green);color:var(--green)" data-cid="'+c.id+'" onclick="markContractSent(this.dataset.cid)">📦 契約書発送済みにする</button>';
+    }
+    html += '</div>';
+  } else {
+    html += '<div style="display:flex;gap:6px">';
+    html += '<button class="btn btn-ghost btn-sm" style="flex:1;justify-content:center;border-color:var(--gold);color:var(--gold)" data-cid="'+c.id+'" onclick="launchBookingLink(this.dataset.cid)">📅 日程調整リンクを発行</button>';
+    if (!sent) {
+      html += '<button class="btn btn-ghost btn-sm" style="flex:1;justify-content:center;border-color:var(--green);color:var(--green)" data-cid="'+c.id+'" onclick="markContractSent(this.dataset.cid)">📦 契約書発送済みにする</button>';
+    }
+    html += '</div>';
+  }
+
+  html += '</div>';
+  return html;
+}
+
+function launchBookingLink(cid) {
+  const c = CASES.find(function(x){ return x.id === cid; });
+  if (!c) return;
+
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;z-index:9999;padding:16px';
+  overlay.innerHTML = `
+    <div style="background:#11141f;border:1px solid #2a3050;border-radius:16px;width:min(460px,100%);font-family:inherit">
+      <div style="padding:16px 20px;border-bottom:1px solid #1e2235">
+        <div style="font-size:14px;font-weight:800;color:#e06060;font-family:'Syne',sans-serif">⚠️ 重説日程調整リンク発行</div>
+        <div style="font-size:10px;color:#5a6080;margin-top:2px">${c.name} 様 / ${c.id}</div>
+      </div>
+      <div style="padding:18px 20px">
+        <div class="warn-agree-box">
+          <strong>必ずご確認ください</strong><br><br>
+          📄 重説は<strong>契約書が届いた後</strong>にしか実施できません。<br>
+          クライアントに必ずその旨をお伝えして日程を調整してください。<br><br>
+          ⏰ 直前（24時間以内）で日程変更になった場合、<strong>緊急対応費用として¥3,000がコミッションから引かれます。</strong>
+          <label class="warn-chk-row">
+            <input type="checkbox" id="warn-chk-1" onchange="checkWarnReady()">
+            <span>クライアントに「契約書到着後に重説実施」の旨を伝えることを理解しました</span>
+          </label>
+          <label class="warn-chk-row">
+            <input type="checkbox" id="warn-chk-2" onchange="checkWarnReady()">
+            <span>直前変更時に¥3,000がコミッションから引かれることを理解しました</span>
+          </label>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button onclick="this.closest('div[style*=fixed]').remove()"
+            style="flex:1;background:transparent;border:1px solid #2a3050;color:#a0a8c0;border-radius:8px;padding:10px;cursor:pointer;font-family:inherit">
+            キャンセル</button>
+          <button id="warn-issue-btn" disabled
+            onclick="issueBookingLink('${cid}')"
+            style="flex:2;background:rgba(201,168,64,.08);border:1px solid rgba(201,168,64,.2);color:#666;border-radius:8px;padding:10px;cursor:not-allowed;font-family:inherit;font-weight:700;transition:.2s">
+            📋 リンクを発行する</button>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+function checkWarnReady() {
+  const c1 = document.getElementById('warn-chk-1');
+  const c2 = document.getElementById('warn-chk-2');
+  const btn = document.getElementById('warn-issue-btn');
+  if (!btn) return;
+  const ok = c1 && c2 && c1.checked && c2.checked;
+  btn.disabled = !ok;
+  btn.style.color = ok ? '#c9a840' : '#666';
+  btn.style.borderColor = ok ? 'rgba(201,168,64,.35)' : 'rgba(201,168,64,.2)';
+  btn.style.cursor = ok ? 'pointer' : 'not-allowed';
+  btn.style.background = ok ? 'rgba(201,168,64,.12)' : 'rgba(201,168,64,.08)';
+}
+
+function issueBookingLink(cid) {
+  const c = CASES.find(function(x){ return x.id === cid; });
+  if (!c) return;
+  const url = buildBookingUrl(c);
+  c.bookingUrl = url;
+  // Close warning overlay
+  const overlay = document.querySelector('div[style*="fixed"][style*="9999"]');
+  if (overlay) overlay.remove();
+  // Slack notify
+  const u = window._SESSION || {};
+  const app = (c.apps || []).find(function(a){ return a.status === 'approved'; }) || {};
   slackSend(SLACK_CH.重説日程, [
     ...slackHeader('📅','IT重説 日程調整リンク発行'),
-    '🆔 *案件ID*：'+c.id,
-    '👤 *クライアント*：'+c.name,
-    '🏠 *物件*：'+(a.prop||'—'),
-    '👨‍💼 *担当エージェント*：'+(u.name||u.userId||'—'),
+    '🆔 *案件ID*：' + c.id,
+    '👤 *クライアント*：' + c.name,
+    '🏠 *物件*：' + (app.prop || c.sub || '—'),
+    '👨‍💼 *担当エージェント*：' + (u.name || u.userId || '—'),
     '─────────────────',
     '📎 *日程調整URL*（クライアントに送付）：',
-    bookingUrl,
+    url,
     '─────────────────',
-    '※ クライアントがこのリンクで日程選択すると重説担当に自動マッチングされ、Google MeetのURLが生成されます',
+    '※ クライアントには「契約書到着後に重説実施」の旨を必ずお伝えください',
     ...slackFooter(),
   ]);
+  // Show link modal
+  showBookingLinkModal(cid, url);
+  open_case(cid);
+}
 
-  advance(id, 'invoice', 'approved', todayISO(), a.prop+' 審査通過 → 請求書発行へ');
-
-  // パネルに日程調整リンクを表示（コピーモーダル）
-  setTimeout(() => showBookingLinkModal(c.id, bookingUrl), 300);
+// 契約書発送済みにする
+function markContractSent(cid) {
+  const c = CASES.find(function(x){ return x.id === cid; });
+  if (!c) return;
+  if (!confirm('契約書を発送済みにしますか？\nクライアントへの到着後に重説を実施してください。')) return;
+  c.contractSent = true;
+  c.contractSentDate = todayISO();
+  c.hist.unshift(today() + ' 契約書発送済み');
+  toast('✅ 契約書発送済みにしました');
+  open_case(cid);
 }
 
 function showBookingLinkModal(caseId, url) {
@@ -2451,7 +2575,7 @@ function stepInvoice(c) {
     +'</div>'
   ) : '';
 
-  return '<div class="step-title">🧾 請求書発行</div>'
+  return bookingLinkBlock(c) + '<div class="step-title">🧾 請求書発行</div>'
     +'<div style="display:flex;gap:6px;margin-bottom:12px;background:var(--card2);padding:4px;border-radius:8px">'+tabHtml+'</div>'
     +'<div style="margin-bottom:4px">'+invNumHtml+'</div>'
     +'<div class="fi"><label>物件名</label><input type="text" id="inv-prop" value="'+(app.prop||'')+'" oninput="invCalc()"></div>'
