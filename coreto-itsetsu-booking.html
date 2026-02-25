@@ -91,6 +91,7 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans-seri
 .cal-toggle:hover{border-color:var(--gold);color:var(--gold)}
 .cal-section{margin-top:14px;display:none}
 .cal-section.open{display:block}
+.cal-grid-outer{overflow-x:auto;overflow-y:auto;max-height:60vh;border:1px solid var(--border2);border-radius:8px}
 .cal-month-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
 .cal-month-lbl{font-size:13px;font-weight:700;color:var(--text)}
 .cal-nav-btn{background:transparent;border:1px solid var(--border2);color:var(--sub);
@@ -98,11 +99,13 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans-seri
 .cal-nav-btn:hover{border-color:var(--gold);color:var(--gold)}
 .cal-grid{width:100%;border-collapse:collapse;font-size:11px}
 .cal-grid th{padding:5px 2px;font-size:9px;color:var(--muted);font-weight:600;
-  text-align:center;white-space:nowrap;border-bottom:1px solid var(--border2)}
+  text-align:center;white-space:nowrap;border-bottom:1px solid var(--border2);
+  position:sticky;top:0;z-index:2;background:#0b0d12}
 .cal-grid td{padding:3px 2px;text-align:center;vertical-align:middle;
   border-right:1px solid var(--border);min-width:28px}
 .cal-grid td:first-child{text-align:right;padding-right:6px;color:var(--muted);
-  font-size:10px;font-family:'DM Mono',monospace;white-space:nowrap;min-width:44px}
+  font-size:10px;font-family:'DM Mono',monospace;white-space:nowrap;min-width:44px;
+  position:sticky;left:0;z-index:1;background:#0b0d12}
 .cal-grid tr{border-bottom:1px solid var(--border)}
 .cal-cell-avail{cursor:pointer;border-radius:50%;width:22px;height:22px;
   display:inline-flex;align-items:center;justify-content:center;
@@ -149,6 +152,7 @@ var propName = decodeURIComponent(P.get('prop')    || '');
 var agentN   = decodeURIComponent(P.get('agent')   || '');
 var agentId  = P.get('agentId')  || '';
 var dedicatedId = P.get('dedicatedId') || agentId; // 専任宅建士ID
+var trackingNo  = P.get('tracking')    || ''; // 郵便追跡番号
 
 var WD = ['日','月','火','水','木','金','土'];
 function fmtDate(ds){
@@ -403,7 +407,7 @@ function renderCalGrid() {
   }).join('');
 
   cont.innerHTML = navHtml
-    +'<div style="overflow-x:auto">'
+    +'<div class="cal-grid-outer">'
     +'<table class="cal-grid"><thead><tr>'+headCols+'</tr></thead>'
     +'<tbody>'+bodyRows+'</tbody></table></div>';
 }
@@ -479,6 +483,32 @@ function renderRequestSent(req) {
     +wishText+'</div></div>';
 }
 
+function contractNoticeHtml() {
+  var trackingUrl = trackingNo
+    ? 'https://trackings.post.japanpost.jp/services/srv/search/direct?reqCodeNo1=' + encodeURIComponent(trackingNo)
+    : '';
+  var html = '<div style="margin-top:8px;padding:12px 14px;'
+    +'background:rgba(79,156,249,.07);border:1px solid rgba(79,156,249,.22);'
+    +'border-radius:8px;font-size:11px;color:var(--sub);line-height:2">';
+  html += '<div style="font-weight:700;color:var(--blue);margin-bottom:4px">📦 契約書の発送について</div>';
+  html += '契約書は数日でお手元に届く予定です。追跡番号は以下の通りです。<br>';
+  html += '<span style="color:var(--muted);font-size:10px">※ 発送直後は追跡番号が確認できない場合があります。</span>';
+  if (trackingNo && trackingUrl) {
+    html += '<div style="margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
+      +'<span style="font-family:monospace;font-size:13px;font-weight:700;color:var(--text);letter-spacing:.08em">'
+      +trackingNo+'</span>'
+      +'<a href="'+trackingUrl+'" target="_blank" rel="noopener"'
+      +' style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;'
+      +'background:rgba(79,156,249,.12);border:1px solid rgba(79,156,249,.3);'
+      +'border-radius:6px;color:var(--blue);font-size:10px;font-weight:700;text-decoration:none">'
+      +'🔍 郵便局で追跡する</a></div>';
+  } else {
+    html += '<div style="margin-top:6px;color:var(--muted);font-size:10px">（追跡番号はエージェントからご連絡します）</div>';
+  }
+  html += '</div>';
+  return html;
+}
+
 function renderNew() {
   var slots = sortedAvailableSlots();
   var app = document.getElementById('app');
@@ -530,7 +560,7 @@ function renderNew() {
   ) : '';
   app.innerHTML = '<div class="card"><div class="card-title">📋 案件情報</div>'+caseInfoHtml()
     +'<div style="margin-top:10px;padding:9px 11px;background:var(--card2);border-radius:7px;font-size:10px;color:var(--sub);line-height:1.9">'
-    +'都合のよい日程を選んでください。選択後、担当からGoogle MeetのURLをお送りします。</div><div style="margin-top:8px;padding:10px 12px;background:rgba(251,146,60,.07);border:1px solid rgba(251,146,60,.22);border-radius:7px;font-size:11px;color:var(--orange);line-height:1.9">⚠️ <strong>重要：</strong>重要事項説明（重説）は、<strong>契約書がお手元に届いた後</strong>にしか実施できません。<br>契約書のご到着を確認されてから、日程をご調整ください。</div></div>'
+    +'都合のよい日程を選んでください。選択後、担当からGoogle MeetのURLをお送りします。</div></div>'+contractNoticeHtml()+'</div>'
     +'<div class="card"><div class="card-title">🗓 日程を選択</div>'
     +(dedicatedId ? '<div style="font-size:10px;color:var(--purple);margin-bottom:10px">🔮 担当者を優先的に表示しています</div>' : '')
     +'<div id="slot-list">'+slotsHtml+'</div>'

@@ -2311,6 +2311,7 @@ function buildBookingUrl(c) {
     agentId:     u.userId || '',
     dedicatedId: dedicatedId,
   });
+  if (c.trackingNo) params.set('tracking', c.trackingNo);
   return location.origin + location.pathname.replace(/[^/]+$/, '')
     + 'coreto-itsetsu-booking.html?' + params.toString();
 }
@@ -2363,6 +2364,14 @@ function launchBookingLink(cid) {
             <span>直前変更時に¥3,000がコミッションから引かれることを理解しました</span>
           </label>
         </div>
+        <div style="margin-bottom:14px">
+          <div style="font-size:11px;color:#a0a8c0;margin-bottom:6px">📦 郵便追跡番号（任意）</div>
+          <input type="text" id="warn-tracking" placeholder="例: 1234567890123"
+            style="width:100%;background:#090b13;border:1px solid #2a3050;border-radius:7px;
+            padding:8px 10px;color:#e0e8f0;font-family:'DM Mono',monospace;font-size:13px;
+            letter-spacing:.08em;outline:none;box-sizing:border-box">
+          <div style="font-size:10px;color:#5a6080;margin-top:4px">入力するとクライアントページに郵便局の追跡リンクが表示されます</div>
+        </div>
         <div style="display:flex;gap:8px">
           <button onclick="this.closest('div[style*=fixed]').remove()"
             style="flex:1;background:transparent;border:1px solid #2a3050;color:#a0a8c0;border-radius:8px;padding:10px;cursor:pointer;font-family:inherit">
@@ -2393,6 +2402,10 @@ function checkWarnReady() {
 function issueBookingLink(cid) {
   const c = CASES.find(function(x){ return x.id === cid; });
   if (!c) return;
+  const trackingInput = document.getElementById('warn-tracking');
+  if (trackingInput && trackingInput.value.trim()) {
+    c.trackingNo = trackingInput.value.trim();
+  }
   const url = buildBookingUrl(c);
   c.bookingUrl = url;
   // Close warning overlay
