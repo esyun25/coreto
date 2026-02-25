@@ -287,6 +287,7 @@ function sortedAvailableSlots() {
 var selectedSlotId = null;
 var selectedFromCal = false;
 var selectedCalTime = null;
+var changingBk = null;
 var mode = 'initial'; // 'initial' | 'booking' | 'changing' | 'existing'
 
 // ── Render ──
@@ -701,28 +702,30 @@ function renderExisting(bk) {
 }
 
 function renderChange(bk) {
-  var slots = sortedAvailableSlots().filter(function(s){ return !(s.date===bk.date && s.start===bk.start); });
-  var slotsHtml = '';
-  if (!slots.length) {
-    slotsHtml = '<div class="no-slots">😔 変更可能な空き枠がありません。<br>担当エージェントにご連絡ください。</div>';
-  } else {
-    slotsHtml = slots.map(function(s){
-      var isPriority = (s.agentId === dedicatedId);
-      var cls = 'slot-item'+(isPriority?' priority':'')+(s.id===selectedSlotId?' selected':'');
-      return '<div class="'+cls+'" onclick="selSlot(\''+s.id+'\',this)">'
-        +'<div class="radio"></div>'
-        +'<div style="min-width:60px"><div class="slot-date">'+fmtDate(s.date)+'</div>'
-        +'<div class="slot-time">'+s.start+'</div>'
-        +'<div class="slot-dur">'+fmtDur(s.dur)+'</div></div>'
-        +'<div class="slot-agent">'+s.agentName+(isPriority?'<span class="priority-badge">専任担当</span>':'')+'</div></div>';
-    }).join('');
-  }
+  // 現在の予約をブロックリストから除外するため、一時的にbk.dateのブロックを解除して表示
+  changingBk = bk; // doChange()で参照
+  selectedSlotId = null;
+  selectedFromCal = false;
+  selectedCalTime = null;
   var mins = minsUntil(bk.date, bk.start);
+  var warnHtml = mins <= 24*60
+    ? '<div class="warn-box">⚠️ 24時間以内の変更です。残り変更可能回数: '+(2-(bk.changeCount||0))+'回</div>'
+    : '';
+  var currentHtml = '<div style="margin-bottom:12px;padding:10px 12px;background:var(--card2);border:1px solid var(--border);border-radius:8px;font-size:11px">'
+    +'<div style="color:var(--sub);margin-bottom:3px">現在の予約</div>'
+    +'<div style="font-weight:700">'+fmtDate(bk.date)+' '+bk.start+'〜</div>'
+    +'</div>';
   app.innerHTML = '<div class="card"><div class="card-title">📅 日程を変更する</div>'
-    +(mins<=24*60 ? '<div class="warn-box">⚠️ 24時間以内の変更です。残り変更可能回数: '+(2-(bk.changeCount||0))+'回</div>' : '')
-    +'<div style="margin-top:10px" id="slot-list">'+slotsHtml+'</div>'
-    +'<div class="btns"><button class="btn btn-gold" id="confirm-btn" onclick="doChange()" disabled>この日程に変更する</button>'
-    +'<button class="btn btn-ghost" onclick="render()" style="margin-top:4px">キャンセル</button></div></div>';
+    +warnHtml+currentHtml
+    +'<div id="slot-list">'
+    +'<div class="cal-section open" id="cal-section"><div id="cal-grid-wrap"></div><div id="cal-sel-info"></div></div>'
+    +'</div>'
+    +'<div class="btns" style="margin-top:14px">'
+    +'<button class="btn btn-gold" id="confirm-btn" onclick="doChange()" disabled>この日程に変更する</button>'
+    +'<button class="btn btn-ghost" onclick="render()" style="margin-top:4px">キャンセル</button>'
+    +'</div></div>';
+  calWeekOffset = 0;
+  renderCalGrid();
 }
 
 var app = document.getElementById('app');
@@ -793,26 +796,24 @@ function doChange() {
   if (bkIdx<0) return;
   var bk = bookings[bkIdx];
   if (!canClientChange(bk)) { alert('変更できません。'); render(); return; }
+  // カレンダー選択の場合: selectedSlotId = "slotId_HH:MM"
+  var realSlotId  = selectedFromCal ? selectedSlotId.split('_')[0] : selectedSlotId;
+  var newStart    = selectedFromCal ? selectedCalTime : null;
   var slots = loadSlots();
-  var newSlot = slots.find(function(s){ return s.id===selectedSlotId && s.status==='open'; });
+  var newSlot = slots.find(function(s){ return s.id===realSlotId && s.status==='open'; });
   if (!newSlot) { alert('選択した日程はすでに予約されています。'); selectedSlotId=null; renderChange(bk); return; }
-  // Release old slot
-  var oldSlot = slots.find(function(s){ return s.id===bk.slotId; });
-  if (oldSlot) { oldSlot.status='open'; oldSlot.bookedCase=null; oldSlot.bookedClient=null; oldSlot.meetUrl=''; oldSlot.bookedAt=null; }
-  // Book new slot
   var meetUrl = genMeet();
-  newSlot.status='booked'; newSlot.bookedCase=caseId; newSlot.bookedClient=clientN; newSlot.meetUrl=meetUrl; newSlot.bookedAt=new Date().toISOString();
-  saveSlots(slots);
-  // Determine if within 24h
+  var bookStart = newStart || newSlot.start;
   var mins = minsUntil(bk.date, bk.start);
-  var hist = { from:{date:bk.date,start:bk.start,agentName:bk.itAgentName}, to:{date:newSlot.date,start:newSlot.start,agentName:newSlot.agentName}, changedAt:new Date().toISOString() };
+  var hist = { from:{date:bk.date,start:bk.start,agentName:bk.itAgentName}, to:{date:newSlot.date,start:bookStart,agentName:newSlot.agentName}, changedAt:new Date().toISOString() };
   if (mins <= 24*60) bk.changeCount = (bk.changeCount||0)+1;
   if (!bk.changeHistory) bk.changeHistory=[];
   bk.changeHistory.push(hist);
-  bk.slotId=newSlot.id; bk.date=newSlot.date; bk.start=newSlot.start; bk.dur=newSlot.dur;
+  bk.slotId=newSlot.id; bk.date=newSlot.date; bk.start=bookStart; bk.dur=60;
   bk.itAgentId=newSlot.agentId; bk.itAgentName=newSlot.agentName; bk.meetUrl=meetUrl;
   saveBookings(bookings);
-  console.log('[Slack #IT重説日程調整] 日程変更\n案件:'+caseId+'\n'+fmtDate(newSlot.date)+' '+newSlot.start+'\n重説担当:'+newSlot.agentName+'\nMeet:'+meetUrl);
+  saveSlots(slots);
+  console.log('[Slack #IT重説日程調整] 日程変更\n案件:'+caseId+'\n'+fmtDate(newSlot.date)+' '+bookStart+'\n重説担当:'+newSlot.agentName+'\nMeet:'+meetUrl);
   render();
 }
 
