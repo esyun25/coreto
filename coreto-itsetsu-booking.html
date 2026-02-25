@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IT重説 日程選択 | CORETO</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0b0d12;--card:#141820;--card2:#191e28;--border:#1e2435;--border2:#252c3d;
+  --text:#e4e7f0;--sub:#7a82a0;--muted:#3e4565;
+  --gold:#c9a840;--gold2:#e0bc5a;--green:#34d399;--blue:#4f9cf9;--red:#f87171;
+}
+body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans-serif;
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:24px 16px}
+
+.logo{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--gold);
+  letter-spacing:4px;margin-bottom:4px;text-align:center}
+.logo-sub{font-size:11px;color:var(--muted);text-align:center;margin-bottom:28px}
+
+.container{width:100%;max-width:580px}
+
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;
+  padding:22px;margin-bottom:16px}
+.card-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:var(--gold);
+  margin-bottom:14px;display:flex;align-items:center;gap:8px}
+
+.info-row{display:flex;gap:8px;font-size:11px;line-height:2;margin-bottom:4px}
+.info-label{color:var(--muted);width:72px;flex-shrink:0}
+.info-val{color:var(--text);font-weight:500}
+
+/* 日程グリッド */
+.date-group{margin-bottom:18px}
+.date-hdr{font-size:11px;font-weight:700;color:var(--sub);margin-bottom:8px;
+  padding-bottom:6px;border-bottom:1px solid var(--border)}
+.slots-row{display:flex;flex-wrap:wrap;gap:8px}
+.slot-btn{padding:10px 14px;border-radius:10px;border:1px solid var(--border2);
+  background:var(--card2);color:var(--text);cursor:pointer;font-family:inherit;
+  font-size:12px;transition:.15s;display:flex;flex-direction:column;align-items:center;gap:2px}
+.slot-btn:hover{border-color:var(--gold);background:rgba(201,168,64,.08)}
+.slot-btn.selected{border-color:var(--gold);background:rgba(201,168,64,.12);color:var(--gold2)}
+.slot-time{font-weight:700;font-size:13px}
+.slot-dur{font-size:9px;color:var(--muted)}
+
+.empty-msg{font-size:12px;color:var(--muted);text-align:center;padding:24px;
+  background:var(--card2);border-radius:10px}
+
+/* confirm section */
+.confirm-box{background:rgba(201,168,64,.06);border:1px solid rgba(201,168,64,.25);
+  border-radius:10px;padding:16px;margin-top:16px;display:none}
+.confirm-box.show{display:block}
+.confirm-date{font-size:16px;font-weight:800;color:var(--gold2);margin-bottom:8px}
+.confirm-note{font-size:11px;color:var(--sub);line-height:1.8}
+
+.btn-confirm{width:100%;padding:14px;border-radius:12px;background:linear-gradient(135deg,#c9a840,#e0bc5a);
+  color:#0b0d12;font-family:inherit;font-size:14px;font-weight:800;border:none;cursor:pointer;
+  margin-top:12px;transition:.15s}
+.btn-confirm:hover{opacity:.9}
+.btn-confirm:disabled{opacity:.4;cursor:default}
+
+/* success screen */
+.success{display:none;text-align:center;padding:24px}
+.success.show{display:block}
+.success-icon{font-size:48px;margin-bottom:12px}
+.success-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--green);margin-bottom:8px}
+.success-sub{font-size:12px;color:var(--sub);line-height:1.8}
+.meet-link{display:inline-flex;align-items:center;gap:8px;margin-top:16px;padding:12px 20px;
+  background:rgba(79,156,249,.12);border:1px solid rgba(79,156,249,.35);border-radius:10px;
+  color:var(--blue);text-decoration:none;font-size:13px;font-weight:700;border-radius:10px}
+
+/* error */
+.error-screen{text-align:center;padding:40px 24px}
+.error-icon{font-size:40px;margin-bottom:12px}
+</style>
+</head>
+<body>
+
+<div class="logo">CORETO</div>
+<div class="logo-sub">IT重説 日程選択</div>
+
+<div class="container" id="app">
+  <div style="text-align:center;padding:40px;color:var(--muted)">読み込み中...</div>
+</div>
+
+<script>
+const STORE_KEY   = 'coreto_itsetsu_slots';
+const BOOKING_KEY = 'coreto_itsetsu_bookings';
+
+function loadSlots() {
+  try { return JSON.parse(localStorage.getItem(STORE_KEY) || '[]'); } catch(e) { return []; }
+}
+function loadBookings() {
+  try { return JSON.parse(localStorage.getItem(BOOKING_KEY) || '[]'); } catch(e) { return []; }
+}
+function saveSlots(s)    { localStorage.setItem(STORE_KEY,    JSON.stringify(s)); }
+function saveBookings(b) { localStorage.setItem(BOOKING_KEY,  JSON.stringify(b)); }
+
+// ── URLパラメータ読み取り ──
+const params   = new URLSearchParams(location.search);
+const caseId   = params.get('caseId')   || '';
+const clientName = decodeURIComponent(params.get('client') || '');
+const propName   = decodeURIComponent(params.get('prop')   || '');
+const agentName  = decodeURIComponent(params.get('agent')  || '');
+const agentId    = params.get('agentId') || '';
+
+let selectedSlotId = null;
+
+function render() {
+  const app = document.getElementById('app');
+
+  if (!caseId) {
+    app.innerHTML = `<div class="error-screen">
+      <div class="error-icon">⚠️</div>
+      <div style="font-size:13px;color:var(--muted)">無効なリンクです。<br>担当エージェントにご連絡ください。</div>
+    </div>`;
+    return;
+  }
+
+  const slots = loadSlots()
+    .filter(s => s.status === 'open' && s.date >= new Date().toISOString().slice(0,10))
+    .sort((a,b) => (a.date+a.start).localeCompare(b.date+b.start));
+
+  // Group by date
+  const grouped = {};
+  slots.forEach(s => {
+    if (!grouped[s.date]) grouped[s.date] = [];
+    grouped[s.date].push(s);
+  });
+
+  const DAYS_JP = ['日','月','火','水','木','金','土'];
+
+  app.innerHTML = `
+    <!-- 案件情報 -->
+    <div class="card">
+      <div class="card-title">📋 IT重説のご予約</div>
+      <div class="info-row"><span class="info-label">お名前</span><span class="info-val">${clientName || '—'} 様</span></div>
+      <div class="info-row"><span class="info-label">物件</span><span class="info-val">${propName || '—'}</span></div>
+      <div class="info-row"><span class="info-label">担当</span><span class="info-val">${agentName || '—'}</span></div>
+      <div style="margin-top:12px;padding:10px 12px;background:var(--card2);border-radius:8px;font-size:11px;color:var(--sub);line-height:1.9">
+        以下の空き時間から都合のよい日程をお選びください。<br>
+        選択後、Google Meet のリンクをお送りします。
+      </div>
+    </div>
+
+    <!-- 日程選択 -->
+    <div class="card" id="slot-picker">
+      <div class="card-title">🗓 日程を選択</div>
+      ${Object.keys(grouped).length === 0
+        ? `<div class="empty-msg">現在選択できる空き枠がありません。<br>担当エージェントにご連絡ください。</div>`
+        : Object.entries(grouped).map(([date, daySlots]) => {
+            const d = new Date(date);
+            const label = `${d.getMonth()+1}月${d.getDate()}日（${DAYS_JP[d.getDay()]}）`;
+            return `<div class="date-group">
+              <div class="date-hdr">${label}</div>
+              <div class="slots-row">
+                ${daySlots.map(s => `
+                  <button class="slot-btn" id="slot-${s.id}" onclick="selectSlot('${s.id}')">
+                    <span class="slot-time">${s.start}</span>
+                    <span class="slot-dur">${s.dur}分</span>
+                  </button>`).join('')}
+              </div>
+            </div>`;
+          }).join('')
+      }
+
+      <!-- 確認 -->
+      <div class="confirm-box" id="confirm-box">
+        <div class="confirm-date" id="confirm-date">—</div>
+        <div class="confirm-note">
+          ・選択後、担当エージェントと重説担当者にご連絡が入ります<br>
+          ・Google Meet のURLをメール・Slackでお送りします<br>
+          ・日程変更が必要な場合は担当エージェントまでご連絡ください
+        </div>
+        <button class="btn-confirm" id="btn-confirm" onclick="confirmBooking()">
+          この日程で予約する
+        </button>
+      </div>
+    </div>
+
+    <!-- 成功画面（非表示） -->
+    <div class="success card" id="success-box">
+      <div class="success-icon">✅</div>
+      <div class="success-title">予約完了</div>
+      <div class="success-sub" id="success-detail">—</div>
+      <a class="meet-link" id="meet-link" href="#" target="_blank">🎥 Google Meet に参加する</a>
+    </div>
+  `;
+}
+
+function selectSlot(slotId) {
+  selectedSlotId = slotId;
+  // Update button states
+  document.querySelectorAll('.slot-btn').forEach(b => b.classList.remove('selected'));
+  const btn = document.getElementById('slot-'+slotId);
+  if (btn) btn.classList.add('selected');
+
+  // Update confirm box
+  const slot = loadSlots().find(s => s.id === slotId);
+  if (!slot) return;
+  const d = new Date(slot.date);
+  const DAYS_JP = ['日','月','火','水','木','金','土'];
+  const label = `${d.getMonth()+1}月${d.getDate()}日（${DAYS_JP[d.getDay()]}）${slot.start}〜 （${slot.dur}分）`;
+  document.getElementById('confirm-date').textContent = label;
+  document.getElementById('confirm-box').classList.add('show');
+  document.getElementById('confirm-box').scrollIntoView({behavior:'smooth'});
+}
+
+function confirmBooking() {
+  if (!selectedSlotId) return;
+  const slots = loadSlots();
+  const slot  = slots.find(s => s.id === selectedSlotId);
+  if (!slot || slot.status !== 'open') {
+    alert('この枠はすでに予約されています。別の日程をお選びください。');
+    render();
+    return;
+  }
+
+  // Generate mock Google Meet URL
+  const meetCode = Math.random().toString(36).slice(2,5)+'-'+Math.random().toString(36).slice(2,6)+'-'+Math.random().toString(36).slice(2,5);
+  const meetUrl  = `https://meet.google.com/${meetCode}`;
+
+  // Mark slot as booked
+  slot.status      = 'booked';
+  slot.bookedCase  = caseId;
+  slot.bookedClient = clientName;
+  slot.meetUrl     = meetUrl;
+  slot.bookedAt    = new Date().toISOString();
+  saveSlots(slots);
+
+  // Record booking
+  const bookings = loadBookings();
+  bookings.push({
+    id:          'BK'+Date.now(),
+    slotId:      slot.id,
+    caseId,
+    clientName,
+    propName,
+    agentId,
+    agentName,
+    itAgentId:   slot.agentId,
+    itAgentName: slot.agentName,
+    date:        slot.date,
+    start:       slot.start,
+    dur:         slot.dur,
+    meetUrl,
+    bookedAt:    new Date().toISOString(),
+    notified:    false,
+  });
+  saveBookings(bookings);
+
+  // Mock Slack notification (console log)
+  const d = new Date(slot.date);
+  const DAYS_JP = ['日','月','火','水','木','金','土'];
+  const dateLabel = `${d.getMonth()+1}月${d.getDate()}日（${DAYS_JP[d.getDay()]}）${slot.start}`;
+  const slackMsg = [
+    '━━━━━━━━━━━━━━━━━━━━━━',
+    '📅 *IT重説 予約確定*',
+    '━━━━━━━━━━━━━━━━━━━━━━',
+    `🆔 *案件ID*：${caseId}`,
+    `👤 *クライアント*：${clientName}`,
+    `🏠 *物件*：${propName}`,
+    `📅 *日時*：${dateLabel}（${slot.dur}分）`,
+    `👨‍💼 *重説担当*：${slot.agentName}（${slot.agentId}）`,
+    `👨‍💼 *担当エージェント*：${agentName}（${agentId}）`,
+    `🔗 *Google Meet*：${meetUrl}`,
+    '━━━━━━━━━━━━━━━━━━━━━━',
+    '🕐 '+new Date().toLocaleString('ja-JP'),
+  ].join('\n');
+
+  console.log('[Slack #重説日程調整]\n'+slackMsg);
+
+  // Show success screen
+  document.getElementById('slot-picker').style.display = 'none';
+  const successBox = document.getElementById('success-box');
+  successBox.classList.add('show');
+  document.getElementById('success-detail').innerHTML =
+    `${dateLabel}（${slot.dur}分）<br>重説担当：${slot.agentName}<br>担当エージェント：${agentName}<br><br>Google Meet のリンクをエージェントより共有いたします。`;
+  const meetLink = document.getElementById('meet-link');
+  meetLink.href = meetUrl;
+  meetLink.textContent = '🎥 Google Meet: '+meetUrl;
+}
+
+render();
+</script>
+</body>
+</html>

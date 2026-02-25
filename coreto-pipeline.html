@@ -310,6 +310,8 @@ const SLACK_CH = {
   決済:     '決済完了',
   重説:     'IT重説完了',
   入金:     '入金確認',
+  退職報告: '早期退職報告',
+  重説日程: 'IT重説日程調整',
 };
 
 // 汎用Slack送信（モック: クリップボードコピー + console.log）
@@ -2175,6 +2177,21 @@ function appPassed(id, appId) {
   // cancel other reviewing apps
   c.apps.filter(x=>x.id!==appId&&(x.status==='reviewing'||x.status==='submitted')).forEach(x=>{x.status='cancelled';});
   if(!c.taskDone) c.taskDone={paid:false,itsetsu:false};
+
+  // 重説日程調整リンクを生成
+  const u = window._SESSION || {};
+  const bookingParams = new URLSearchParams({
+    caseId:   c.id,
+    client:   encodeURIComponent(c.name),
+    prop:     encodeURIComponent(a.prop||c.sub||''),
+    agent:    encodeURIComponent(u.name||u.userId||''),
+    agentId:  u.userId||'',
+  });
+  const bookingUrl = location.origin + location.pathname.replace(/[^/]+$/, '')
+    + 'coreto-itsetsu-booking.html?' + bookingParams.toString();
+  c.bookingUrl = bookingUrl;
+
+  // 審査通過 Slack
   slackSend(SLACK_CH.審査, [
     ...slackHeader('✅','審査通過'),
     ...slackCase(c),
@@ -2182,7 +2199,60 @@ function appPassed(id, appId) {
     '🏢 *管理会社*：'+(a.mgmt||'—'),
     ...slackFooter(),
   ]);
+
+  // 重説日程調整 Slack（エージェントへ送付用URL付き）
+  slackSend(SLACK_CH.重説日程, [
+    ...slackHeader('📅','IT重説 日程調整リンク発行'),
+    '🆔 *案件ID*：'+c.id,
+    '👤 *クライアント*：'+c.name,
+    '🏠 *物件*：'+(a.prop||'—'),
+    '👨‍💼 *担当エージェント*：'+(u.name||u.userId||'—'),
+    '─────────────────',
+    '📎 *日程調整URL*（クライアントに送付）：',
+    bookingUrl,
+    '─────────────────',
+    '※ クライアントがこのリンクで日程選択すると重説担当に自動マッチングされ、Google MeetのURLが生成されます',
+    ...slackFooter(),
+  ]);
+
   advance(id, 'invoice', 'approved', todayISO(), a.prop+' 審査通過 → 請求書発行へ');
+
+  // パネルに日程調整リンクを表示（コピーモーダル）
+  setTimeout(() => showBookingLinkModal(c.id, bookingUrl), 300);
+}
+
+function showBookingLinkModal(caseId, url) {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:9999;padding:16px';
+  overlay.innerHTML = `
+    <div style="background:#11141f;border:1px solid #2a3050;border-radius:16px;width:min(440px,100%);font-family:inherit">
+      <div style="padding:16px 20px;border-bottom:1px solid #1e2235">
+        <div style="font-size:14px;font-weight:800;color:#c9a840;font-family:'Syne',sans-serif">📅 IT重説 日程調整リンク</div>
+        <div style="font-size:10px;color:#5a6080;margin-top:2px">クライアントに送付してください</div>
+      </div>
+      <div style="padding:18px 20px">
+        <div style="background:#090b13;border:1px solid #2a3050;border-radius:8px;padding:10px 12px;font-size:10px;
+          font-family:'DM Mono',monospace;color:#a0b0c0;word-break:break-all;margin-bottom:12px;line-height:1.7">
+          ${url}
+        </div>
+        <div style="background:rgba(201,168,64,.06);border:1px solid rgba(201,168,64,.2);border-radius:8px;
+          padding:10px 12px;font-size:11px;color:#a0905a;line-height:1.8;margin-bottom:14px">
+          ① URLをコピーしてクライアントにLINE・メールで送付<br>
+          ② クライアントが日程を選択すると自動でマッチング<br>
+          ③ 重説担当・担当エージェント双方にSlack通知が届きます
+        </div>
+        <div style="display:flex;gap:8px">
+          <button onclick="this.closest('div[style*=fixed]').remove()"
+            style="flex:1;background:transparent;border:1px solid #2a3050;color:#a0a8c0;
+            border-radius:8px;padding:10px;cursor:pointer;font-family:inherit">閉じる</button>
+          <button onclick="navigator.clipboard.writeText('${url.replace(/'/g, "\'")}').then(()=>{this.textContent='✅ コピー済み';setTimeout(()=>this.textContent='📋 URLをコピー',2000)})"
+            style="flex:2;background:rgba(201,168,64,.12);border:1px solid rgba(201,168,64,.35);
+            color:#c9a840;border-radius:8px;padding:10px;cursor:pointer;font-family:inherit;font-weight:700">
+            📋 URLをコピー</button>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
 }
 
 function appRejected(id, appId) {
