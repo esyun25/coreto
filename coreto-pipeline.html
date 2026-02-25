@@ -755,14 +755,14 @@ function stepHR(c) {
   if (c.step === 'payment') {
     html += '<div style="background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.25);border-radius:8px;padding:12px;font-size:11px;margin-bottom:10px">';
     html += '✅ 入社後の在籍確認が必要です。在籍確認完了で第2回報酬が発生します。</div>';
-    html += '<a href="coreto-early-quit.html" target="_blank" class="btn btn-ghost" style="width:100%;justify-content:center;margin-bottom:6px">退職・返金の管理 ↗</a>';
+    html += '<button class="btn btn-ghost" style="width:100%;justify-content:center;margin-bottom:6px;border-color:rgba(248,113,113,.4);color:var(--red)" data-cid="'+c.id+'" onclick="openQuitModal(this.dataset.cid)">⚠️ 退職を報告する</button>';
     html += '<button class="btn btn-green" style="width:100%;justify-content:center" data-cid="'+c.id+'" onclick="hrAdvance(this.dataset.cid,\'done\')">在籍確認完了 → 成約</button>';
   } else if (c.step === 'contract' && accepted) {
     html += '<div style="background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.25);border-radius:8px;padding:12px;font-size:11px;margin-bottom:10px">';
     html += '<strong style="color:var(--green)">'+accepted.name+'</strong> への内定承諾が確定しています。<br>';
     html += '入社日：'+(accepted.startDate||'未定')+'　手数料：'+fmtFee(accepted.fee)+'</div>';
     html += '<button class="btn btn-green" style="width:100%;justify-content:center" data-cid="'+c.id+'" onclick="hrAdvance(this.dataset.cid,\'payment\')">入社確認 → 在籍確認へ</button>';
-    html += '<a href="coreto-early-quit.html" target="_blank" class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;margin-top:6px">⚠️ 早期退職フォローを記録</a>';
+    html += '<button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;margin-top:6px;border-color:rgba(248,113,113,.3);color:var(--red)" data-cid="'+c.id+'" onclick="openQuitModal(this.dataset.cid)">⚠️ 早期退職フォローを記録</button>';
   }
 
   return html;
@@ -909,6 +909,162 @@ function hrCoRemove(cid, coId) {
 }
 
 // 案件全体ステップを応募先の状況から自動更新
+// ══════════════════════════════════════════
+// 退職報告モーダル（エージェント→HQ送信→Slack）
+// ══════════════════════════════════════════
+function openQuitModal(cid) {
+  const c = CASES.find(x => x.id === cid);
+  if (!c) return;
+
+  const accepted = (c.companies||[]).find(x => x.status === 'accepted');
+  const companyName = accepted ? accepted.name : (c.company || '—');
+  const startDate   = accepted ? (accepted.startDate || '') : '';
+  const feeStr      = accepted ? (accepted.fee ? '¥' + parseInt(accepted.fee).toLocaleString() : '') : '';
+
+  const REASONS = [
+    '本人都合（家庭・体調）',
+    '本人都合（待遇・環境への不満）',
+    '本人都合（他社内定）',
+    '会社都合（試用期間満了）',
+    '会社都合（業績悪化・リストラ）',
+    'その他',
+  ];
+
+  const overlay = document.createElement('div');
+  overlay.id = 'quit-modal-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.78);display:flex;align-items:center;justify-content:center;z-index:9999;padding:16px';
+
+  overlay.innerHTML = `
+    <div style="background:#11141f;border:1px solid #3a1f1f;border-radius:16px;width:min(460px,100%);max-height:92vh;overflow-y:auto;font-family:inherit">
+      <div style="padding:16px 20px;border-bottom:1px solid #2a1515;display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-size:15px;font-weight:800;color:#f87171;font-family:'Syne',sans-serif">⚠️ 退職報告</div>
+          <div style="font-size:10px;color:#a06060;margin-top:2px">${c.name} — ${companyName}</div>
+        </div>
+        <button onclick="document.getElementById('quit-modal-overlay').remove()" style="background:transparent;border:none;color:#7a5050;cursor:pointer;font-size:18px;padding:4px 8px">✕</button>
+      </div>
+      <div style="padding:20px">
+
+        <!-- 基本情報（読み取り専用） -->
+        <div style="background:#0d0a0a;border:1px solid #2a1515;border-radius:8px;padding:12px;margin-bottom:16px;font-size:11px;line-height:2;color:#c0a0a0">
+          <div><span style="color:#7a5050">候補者：</span><strong style="color:#f0e0e0">${c.name}</strong></div>
+          <div><span style="color:#7a5050">入社企業：</span>${companyName}</div>
+          ${startDate ? '<div><span style="color:#7a5050">入社日：</span>' + startDate + '</div>' : ''}
+          ${feeStr ? '<div><span style="color:#7a5050">手数料：</span>' + feeStr + '</div>' : ''}
+        </div>
+
+        <!-- 退職日 -->
+        <div class="fi">
+          <label style="color:#f87171">退職日 <span style="color:#f87171">*</span></label>
+          <input type="date" id="qm-quit-date" style="background:#0d0a0a;border-color:#3a1f1f;color:#f0e0e0">
+        </div>
+
+        <!-- 退職理由 -->
+        <div class="fi">
+          <label style="color:#f87171">退職理由 <span style="color:#f87171">*</span></label>
+          <select id="qm-reason" style="width:100%;background:#0d0a0a;border:1px solid #3a1f1f;border-radius:8px;padding:9px 10px;color:#f0e0e0;font-family:inherit;font-size:12px">
+            <option value="">選択してください</option>
+            ${REASONS.map(r => '<option value="' + r + '">' + r + '</option>').join('')}
+          </select>
+        </div>
+
+        <!-- 返金額 -->
+        <div class="fi">
+          <label>返金予定額（税込・円）</label>
+          <input type="number" id="qm-refund" placeholder="例: 1050000　※保証規定に基づき計算" style="background:#0d0a0a;border-color:#3a1f1f;color:#f0e0e0">
+        </div>
+
+        <!-- 退職月数（在籍確認用） -->
+        <div class="fi">
+          <label>在籍期間（ヶ月）</label>
+          <input type="number" id="qm-months" min="0" max="24" placeholder="例: 3" style="background:#0d0a0a;border-color:#3a1f1f;color:#f0e0e0">
+        </div>
+
+        <!-- 詳細メモ -->
+        <div class="fi">
+          <label>詳細・経緯（HQへの申し送り）</label>
+          <textarea id="qm-notes" rows="3" placeholder="候補者から聞いた経緯・企業側の反応・対応状況など"
+            style="width:100%;background:#0d0a0a;border:1px solid #3a1f1f;border-radius:8px;padding:9px 10px;color:#f0e0e0;font-family:inherit;font-size:12px;resize:vertical;box-sizing:border-box"></textarea>
+        </div>
+
+        <!-- 注意書き -->
+        <div style="background:rgba(248,113,113,.06);border:1px solid rgba(248,113,113,.2);border-radius:8px;padding:10px 12px;font-size:10px;color:#c08080;line-height:1.8;margin-bottom:16px">
+          送信後、HQのSlackに通知が届きます。返金処理・保証対応はHQが early-quit 管理ページで行います。
+        </div>
+
+        <div style="display:flex;gap:8px">
+          <button onclick="document.getElementById('quit-modal-overlay').remove()"
+            style="flex:1;background:transparent;border:1px solid #2a1515;color:#a06060;border-radius:8px;padding:11px;cursor:pointer;font-family:inherit">
+            キャンセル
+          </button>
+          <button data-cid="${cid}" onclick="submitQuitReport(this.dataset.cid)"
+            style="flex:2;background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.4);color:#f87171;border-radius:8px;padding:11px;cursor:pointer;font-family:inherit;font-weight:700">
+            ⚠️ HQに送信・Slack通知
+          </button>
+        </div>
+      </div>
+    </div>`;
+
+  document.body.appendChild(overlay);
+  setTimeout(() => document.getElementById('qm-quit-date')?.focus(), 100);
+}
+
+function submitQuitReport(cid) {
+  const c = CASES.find(x => x.id === cid);
+  if (!c) return;
+
+  const quitDate = document.getElementById('qm-quit-date')?.value;
+  const reason   = document.getElementById('qm-reason')?.value;
+  if (!quitDate) { alert('退職日を入力してください'); return; }
+  if (!reason)   { alert('退職理由を選択してください'); return; }
+
+  const refund = document.getElementById('qm-refund')?.value;
+  const months = document.getElementById('qm-months')?.value;
+  const notes  = document.getElementById('qm-notes')?.value.trim();
+
+  const accepted = (c.companies||[]).find(x => x.status === 'accepted');
+  const companyName = accepted ? accepted.name : (c.company || '—');
+  const feeStr = accepted && accepted.fee ? '¥' + parseInt(accepted.fee).toLocaleString() : '未登録';
+  const refundStr = refund ? '¥' + parseInt(refund).toLocaleString() : '未定';
+  const u = window._SESSION || {};
+
+  // 案件ステータス更新
+  c.quitDate   = quitDate;
+  c.quitReason = reason;
+  c.quitRefund = refund ? parseInt(refund) : 0;
+  c.quitMonths = months ? parseInt(months) : 0;
+  c.quitNotes  = notes;
+  c.quitStatus = 'reported';  // HQ確認待ち
+  if (!c.hist) c.hist = [];
+  c.hist.push(today() + ' ⚠️ 退職報告送信（' + reason + '）');
+
+  // 内定承諾企業のステータスを更新
+  if (accepted) {
+    accepted.status = 'resigned';
+    accepted.notes  = (accepted.notes ? accepted.notes + ' / ' : '') + '退職: ' + quitDate;
+  }
+
+  // Slack 通知 → #早期退職報告
+  slackSend(SLACK_CH.退職報告, [
+    ...slackHeader('⚠️', '早期退職報告'),
+    '🆔 *案件ID*：' + c.id,
+    '👤 *候補者*：' + c.name,
+    '🏢 *入社企業*：' + companyName,
+    '📅 *退職日*：' + quitDate + (months ? '（在籍 ' + months + 'ヶ月）' : ''),
+    '📋 *退職理由*：' + reason,
+    '💸 *手数料*：' + feeStr,
+    '💴 *返金予定額*：' + refundStr,
+    notes ? '📝 *経緯・申し送り*：' + notes : null,
+    '👨‍💼 *報告者*：' + (u.name || u.userId || '—'),
+    ...slackFooter(),
+  ]);
+
+  document.getElementById('quit-modal-overlay')?.remove();
+  render();
+  open_case(cid);
+  toast('⚠️ 退職報告をHQに送信しました');
+}
+
 function hrAutoStep(c) {
   if(!c.companies || !c.companies.length) return;
   const cos = c.companies;
