@@ -228,34 +228,39 @@ function sortedAvailableSlots() {
   var demos = [];
   var seed = 99;
   function rnd(){ seed=(seed*1103515245+12345)&0x7fffffff; return seed/0x7fffffff; }
-  // 1日1エージェント、広い対応時間帯で登録（10:00〜19:00など）
-  var dayStarts = ['10:00','09:00','10:00','09:30','10:00','10:00','09:00',
-                   '10:00','09:00','10:00','09:30','10:00','10:00','09:00'];
-  var dayEnds   = ['19:00','20:00','18:00','19:30','20:00','19:00','18:00',
-                   '20:00','19:00','18:30','20:00','19:00','20:00','18:00'];
+  // 1日1〜2スロット、広い対応時間帯で登録
+  // 例: 午前スロット(9:00〜13:00) + 午後スロット(14:00〜20:00) など
+  var slotPatterns = [
+    [{s:'10:00',e:'20:00'}],
+    [{s:'09:00',e:'13:00'},{s:'14:00',e:'19:00'}],
+    [{s:'10:00',e:'18:00'}],
+    [{s:'09:00',e:'20:00'}],
+    [{s:'09:30',e:'12:30'},{s:'13:30',e:'19:30'}],
+    [{s:'10:00',e:'19:00'}],
+    [{s:'09:00',e:'12:00'},{s:'15:00',e:'20:00'}],
+  ];
   for (var dayOff = 1; dayOff <= 14; dayOff++) {
     var d = new Date(today);
     d.setDate(today.getDate() + dayOff);
     var dow = d.getDay();
     if (dow === 0) continue; // 日曜対応なし
-    var agent = agents[Math.floor(rnd() * agents.length)];
     var dateStr = d.toISOString().slice(0,10);
-    var slotId = 'SL'+dateStr.replace(/-/g,'')+agent.id;
-    var startT = dow===6 ? '11:00' : dayStarts[dayOff-1];
-    var endT   = dow===6 ? '17:00' : dayEnds[dayOff-1];
-    // 稀に予約済みスロットを作る（=その日全体がbooked）
-    var isBooked = rnd() < 0.1;
-    demos.push({
-      id: slotId,
-      agentId: agent.id, agentName: agent.name,
-      agentRank: agent.rank, agentItCount: agent.itCount,
-      date: dateStr, start: startT, end: endT, dur: 60,
-      status: isBooked ? 'booked' : 'open',
-      bookedCase: isBooked ? 'R0'+Math.floor(rnd()*90000+10000) : null,
-      bookedClient: isBooked ? ['田中 雄介','佐藤 美咲','鈴木 健太'][Math.floor(rnd()*3)] : null,
-      bookedStart: isBooked ? startT : null, // 予約が入った具体的な開始時刻
-      meetUrl: isBooked ? 'https://meet.google.com/demo-'+slotId.slice(-6) : '',
-      bookingToken: 'BK'+slotId.slice(-6).toUpperCase()
+    // 土曜は1パターン固定、平日はランダム
+    var pattern = dow===6
+      ? [{s:'10:00',e:'17:00'}]
+      : slotPatterns[Math.floor(rnd()*slotPatterns.length)];
+    pattern.forEach(function(seg, si) {
+      var agent = agents[Math.floor(rnd()*agents.length)];
+      var slotId = 'SL'+dateStr.replace(/-/g,'')+si+agent.id;
+      demos.push({
+        id: slotId,
+        agentId: agent.id, agentName: agent.name,
+        agentRank: agent.rank, agentItCount: agent.itCount,
+        date: dateStr, start: seg.s, end: seg.e, dur: 30,
+        status: 'open',
+        bookedCase: null, bookedClient: null,
+        meetUrl: '', bookingToken: 'BK'+slotId.slice(-6).toUpperCase()
+      });
     });
   }
   if (demos.length > 0) saveSlots(demos);
@@ -408,9 +413,8 @@ function renderCalGrid() {
   bookings.forEach(function(b) {
     if (!blockedMap[b.date]) blockedMap[b.date] = {};
     var bStart = toMins(b.start);
-    var bEnd   = bStart + (b.dur || 60);
-    // ブロック対象: bStart-30 〜 bEnd の範囲に重なる30分刻みの開始時刻
-    for (var m = Math.max(0, bStart-30); m < bEnd+30; m += 30) {
+    // 所要時間30〜45分 → 予約開始から75分後まで（前後30分バッファ含む）をブロック
+    for (var m = Math.max(0, bStart-30); m <= bStart+75; m += 30) {
       blockedMap[b.date][m] = true;
     }
   });
@@ -463,7 +467,7 @@ function renderCalGrid() {
 
       // この時間が対応範囲内か（tMins〜tMins+60をカバーするスロットがあるか）
       var avail = (availMap[iso]||[]).filter(function(a){
-        return a.startMins <= tMins && a.endMins >= tMins + 60;
+        return a.startMins <= tMins && a.endMins >= tMins + 30;
       });
       if (!avail.length) {
         return '<td style="'+bg+'" class="'+col+'"><span class="cal-cell-none">×</span></td>';
