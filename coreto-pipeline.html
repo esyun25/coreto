@@ -1251,6 +1251,7 @@ function stepPrekey(c) {
       + h;
   }
 
+  h += contractSentRow(c);
   h += bookingLinkBlock(c);
   return h;
 }
@@ -2316,35 +2317,37 @@ function buildBookingUrl(c) {
 }
 
 // 警告ダイアログ付き発行フロー
+function contractSentRow(c) {
+  if (c.contractSent) {
+    const d = c.contractSentDate || '';
+    return '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;margin-top:8px;'
+      +'background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.2);border-radius:8px">'
+      +'<span style="font-size:16px">✅</span>'
+      +'<div><div style="font-size:12px;color:var(--green);font-weight:700">契約書 発送済み</div>'
+      +(d ? '<div style="font-size:10px;color:var(--muted)">'+d+'</div>' : '')
+      +'</div></div>';
+  }
+  return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;margin-top:8px;'
+    +'background:var(--card2);border:1px solid var(--border);border-radius:8px">'
+    +'<span style="font-size:12px">📦 契約書 発送</span>'
+    +'<button class="btn btn-green btn-sm" data-cid="'+c.id+'" onclick="markContractSent(this.dataset.cid)">発送済みにする</button>'
+    +'</div>';
+}
+
 function bookingLinkBlock(c) {
-  const sent = c.contractSent;
-  const sentDate = c.contractSentDate ? ' （'+c.contractSentDate+'）' : '';
   let html = '<div style="margin-top:12px;padding-top:12px;border-top:1px dashed var(--border2)">';
   html += '<div style="font-size:10px;color:var(--gold-dim,#7a5f22);font-weight:700;margin-bottom:8px;letter-spacing:.05em">📅 重説日程調整リンク</div>';
 
-  if (sent) {
-    html += '<div style="background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.2);border-radius:7px;padding:7px 10px;font-size:10px;color:var(--green);margin-bottom:8px">📨 契約書発送済み'+sentDate+'</div>';
-  } else {
-    html += '<div style="background:rgba(201,168,64,.05);border:1px solid rgba(201,168,64,.15);border-radius:7px;padding:7px 10px;font-size:10px;color:var(--muted);margin-bottom:8px">📦 契約書が未発送です。発送後のリンク発行を推奨しますが、申込後はいつでも発行できます。</div>';
-  }
-
-  // bookingUrl 表示（既に発行済みの場合）
   if (c.bookingUrl) {
+    // 発行済み: URLコピー + 再発行
     html += '<div style="background:var(--card2);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;font-size:10px;word-break:break-all;font-family:monospace;color:var(--blue);margin-bottom:8px">' + c.bookingUrl + '</div>';
     html += '<div style="display:flex;gap:6px">';
     html += '<button class="btn btn-ghost btn-sm" style="flex:1;justify-content:center" data-url="'+c.bookingUrl+'" onclick="copyBookingUrl(this)">📋 コピー</button>';
     html += '<button class="btn btn-ghost btn-sm" style="flex:1;justify-content:center" data-cid="'+c.id+'" onclick="launchBookingLink(this.dataset.cid)">🔄 再発行</button>';
-    if (!sent) {
-      html += '<button class="btn btn-ghost btn-sm" style="flex:1;justify-content:center;border-color:var(--green);color:var(--green)" data-cid="'+c.id+'" onclick="markContractSent(this.dataset.cid)">📦 契約書発送済みにする</button>';
-    }
     html += '</div>';
   } else {
-    html += '<div style="display:flex;gap:6px">';
-    html += '<button class="btn btn-ghost btn-sm" style="flex:1;justify-content:center;border-color:var(--gold);color:var(--gold)" data-cid="'+c.id+'" onclick="launchBookingLink(this.dataset.cid)">📅 日程調整リンクを発行</button>';
-    if (!sent) {
-      html += '<button class="btn btn-ghost btn-sm" style="flex:1;justify-content:center;border-color:var(--green);color:var(--green)" data-cid="'+c.id+'" onclick="markContractSent(this.dataset.cid)">📦 契約書発送済みにする</button>';
-    }
-    html += '</div>';
+    // 未発行
+    html += '<button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;border-color:var(--gold);color:var(--gold)" data-cid="'+c.id+'" onclick="launchBookingLink(this.dataset.cid)">📅 日程調整リンクを発行</button>';
   }
 
   html += '</div>';
@@ -2608,7 +2611,8 @@ function stepInvoice(c) {
     +'<div class="fi"><label style="color:var(--orange)">⚠ 合計が家賃1ヶ月分未満 — 理由を記入してください</label>'
     +'<textarea id="inv-reason" rows="2" placeholder="例: クライアント交渉の結果、手数料を減額。入居率優先のため。" style="font-size:12px;resize:vertical">'+prevReason+'</textarea></div>'
     +'</div>'
-    +'<button class="btn btn-gold" style="width:100%;justify-content:center" data-cid="'+id+'" onclick="issueInvoice(this.dataset.cid)">📄 請求書発行 → 重説・入金へ</button>';
+    +'<button class="btn btn-gold" style="width:100%;justify-content:center" data-cid="'+id+'" onclick="issueInvoice(this.dataset.cid)">📄 請求書発行 → 重説・入金へ</button>'
+    + contractSentRow(c);
 }
 
 // ═══════════════════════════════════════════════
