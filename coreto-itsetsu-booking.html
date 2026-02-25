@@ -216,7 +216,11 @@ function sortedAvailableSlots() {
 
 // ── Demo data seed (schedule.html未訪問でも動作するよう) ──
 (function(){
-  if (loadSlots().length > 20) return;
+  var DEMO_VER = 'v4'; // ← バージョン変えると強制リセット
+  if (localStorage.getItem('coreto_demo_ver') === DEMO_VER && loadSlots().length > 5) return;
+  localStorage.setItem('coreto_demo_ver', DEMO_VER);
+  localStorage.removeItem('coreto_itsetsu_slots');
+  localStorage.removeItem('coreto_itsetsu_bookings');
   var today = new Date();
   var agents = [
     { id: '10012', name: '山田 誠',   rank: 'Gold',     itCount: 2 },
@@ -239,6 +243,19 @@ function sortedAvailableSlots() {
     [{s:'10:00',e:'19:00'}],
     [{s:'09:00',e:'12:00'},{s:'15:00',e:'20:00'}],
   ];
+  // 今日（2/25）の固定デモスロット
+  (function(){
+    var todayStr = today.toISOString().slice(0,10);
+    demos.push({
+      id: 'SL'+todayStr.replace(/-/g,'')+'0'+agents[0].id,
+      agentId: agents[0].id, agentName: agents[0].name,
+      agentRank: agents[0].rank, agentItCount: agents[0].itCount,
+      date: todayStr, start: '12:00', end: '20:00', dur: 30,
+      status: 'open', bookedCase: null, bookedClient: null,
+      meetUrl: '', bookingToken: 'BKTODAY0'
+    });
+  })();
+
   for (var dayOff = 1; dayOff <= 14; dayOff++) {
     var d = new Date(today);
     d.setDate(today.getDate() + dayOff);
@@ -413,10 +430,9 @@ function renderCalGrid() {
   bookings.forEach(function(b) {
     if (!blockedMap[b.date]) blockedMap[b.date] = {};
     var bStart = toMins(b.start);
-    // 所要時間30〜45分 → 予約開始から75分後まで（前後30分バッファ含む）をブロック
-    for (var m = Math.max(0, bStart-30); m <= bStart+75; m += 30) {
-      blockedMap[b.date][m] = true;
-    }
+    // 選択時間 + その30分後のみブロック（所要時間考慮）
+    blockedMap[b.date][bStart]    = true;
+    blockedMap[b.date][bStart+30] = true;
   });
 
   var weekDates = getWeekDates(calWeekOffset);
