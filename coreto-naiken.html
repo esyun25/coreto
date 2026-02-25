@@ -248,20 +248,12 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
       </div>
     </div>
 
-    <div class="s-label">担当エージェント（名刺部分に反映）</div>
-    <div class="agent-cards" id="agent-cards">
-      <!-- JS生成 -->
+    <div class="s-label">担当者（名刺部分に反映）</div>
+    <div id="agent-display" style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:11px;line-height:1.8;margin-bottom:6px;color:var(--sub)">
+      <!-- セッションから自動設定 -->
     </div>
 
     <div class="s-label">Slackリマインド設定</div>
-    <div class="fg">
-      <label>送付チャンネル</label>
-      <select id="slack-channel">
-        <option value="#案件管理">#案件管理（本部）</option>
-        <option value="#エージェント専用">#エージェント専用</option>
-        <option value="DM">担当エージェントへDM</option>
-      </select>
-    </div>
     <div class="row2">
       <div class="fg">
         <label>リマインド（前日）</label>
@@ -427,14 +419,59 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
 (function() {
   const _S = JSON.parse(sessionStorage.getItem('coreto_session') || 'null');
   if (!_S) return;
+
+  // セッションからエージェント情報を selectedAgent にセット
+  selectedAgent = {
+    id:      _S.userId  || '—',
+    name:    _S.name    || '担当者名',
+    tel:     _S.tel     || '03-XXXX-XXXX',
+    mobile:  _S.mobile  || '080-XXXX-XXXX',
+    license: _S.license || '東京都知事(X)第XXXXX号',
+  };
+
   window.addEventListener('DOMContentLoaded', () => {
-    // マイページへ戻るリンクをタブバーに追加
+    // ① 担当者表示を更新（agent-display div）
+    const disp = document.getElementById('agent-display');
+    if (disp) {
+      disp.innerHTML =
+        '<strong style="color:var(--text)">' + selectedAgent.name + '</strong>'
+        + '　<span style="color:var(--muted);font-size:10px">ID: ' + selectedAgent.id + '</span><br>'
+        + '<span style="color:var(--muted)">携帯: </span>' + selectedAgent.mobile + '　'
+        + '<span style="color:var(--muted)">Tel: </span>' + selectedAgent.tel;
+      updatePreview();
+    }
+
+    // ② URLパラメータから案件情報を自動入力
+    // pipeline から ?prop=物件名&mgmt=管理会社&date=YYYY-MM-DD&caseId=XXX で起動
+    const params = new URLSearchParams(location.search);
+    if (params.get('prop')) {
+      const propEl = document.getElementById('prop-name');
+      if (propEl) { propEl.value = params.get('prop'); }
+    }
+    if (params.get('mgmt')) {
+      const mgmtEl = document.getElementById('mgmt-company');
+      if (mgmtEl) { mgmtEl.value = params.get('mgmt'); }
+    }
+    if (params.get('date')) {
+      const dateEl = document.getElementById('naiken-date');
+      if (dateEl) { dateEl.value = params.get('date'); }
+    }
+    if (params.get('caseId')) {
+      // ページタイトル補足表示
+      const titleEl = document.querySelector('.panel-title');
+      if (titleEl) titleEl.textContent = '内見依頼書 情報入力　（案件: ' + params.get('caseId') + '）';
+    }
+    if (params.get('prop') || params.get('mgmt')) updatePreview();
+
+    // ③ タブバーに戻るボタン追加
     const tabs = document.querySelector('.tabs');
     if (tabs) {
       const back = document.createElement('div');
       back.style.cssText = 'margin-left:auto;padding:0 16px;display:flex;align-items:center;gap:10px';
-      back.innerHTML = '<span style="font-size:10px;color:var(--muted)">👤 '+_S.name+'</span>' +
-        '<button onclick="location.href=\'coreto-hub.html\'" style="font-size:10px;padding:4px 10px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;font-family:sans-serif">← マイページ</button>';
+      const backUrl = params.get('caseId') ? 'coreto-pipeline.html' : 'coreto-hub.html';
+      const backLabel = params.get('caseId') ? '← 案件管理へ戻る' : '← マイページ';
+      back.innerHTML = '<span style="font-size:10px;color:var(--muted)">👤 ' + _S.name + '</span>' +
+        '<button onclick="location.href=\'' + backUrl + '\'" style="font-size:10px;padding:4px 10px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;font-family:sans-serif">' + backLabel + '</button>';
       tabs.appendChild(back);
     }
   });
@@ -481,7 +518,8 @@ const CUSTOMER_MAP = {
   'CL-00023':'鈴木 健一','CL-00047':'田中 美咲'
 };
 
-let selectedAgent = AGENTS[0];
+// selectedAgent はセッションから初期化（session load セクション参照）
+let selectedAgent = { id:'—', name:'—', tel:'—', mobile:'—', license:'—' };
 let dbFilter_current = 'all';
 
 // ── タブ切替 ──
@@ -491,27 +529,10 @@ function switchTab(i){
   if(i===1) renderDb();
 }
 
-// ── エージェントカード生成 ──
-function renderAgentCards(){
-  document.getElementById('agent-cards').innerHTML = AGENTS.map((ag,i)=>`
-    <div class="agent-card${i===0?' selected':''}" onclick="selectAgent(${i},this)" data-i="${i}">
-      <div class="ac-name">${ag.name}</div>
-      <div class="ac-id">${ag.id}</div>
-      <div class="ac-info">
-        📱 ${ag.mobile}<br>
-        🏠 ${ag.license}
-      </div>
-      <div class="ac-rank" style="${RANK_COLORS[ag.rank]}">${ag.rank}</div>
-    </div>
-  `).join('');
-}
+// renderAgentCards は不使用（session から自動設定）
+function renderAgentCards(){ /* no-op */ }
 
-function selectAgent(i, el){
-  selectedAgent = AGENTS[i];
-  document.querySelectorAll('.agent-card').forEach(c=>c.classList.remove('selected'));
-  el.classList.add('selected');
-  updatePreview();
-}
+function selectAgent(i, el){ /* no-op */ }
 
 // ── 顧客選択時の自動入力 ──
 function fillCustomerInfo(clientId, clientName){

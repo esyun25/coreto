@@ -1104,7 +1104,7 @@ function stepNaiken(c) {
   return '<div class="step-title">🏠 内見</div>'
     +'<div class="fi"><label>内見日</label><input type="date" id="s-naiken-date" class="mono" value="'+dateVal+'"></div>'
     +'<div class="fi"><label>物件名</label><input type="text" id="s-naiken-prop" placeholder="〇〇マンション 1LDK" value="'+(c.dates.naikenProp||'')+'"></div>'
-    +'<button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:10px;border-color:var(--gold);color:var(--gold)" onclick="openNaikenDoc(\''+c.id+'\')">📄 内見依頼書を発行（FAX印刷）</button>'
+    +'<button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:10px;border-color:var(--gold);color:var(--gold)" onclick="launchNaikenPage(\''+c.id+'\')">📄 内見依頼書を発行（FAX印刷）</button>'
     +'<div class="row" style="margin-top:8px">'
     +'<button class="btn btn-green" onclick="naikenDone(\''+c.id+'\')">✓ 内見完了 → 申込へ</button>'
     +'<button class="btn btn-red" onclick="naikenSkip(\''+c.id+'\')">見送り</button>'
@@ -1214,7 +1214,7 @@ function stepSaleNaiken(c) {
   return '<div class="step-title">🏠 内見（売買）</div>'
     +'<div class="fi"><label>物件名</label><input type="text" id="s-sale-prop" value="'+(c.dates.naikenProp||'')+'" placeholder="〇〇マンション 101号"></div>'
     +'<div class="fi"><label>内見日</label><input type="date" id="s-naiken-date" class="mono" value="'+val+'"></div>'
-    +'<button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:10px;border-color:var(--gold);color:var(--gold)" onclick="openNaikenDoc(\''+c.id+'\')">📄 内見依頼書を発行（FAX印刷）</button>'
+    +'<button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:10px;border-color:var(--gold);color:var(--gold)" onclick="launchNaikenPage(\''+c.id+'\')">📄 内見依頼書を発行（FAX印刷）</button>'
     +'<div style="display:flex;gap:8px;margin-top:8px">'
     +(c.type==='sannai'
       ? '<button class="btn btn-green" style="flex:1;justify-content:center" data-cid="'+c.id+'" onclick="sannaiNaikenDone(this.dataset.cid)">内見完了 → 業者確認へ</button>'
@@ -1898,6 +1898,25 @@ function naikenSkip(id) {
 // ══════════════════════════════════════════
 // 内見依頼書発行モーダル
 // ══════════════════════════════════════════
+// ── 内見依頼書ページを案件情報付きで起動 ──
+function launchNaikenPage(cid) {
+  const c = CASES.find(x => x.id === cid);
+  if (!c) return;
+
+  // 物件名・内見日はパネルの入力値を優先、なければcaseから取得
+  const propEl = document.getElementById('s-sale-prop') || document.getElementById('s-naiken-prop');
+  const dateEl = document.getElementById('s-naiken-date');
+  const prop   = (propEl && propEl.value.trim()) || c.sub || '';
+  const date   = (dateEl && dateEl.value) || c.dates?.naiken || '';
+
+  const params = new URLSearchParams();
+  params.set('caseId', cid);
+  if (prop) params.set('prop', prop);
+  if (date) params.set('date', date);
+
+  location.href = 'coreto-naiken.html?' + params.toString();
+}
+
 function openNaikenDoc(cid) {
   const c = CASES.find(x => x.id === cid);
   const u = window._SESSION || {};
