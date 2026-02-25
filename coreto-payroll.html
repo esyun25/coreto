@@ -316,28 +316,31 @@ html,body{height:100%;font-family:'Noto Sans JP',sans-serif;background:var(--bg)
 
 // ─── デモ データ ─────────────────────────────────────────────────
 const yen = v => '¥' + Math.round(v).toLocaleString();
+const IT_FEE_UNIT = 2000; // IT重説対応費用 2,000円/件（固定）
+
 const AGENTS = [
-  {id:'10012',name:'山田 誠',   type:'re',rank:'Gold',    cases:5, gross:1200000, fee:0, adj:0, bank:'GMOあおぞら···4567', itCount:4, itFee:6000, sennin:true},
-  {id:'10008',name:'佐藤 花子', type:'re',rank:'Platinum',cases:8, gross:1800000, fee:0, adj:0, bank:'三菱UFJ···3210', itCount:6, itFee:5000, sennin:true},
-  {id:'10023',name:'鈴木 健太', type:'re',rank:'Silver',  cases:3, gross:720000,  fee:490, adj:5000, bank:'楽天···8877', itCount:2, itFee:4500, sennin:false},
-  {id:'10041',name:'渡辺 隆',   type:'re',rank:'Bronze',  cases:1, gross:240000,  fee:980, adj:0, bank:'ゆうちょ···2345', itCount:1, itFee:5000, sennin:true},
-  {id:'20005',name:'田中 美穂', type:'hr',rank:'Gold',    cases:4, gross:860000,  fee:0, adj:0, bank:'PayPay···7654', itCount:0, itFee:0, sennin:false},
+  {id:'10012',name:'山田 誠',   type:'re',rank:'Gold',    cases:5, gross:1200000, fee:0, adj:0, bank:'GMOあおぞら···4567', itCount:4, sennin:true},
+  {id:'10008',name:'佐藤 花子', type:'re',rank:'Platinum',cases:8, gross:1800000, fee:0, adj:0, bank:'三菱UFJ···3210', itCount:6, sennin:true},
+  {id:'10023',name:'鈴木 健太', type:'re',rank:'Silver',  cases:3, gross:720000,  fee:490, adj:5000, bank:'楽天···8877', itCount:2, sennin:false},
+  {id:'10041',name:'渡辺 隆',   type:'re',rank:'Bronze',  cases:1, gross:240000,  fee:980, adj:0, bank:'ゆうちょ···2345', itCount:1, sennin:true},
+  {id:'20005',name:'田中 美穂', type:'hr',rank:'Gold',    cases:4, gross:860000,  fee:0, adj:0, bank:'PayPay···7654', itCount:0, sennin:false},
 ];
 
 function calcRow(ag) {
-  const total = ag.gross - ag.fee + ag.adj;
-  const tax   = total <= 1000000 ? Math.floor(total*0.1021) : Math.floor(1000000*0.1021+(total-1000000)*0.2042);
-  const net   = total - tax;
-  return { total, tax, net };
+  const itTotal = (ag.itCount || 0) * IT_FEE_UNIT;
+  const total   = ag.gross - ag.fee + ag.adj + itTotal;
+  const tax     = total <= 1000000 ? Math.floor(total*0.1021) : Math.floor(1000000*0.1021+(total-1000000)*0.2042);
+  const net     = total - tax;
+  return { total, tax, net, itTotal };
 }
 
 function renderTable() {
   const tbody = document.getElementById('payroll-body');
-  let totCases=0, totGross=0, totFee=0, totAdj=0, totTotal=0, totTax=0, totNet=0;
+  let totCases=0, totGross=0, totFee=0, totAdj=0, totTotal=0, totTax=0, totNet=0, totIT=0;
   tbody.innerHTML = AGENTS.map(ag => {
-    const {total,tax,net} = calcRow(ag);
+    const {total,tax,net,itTotal} = calcRow(ag);
     totCases+=ag.cases; totGross+=ag.gross; totFee+=ag.fee; totAdj+=ag.adj;
-    totTotal+=total; totTax+=tax; totNet+=net;
+    totTotal+=total; totTax+=tax; totNet+=net; totIT+=(itTotal||0);
     const rankColor = {Gold:'var(--gold)',Platinum:'var(--purple)',Silver:'#c0c0c0',Bronze:'#cd7f32'}[ag.rank]||'var(--sub)';
     return `<tr>
       <td class="mono">${ag.id}</td>
@@ -347,7 +350,7 @@ function renderTable() {
       <td class="mono">${ag.cases}件</td>
       <td class="mono">${yen(ag.gross)}</td>
       <td class="mono" style="color:var(--red)">-${yen(ag.fee)}</td>
-      <td class="mono" style="color:var(--purple)">${ag.itCount>0 ? '+'+yen((ag.itCount||0)*(ag.itFee||0))+"（"+ag.itCount+"件）" : "—"}</td>
+      <td class="mono" style="color:var(--purple)">${ag.itCount>0 ? '+'+yen((ag.itCount||0)*IT_FEE_UNIT)+'（'+ag.itCount+'件 × ¥2,000）' : '—'}</td>
       <td><input type="number" value="${ag.adj}" step="1000"
                  onchange="AGENTS.find(a=>a.id==='${ag.id}').adj=+this.value; recalcAll()"
                  style="width:90px"></td>

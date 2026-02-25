@@ -531,11 +531,11 @@ const USERS = {
   '00001':{ name:'HQ 統括',        type:'hq', hqRole:'exec',    pw:'coreto2026', color:'var(--gold)',   avatar:'統' },
   '00347':{ name:'HQ マネージャー',type:'hq', hqRole:'manager', pw:'coreto2026', color:'var(--blue)',   avatar:'マ' },
   '00891':{ name:'HQ スタッフ',    type:'hq', hqRole:'staff',   pw:'coreto2026', color:'var(--green)',  avatar:'ス' },
-  '10008':{ name:'佐藤 花子', type:'re', rank:'Platinum', rankKey:'platinum', pw:'coreto2026', color:'var(--purple)', avatar:'佐' },
-  '10012':{ name:'山田 誠',   type:'re', rank:'Gold',     rankKey:'gold',     pw:'coreto2026', color:'var(--gold)',   avatar:'山' },
-  '10023':{ name:'鈴木 健太', type:'re', rank:'Silver',   rankKey:'silver',   pw:'coreto2026', color:'var(--green)',  avatar:'鈴' },
-  '10041':{ name:'渡辺 隆',   type:'re', rank:'Bronze',   rankKey:'bronze',   pw:'coreto2026', color:'var(--orange)', avatar:'渡' },
-  '20005':{ name:'田中 美穂', type:'hr', rank:'Gold',     rankKey:'gold',     pw:'coreto2026', color:'var(--green)',  avatar:'田' },
+  '10008':{ name:'佐藤 花子', type:'re', rank:'Platinum', rankKey:'platinum', pw:'coreto2026', color:'var(--purple)', avatar:'佐', sennin:true  },
+  '10012':{ name:'山田 誠',   type:'re', rank:'Gold',     rankKey:'gold',     pw:'coreto2026', color:'var(--gold)',   avatar:'山', sennin:true  },
+  '10023':{ name:'鈴木 健太', type:'re', rank:'Silver',   rankKey:'silver',   pw:'coreto2026', color:'var(--green)',  avatar:'鈴', sennin:false },
+  '10041':{ name:'渡辺 隆',   type:'re', rank:'Bronze',   rankKey:'bronze',   pw:'coreto2026', color:'var(--orange)', avatar:'渡', sennin:true  },
+  '20005':{ name:'田中 美穂', type:'hr', rank:'Gold',     rankKey:'gold',     pw:'coreto2026', color:'var(--green)',  avatar:'田', sennin:false },
   '30007':{ name:'佐藤 美咲', type:'pt', rank:'Partner',  rankKey:'pt',       pw:'coreto2026', color:'var(--purple)', avatar:'佐' },
 };
 
@@ -549,7 +549,11 @@ let currentPage = 'dashboard';
 (function(){
   const s = JSON.parse(sessionStorage.getItem('coreto_session') || 'null');
   if(s && USERS[s.userId] && USERS[s.userId].type === s.type) {
-    session = {...USERS[s.userId], userId: s.userId, hqRole: s.hqRole || USERS[s.userId]?.hqRole || null};
+    // Merge sennin overrides from localStorage (HQが変更した場合)
+    const senninOverrides = JSON.parse(localStorage.getItem('coreto_sennin_overrides') || '{}');
+    const baseSennin = USERS[s.userId]?.sennin || false;
+    const senninVal  = (s.userId in senninOverrides) ? senninOverrides[s.userId] : baseSennin;
+    session = {...USERS[s.userId], userId: s.userId, hqRole: s.hqRole || USERS[s.userId]?.hqRole || null, sennin: senninVal};
     document.getElementById('login-screen').style.display = 'none';
     initShell();
   }
@@ -649,6 +653,8 @@ function buildSidebar() {
       if(item.ext) {
         // External pages: use same-tab to preserve sessionStorage
         el.onclick = () => { location.href = item.url; };
+      } else if(item.onclick) {
+        el.onclick = () => eval(item.onclick);
       } else if(item.id === 'ref-link') {
         el.onclick = () => openRefModal();
       } else {
@@ -702,6 +708,7 @@ function getSidebarNav() {
         { id:'codes',      icon:'🔖', label:'紹介コード管理', url:'coreto-codes.html', ext:true },
         { id:'pt-mgmt',    icon:'🤝', label:'パートナー管理', url:'coreto-partner.html', ext:true },
         { id:'rbac',       icon:'🛡', label:'権限管理', url:'coreto-admin-rbac.html', ext:true },
+        { id:'sennin-mgmt', icon:'🔖', label:'専任宅建士 管理', onclick:'openSenninMgmt()' },
       ]});
     }
 
@@ -724,8 +731,10 @@ function getSidebarNav() {
       ]},
       { section:'案件業務', items:[
         { id:'pipeline',   icon:'📋', label:'案件管理', url:'coreto-pipeline.html', ext:true },
-                { id:'it-setsu',   icon:'📝', label:'IT重説・契約書', url:'coreto-it-setsu.html', ext:true },
-                { id:'it-schedule', icon:'📅', label:'重説スケジュール', url:'coreto-itsetsu-schedule.html', ext:true },
+        ...(session.sennin ? [
+          { id:'it-setsu',   icon:'📝', label:'IT重説・契約書', url:'coreto-it-setsu.html', ext:true },
+          { id:'it-schedule', icon:'📅', label:'重説スケジュール', url:'coreto-itsetsu-schedule.html', ext:true },
+        ] : []),
         { id:'batch-close',icon:'🎯', label:'成約報告', url:'coreto-batch-close.html', ext:true },
       ]},
       { section:'報酬・支払い', items:[
@@ -812,6 +821,73 @@ function goPage(pageId) {
 // ════════════════════════════════════════════════════════════
 //  CONTENT BUILDER
 // ════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════
+// 専任宅建士 管理モーダル (HQ専用)
+// ══════════════════════════════════════════════
+function openSenninMgmt() {
+  const overrides = JSON.parse(localStorage.getItem('coreto_sennin_overrides') || '{}');
+  const agents = Object.entries(USERS)
+    .filter(([id, u]) => u.type === 're' || u.type === 'hr')
+    .map(([id, u]) => {
+      const base = u.sennin || false;
+      const cur  = (id in overrides) ? overrides[id] : base;
+      return { id, name: u.name, type: u.type.toUpperCase(), rank: u.rank || '', cur };
+    });
+
+  const rows = agents.map(a => {
+    const checked = a.cur ? 'checked' : '';
+    const badge   = a.cur
+      ? '<span style="font-size:9px;padding:1px 7px;border-radius:10px;background:rgba(167,139,250,.15);color:#a78bfa">専任</span>'
+      : '<span style="font-size:9px;padding:1px 7px;border-radius:10px;background:rgba(62,69,101,.3);color:#5a6280">一般</span>';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid #1e2435">
+      <div style="min-width:52px;font-family:'DM Mono',monospace;font-size:10px;color:#7a82a0">${a.id}</div>
+      <div style="flex:1;font-size:12px;font-weight:700">${a.name}</div>
+      <div style="font-size:10px;color:#5a6280">${a.type} / ${a.rank}</div>
+      ${badge}
+      <label style="position:relative;display:inline-block;width:36px;height:20px;flex-shrink:0">
+        <input type="checkbox" ${checked} data-uid="${a.id}"
+          style="opacity:0;width:0;height:0;position:absolute"
+          onchange="toggleSennin('${a.id}',this.checked)">
+        <span style="position:absolute;inset:0;background:${a.cur?'rgba(167,139,250,.7)':'#1e2435'};border-radius:20px;transition:.2s;cursor:pointer"
+          id="sw-${a.id}">
+          <span style="position:absolute;left:${a.cur?'18':'2'}px;top:2px;width:16px;height:16px;background:white;border-radius:50%;transition:.2s" id="sw-knob-${a.id}"></span>
+        </span>
+      </label>
+    </div>`;
+  }).join('');
+
+  const overlay = document.createElement('div');
+  overlay.id = 'sennin-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;z-index:9999;padding:16px';
+  overlay.innerHTML = `
+    <div style="background:#11141f;border:1px solid #2a3050;border-radius:16px;width:min(480px,100%);max-height:80vh;display:flex;flex-direction:column;font-family:'Noto Sans JP',sans-serif">
+      <div style="padding:16px 20px;border-bottom:1px solid #1e2435;display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:#c9a840">🔖 専任宅建士 管理</div>
+          <div style="font-size:10px;color:#5a6280;margin-top:2px">有効にすると IT重説・スケジュール管理 タブが表示されます</div>
+        </div>
+        <button onclick="document.getElementById('sennin-overlay').remove()"
+          style="background:transparent;border:none;color:#5a6280;font-size:20px;cursor:pointer;padding:4px 8px">✕</button>
+      </div>
+      <div style="overflow-y:auto;flex:1">${rows}</div>
+      <div style="padding:12px 16px;border-top:1px solid #1e2435;font-size:10px;color:#5a6280">
+        ※ 変更は即時反映されます。エージェントが再ログイン後にナビが更新されます。
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+function toggleSennin(uid, val) {
+  const overrides = JSON.parse(localStorage.getItem('coreto_sennin_overrides') || '{}');
+  overrides[uid] = val;
+  localStorage.setItem('coreto_sennin_overrides', JSON.stringify(overrides));
+  // Update toggle visual immediately
+  const sw = document.getElementById('sw-' + uid);
+  const knob = document.getElementById('sw-knob-' + uid);
+  if (sw) sw.style.background = val ? 'rgba(167,139,250,.7)' : '#1e2435';
+  if (knob) knob.style.left = val ? '18px' : '2px';
+}
+
 function buildContent() {
   const cnt = document.getElementById('content');
   cnt.innerHTML = '';

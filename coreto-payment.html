@@ -276,6 +276,18 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
   <div id="mentor-list"></div>
   <button class="add-case-btn" style="margin-top:0" onclick="addMentor()">＋ メンター報酬を追加</button>
 
+  <!-- IT重説対応費用 -->
+  <div class="ed-title" style="margin-top:16px">IT重説 対応費用</div>
+  <div style="display:flex;align-items:center;gap:10px;margin-top:6px">
+    <label style="font-size:11px;color:#666;white-space:nowrap">対応件数</label>
+    <input type="number" id="it-count" min="0" value="0" step="1"
+      style="width:80px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:12px"
+      onchange="generate()">
+    <span style="font-size:11px;color:#888">件 × ¥2,000 =</span>
+    <span id="it-fee-display" style="font-size:13px;font-weight:700;color:#5a3ea0">¥0</span>
+  </div>
+  <div style="font-size:10px;color:#aaa;margin-top:4px">※ IT重説担当として対応した件数を入力してください</div>
+
 </div>
 
 <!-- ─ Right Preview ─ -->
@@ -339,7 +351,7 @@ window.addEventListener('DOMContentLoaded', () => {
     // Add agent header
     const agHeader = document.createElement('div');
     agHeader.style.cssText = 'padding:14px 28px;background:rgba(52,211,153,.06);border-bottom:1px solid rgba(52,211,153,.15);font-size:12px;color:var(--sub);display:flex;align-items:center;justify-content:space-between';
-    agHeader.innerHTML = '<span>📄 支払明細書</span><span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">印刷：ブラウザのCtrl+P / ⌘+P</span>';
+    agHeader.innerHTML = `<span>📄 支払明細書</span><span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">印刷：ブラウザのCtrl+P / ⌘+P</span>`;
     document.querySelector('.preview').insertBefore(agHeader, document.querySelector('.preview').firstChild);
   }
 });
@@ -564,7 +576,12 @@ function generate() {
   const totalNet        = computed.reduce((s,c)=>s+c.calc.net,   0);
   const totalPayMonth   = computed.reduce((s,c)=>s+c.calc.payThisMonth, 0);
   const totalMentor     = mentors.reduce((s,m)=>s+(m.reward||0), 0);
-  const finalTransfer   = totalPayMonth + totalMentor - mFee;
+  const itCount         = parseInt(document.getElementById('it-count').value) || 0;
+  const itFeeTotal      = itCount * 2000;
+  const finalTransfer   = totalPayMonth + totalMentor + itFeeTotal - mFee;
+  // Update IT fee display
+  const itDisp = document.getElementById('it-fee-display');
+  if (itDisp) itDisp.textContent = '¥' + itFeeTotal.toLocaleString();
 
   // Case rows HTML
   const caseRowsHTML = computed.map((c, i) => {
@@ -647,8 +664,12 @@ function generate() {
       </div>
       <div class="ss-item">
         <div class="ss-label">報酬合計（税抜）</div>
-        <div class="ss-val">${yen(totalGross + totalMentor)}</div>
+        <div class="ss-val">${yen(totalGross + totalMentor + itFeeTotal)}</div>
       </div>
+      ${itFeeTotal > 0 ? `<div class="ss-item" style="border-left:2px solid #7c3aed">
+        <div class="ss-label">IT重説（${itCount}件）</div>
+        <div class="ss-val" style="color:#7c3aed">+${yen(itFeeTotal)}</div>
+      </div>` : ''}
       <div class="ss-item" style="border-left:2px solid #1a6b3a">
         <div class="ss-label">振込額</div>
         <div class="ss-val big">${yen(Math.max(0, finalTransfer))}</div>
@@ -685,6 +706,7 @@ function generate() {
         <span class="bk-val" style="color:#5a3ea0">${yen(totalPayMonth)}</span>
       </div>` : ''}
       ${totalMentor > 0 ? `<div class="bk-row"><span class="bk-label">🎓 メンター報酬合計</span><span class="bk-val">+${yen(totalMentor)}</span></div>` : ''}
+      ${itFeeTotal > 0 ? `<div class="bk-row" style="background:#f5f0ff"><span class="bk-label" style="color:#5a3ea0">📋 IT重説対応費用（${itCount}件 × ¥2,000）</span><span class="bk-val" style="color:#5a3ea0">+${yen(itFeeTotal)}</span></div>` : ''}
       ${mFee > 0 ? `<div class="bk-row"><span class="bk-label">月会費（${r.label}）</span><span class="bk-val bk-minus">-${yen(mFee)}</span></div>` : ''}
       <div class="bk-row bk-total">
         <span class="bk-label">振込額</span>
