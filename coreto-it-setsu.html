@@ -1015,6 +1015,39 @@ window.addEventListener('DOMContentLoaded', () => {
 // ================================================================
 //  Case list
 // ================================================================
+// ── HQ予約管理 ──
+function hqResetChangeCount(caseId) {
+  try {
+    var bookings = JSON.parse(localStorage.getItem('coreto_itsetsu_bookings')||'[]');
+    var bk = bookings.find(function(b){ return b.caseId===caseId && b.status!=='cancelled'; });
+    if (!bk) { alert('アクティブな予約が見つかりません'); return; }
+    bk.changeCount = 0;
+    localStorage.setItem('coreto_itsetsu_bookings', JSON.stringify(bookings));
+    renderCaseHeader();
+    alert('✅ 変更回数をリセットしました');
+  } catch(e) { alert('エラー: '+e.message); }
+}
+function hqForceCancel(caseId) {
+  try {
+    if (!confirm('【本部権限】この予約を強制キャンセルしますか？\nクライアントには担当から連絡してください。')) return;
+    var bookings = JSON.parse(localStorage.getItem('coreto_itsetsu_bookings')||'[]');
+    var bk = bookings.find(function(b){ return b.caseId===caseId && b.status!=='cancelled'; });
+    if (!bk) { alert('アクティブな予約が見つかりません'); return; }
+    // Release slot
+    var slots = JSON.parse(localStorage.getItem('coreto_itsetsu_slots')||'[]');
+    var slot = slots.find(function(s){ return s.id===bk.slotId; });
+    if (slot) {
+      slot.status='open'; slot.bookedCase=null; slot.bookedClient=null;
+      slot.meetUrl=''; slot.bookedAt=null;
+      localStorage.setItem('coreto_itsetsu_slots', JSON.stringify(slots));
+    }
+    bk.status='cancelled'; bk.cancelledAt=new Date().toISOString(); bk.cancelReason='hq_force';
+    localStorage.setItem('coreto_itsetsu_bookings', JSON.stringify(bookings));
+    renderCaseHeader();
+    alert('✅ 強制キャンセルしました。スロットを解放しました。');
+  } catch(e) { alert('エラー: '+e.message); }
+}
+
 function renderCaseList() {
   const STATUS_CLS = {
     'it-pending':   'st-waiting',
@@ -1102,10 +1135,23 @@ function renderCaseHeader() {
       const d = new Date(bk.date);
       const DAYS = ['日','月','火','水','木','金','土'];
       const dtLabel = `${d.getMonth()+1}/${d.getDate()}（${DAYS[d.getDay()]}）${bk.start}〜`;
+      const sess = JSON.parse(sessionStorage.getItem('coreto_session')||'null');
+      const isHQUser = sess && sess.type === 'hq';
+      const hqControls = isHQUser ? `
+        <span class="case-detail-row" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:4px">
+          <span style="font-size:9px;color:var(--muted)">変更回数: ${bk.changeCount||0}/2</span>
+          <button onclick="hqResetChangeCount('${c.id}')"
+            style="font-size:9px;padding:2px 8px;border-radius:4px;border:1px solid rgba(201,168,64,.35);background:transparent;color:var(--gold);cursor:pointer;font-family:inherit">
+            🔄 回数リセット</button>
+          <button onclick="hqForceCancel('${c.id}')"
+            style="font-size:9px;padding:2px 8px;border-radius:4px;border:1px solid rgba(248,113,113,.35);background:transparent;color:var(--red);cursor:pointer;font-family:inherit">
+            ✕ 強制キャンセル</button>
+        </span>` : '';
       bookingInfo = `
         <span class="case-detail-row" style="color:var(--green)">✅ 日程確定：${dtLabel}</span>
         <span class="case-detail-row">重説担当：${bk.itAgentName || '—'}</span>
-        <span class="case-detail-row"><a href="${bk.meetUrl}" target="_blank" style="color:var(--blue)">🔗 Google Meet: ${bk.meetUrl}</a></span>`;
+        <span class="case-detail-row"><a href="${bk.meetUrl}" target="_blank" style="color:var(--blue)">🔗 Google Meet: ${bk.meetUrl}</a></span>
+        ${hqControls}`;
     } else if (c.bookingUrl) {
       bookingInfo = `<span class="case-detail-row" style="color:var(--orange)">⏳ 日程未確定
         <button onclick="navigator.clipboard.writeText('${(c.bookingUrl||'').replace(/'/g,"\'")}').then(()=>alert('URLをコピーしました'))"

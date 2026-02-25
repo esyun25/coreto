@@ -157,9 +157,53 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans-seri
 })();
 
 // ── Storage ──
-const STORE_KEY = 'coreto_itsetsu_slots';
-function loadSlots() { try { return JSON.parse(localStorage.getItem(STORE_KEY) || '[]'); } catch(e) { return []; } }
-function saveSlots(s) { localStorage.setItem(STORE_KEY, JSON.stringify(s)); }
+const STORE_KEY    = 'coreto_itsetsu_slots';
+const BOOKINGS_KEY = 'coreto_itsetsu_bookings';
+function loadSlots()    { try { return JSON.parse(localStorage.getItem(STORE_KEY)    || '[]'); } catch(e) { return []; } }
+function saveSlots(s)   { localStorage.setItem(STORE_KEY,    JSON.stringify(s)); }
+function loadBookings() { try { return JSON.parse(localStorage.getItem(BOOKINGS_KEY) || '[]'); } catch(e) { return []; } }
+function saveBookings(b){ localStorage.setItem(BOOKINGS_KEY, JSON.stringify(b)); }
+
+// ── HQ / agent mode ──
+var isHQ      = (window._SESSION && (window._SESSION.type === 'hq'));
+var myAgentId = (window._SESSION && window._SESSION.userId) || '';
+
+// ── Cancel helpers ──
+function hasAlternative(slot) {
+  return loadSlots().some(function(s){
+    return s.id !== slot.id && s.date === slot.date &&
+           s.start === slot.start && s.status === 'open';
+  });
+}
+function minsUntilSlot(slot) {
+  return (new Date(slot.date+'T'+slot.start+':00') - new Date()) / 60000;
+}
+function canCancelSlot(slot) {
+  if (slot.status !== 'booked') return false;
+  var mins = minsUntilSlot(slot);
+  if (mins <= 0) return false;
+  if (isHQ) return true;
+  if (mins <= 24*60) return false;
+  return hasAlternative(slot);
+}
+function cancelReasonText(slot) {
+  if (slot.status !== 'booked') return '';
+  var mins = minsUntilSlot(slot);
+  if (mins <= 0) return '';
+  if (!isHQ && mins <= 24*60) return '24時間以内 / 本部のみ可';
+  if (!isHQ && !hasAlternative(slot)) return '代替担当者の空きなし';
+  return '';
+}
+function releaseBookingForSlot(slotId) {
+  var bookings = loadBookings();
+  var bk = bookings.find(function(b){ return b.slotId === slotId && b.status !== 'cancelled'; });
+  if (bk) {
+    bk.status = 'cancelled';
+    bk.cancelledAt = new Date().toISOString();
+    bk.cancelReason = isHQ ? 'hq' : 'agent';
+    saveBookings(bookings);
+  }
+}
 
 // ── Agent badge ──
 (function(){
@@ -377,14 +421,24 @@ function renderPanelSlots() {
   }
 
   el.innerHTML = slots.map(function(s){
-    return '<div class="sitem' + (s.status === 'booked' ? ' booked' : '') + '">'
-      + '<div class="stime">' + s.start + ' 〜 ' + s.end + '</div>'
+    var canCancel = canCancelSlot(s);
+    var reason    = cancelReasonText(s);
+    var bookedInfo = s.bookedClient ? ('<div style="font-size:9px;color:var(--blue);margin-top:1px">'+s.bookedClient+(s.bookedCase?' ('+s.bookedCase+')':'')+'</div>') : '';
+    var hqBadge   = (isHQ && s.status==='booked') ? '<span style="font-size:8px;padding:1px 5px;border-radius:6px;background:rgba(201,168,64,.15);color:var(--gold);margin-left:4px">HQ</span>' : '';
+    var cancelBtn = canCancel
+      ? '<button class="del-btn" onclick="cancelBookedSlot(\'' + s.id + '\')" style="border-color:rgba(251,146,60,.4);color:var(--orange)">解除</button>'
+      : (reason ? '<span style="font-size:8px;color:var(--muted)">' + reason + '</span>' : '');
+    var deleteBtn = s.status === 'open'
+      ? '<button class="del-btn" onclick="removeSlot(\'' + s.id + '\')">削除</button>'
+      : '';
+    return '<div class="sitem' + (s.status==='booked'?' booked':'') + '">'
+      + '<div style="flex:1">'
+      + '<div class="stime">' + s.start + ' 〜 ' + s.end + hqBadge + '</div>'
       + '<div class="sdur">' + fmtDur(s.dur) + '</div>'
-      + '<span class="spill ' + (s.status === 'booked' ? 'pill-b' : 'pill-o') + '">'
-      + (s.status === 'booked' ? '予約済' : '空き') + '</span>'
-      + (s.status === 'open'
-          ? '<button class="del-btn" onclick="removeSlot(\'' + s.id + '\')">削除</button>'
-          : '<span style="font-size:9px;color:var(--blue)">' + (s.bookedClient || '') + '</span>')
+      + bookedInfo + '</div>'
+      + '<span class="spill ' + (s.status==='booked'?'pill-b':'pill-o') + '">'
+      + (s.status==='booked'?'予約済':'空き') + '</span>'
+      + (s.status==='booked' ? cancelBtn : deleteBtn)
       + '</div>';
   }).join('');
 }
@@ -427,6 +481,31 @@ function removeSlot(id) {
   saveSlots(loadSlots().filter(function(s){ return s.id !== id; }));
   renderPanelSlots();
   renderCalendar();
+}
+
+function cancelBookedSlot(slotId) {
+  var slots = loadSlots();
+  var slot  = slots.find(function(s){ return s.id === slotId; });
+  if (!slot) return;
+  if (!canCancelSlot(slot)) {
+    var reason = cancelReasonText(slot);
+    alert(reason || 'キャンセルできません');
+    return;
+  }
+  var confirmMsg = isHQ
+    ? '【本部権限】この予約をキャンセルしますか？\nクライアント: ' + (slot.bookedClient||'—')
+    : 'この予約を解除しますか？\nクライアントは他の担当者の空き枠から再選択できます。';
+  if (!confirm(confirmMsg)) return;
+  // Release slot
+  slot.status = 'open';
+  slot.bookedCase = null; slot.bookedClient = null;
+  slot.meetUrl = ''; slot.bookedAt = null;
+  saveSlots(slots);
+  // Mark booking cancelled
+  releaseBookingForSlot(slotId);
+  renderPanelSlots();
+  renderCalendar();
+  toast('✅ 予約を解除しました');
 }
 
 // ── Stats ──
