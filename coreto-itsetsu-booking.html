@@ -214,6 +214,49 @@ function sortedAvailableSlots() {
   return slots;
 }
 
+// ── Demo data seed (schedule.html未訪問でも動作するよう) ──
+(function(){
+  if (loadSlots().length > 20) return;
+  var today = new Date();
+  var agents = [
+    { id: '10012', name: '山田 誠',   rank: 'Gold',     itCount: 2 },
+    { id: '10015', name: '佐藤 花子', rank: 'Silver',   itCount: 1 },
+    { id: '10023', name: '鈴木 拓也', rank: 'Platinum', itCount: 0 },
+    { id: '10031', name: '田村 さやか', rank: 'Bronze', itCount: 3 },
+  ];
+  var startHours = [9,10,11,12,13,14,15,16,17,18,19,20];
+  var demos = [];
+  var seed = 99;
+  function rnd(){ seed=(seed*1103515245+12345)&0x7fffffff; return seed/0x7fffffff; }
+  for (var dayOff = 1; dayOff <= 14; dayOff++) {
+    var d = new Date(today);
+    d.setDate(today.getDate() + dayOff);
+    var dow = d.getDay();
+    var fillRate = dow===0?0.4:dow===6?0.55:0.7;
+    startHours.forEach(function(h) {
+      if (rnd() > fillRate) return;
+      var start = (h<10?'0':'')+h+':00';
+      var end   = (h+1<21?h+1:21)+':00';
+      var agent = agents[Math.floor(rnd()*agents.length)];
+      var isBooked = rnd() < 0.15;
+      var slotId = 'SL'+d.toISOString().slice(0,10).replace(/-/g,'')+h+agent.id;
+      demos.push({
+        id: slotId,
+        agentId: agent.id, agentName: agent.name,
+        agentRank: agent.rank, agentItCount: agent.itCount,
+        date: d.toISOString().slice(0,10),
+        start: start, end: end, dur: 60,
+        status: isBooked ? 'booked' : 'open',
+        bookedCase: isBooked ? 'R0'+Math.floor(rnd()*90000+10000) : null,
+        bookedClient: isBooked ? ['田中 雄介','佐藤 美咲','鈴木 健太'][Math.floor(rnd()*3)] : null,
+        meetUrl: isBooked ? 'https://meet.google.com/demo-'+slotId.slice(-6) : '',
+        bookingToken: 'BK'+slotId.slice(-6).toUpperCase()
+      });
+    });
+  }
+  if (demos.length > 0) saveSlots(demos);
+})();
+
 // ── State ──
 var selectedSlotId = null;
 var selectedFromCal = false;
@@ -524,9 +567,8 @@ function renderNew() {
         +'<div style="min-width:60px"><div class="slot-date">'+fmtDate(s.date)+'</div>'
         +'<div class="slot-time">'+s.start+'</div>'
         +'<div class="slot-dur">'+fmtDur(s.dur)+'</div></div>'
-        +'<div class="slot-agent">'+s.agentName
-        +(isPriority ? '<span class="priority-badge">専任担当</span>' : '')
-        +'</div></div>';
+        +(isPriority ? '<div class="slot-agent"><span class="priority-badge">専任担当</span></div>' : '')
+        +'</div>';
     }).join('');
     // カレンダーは常に表示（スロット数に関わらず）
     slotsHtml += '<button class="cal-toggle" id="cal-toggle-btn" onclick="toggleCalendar()">'
@@ -732,7 +774,7 @@ function renderSuccess(bk) {
     +'</div></div>';
 }
 
-function fmtDur(m){ return m<60?m+'分':Math.floor(m/60)+'時間'+(m%60?m%60+'分':''); }
+function fmtDur(m){ return '所要時間30〜45分'; }
 
 render();
 </script>
