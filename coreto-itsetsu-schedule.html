@@ -91,6 +91,43 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans-seri
   border:1px dashed var(--border2);border-radius:8px}
 .panel-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:99;display:none}
 .panel-overlay.show{display:block}
+/* Request panel */
+.req-badge{display:inline-flex;align-items:center;justify-content:center;
+  min-width:18px;height:18px;border-radius:9px;background:var(--orange);
+  color:#0b0d12;font-size:9px;font-weight:800;padding:0 4px;margin-left:4px}
+.req-panel{position:fixed;top:0;right:-400px;width:380px;max-width:96vw;height:100vh;
+  background:#111520;border-left:1px solid var(--border2);z-index:800;
+  display:flex;flex-direction:column;transition:right .25s cubic-bezier(.4,0,.2,1)}
+.req-panel.show{right:0}
+.req-panel-hdr{padding:16px 18px;border-bottom:1px solid var(--border2);
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.req-panel-body{flex:1;overflow-y:auto;padding:12px}
+.ritem{background:var(--card);border:1px solid var(--border2);border-radius:10px;
+  margin-bottom:10px;overflow:hidden}
+.ritem-hdr{padding:10px 12px;display:flex;align-items:flex-start;gap:8px}
+.ritem-status{font-size:9px;padding:2px 7px;border-radius:8px;font-weight:700;flex-shrink:0;margin-top:1px}
+.rs-open{background:rgba(251,146,60,.15);color:var(--orange)}
+.rs-matched{background:rgba(52,211,153,.15);color:var(--green)}
+.rs-cancelled{background:rgba(99,107,140,.15);color:var(--muted)}
+.ritem-body{padding:8px 12px 10px;border-top:1px solid var(--border)}
+.wish-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;
+  border-radius:6px;font-size:10px;font-family:'DM Mono',monospace;margin:3px 2px;
+  background:rgba(30,36,53,.8);border:1px solid var(--border2)}
+.wish-chip.match{background:rgba(201,168,64,.1);border-color:rgba(201,168,64,.35);color:var(--gold)}
+.match-row{background:rgba(52,211,153,.07);border-top:1px solid rgba(52,211,153,.2);
+  padding:8px 12px;font-size:10px;color:var(--green);display:flex;align-items:center;gap:6px}
+.req-btn{font-size:10px;padding:5px 10px;border-radius:7px;border:none;cursor:pointer;
+  font-family:inherit;font-weight:700;transition:.12s}
+.req-btn-gold{background:var(--gold);color:#0b0d12}
+.req-btn-gold:hover{background:var(--gold2)}
+.req-btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--sub)}
+.req-btn-ghost:hover{border-color:var(--border);color:var(--text)}
+.rank-badge{font-size:8px;padding:1px 5px;border-radius:5px}
+.rank-pt{background:rgba(167,139,250,.15);color:#a78bfa}
+.rank-gd{background:rgba(201,168,64,.15);color:#c9a840}
+.rank-sv{background:rgba(192,192,192,.15);color:#c0c0c0}
+.rank-br{background:rgba(205,127,50,.15);color:#cd7f32}
+
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
   background:var(--card2);border:1px solid var(--border);color:var(--text);
   padding:9px 18px;border-radius:10px;font-size:12px;z-index:9999;
@@ -119,7 +156,26 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans-seri
       <button class="week-btn" onclick="goToday()" style="margin-left:4px">今週</button>
     </div>
     <div class="stats" id="stats-bar"></div>
+    <button class="week-btn" onclick="openRequestPanel()" id="req-panel-btn"
+      style="margin-left:8px;border-color:rgba(251,146,60,.4);color:var(--orange)">
+      📨 リクエスト<span class="req-badge" id="req-badge" style="display:none">0</span>
+    </button>
   </div>
+
+  <!-- Request Panel -->
+  <div class="req-panel" id="req-panel">
+    <div class="req-panel-hdr">
+      <div>
+        <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:var(--orange)">📨 日程リクエスト</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px">クライアントからの希望日時リクエスト</div>
+      </div>
+      <button onclick="closeRequestPanel()" style="background:transparent;border:none;color:var(--muted);font-size:18px;cursor:pointer">✕</button>
+    </div>
+    <div class="req-panel-body" id="req-panel-body">
+      <div style="text-align:center;padding:32px;color:var(--muted);font-size:11px">読み込み中...</div>
+    </div>
+  </div>
+  <div class="panel-overlay" id="req-overlay" onclick="closeRequestPanel()"></div>
   <div class="cal-wrap" id="cal-wrap">
     <div class="cal-grid" id="cal-grid"></div>
   </div>
@@ -159,10 +215,218 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans-seri
 // ── Storage ──
 const STORE_KEY    = 'coreto_itsetsu_slots';
 const BOOKINGS_KEY = 'coreto_itsetsu_bookings';
+const REQUESTS_KEY = 'coreto_itsetsu_requests';
 function loadSlots()    { try { return JSON.parse(localStorage.getItem(STORE_KEY)    || '[]'); } catch(e) { return []; } }
 function saveSlots(s)   { localStorage.setItem(STORE_KEY,    JSON.stringify(s)); }
 function loadBookings() { try { return JSON.parse(localStorage.getItem(BOOKINGS_KEY) || '[]'); } catch(e) { return []; } }
 function saveBookings(b){ localStorage.setItem(BOOKINGS_KEY, JSON.stringify(b)); }
+function loadRequests() { try { return JSON.parse(localStorage.getItem(REQUESTS_KEY) || '[]'); } catch(e) { return []; } }
+function saveRequests(r){ localStorage.setItem(REQUESTS_KEY, JSON.stringify(r)); }
+
+// ── Rank priority map for matching ──
+var RANK_PRIORITY = { Platinum:4, Gold:3, Silver:2, Bronze:1 };
+
+// ── Matching engine ──
+// Priority: 1. dedicatedAgent  2. itCount少 3. rank高 4. 登録早
+function pickBestSlot(req, availSlots) {
+  if (!availSlots.length) return null;
+  var slots = availSlots.slice().sort(function(a, b) {
+    // 1. dedicated agent always wins
+    var aD = (a.agentId === req.dedicatedId) ? 0 : 1;
+    var bD = (b.agentId === req.dedicatedId) ? 0 : 1;
+    if (aD !== bD) return aD - bD;
+    // 2. itCount ascending (less work = higher priority)
+    var aCount = a.agentItCount || 0;
+    var bCount = b.agentItCount || 0;
+    if (aCount !== bCount) return aCount - bCount;
+    // 3. rank descending
+    var aRank = RANK_PRIORITY[a.agentRank] || 0;
+    var bRank = RANK_PRIORITY[b.agentRank] || 0;
+    if (aRank !== bRank) return bRank - aRank;
+    // 4. registration time ascending (earlier = higher priority)
+    return (a.id||'').localeCompare(b.id||'');
+  });
+  return slots[0];
+}
+
+function tryAutoMatch(req) {
+  var slots = loadSlots();
+  // Find slots matching any of req.wishes
+  var candidates = [];
+  req.wishes.forEach(function(w) {
+    slots.filter(function(s){
+      return s.status === 'open'
+        && s.date === w.date
+        && s.start <= w.start
+        && s.end   >= w.end;
+    }).forEach(function(s){ candidates.push({ slot:s, wish:w }); });
+  });
+  if (!candidates.length) return null;
+  // Sort candidate slots using matching engine
+  candidates.sort(function(a, b){
+    var sa = a.slot, sb = b.slot;
+    var aD = (sa.agentId === req.dedicatedId) ? 0 : 1;
+    var bD = (sb.agentId === req.dedicatedId) ? 0 : 1;
+    if (aD !== bD) return aD - bD;
+    var aCount = sa.agentItCount || 0;
+    var bCount = sb.agentItCount || 0;
+    if (aCount !== bCount) return aCount - bCount;
+    var aRank = RANK_PRIORITY[sa.agentRank] || 0;
+    var bRank = RANK_PRIORITY[sb.agentRank] || 0;
+    if (aRank !== bRank) return bRank - aRank;
+    return (sa.id||'').localeCompare(sb.id||'');
+  });
+  return candidates[0];
+}
+
+function matchRequest(reqId) {
+  var reqs  = loadRequests();
+  var req   = reqs.find(function(r){ return r.id === reqId; });
+  if (!req || req.status !== 'open') { toast('⚠️ マッチングできません（受付中以外）'); return; }
+  var match = tryAutoMatch(req);
+  if (!match) { toast('⚠️ 希望日時に対応できる空き枠がありません'); return; }
+  // Confirm
+  var slot = match.slot;
+  var wish = match.wish;
+  var msg = 'マッチング確定: ' + fmtDateReq(slot.date) + ' ' + wish.start + '〜' + wish.end
+    + ' / 担当: ' + slot.agentName + (slot.agentRank ? ' (' + slot.agentRank + ')' : '')
+    + ' / クライアント: ' + req.clientName;
+  if (!confirm(msg)) return;
+  // Book the slot
+  var slots  = loadSlots();
+  var target = slots.find(function(s){ return s.id === slot.id; });
+  if (!target || target.status !== 'open') { toast('⚠️ スロットが既に予約済みです'); renderRequestPanel(); return; }
+  var meetUrl = genMeet();
+  target.status = 'booked';
+  target.bookedCase   = req.caseId;
+  target.bookedClient = req.clientName;
+  target.meetUrl      = meetUrl;
+  target.bookedAt     = new Date().toISOString();
+  saveSlots(slots);
+  // Update booking
+  var bookings = loadBookings();
+  var bk = {
+    id: 'BK'+Date.now(),
+    slotId: target.id,
+    caseId: req.caseId,
+    clientName: req.clientName, propName: req.propName,
+    agentId: req.agentId, agentName: req.agentName,
+    itAgentId: target.agentId, itAgentName: target.agentName,
+    dedicatedAgentId: req.dedicatedId,
+    date: target.date, start: wish.start, dur: timeDiff(wish.start, wish.end),
+    meetUrl: meetUrl,
+    bookedAt: new Date().toISOString(),
+    changeCount: 0, changeHistory: [], status: 'active', cancelledAt: null
+  };
+  bookings.push(bk);
+  saveBookings(bookings);
+  // Update request
+  req.status       = 'matched';
+  req.matchedSlotId   = target.id;
+  req.matchedAgentId  = target.agentId;
+  req.matchedAt    = new Date().toISOString();
+  saveRequests(reqs);
+  // Slack
+  console.log('[Slack #IT重説日程調整] マッチング確定 案件:' + req.caseId + ' ' + req.clientName + ' ' + fmtDateReq(target.date) + ' ' + wish.start + ' 重説担当:' + target.agentName + ' Meet:' + meetUrl);
+  toast('✅ マッチング完了 — ' + target.agentName + ' ' + fmtDateReq(target.date) + ' ' + wish.start);
+  renderCalendar();
+  renderStats();
+  renderRequestBadge();
+  renderRequestPanel();
+}
+
+function cancelRequest(reqId) {
+  if (!confirm('このリクエストをキャンセルしますか？')) return;
+  var reqs = loadRequests();
+  var req  = reqs.find(function(r){ return r.id === reqId; });
+  if (!req) return;
+  req.status = 'cancelled';
+  req.cancelledAt = new Date().toISOString();
+  saveRequests(reqs);
+  toast('リクエストをキャンセルしました');
+  renderRequestBadge();
+  renderRequestPanel();
+}
+
+function fmtDateReq(ds) {
+  var d = new Date(ds + 'T00:00:00');
+  var WD = ['日','月','火','水','木','金','土'];
+  return (d.getMonth()+1) + '/' + d.getDate() + '（' + WD[d.getDay()] + '）';
+}
+
+// ── Request panel UI ──
+function renderRequestBadge() {
+  var open = loadRequests().filter(function(r){ return r.status === 'open'; }).length;
+  var badge = document.getElementById('req-badge');
+  if (!badge) return;
+  badge.textContent = open;
+  badge.style.display = open > 0 ? '' : 'none';
+}
+
+function openRequestPanel() {
+  document.getElementById('req-panel').classList.add('show');
+  document.getElementById('req-overlay').classList.add('show');
+  renderRequestPanel();
+}
+
+function closeRequestPanel() {
+  document.getElementById('req-panel').classList.remove('show');
+  document.getElementById('req-overlay').classList.remove('show');
+}
+
+function renderRequestPanel() {
+  var body = document.getElementById('req-panel-body');
+  if (!body) return;
+  var reqs = loadRequests().filter(function(r){ return r.status !== 'cancelled'; });
+  reqs.sort(function(a,b){ return b.submittedAt.localeCompare(a.submittedAt); });
+  if (!reqs.length) {
+    body.innerHTML = '<div style="text-align:center;padding:32px;color:var(--muted);font-size:11px">リクエストはありません</div>';
+    return;
+  }
+  body.innerHTML = reqs.map(function(r) {
+    var statusCls = r.status === 'open' ? 'rs-open' : (r.status === 'matched' ? 'rs-matched' : 'rs-cancelled');
+    var statusLbl = r.status === 'open' ? '受付中' : (r.status === 'matched' ? 'マッチング済' : 'キャンセル');
+    var wishHtml = r.wishes.map(function(w) {
+      // Check if any slot covers this wish
+      var slots = loadSlots();
+      var hasSlot = slots.some(function(s){
+        return s.status==='open' && s.date===w.date && s.start<=w.start && s.end>=w.end;
+      });
+      return '<span class="wish-chip' + (hasSlot?' match':'') + '">'
+        + fmtDateReq(w.date) + ' ' + w.start + '〜' + w.end
+        + (hasSlot ? ' ✓' : '') + '</span>';
+    }).join('');
+    var matchInfo = r.status === 'matched' ? (
+      '<div class="match-row">✅ マッチング済 — ' + (r.matchedAgentId||'—') + ' ' + (r.matchedAt||'').slice(0,10) + '</div>'
+    ) : '';
+    // Auto-match check
+    var match = r.status === 'open' ? tryAutoMatch(r) : null;
+    var actionHtml = '';
+    if (r.status === 'open') {
+      actionHtml = '<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">'
+        + (match
+          ? '<button class="req-btn req-btn-gold" onclick="matchRequest(\'' + r.id + '\')">⚡ マッチング実行</button>'
+          : '<span style="font-size:9px;color:var(--muted)">対応できる空き枠なし</span>')
+        + '<button class="req-btn req-btn-ghost" onclick="cancelRequest(\'' + r.id + '\')">キャンセル</button>'
+        + '</div>';
+    }
+    return '<div class="ritem">'
+      + '<div class="ritem-hdr">'
+      + '<span class="ritem-status '+statusCls+'">'+statusLbl+'</span>'
+      + '<div style="flex:1">'
+      + '<div style="font-size:12px;font-weight:700">'+r.clientName+' 様</div>'
+      + '<div style="font-size:10px;color:var(--sub)">'+r.caseId+' / 担当: '+r.agentName+'</div>'
+      + '<div style="font-size:9px;color:var(--muted);margin-top:1px">送信: '+(r.submittedAt||'').slice(0,16).replace('T',' ')+'</div>'
+      + '</div></div>'
+      + '<div class="ritem-body">'
+      + '<div style="font-size:9px;color:var(--muted);margin-bottom:4px">希望日時</div>'
+      + wishHtml
+      + actionHtml
+      + '</div>'
+      + matchInfo
+      + '</div>';
+  }).join('');
+}
 
 // ── HQ / agent mode ──
 var isHQ      = (window._SESSION && (window._SESSION.type === 'hq'));
@@ -459,10 +723,18 @@ function addSlotFromPanel() {
   if (overlap) { toast('⚠️ 他の時間帯と重複しています'); return; }
 
   var u = window._SESSION || {};
+  // Count this agent's existing IT重説 slots this month for matching priority
+  var thisMonth = new Date().toISOString().slice(0,7);
+  var agentItCount = loadSlots().filter(function(s){
+    return s.agentId === (u.userId||'') && s.status === 'booked'
+      && (s.date||'').slice(0,7) === thisMonth;
+  }).length;
   slots.push({
     id: 'SL' + Date.now(),
     agentId:   u.userId || '—',
     agentName: u.name   || '重説担当',
+    agentRank: u.rank   || '',
+    agentItCount: agentItCount,
     date:  activePanelDate,
     start: start,
     end:   end,
@@ -474,6 +746,7 @@ function addSlotFromPanel() {
   saveSlots(slots);
   renderPanelSlots();
   renderCalendar();
+  renderRequestBadge(); // 新スロットで既存リクエストがマッチ可能になった場合に反映
   toast('✅ ' + start + ' 〜 ' + end + ' を追加');
 }
 
@@ -530,6 +803,8 @@ function toast(msg) {
 
 // ── Init ──
 renderCalendar();
+renderStats();
+renderRequestBadge();
 setTimeout(function(){ document.getElementById('cal-wrap').scrollTop = 16 * CELL_H; }, 50);
 </script>
 </body>

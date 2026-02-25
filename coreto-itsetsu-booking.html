@@ -70,6 +70,28 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans-seri
   border-radius:8px;padding:10px 12px;font-size:11px;color:var(--orange);margin-top:8px;line-height:1.8}
 /* History */
 .hist-item{font-size:10px;color:var(--muted);padding:5px 0;border-bottom:1px solid var(--border);line-height:1.7}
+/* Request form */
+.req-section{border-top:1.5px dashed var(--border2);margin-top:14px;padding-top:14px}
+.req-title{font-size:12px;font-weight:700;color:var(--orange);margin-bottom:8px}
+.req-desc{font-size:10px;color:var(--muted);line-height:1.9;margin-bottom:12px;
+  background:rgba(251,146,60,.07);border:1px solid rgba(251,146,60,.18);border-radius:8px;padding:9px 11px}
+.wish-row{display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap}
+.wish-label{font-size:10px;color:var(--sub);min-width:28px;flex-shrink:0}
+.wish-del{background:transparent;border:1px solid rgba(248,113,113,.3);color:var(--red);
+  border-radius:5px;padding:2px 7px;font-size:10px;cursor:pointer;font-family:inherit;flex-shrink:0}
+.wish-del:hover{background:rgba(248,113,113,.1)}
+.add-wish-btn{font-size:11px;padding:5px 12px;border-radius:7px;border:1px dashed var(--border2);
+  background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;width:100%;margin-top:2px}
+.add-wish-btn:hover{border-color:var(--orange);color:var(--orange)}
+.req-note{font-size:10px;color:var(--muted);margin-top:8px}
+.date-inp{background:var(--card2);border:1px solid var(--border2);border-radius:7px;
+  padding:7px 8px;color:var(--text);font-family:'DM Mono',monospace;font-size:11px;outline:none;min-width:110px}
+.date-inp:focus{border-color:var(--gold)}
+.tsel-sm{background:var(--card2);border:1px solid var(--border2);border-radius:7px;
+  padding:7px 6px;color:var(--text);font-family:'DM Mono',monospace;font-size:11px;cursor:pointer;outline:none}
+.tsel-sm:focus{border-color:var(--gold)}
+.req-status{background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.25);
+  border-radius:10px;padding:16px;text-align:center;margin-top:14px}
 </style>
 </head>
 <body>
@@ -81,10 +103,13 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans-seri
 // ── Keys ──
 var SLOTS_KEY    = 'coreto_itsetsu_slots';
 var BOOKINGS_KEY = 'coreto_itsetsu_bookings';
+var REQUESTS_KEY = 'coreto_itsetsu_requests';
 function loadSlots()    { try{return JSON.parse(localStorage.getItem(SLOTS_KEY)||'[]');}catch(e){return[];} }
 function saveSlots(s)   { localStorage.setItem(SLOTS_KEY, JSON.stringify(s)); }
 function loadBookings() { try{return JSON.parse(localStorage.getItem(BOOKINGS_KEY)||'[]');}catch(e){return[];} }
 function saveBookings(b){ localStorage.setItem(BOOKINGS_KEY, JSON.stringify(b)); }
+function loadRequests() { try{return JSON.parse(localStorage.getItem(REQUESTS_KEY)||'[]');}catch(e){return[];} }
+function saveRequests(r){ localStorage.setItem(REQUESTS_KEY, JSON.stringify(r)); }
 
 // ── URL params ──
 var P = new URLSearchParams(location.search);
@@ -183,17 +208,116 @@ function caseInfoHtml() {
   return rows.join('');
 }
 
+function buildTimeSelectSm(id, val) {
+  var opts = '';
+  for (var h = 8; h < 22; h++) {
+    for (var m = 0; m < 60; m += 30) {
+      var v = (h<10?'0':'')+h+':'+(m===0?'00':'30');
+      opts += '<option value="'+v+'"'+(v===val?' selected':'')+'>'+v+'</option>';
+    }
+  }
+  return '<select class="tsel-sm" id="'+id+'">'+opts+'</select>';
+}
+
+var wishList = [{ date:'', start:'10:00', end:'11:00' }]; // initial 1 wish
+var requestSent = false;
+
+function renderWishRows() {
+  var html = wishList.map(function(w, i) {
+    return '<div class="wish-row" id="wish-row-'+i+'">'
+      +'<span class="wish-label">'+(i+1)+'.</span>'
+      +'<input type="date" class="date-inp" id="wish-date-'+i+'" value="'+w.date+'"'
+      +' min="'+new Date().toISOString().slice(0,10)+'"'
+      +' onchange="syncWish('+i+')">'
+      +buildTimeSelectSm('wish-start-'+i, w.start).replace('>', ' onchange="syncWish('+i+')">')
+      +'<span style="font-size:10px;color:var(--muted)">〜</span>'
+      +buildTimeSelectSm('wish-end-'+i, w.end).replace('>', ' onchange="syncWish('+i+')">')
+      +(wishList.length > 1 ? '<button class="wish-del" onclick="removeWish('+i+')">✕</button>' : '')
+      +'</div>';
+  }).join('');
+  var el = document.getElementById('wish-rows');
+  if (el) el.innerHTML = html;
+  var addBtn = document.getElementById('add-wish-btn');
+  if (addBtn) addBtn.style.display = wishList.length >= 3 ? 'none' : '';
+}
+
+function syncWish(i) {
+  var d = document.getElementById('wish-date-'+i);
+  var s = document.getElementById('wish-start-'+i);
+  var e = document.getElementById('wish-end-'+i);
+  if (d) wishList[i].date  = d.value;
+  if (s) wishList[i].start = s.value;
+  if (e) wishList[i].end   = e.value;
+}
+
+function addWish() {
+  if (wishList.length >= 3) return;
+  wishList.push({ date:'', start:'10:00', end:'11:00' });
+  renderWishRows();
+}
+
+function removeWish(i) {
+  wishList.splice(i, 1);
+  renderWishRows();
+}
+
+function submitRequest() {
+  // Sync all wish fields first
+  wishList.forEach(function(w, i) { syncWish(i); });
+  var valid = wishList.filter(function(w){ return w.date && w.start < w.end; });
+  if (!valid.length) { alert('希望日時を1件以上正しく入力してください。（終了は開始より後の時刻にしてください）'); return; }
+  var reqs = loadRequests();
+  // Check for existing open request for this case
+  var existing = reqs.find(function(r){ return r.caseId === caseId && r.status === 'open'; });
+  if (existing) { alert('このご案件にはすでに受付中のリクエストがあります。 担当エージェントへご連絡ください。'); return; }
+  var req = {
+    id: 'RQ'+Date.now(),
+    caseId: caseId, clientName: clientN, propName: propName,
+    agentId: agentId, agentName: agentN, dedicatedId: dedicatedId,
+    wishes: valid,
+    submittedAt: new Date().toISOString(),
+    status: 'open',     // open | matched | cancelled
+    matchedSlotId: null,
+    matchedAgentId: null
+  };
+  reqs.push(req);
+  saveRequests(reqs);
+  requestSent = true;
+  // Slack mock notify
+  var wishText = valid.map(function(w,i){ return (i+1)+'. '+fmtDate(w.date)+' '+w.start+'〜'+w.end; }).join(' / ');
+  console.log('[Slack #IT重説日程調整] 【日程リクエスト】案件:'+caseId+'/'+clientN+' 希望:'+wishText+' 担当:'+agentN);
+  renderRequestSent(req);
+}
+
+function renderRequestSent(req) {
+  var app = document.getElementById('app');
+  var wishText = req.wishes.map(function(w,i){
+    return '<div class="hist-item">'+(i+1)+'. '+fmtDate(w.date)+' '+w.start+'〜'+w.end+'</div>';
+  }).join('');
+  app.innerHTML = '<div class="card">'
+    +'<div class="req-status">'
+    +'<div style="font-size:28px;margin-bottom:8px">📨</div>'
+    +'<div style="font-size:14px;font-weight:800;color:var(--green);margin-bottom:4px">リクエストを受付しました</div>'
+    +'<div style="font-size:10px;color:var(--muted)">担当エージェントが日程を調整します。<br>確定次第このページでご確認いただけます。</div>'
+    +'</div>'
+    +'<div style="margin-top:14px"><div style="font-size:10px;color:var(--muted);margin-bottom:6px">ご希望の日時</div>'
+    +wishText+'</div></div>';
+}
+
 function renderNew() {
   var slots = sortedAvailableSlots();
   var app = document.getElementById('app');
+  // Check for existing open request
+  var existingReq = loadRequests().find(function(r){ return r.caseId===caseId && r.status==='open'; });
+  if (existingReq) { renderRequestSent(existingReq); return; }
   var slotsHtml = '';
   if (!slots.length) {
-    slotsHtml = '<div class="no-slots">😔 現在、空き日程がございません。<br>担当エージェントにご連絡ください。</div>';
+    slotsHtml = '<div class="no-slots">😔 現在、空き日程がございません。</div>';
   } else {
     slotsHtml = slots.map(function(s){
       var isPriority = (s.agentId === dedicatedId);
       var cls = 'slot-item' + (isPriority ? ' priority' : '') + (s.id === selectedSlotId ? ' selected' : '');
-      return '<div class="'+cls+'" onclick="selSlot(\''+s.id+'\',this)">'
+      return '<div class="'+cls+'" onclick="selSlot(\'' + s.id + '\',this)">'
         +'<div class="radio"></div>'
         +'<div style="min-width:60px"><div class="slot-date">'+fmtDate(s.date)+'</div>'
         +'<div class="slot-time">'+s.start+'</div>'
@@ -203,13 +327,27 @@ function renderNew() {
         +'</div></div>';
     }).join('');
   }
+  var requestSection = caseId ? (
+    '<div class="req-section">'
+    +'<div class="req-title">📨 ご希望の日時をリクエストする</div>'
+    +'<div class="req-desc">上記の日程が合わない場合、ご希望の日時を最大3件ご提出ください。<br>'
+    +'専任宅建士に通知が届き、対応可能な方が空き枠を追加してマッチングします。</div>'
+    +'<div id="wish-rows"></div>'
+    +'<button class="add-wish-btn" id="add-wish-btn" onclick="addWish()">＋ 希望日時を追加（最大3件）</button>'
+    +'<div class="req-note">※ 終了時刻は開始より後の時刻にしてください</div>'
+    +'<div class="btns" style="margin-top:12px">'
+    +'<button class="btn btn-ghost" onclick="submitRequest()">📨 この日時でリクエストを送る</button>'
+    +'</div></div>'
+  ) : '';
   app.innerHTML = '<div class="card"><div class="card-title">📋 案件情報</div>'+caseInfoHtml()
     +'<div style="margin-top:10px;padding:9px 11px;background:var(--card2);border-radius:7px;font-size:10px;color:var(--sub);line-height:1.9">'
     +'都合のよい日程を選んでください。選択後、担当からGoogle MeetのURLをお送りします。</div></div>'
     +'<div class="card"><div class="card-title">🗓 日程を選択</div>'
     +(dedicatedId ? '<div style="font-size:10px;color:var(--purple);margin-bottom:10px">🔮 専任担当の空き枠を優先表示しています</div>' : '')
     +'<div id="slot-list">'+slotsHtml+'</div>'
-    +'<div class="btns"><button class="btn btn-gold" id="confirm-btn" onclick="doBook()" disabled>この日程で予約する</button></div></div>';
+    +(slots.length ? '<div class="btns"><button class="btn btn-gold" id="confirm-btn" onclick="doBook()" disabled>この日程で予約する</button></div>' : '')
+    +requestSection+'</div>';
+  renderWishRows();
 }
 
 function renderExisting(bk) {
