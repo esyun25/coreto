@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IT重説 スケジュール管理 — CORETO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090f;--card:#0f1119;--card2:#141720;--border:#1e2235;--border2:#252a3d;
+  --gold:#c9a84c;--gold-l:#e8c96a;--gold-dim:#7a5f22;
+  --blue:#4f9cf9;--green:#34d399;--red:#f87171;--orange:#fb923c;--purple:#a78bfa;
+  --teal:#2dd4bf;--muted:#4a5270;--sub:#7a849e;--text:#e2e6f3;
+}
+body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans-serif;font-size:13px;min-height:100vh}
+
+/* ── Header ── */
+.hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;border-bottom:1px solid var(--border);background:rgba(10,12,22,.9);backdrop-filter:blur(12px);position:sticky;top:0;z-index:100}
+.hdr-left{display:flex;align-items:center;gap:14px}
+.logo{font-family:'Syne',sans-serif;font-weight:800;font-size:18px;color:var(--gold);letter-spacing:.05em}
+.hdr-badge{font-size:11px;padding:3px 10px;border-radius:20px;background:rgba(77,156,249,.12);border:1px solid rgba(77,156,249,.3);color:var(--blue)}
+.btn-back{font-size:11px;padding:5px 12px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;font-family:'Noto Sans JP',sans-serif}
+.btn-back:hover{color:var(--text);border-color:var(--sub)}
+
+/* ── Layout ── */
+.layout{display:grid;grid-template-columns:340px 1fr;gap:0;height:calc(100vh - 57px)}
+
+/* ── Left panel: Add slot ── */
+.left{padding:20px;border-right:1px solid var(--border);overflow-y:auto}
+.panel-title{font-family:'Syne',sans-serif;font-weight:800;font-size:14px;letter-spacing:.05em;margin-bottom:16px;color:var(--text)}
+.fi{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.fi label{font-size:10px;color:var(--sub);letter-spacing:.08em;text-transform:uppercase}
+.fi input,.fi select{background:var(--card2);border:1px solid var(--border2);border-radius:8px;padding:9px 11px;color:var(--text);font-family:'Noto Sans JP',sans-serif;font-size:12px;width:100%}
+.fi input:focus,.fi select:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(79,156,249,.12)}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:8px;border:none;cursor:pointer;font-family:'Noto Sans JP',sans-serif;font-size:12px;font-weight:700;transition:all .15s}
+.btn-gold{background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.4);color:var(--gold)}
+.btn-gold:hover{background:rgba(201,168,76,.25)}
+.btn-full{width:100%;justify-content:center}
+.section-hdr{font-size:10px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.agent-info-card{background:var(--card2);border:1px solid var(--border2);border-radius:8px;padding:11px 13px;margin-bottom:16px;font-size:11px;line-height:1.9}
+
+/* ── Right panel: Slot list ── */
+.right{overflow-y:auto;padding:20px}
+.right-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.filter-tabs{display:flex;gap:6px}
+.ftab{padding:5px 14px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--sub);cursor:pointer;font-size:11px;font-family:'Noto Sans JP',sans-serif;transition:all .12s}
+.ftab.on{background:rgba(201,168,76,.12);border-color:rgba(201,168,76,.4);color:var(--gold)}
+
+/* ── Slot cards ── */
+.slots-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.slot-card{background:var(--card);border:1px solid var(--border2);border-radius:12px;padding:14px 16px;position:relative;transition:border-color .15s}
+.slot-card.booked{border-color:rgba(52,211,153,.3);background:rgba(52,211,153,.03)}
+.slot-card.past{opacity:.45}
+.slot-date{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--text);line-height:1}
+.slot-weekday{font-size:10px;color:var(--muted);margin-top:2px}
+.slot-time{font-family:'DM Mono',monospace;font-size:15px;color:var(--gold);margin-top:6px;font-weight:500}
+.slot-duration{font-size:10px;color:var(--sub);margin-top:2px}
+.slot-status{position:absolute;top:12px;right:12px;font-size:10px;padding:3px 8px;border-radius:20px}
+.status-free{background:rgba(79,156,249,.12);border:1px solid rgba(79,156,249,.25);color:var(--blue)}
+.status-booked{background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.25);color:var(--green)}
+.slot-booking{margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:10px;line-height:1.8;color:var(--sub)}
+.slot-booking strong{color:var(--text)}
+.slot-meet{font-family:'DM Mono',monospace;font-size:10px;color:var(--teal);word-break:break-all}
+.slot-actions{display:flex;gap:6px;margin-top:10px}
+.btn-del{flex:1;padding:6px;border-radius:6px;border:1px solid rgba(248,113,113,.2);background:rgba(248,113,113,.06);color:var(--red);cursor:pointer;font-size:10px;font-family:'Noto Sans JP',sans-serif}
+.btn-del:hover{background:rgba(248,113,113,.12)}
+.empty-slots{text-align:center;padding:60px 20px;color:var(--muted);font-size:12px}
+.empty-icon{font-size:40px;margin-bottom:12px}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1a1f35;border:1px solid var(--border2);border-radius:10px;padding:10px 20px;font-size:12px;color:var(--text);z-index:9999;pointer-events:none;transition:opacity .3s;white-space:nowrap}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-left">
+    <div class="logo">CORETO</div>
+    <div style="width:1px;height:18px;background:var(--border2)"></div>
+    <div class="hdr-badge">📅 IT重説 スケジュール管理</div>
+  </div>
+  <button class="btn-back" onclick="location.href='coreto-hub.html'">← マイページ</button>
+</div>
+
+<div class="layout">
+
+<!-- ── 左：スロット追加 ── -->
+<div class="left">
+  <div class="agent-info-card" id="agent-info-card">
+    <div style="font-size:10px;color:var(--muted);margin-bottom:4px">ログイン中</div>
+    <strong id="ai-name">—</strong>
+    <div style="color:var(--sub)" id="ai-id">—</div>
+  </div>
+
+  <div class="panel-title">＋ 対応可能スロットを追加</div>
+
+  <div class="fi">
+    <label>日付</label>
+    <input type="date" id="s-date">
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+    <div class="fi">
+      <label>開始時刻</label>
+      <select id="s-time">
+        <option>09:00</option><option>09:30</option>
+        <option>10:00</option><option>10:30</option>
+        <option>11:00</option><option>11:30</option>
+        <option>13:00</option><option>13:30</option>
+        <option selected>14:00</option><option>14:30</option>
+        <option>15:00</option><option>15:30</option>
+        <option>16:00</option><option>16:30</option>
+        <option>17:00</option>
+      </select>
+    </div>
+    <div class="fi">
+      <label>所要時間</label>
+      <select id="s-dur">
+        <option value="60" selected>60分</option>
+        <option value="90">90分</option>
+        <option value="120">120分</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="fi">
+    <label>メモ（任意）</label>
+    <input type="text" id="s-memo" placeholder="例: Google Meet / Zoom 対応可">
+  </div>
+
+  <button class="btn btn-gold btn-full" onclick="addSlot()" style="margin-top:4px">＋ スロットを追加</button>
+
+  <div style="margin-top:24px">
+    <div class="section-hdr">一括追加</div>
+    <div style="font-size:11px;color:var(--sub);margin-bottom:10px">指定週の平日に一括でスロットを追加します</div>
+    <div class="fi">
+      <label>対象週（月曜日）</label>
+      <input type="date" id="b-week">
+    </div>
+    <div class="fi">
+      <label>時間帯</label>
+      <select id="b-time">
+        <option value="14:00">14:00</option>
+        <option value="15:00">15:00</option>
+        <option value="10:00">10:00</option>
+        <option value="13:00">13:00</option>
+      </select>
+    </div>
+    <button class="btn btn-gold btn-full" onclick="addWeek()" style="background:rgba(201,168,76,.08)">📅 平日5日分を追加</button>
+  </div>
+</div>
+
+<!-- ── 右：スロット一覧 ── -->
+<div class="right">
+  <div class="right-header">
+    <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:14px">登録済みスロット</div>
+    <div class="filter-tabs">
+      <button class="ftab on" data-f="all" onclick="setFilter('all',this)">すべて</button>
+      <button class="ftab" data-f="free" onclick="setFilter('free',this)">空き</button>
+      <button class="ftab" data-f="booked" onclick="setFilter('booked',this)">予約済み</button>
+    </div>
+  </div>
+  <div class="slots-grid" id="slots-grid"></div>
+</div>
+
+</div>
+
+<div class="toast" id="toast" style="opacity:0"></div>
+
+<script>
+// ── セッション ──
+(function() {
+  var s = null;
+  try { s = JSON.parse(sessionStorage.getItem('coreto_session') || 'null'); } catch(e) {}
+  if (!s) { location.replace('coreto-hub.html'); return; }
+  window._SESSION = s;
+  document.getElementById('ai-name').textContent = s.name || '—';
+  document.getElementById('ai-id').textContent = 'ID: ' + (s.userId || '—') + (s.license ? '　' + s.license : '');
+})();
+
+// ── LocalStorage ──
+const LS_KEY = 'coreto_it_slots';
+
+function loadSlots() {
+  try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); } catch(e) { return []; }
+}
+function saveSlots(slots) {
+  localStorage.setItem(LS_KEY, JSON.stringify(slots));
+}
+
+// ── デフォルト日付 ──
+(function() {
+  const today = new Date();
+  document.getElementById('s-date').value = today.toISOString().slice(0,10);
+  // 来週月曜
+  const mon = new Date(today);
+  mon.setDate(today.getDate() + (8 - today.getDay()) % 7 || 7);
+  document.getElementById('b-week').value = mon.toISOString().slice(0,10);
+})();
+
+// ── スロット追加 ──
+function addSlot() {
+  const u = window._SESSION || {};
+  const date = document.getElementById('s-date').value;
+  const time = document.getElementById('s-time').value;
+  const dur  = parseInt(document.getElementById('s-dur').value);
+  const memo = document.getElementById('s-memo').value.trim();
+  if (!date) { toast('日付を選択してください'); return; }
+  const slots = loadSlots();
+  // 重複チェック（同エージェント・同日時）
+  const dup = slots.find(s => s.agentId === u.userId && s.date === date && s.time === time && !s.booked);
+  if (dup) { toast('⚠️ 同日時のスロットが既に存在します'); return; }
+  slots.push({
+    id:         'slot_' + Date.now(),
+    agentId:    u.userId   || '—',
+    agentName:  u.name     || '—',
+    agentMobile:u.mobile   || '—',
+    agentTel:   u.tel      || '—',
+    agentLicense: u.license || '—',
+    date, time, dur, memo,
+    booked: false,
+    caseId: null, clientName: null, meetUrl: null, bookedAt: null,
+  });
+  saveSlots(slots);
+  render();
+  toast('✅ スロットを追加しました（' + date + ' ' + time + '）');
+}
+
+// ── 一括追加（平日5日） ──
+function addWeek() {
+  const u = window._SESSION || {};
+  const monStr = document.getElementById('b-week').value;
+  const time   = document.getElementById('b-time').value;
+  if (!monStr) { toast('週の月曜日を選択してください'); return; }
+  const mon = new Date(monStr + 'T00:00:00');
+  const slots = loadSlots();
+  let added = 0;
+  for (let i = 0; i < 5; i++) {
+    const d = new Date(mon);
+    d.setDate(mon.getDate() + i);
+    const dateStr = d.toISOString().slice(0,10);
+    const dup = slots.find(s => s.agentId === u.userId && s.date === dateStr && s.time === time);
+    if (dup) continue;
+    slots.push({
+      id:         'slot_' + Date.now() + '_' + i,
+      agentId:    u.userId   || '—',
+      agentName:  u.name     || '—',
+      agentMobile:u.mobile   || '—',
+      agentTel:   u.tel      || '—',
+      agentLicense: u.license || '—',
+      date: dateStr, time, dur: 60, memo: '',
+      booked: false, caseId: null, clientName: null, meetUrl: null, bookedAt: null,
+    });
+    added++;
+  }
+  saveSlots(slots);
+  render();
+  toast('✅ ' + added + 'スロット追加しました');
+}
+
+// ── 削除 ──
+function deleteSlot(id) {
+  const slots = loadSlots();
+  const s = slots.find(x => x.id === id);
+  if (!s) return;
+  if (s.booked) { if (!confirm('予約済みのスロットを削除しますか？クライアントへの連絡が必要です。')) return; }
+  saveSlots(slots.filter(x => x.id !== id));
+  render();
+  toast('🗑 スロットを削除しました');
+}
+
+// ── フィルター ──
+let currentFilter = 'all';
+function setFilter(f, el) {
+  currentFilter = f;
+  document.querySelectorAll('.ftab').forEach(t => t.classList.remove('on'));
+  el.classList.add('on');
+  render();
+}
+
+// ── 日本語曜日 ──
+const WEEKDAYS = ['日','月','火','水','木','金','土'];
+function fmtDate(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  return { md: (d.getMonth()+1) + '/' + d.getDate(), wd: WEEKDAYS[d.getDay()], full: dateStr };
+}
+function isPast(dateStr, time) {
+  return new Date(dateStr + 'T' + time) < new Date();
+}
+
+// ── 描画 ──
+function render() {
+  const u = window._SESSION || {};
+  let slots = loadSlots().filter(s => s.agentId === u.userId);
+  slots.sort((a,b) => (a.date+a.time).localeCompare(b.date+b.time));
+
+  if (currentFilter === 'free')   slots = slots.filter(s => !s.booked);
+  if (currentFilter === 'booked') slots = slots.filter(s => s.booked);
+
+  const grid = document.getElementById('slots-grid');
+  if (!slots.length) {
+    grid.innerHTML = '<div class="empty-slots" style="grid-column:1/-1"><div class="empty-icon">📅</div>登録済みスロットがありません<br><span style="font-size:10px;margin-top:6px;display:block">左のフォームからスロットを追加してください</span></div>';
+    return;
+  }
+
+  grid.innerHTML = slots.map(s => {
+    const fd = fmtDate(s.date);
+    const past = isPast(s.date, s.time);
+    const cls = s.booked ? 'booked' : past ? 'past' : '';
+    const statusHtml = s.booked
+      ? '<div class="slot-status status-booked">予約済み</div>'
+      : past
+        ? '<div class="slot-status" style="background:rgba(74,82,112,.15);border:1px solid rgba(74,82,112,.3);color:var(--muted)">期限切れ</div>'
+        : '<div class="slot-status status-free">空き</div>';
+
+    const bookingHtml = s.booked ? `
+      <div class="slot-booking">
+        <strong>${s.clientName || '—'}</strong>（案件: ${s.caseId || '—'}）<br>
+        <div class="slot-meet">🎥 ${s.meetUrl || '—'}</div>
+        <div style="margin-top:4px;color:var(--muted)">予約: ${s.bookedAt ? s.bookedAt.slice(0,10) : '—'}</div>
+      </div>` : '';
+
+    const deleteBtn = !s.booked
+      ? `<button class="btn-del" data-id="${s.id}" onclick="deleteSlot(this.dataset.id)">🗑 削除</button>`
+      : `<div style="font-size:10px;color:var(--muted);padding:6px;text-align:center">予約確定済み</div>`;
+
+    return `
+      <div class="slot-card ${cls}">
+        ${statusHtml}
+        <div class="slot-date">${fd.md}</div>
+        <div class="slot-weekday">（${fd.wd}）${s.date}</div>
+        <div class="slot-time">${s.time}</div>
+        <div class="slot-duration">${s.dur}分　${s.memo ? '📝 ' + s.memo : ''}</div>
+        ${bookingHtml}
+        <div class="slot-actions">${deleteBtn}</div>
+      </div>`;
+  }).join('');
+}
+
+// ── Toast ──
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.opacity = '1';
+  setTimeout(() => { el.style.opacity = '0'; }, 2800);
+}
+
+render();
+// 30秒ごとに再描画（他のページで予約が入った場合も反映）
+setInterval(render, 30000);
+</script>
+</body>
+</html>

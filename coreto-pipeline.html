@@ -1160,6 +1160,40 @@ function stepPrekey(c) {
   const setsuOk  = td.itsetsu || false;
   const canKey   = setsuOk && (paidOk || ad);
 
+  // ── 重説日程ブロックを生成 ──
+  function itScheduleBlock() {
+    const bk = c.itBooking;
+    if (bk && bk.date) {
+      const WD = ['日','月','火','水','木','金','土'];
+      const d = new Date(bk.date + 'T00:00:00');
+      const fmtd = (d.getMonth()+1) + '/' + d.getDate() + '（' + WD[d.getDay()] + '）';
+      return '<div style="background:rgba(45,212,191,.06);border:1px solid rgba(45,212,191,.25);border-radius:8px;padding:12px 14px;margin-bottom:12px;font-size:11px;line-height:1.9">'
+        + '<div style="font-size:10px;color:rgba(45,212,191,.8);letter-spacing:.08em;margin-bottom:6px">📅 IT重説 日程確定</div>'
+        + '<div><span style="color:var(--muted)">日時：</span><strong style="color:var(--teal)">' + fmtd + '　' + bk.time + '（' + (bk.dur||60) + '分）</strong></div>'
+        + '<div><span style="color:var(--muted)">重説担当：</span>' + (bk.agentName||'—') + '</div>'
+        + '<div style="margin-top:6px;font-family:var(--mono,monospace);font-size:10px;word-break:break-all;color:#2dd4bf">🎥 ' + (bk.meetUrl||'—') + '</div>'
+        + '<button style="margin-top:8px;width:100%;background:transparent;border:1px solid rgba(45,212,191,.25);border-radius:6px;padding:6px;color:rgba(45,212,191,.8);cursor:pointer;font-size:10px;font-family:inherit" data-cid="' + c.id + '" onclick="copyMeetLink(this.dataset.cid)">📋 Meet URLをコピー</button>'
+        + '</div>';
+    }
+    // 未予約
+    const app = c.apps.find(a=>a.status==='approved') || {};
+    const prop = app.prop || c.sub || '';
+    const u = window._SESSION || {};
+    const bookingUrl = location.origin + location.pathname.replace('coreto-pipeline.html','')
+      + 'coreto-itsetsu-booking.html?caseId=' + encodeURIComponent(c.id)
+      + (c.name ? '&client=' + encodeURIComponent(c.name) : '')
+      + (prop   ? '&prop='   + encodeURIComponent(prop)   : '')
+      + (u.name ? '&agent='  + encodeURIComponent(u.name) : '');
+    return '<div style="background:rgba(201,168,76,.05);border:1px solid rgba(201,168,76,.2);border-radius:8px;padding:12px 14px;margin-bottom:12px">'
+      + '<div style="font-size:10px;color:var(--gold-dim,#7a5f22);letter-spacing:.08em;margin-bottom:8px">📅 IT重説 日程調整</div>'
+      + '<div style="font-size:11px;color:var(--sub);margin-bottom:10px">クライアントに以下のリンクを送付してください。スロット選択後、自動でマッチングされます。</div>'
+      + '<div style="background:var(--card2);border:1px solid var(--border2);border-radius:6px;padding:8px 10px;font-size:10px;word-break:break-all;font-family:monospace;color:var(--blue);margin-bottom:8px">' + bookingUrl + '</div>'
+      + '<div style="display:flex;gap:6px">'
+      + '<button class="btn btn-ghost" style="flex:1;justify-content:center;font-size:11px" data-url="' + bookingUrl + '" onclick="copyBookingUrl(this)">📋 リンクをコピー</button>'
+      + '<button class="btn btn-ghost" style="flex:1;justify-content:center;font-size:11px" data-cid="' + c.id + '" onclick="checkItBooking(this.dataset.cid)">🔄 予約確認</button>'
+      + '</div></div>';
+  }
+
   function taskRow(done, label, onclick) {
     if (done) return '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;'
       +'background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.2);border-radius:8px;margin-bottom:8px">'
@@ -1170,7 +1204,7 @@ function stepPrekey(c) {
       +'<button class="btn btn-green btn-sm" onclick="'+onclick+'">完了</button></div>';
   }
 
-  let h = '<div class="step-title">📝 重説・入金</div>';
+  let h = itScheduleBlock() + '<div class="step-title">📝 重説・入金</div>';
   h += taskRow(setsuOk, 'IT重説・契約',
     "window.open('coreto-it-setsu.html','_blank');itsetsuCheck('"+c.id+"')");
   if (!ad) {
@@ -1906,6 +1940,70 @@ function naikenSkip(id) {
 // ══════════════════════════════════════════
 // 内見依頼書発行モーダル
 // ══════════════════════════════════════════
+
+// ── IT重説日程 ヘルパー ──
+function copyBookingUrl(btn) {
+  const url = btn.dataset.url;
+  navigator.clipboard.writeText(url)
+    .then(() => toast('📋 日程選択リンクをコピーしました'))
+    .catch(() => { prompt('リンク:', url); });
+}
+
+function copyMeetLink(cid) {
+  const c = CASES.find(x=>x.id===cid);
+  if (!c || !c.itBooking || !c.itBooking.meetUrl) { toast('Meet URLが見つかりません'); return; }
+  navigator.clipboard.writeText(c.itBooking.meetUrl)
+    .then(()=>toast('📋 Meet URLをコピーしました'))
+    .catch(()=>{ prompt('Meet URL:', c.itBooking.meetUrl); });
+}
+
+function checkItBooking(cid) {
+  const c = CASES.find(x=>x.id===cid);
+  if (!c) return;
+  // localStorageからスロットを確認
+  let slots = [];
+  try { slots = JSON.parse(localStorage.getItem('coreto_it_slots')||'[]'); } catch(e) {}
+  const booked = slots.find(s => s.booked && s.caseId === cid);
+  if (!booked) { toast('まだ予約が入っていません'); return; }
+
+  // 予約データを案件にセット
+  c.itBooking = {
+    slotId:    booked.id,
+    agentId:   booked.agentId,
+    agentName: booked.agentName,
+    agentMobile: booked.agentMobile || '',
+    date:      booked.date,
+    time:      booked.time,
+    dur:       booked.dur,
+    meetUrl:   booked.meetUrl,
+    clientName:booked.clientName,
+    bookedAt:  booked.bookedAt,
+  };
+  if (!c.hist) c.hist = [];
+  c.hist.unshift(today() + ' IT重説日程確定 ' + booked.date + ' ' + booked.time);
+
+  // Slack通知（エージェントと重説担当へ）
+  const u = window._SESSION || {};
+  const WD=['日','月','火','水','木','金','土'];
+  const d = new Date(booked.date+'T00:00:00');
+  const fmtd = (d.getMonth()+1)+'/'+ d.getDate()+'（'+WD[d.getDay()]+'）';
+  slackSend(SLACK_CH.重説日程, [
+    ...slackHeader('📅', 'IT重説 日程確定'),
+    '🆔 *案件ID*：' + cid,
+    '👤 *クライアント*：' + c.name,
+    '🏠 *物件*：' + (c.apps.find(a=>a.status==='approved')?.prop || c.sub || '—'),
+    '📅 *日時*：' + fmtd + '　' + booked.time + '（' + booked.dur + '分）',
+    '👩‍💼 *重説担当*：' + booked.agentName + (booked.agentMobile ? '　📱' + booked.agentMobile : ''),
+    '👨‍💼 *担当エージェント*：' + (u.name || u.userId || '—'),
+    '🎥 *Google Meet*：' + booked.meetUrl,
+    ...slackFooter(),
+  ]);
+
+  render();
+  open_case(cid);
+  toast('✅ 予約を確認しました！Slackに通知しました');
+}
+
 // ── 内見依頼書ページを案件情報付きで起動 ──
 function launchNaikenPage(cid) {
   const c = CASES.find(x => x.id === cid);
