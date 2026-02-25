@@ -485,27 +485,53 @@ function fmtDur(m) { return m < 60 ? m + '分' : Math.floor(m / 60) + '時間' +
 
 // ── Demo data ──
 (function(){
-  if (loadSlots().length > 0) return;
+  if (loadSlots().length > 20) return; // デモ: 20枠以下なら再生成
   var today = new Date();
   var u = window._SESSION || {};
-  var aid = u.userId || 'AG-001', an = u.name || '重説担当';
+  var agents = [
+    { id: u.userId || '10012', name: u.name || '山田 誠',   rank: 'Gold',   itCount: 2 },
+    { id: '10015',             name: '佐藤 花子',           rank: 'Silver', itCount: 1 },
+    { id: '10023',             name: '鈴木 拓也',           rank: 'Platinum', itCount: 0 },
+    { id: '10031',             name: '田村 さやか',         rank: 'Bronze', itCount: 3 },
+  ];
+  // 時間枠テンプレート（1時間単位）
+  var slots9to21 = [
+    '09:00','10:00','11:00','12:00','13:00','14:00',
+    '15:00','16:00','17:00','18:00','19:00','20:00'
+  ];
   var demos = [];
-  [[1,'09:30','11:00'],[1,'14:00','16:00'],[2,'10:00','12:00'],[3,'13:00','15:30'],[5,'09:00','10:30']].forEach(function(row){
-    var off = row[0], s = row[1], e = row[2];
-    var d = new Date(today); d.setDate(d.getDate() + off);
-    demos.push({
-      id: 'SL' + Date.now() + Math.random().toString(36).slice(2,5),
-      agentId: aid, agentName: an,
-      date: d.toISOString().slice(0,10),
-      start: s, end: e, dur: timeDiff(s, e),
-      status: 'open', bookedCase: null, bookedClient: null,
-      meetUrl: '', bookingToken: ''
+  var seed = 42;
+  function rnd() { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; }
+
+  // 今日から14日間 × 各時間枠 × 約70%カバー
+  for (var dayOff = 1; dayOff <= 14; dayOff++) {
+    var d = new Date(today);
+    d.setDate(today.getDate() + dayOff);
+    var dow = d.getDay(); // 0=日
+    // 日曜は枠少なめ（40%）、土曜は少なめ（55%）、平日は70%
+    var fillRate = dow === 0 ? 0.4 : dow === 6 ? 0.55 : 0.7;
+    slots9to21.forEach(function(start) {
+      if (rnd() > fillRate) return; // スキップ
+      var hour = parseInt(start);
+      var end = (hour + 1 < 21 ? (hour + 1) : 21) + ':00';
+      var agent = agents[Math.floor(rnd() * agents.length)];
+      var isBooked = rnd() < 0.15; // 15%はすでに予約済み
+      var slotId = 'SL' + d.toISOString().slice(0,10).replace(/-/g,'') + start.replace(':','') + agent.id;
+      var slot = {
+        id: slotId,
+        agentId: agent.id, agentName: agent.name,
+        agentRank: agent.rank, agentItCount: agent.itCount,
+        date: d.toISOString().slice(0,10),
+        start: start, end: end, dur: 60,
+        status: isBooked ? 'booked' : 'open',
+        bookedCase: isBooked ? 'R0' + Math.floor(rnd()*90000+10000) : null,
+        bookedClient: isBooked ? ['田中 雄介','佐藤 美咲','鈴木 健太','山本 由美'][Math.floor(rnd()*4)] : null,
+        meetUrl: isBooked ? 'https://meet.google.com/demo-'+slotId.slice(-6) : '',
+        bookingToken: 'BK' + slotId.slice(-6).toUpperCase()
+      };
+      demos.push(slot);
     });
-  });
-  demos[1].status = 'booked';
-  demos[1].bookedClient = '田中 雄介';
-  demos[1].bookedCase = 'R042857';
-  demos[1].meetUrl = 'https://meet.google.com/demo-abc-xyz';
+  }
   saveSlots(demos);
 })();
 
