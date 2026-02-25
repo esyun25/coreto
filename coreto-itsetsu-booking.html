@@ -789,7 +789,26 @@ function doBook() {
   };
   bookings.push(bk);
   saveBookings(bookings);
-  console.log('[Slack #IT重説日程調整] 予約確定\n案件:'+caseId+'\nクライアント:'+clientN+'\n'+fmtDate(slot.date)+' '+slot.start+'\n重説担当:'+slot.agentName+'\nMeet:'+meetUrl);
+  var changeUrl = location.href;
+  var slackMsg = '📅 *IT重説 予約確定*\n'
+    + '━━━━━━━━━━━━━━\n'
+    + '案件ID: ' + caseId + '\n'
+    + 'クライアント: ' + clientN + ' 様\n'
+    + '日時: *' + fmtDate(bk.date) + ' ' + bk.start + '〜*（所要時間30〜45分）\n'
+    + '━━━━━━━━━━━━━━\n'
+    + '📋 *クライアントへ以下をSMSで転送してください*\n'
+    + '```\n'
+    + '【重説のご予約が完了しました】\n'
+    + fmtDate(bk.date) + ' ' + bk.start + '〜（30〜45分）\n'
+    + '\n'
+    + '🎥 当日のGoogle Meet\n'
+    + bk.meetUrl + '\n'
+    + '\n'
+    + '📅 日程変更・キャンセルはこちら\n'
+    + changeUrl + '\n'
+    + '※予約の24時間以上前まで変更可能です\n'
+    + '```';
+  console.log('[Slack] ' + slackMsg);
   renderSuccess(bk);
 }
 
@@ -817,7 +836,26 @@ function doChange() {
   bk.itAgentId=newSlot.agentId; bk.itAgentName=newSlot.agentName; bk.meetUrl=meetUrl;
   saveBookings(bookings);
   saveSlots(slots);
-  console.log('[Slack #IT重説日程調整] 日程変更\n案件:'+caseId+'\n'+fmtDate(newSlot.date)+' '+bookStart+'\n重説担当:'+newSlot.agentName+'\nMeet:'+meetUrl);
+  var changeUrl2 = location.href;
+  var slackChangeMsg = '🔄 *IT重説 日程変更*\n'
+    + '━━━━━━━━━━━━━━\n'
+    + '案件ID: ' + caseId + '\n'
+    + 'クライアント: ' + clientN + ' 様\n'
+    + '新日時: *' + fmtDate(bk.date) + ' ' + bk.start + '〜*（所要時間30〜45分）\n'
+    + '━━━━━━━━━━━━━━\n'
+    + '📋 *クライアントへ以下をSMSで転送してください*\n'
+    + '```\n'
+    + '【重説の日程が変更されました】\n'
+    + fmtDate(bk.date) + ' ' + bk.start + '〜（30〜45分）\n'
+    + '\n'
+    + '🎥 当日のGoogle Meet\n'
+    + meetUrl + '\n'
+    + '\n'
+    + '📅 再度変更・キャンセルはこちら\n'
+    + changeUrl2 + '\n'
+    + '※予約の24時間以上前まで変更可能です\n'
+    + '```';
+  console.log('[Slack] ' + slackChangeMsg);
   render();
 }
 
@@ -844,17 +882,6 @@ function doCancel() {
 
 function renderSuccess(bk) {
   var appEl = document.getElementById('app');
-  var changeUrl = location.href;
-  var smsBody = encodeURIComponent(
-    '【重説予約完了】\n'
-    + fmtDate(bk.date) + ' ' + bk.start + '〜（所要時間30〜45分）\n'
-    + (bk.meetUrl ? '\n🎥 Google Meet\n' + bk.meetUrl + '\n' : '')
-    + '\n📅 日程変更・キャンセル\n' + changeUrl
-    + '\n※24時間以上前まで変更可能'
-  );
-  // クライアントが自分自身に送るSMSリンク
-  var smsHref = 'sms:' + (navigator.userAgent.match(/iPhone|iPad/) ? '&' : '?') + 'body=' + smsBody;
-
   appEl.innerHTML = '<div class="card">'
     +'<div class="success-icon">✅</div>'
     +'<div class="success-title" style="color:var(--green)">予約が完了しました</div>'
@@ -863,19 +890,12 @@ function renderSuccess(bk) {
     +'<div style="font-size:10px;color:var(--sub);margin-top:3px">所要時間 30〜45分</div>'
     +(bk.meetUrl ? '<a class="meet-link" href="'+bk.meetUrl+'" target="_blank">🎥 Google Meet に参加する</a>' : '')
     +'</div>'
-    // 変更URL表示
-    +'<div style="margin-top:14px;padding:12px 14px;background:var(--card2);border:1px solid var(--border);border-radius:10px">'
-    +'<div style="font-size:10px;color:var(--sub);margin-bottom:6px">🔗 日程変更・キャンセル用URL</div>'
-    +'<div style="font-size:10px;word-break:break-all;font-family:monospace;color:var(--blue);line-height:1.6">'+changeUrl+'</div>'
-    +'<div style="font-size:10px;color:var(--sub);margin-top:6px">このURLをブックマークしておくと変更・キャンセルが可能です。</div>'
+    +'<div style="margin-top:14px;padding:12px 14px;background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.2);border-radius:10px;font-size:11px;color:var(--sub);line-height:2">'
+    +'✅ 担当エージェントへSlackで通知しました。<br>'
+    +'日程変更・キャンセルの確認方法はエージェントよりSMSでご連絡します。'
     +'</div>'
-    // SMS自己送信ボタン
-    +'<a href="'+smsHref+'" style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px;'
-    +'padding:12px;background:rgba(79,156,249,.1);border:1px solid rgba(79,156,249,.3);'
-    +'border-radius:10px;color:var(--blue);font-weight:700;font-size:13px;text-decoration:none">'
-    +'📩 予約内容をSMSで自分に送る</a>'
     +'<div style="font-size:10px;color:var(--sub);line-height:1.9;margin-top:12px;text-align:center">'
-    +'変更・キャンセルはこのページに再度アクセスしてください。<br>'
+    +'変更・キャンセルはエージェントから届くSMSのリンクからお願いします。<br>'
     +'24時間以上前まで変更可能 / 24時間以内は2回まで'
     +'</div></div>';
 }
