@@ -1251,7 +1251,6 @@ function stepPrekey(c) {
       + h;
   }
 
-  h += contractSentRow(c);
   h += bookingLinkBlock(c);
   return h;
 }
@@ -2317,23 +2316,6 @@ function buildBookingUrl(c) {
 }
 
 // 警告ダイアログ付き発行フロー
-function contractSentRow(c) {
-  if (c.contractSent) {
-    const d = c.contractSentDate || '';
-    return '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;margin-top:8px;'
-      +'background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.2);border-radius:8px">'
-      +'<span style="font-size:16px">✅</span>'
-      +'<div><div style="font-size:12px;color:var(--green);font-weight:700">契約書 発送済み</div>'
-      +(d ? '<div style="font-size:10px;color:var(--muted)">'+d+'</div>' : '')
-      +'</div></div>';
-  }
-  return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;margin-top:8px;'
-    +'background:var(--card2);border:1px solid var(--border);border-radius:8px">'
-    +'<span style="font-size:12px">📦 契約書 発送</span>'
-    +'<button class="btn btn-green btn-sm" data-cid="'+c.id+'" onclick="markContractSent(this.dataset.cid)">発送済みにする</button>'
-    +'</div>';
-}
-
 function bookingLinkBlock(c) {
   let html = '<div style="margin-top:12px;padding-top:12px;border-top:1px dashed var(--border2)">';
   html += '<div style="font-size:10px;color:var(--gold-dim,#7a5f22);font-weight:700;margin-bottom:8px;letter-spacing:.05em">📅 重説日程調整リンク</div>';
@@ -2434,18 +2416,6 @@ function issueBookingLink(cid) {
   ]);
   // Show link modal
   showBookingLinkModal(cid, url);
-  open_case(cid);
-}
-
-// 契約書発送済みにする
-function markContractSent(cid) {
-  const c = CASES.find(function(x){ return x.id === cid; });
-  if (!c) return;
-  if (!confirm('契約書を発送済みにしますか？\nクライアントへの到着後に重説を実施してください。')) return;
-  c.contractSent = true;
-  c.contractSentDate = todayISO();
-  c.hist.unshift(today() + ' 契約書発送済み');
-  toast('✅ 契約書発送済みにしました');
   open_case(cid);
 }
 
@@ -2612,7 +2582,7 @@ function stepInvoice(c) {
     +'<textarea id="inv-reason" rows="2" placeholder="例: クライアント交渉の結果、手数料を減額。入居率優先のため。" style="font-size:12px;resize:vertical">'+prevReason+'</textarea></div>'
     +'</div>'
     +'<button class="btn btn-gold" style="width:100%;justify-content:center" data-cid="'+id+'" onclick="issueInvoice(this.dataset.cid)">📄 請求書発行 → 重説・入金へ</button>'
-    + contractSentRow(c);
+
 }
 
 // ═══════════════════════════════════════════════
