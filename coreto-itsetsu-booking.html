@@ -40,7 +40,7 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans-seri
 .slot-agent{font-size:10px;color:var(--sub);text-align:right;flex:1}
 .priority-badge{font-size:8px;padding:1px 6px;border-radius:8px;background:rgba(167,139,250,.15);
   color:var(--purple);font-weight:700;display:block;margin-top:2px}
-.no-slots{font-size:12px;color:var(--muted);text-align:center;padding:28px;border:1px dashed var(--border2);border-radius:10px}
+.no-slots{font-size:12px;color:var(--sub);text-align:center;padding:28px;border:1px dashed var(--border2);border-radius:10px}
 /* Confirm / change buttons */
 .btn{width:100%;padding:13px;border-radius:12px;font-family:inherit;font-size:13px;font-weight:800;
   border:none;cursor:pointer;transition:.12s}
@@ -73,7 +73,7 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans-seri
 /* Request form */
 .req-section{border-top:1.5px dashed var(--border2);margin-top:14px;padding-top:14px}
 .req-title{font-size:12px;font-weight:700;color:var(--orange);margin-bottom:8px}
-.req-desc{font-size:10px;color:var(--muted);line-height:1.9;margin-bottom:12px;
+.req-desc{font-size:10px;color:var(--sub);line-height:1.9;margin-bottom:12px;
   background:rgba(251,146,60,.07);border:1px solid rgba(251,146,60,.18);border-radius:8px;padding:9px 11px}
 .wish-row{display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap}
 .wish-label{font-size:10px;color:var(--sub);min-width:28px;flex-shrink:0}
@@ -83,10 +83,10 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans-seri
 .add-wish-btn{font-size:11px;padding:5px 12px;border-radius:7px;border:1px dashed var(--border2);
   background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;width:100%;margin-top:2px}
 .add-wish-btn:hover{border-color:var(--orange);color:var(--orange)}
-.req-note{font-size:10px;color:var(--muted);margin-top:8px}
+.req-note{font-size:10px;color:var(--sub);margin-top:8px}
 /* Calendar grid */
 .cal-toggle{width:100%;margin-top:12px;padding:10px 0;background:transparent;
-  border:1px dashed var(--border2);border-radius:8px;color:var(--muted);
+  border:1px dashed var(--border2);border-radius:8px;color:var(--sub);
   cursor:pointer;font-size:11px;font-family:inherit;transition:.15s}
 .cal-toggle:hover{border-color:var(--gold);color:var(--gold)}
 .cal-section{margin-top:14px;display:none}
@@ -112,8 +112,8 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans-seri
   border:1.5px solid var(--gold);color:var(--gold);font-size:14px;font-weight:700;
   transition:.12s}
 .cal-cell-avail:hover,.cal-cell-avail.selected{background:var(--gold);color:#0b0d12}
-.cal-cell-none{color:var(--border2);font-size:12px}
-.cal-cell-past{color:var(--border);font-size:10px}
+.cal-cell-none{color:var(--sub);font-size:12px}
+.cal-cell-past{color:var(--muted);font-size:10px}
 .col-sun{color:var(--red)!important}
 .col-sat{color:var(--blue)!important}
 .col-today{background:rgba(201,168,64,.06)}
@@ -340,20 +340,11 @@ function renderCalGrid() {
   var weekDates = getWeekDates(calWeekOffset);
   var today = new Date(); today.setHours(0,0,0,0);
 
-  // Collect all unique time labels from available slots in this week + next 3 weeks
-  var allDates = [];
-  for (var w = 0; w < 4; w++) getWeekDates(calWeekOffset + w).forEach(function(d){ allDates.push(fmtIso(d)); });
-  var timesSet = {};
-  allDates.forEach(function(ds) {
-    (slotMap[ds] || []).forEach(function(s) { timesSet[s.start] = true; });
-  });
-  var times = Object.keys(timesSet).sort();
-  if (!times.length) {
-    // Show all 30-min slots 8:00-20:30 if no data
-    for (var h = 8; h < 21; h++) {
-      times.push((h<10?'0':'')+h+':00');
-      times.push((h<10?'0':'')+h+':30');
-    }
+  // 固定時間帯を常に表示（9:00〜21:00、30分単位）
+  var times = [];
+  for (var h = 9; h < 21; h++) {
+    times.push((h<10?'0':'')+h+':00');
+    times.push((h<10?'0':'')+h+':30');
   }
 
   var WD = ['日','月','火','水','木','金','土'];
@@ -435,7 +426,7 @@ function selSlotCal(slotId) {
         +'✅ 選択: '+fmtDate(slot.date)+' '+slot.start+' / '+slot.agentName+'</div>';
     }
     // Scroll to confirm btn
-    var confirmBtn = document.getElementById('confirm-btn-cal');
+    var confirmBtn = document.getElementById('confirm-btn');
     if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.scrollIntoView({behavior:'smooth',block:'nearest'}); }
   }
 }
@@ -542,9 +533,7 @@ function renderNew() {
       +'<div class="cal-section" id="cal-section">'
       +'<div id="cal-grid-wrap"></div>'
       +'<div id="cal-sel-info"></div>'
-      +'<div class="btns" style="margin-top:10px">'
-      +'<button class="btn btn-gold" id="confirm-btn-cal" onclick="doBook()" disabled>この日程で予約する</button>'
-      +'</div></div>';
+      +'</div>';
   }
   var requestSection = caseId ? (
     '<div class="req-section">'
@@ -564,7 +553,7 @@ function renderNew() {
     +'<div class="card"><div class="card-title">🗓 日程を選択</div>'
     +(dedicatedId ? '<div style="font-size:10px;color:var(--purple);margin-bottom:10px">🔮 担当者を優先的に表示しています</div>' : '')
     +'<div id="slot-list">'+slotsHtml+'</div>'
-    +(slots.length ? '<div class="btns"><button class="btn btn-gold" id="confirm-btn" onclick="doBook()" disabled>この日程で予約する</button></div>' : '')
+    +'<div class="btns" style="margin-top:14px"><button class="btn btn-gold" id="confirm-btn" onclick="doBook()" disabled>この日程で予約する</button></div>'
     +requestSection+'</div>';
   renderWishRows();
 }
