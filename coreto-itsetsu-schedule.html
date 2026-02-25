@@ -4,413 +4,330 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>重説スケジュール登録 | CORETO</title>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
   --bg:#0b0d12;--bg2:#0f1219;--card:#141820;--card2:#191e28;
   --border:#1e2435;--border2:#252c3d;--text:#e4e7f0;--sub:#7a82a0;
-  --muted:#3e4565;--gold:#c9a840;--gold2:#e0bc5a;--gold-bg:rgba(201,168,64,.07);
-  --blue:#4f9cf9;--green:#34d399;--red:#f87171;--orange:#fb923c;--purple:#a78bfa;
+  --muted:#3e4565;--gold:#c9a840;--gold2:#e0bc5a;
+  --blue:#4f9cf9;--green:#34d399;--red:#f87171;--orange:#fb923c;
 }
 body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans-serif;min-height:100vh}
 .header{height:50px;display:flex;align-items:center;justify-content:space-between;
-  padding:0 20px;border-bottom:1px solid var(--border);background:var(--card2)}
+  padding:0 20px;border-bottom:1px solid var(--border);background:var(--card2);flex-shrink:0}
 .logo{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:var(--gold);letter-spacing:3px}
-.hdr-badge{font-size:11px;color:var(--sub);margin-left:12px}
-.back-btn{font-size:10px;padding:5px 12px;border-radius:6px;border:1px solid var(--border2);
-  background:transparent;color:var(--muted);cursor:pointer;font-family:inherit}
-.layout{display:grid;grid-template-columns:320px 1fr;gap:0;height:calc(100vh - 50px)}
-.sidebar{border-right:1px solid var(--border);padding:20px;overflow-y:auto;background:var(--bg2)}
-.main{padding:24px;overflow-y:auto}
-.section-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:800;color:var(--gold);
-  letter-spacing:1px;margin-bottom:14px;display:flex;align-items:center;gap:8px}
-.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px}
-.fi{margin-bottom:10px}
-.fi label{display:block;font-size:11px;color:var(--sub);margin-bottom:4px}
-.fi input,.fi select,.fi textarea{width:100%;background:var(--card2);border:1px solid var(--border2);
-  border-radius:8px;padding:9px 10px;color:var(--text);font-family:inherit;font-size:12px;outline:none}
-.fi input:focus,.fi select:focus,.fi textarea:focus{border-color:var(--gold)}
-.row{display:flex;gap:8px}
-.btn{padding:9px 18px;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;
-  font-family:inherit;transition:.15s;border:none;display:inline-flex;align-items:center;gap:7px}
-.btn-gold{background:linear-gradient(135deg,#c9a840,#e0bc5a);color:#0b0d12}
-.btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--sub)}
-.btn-ghost:hover{border-color:var(--border);color:var(--text)}
-.btn-red{background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.3);color:var(--red)}
-.btn-green{background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);color:var(--green)}
-.btn-full{width:100%;justify-content:center;margin-top:8px}
-
-/* スロットグリッド */
-.week-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
-.week-label{font-size:13px;font-weight:700;color:var(--text)}
-.week-btn{background:var(--card2);border:1px solid var(--border2);color:var(--sub);
-  border-radius:6px;padding:5px 10px;cursor:pointer;font-family:inherit;font-size:11px}
+.hdr-right{display:flex;align-items:center;gap:10px}
+.agent-badge{font-size:10px;color:var(--sub);background:var(--card);border:1px solid var(--border2);border-radius:6px;padding:3px 10px}
+.back-btn{font-size:10px;padding:5px 12px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;font-family:inherit}
+.layout{display:flex;flex-direction:column;height:calc(100vh - 50px);overflow:hidden}
+.toolbar{height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0}
+.week-nav{display:flex;align-items:center;gap:10px}
+.week-btn{background:var(--card2);border:1px solid var(--border2);color:var(--sub);border-radius:6px;padding:5px 12px;cursor:pointer;font-family:inherit;font-size:11px;transition:.1s}
 .week-btn:hover{color:var(--text);border-color:var(--border)}
-.cal-grid{display:grid;grid-template-columns:56px repeat(7,1fr);gap:1px;
-  background:var(--border);border:1px solid var(--border);border-radius:10px;overflow:hidden}
-.cal-head{background:var(--card2);padding:8px 4px;text-align:center;font-size:10px;font-weight:700;color:var(--sub)}
-.cal-head.today{color:var(--gold)}
-.cal-time{background:var(--card);padding:8px 6px;font-size:9px;color:var(--muted);
-  font-family:'DM Mono',monospace;text-align:right}
-.cal-cell{background:var(--card);min-height:36px;cursor:pointer;transition:.1s;position:relative}
-.cal-cell:hover{background:var(--card2)}
-.cal-cell.slot-open{background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.3) !important}
-.cal-cell.slot-open:hover{background:rgba(52,211,153,.18)}
-.cal-cell.slot-booked{background:rgba(79,156,249,.1);border:1px solid rgba(79,156,249,.3) !important;cursor:default}
-.cal-cell.slot-past{opacity:.35;cursor:default}
-.slot-label{position:absolute;inset:3px;border-radius:4px;display:flex;align-items:center;
-  justify-content:center;font-size:8px;font-weight:700;line-height:1.2;text-align:center;padding:2px}
-.slot-label.open{background:rgba(52,211,153,.2);color:var(--green)}
-.slot-label.booked{background:rgba(79,156,249,.15);color:var(--blue)}
-
-/* 登録済みスロット一覧 */
-.slot-item{background:var(--card2);border:1px solid var(--border2);border-radius:8px;
-  padding:10px 12px;margin-bottom:8px;display:flex;align-items:center;gap:10px}
-.slot-item.booked{border-color:rgba(79,156,249,.3)}
-.slot-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.slot-info{flex:1;font-size:11px;line-height:1.7}
-.slot-status{font-size:9px;padding:2px 8px;border-radius:10px;font-weight:700}
-.status-open{background:rgba(52,211,153,.15);color:var(--green)}
-.status-booked{background:rgba(79,156,249,.15);color:var(--blue)}
-
-/* 統計 */
-.stat-row{display:flex;gap:10px;margin-bottom:20px}
-.stat-box{flex:1;background:var(--card2);border:1px solid var(--border2);border-radius:8px;
-  padding:12px;text-align:center}
-.stat-n{font-size:22px;font-weight:800;font-family:'Syne',sans-serif}
-.stat-l{font-size:10px;color:var(--muted);margin-top:2px}
-
-/* legend */
-.legend{display:flex;gap:12px;font-size:10px;color:var(--muted);margin-bottom:12px}
-.legend-dot{width:10px;height:10px;border-radius:2px;display:inline-block;margin-right:4px}
+.week-label{font-size:12px;font-weight:700;color:var(--text);min-width:160px;text-align:center}
+.stats{display:flex;gap:16px;font-size:11px}
+.stat{display:flex;align-items:center;gap:5px}
+.stat-dot{width:8px;height:8px;border-radius:50%}
+.cal-wrap{flex:1;overflow:auto}
+.cal-grid{display:grid;grid-template-columns:52px repeat(7,1fr);min-width:620px}
+.col-head{background:var(--bg2);padding:8px 4px;text-align:center;position:sticky;top:0;z-index:10;border-bottom:1px solid var(--border)}
+.col-head-inner{font-size:10px;font-weight:700;color:var(--sub);line-height:1.7}
+.col-head-inner.today{color:var(--gold)}
+.col-head-inner .day-num{font-size:18px;font-weight:800;font-family:'Syne',sans-serif;display:block}
+.time-label{background:var(--bg2);display:flex;align-items:flex-start;justify-content:flex-end;
+  padding:0 6px;border-right:1px solid var(--border);font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);position:relative}
+.time-label .lbl{position:absolute;top:-6px;right:6px;font-size:9px;color:var(--sub)}
+.cell{border-left:1px solid var(--border);cursor:pointer;transition:background .1s;position:relative}
+.cell:hover{background:rgba(201,168,64,.05)}
+.cell.past{cursor:default;opacity:.35}
+.cell.past:hover{background:transparent}
+.slot-block{position:absolute;inset:1px;border-radius:4px;z-index:2;
+  display:flex;align-items:center;justify-content:center;
+  font-size:7px;font-weight:700;line-height:1.3;padding:2px 3px;text-align:center}
+.slot-block.open{background:rgba(52,211,153,.2);border:1px solid rgba(52,211,153,.5);color:var(--green);cursor:pointer}
+.slot-block.open:hover{background:rgba(52,211,153,.3)}
+.slot-block.booked{background:rgba(79,156,249,.15);border:1px solid rgba(79,156,249,.4);color:var(--blue);cursor:default}
+/* Panel */
+.day-panel{position:fixed;right:0;top:50px;bottom:0;width:340px;
+  background:var(--card);border-left:1px solid var(--border);
+  transform:translateX(100%);transition:transform .2s cubic-bezier(.4,0,.2,1);
+  z-index:100;display:flex;flex-direction:column}
+.day-panel.open{transform:translateX(0)}
+.panel-hdr{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.panel-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:var(--gold)}
+.close-btn{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:18px;padding:4px 8px}
+.panel-body{flex:1;overflow-y:auto;padding:14px 16px}
+.add-form{background:var(--card2);border:1px solid var(--border2);border-radius:10px;padding:14px;margin-bottom:14px}
+.form-lbl{font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:8px;text-transform:uppercase}
+.time-row{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.tsel{background:var(--bg);border:1px solid var(--border2);border-radius:7px;padding:8px;
+  color:var(--text);font-family:'DM Mono',monospace;font-size:13px;cursor:pointer;flex:1;outline:none}
+.tsel:focus{border-color:var(--gold)}
+.arr{color:var(--muted);font-size:12px;flex-shrink:0}
+.btn-add{width:100%;padding:9px;border-radius:8px;background:rgba(201,168,64,.12);
+  border:1px solid rgba(201,168,64,.35);color:var(--gold);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer}
+.btn-add:hover{background:rgba(201,168,64,.2)}
+.list-lbl{font-size:10px;color:var(--muted);margin-bottom:8px;letter-spacing:1px}
+.sitem{display:flex;align-items:center;gap:8px;padding:9px 11px;
+  background:var(--card2);border:1px solid var(--border2);border-radius:8px;margin-bottom:6px}
+.sitem.booked{border-color:rgba(79,156,249,.3)}
+.stime{flex:1;font-family:'DM Mono',monospace;font-size:12px;font-weight:700}
+.sdur{font-size:10px;color:var(--muted)}
+.spill{font-size:9px;padding:2px 7px;border-radius:10px;font-weight:700}
+.pill-o{background:rgba(52,211,153,.15);color:var(--green)}
+.pill-b{background:rgba(79,156,249,.15);color:var(--blue)}
+.del-btn{background:transparent;border:1px solid rgba(248,113,113,.25);color:var(--red);border-radius:5px;padding:3px 7px;font-size:10px;cursor:pointer;font-family:inherit}
+.no-slots{font-size:11px;color:var(--muted);text-align:center;padding:20px;border:1px dashed var(--border2);border-radius:8px}
+.panel-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:99;display:none}
+.panel-overlay.show{display:block}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+  background:var(--card2);border:1px solid var(--border);color:var(--text);
+  padding:9px 18px;border-radius:10px;font-size:12px;z-index:9999;white-space:nowrap;pointer-events:none;transition:opacity .3s}
 </style>
 </head>
 <body>
-
-<!-- ── Session Guard ── -->
 <script>
-(function(){
-  var s=null;
-  try{s=JSON.parse(sessionStorage.getItem('coreto_session')||'null');}catch(e){}
-  if(!s){location.replace('coreto-hub.html');return;}
-  window._SESSION=s;
-})();
-</script>
-
+(function(){var s=null;try{s=JSON.parse(sessionStorage.getItem('coreto_session')||'null');}catch(e){}if(!s){location.replace('coreto-hub.html');return;}window._SESSION=s;})();
+<\/script>
 <div class="header">
   <div style="display:flex;align-items:center;gap:10px">
     <div class="logo">CORETO</div>
-    <span class="hdr-badge">重説スケジュール管理</span>
+    <span style="font-size:11px;color:var(--sub)">重説スケジュール管理</span>
   </div>
-  <button class="back-btn" onclick="location.href='coreto-hub.html'">← マイページ</button>
+  <div class="hdr-right">
+    <span class="agent-badge" id="agent-badge">—</span>
+    <button class="back-btn" onclick="location.href='coreto-hub.html'">← マイページ</button>
+  </div>
 </div>
-
 <div class="layout">
-
-<!-- ─ Sidebar: 登録フォーム + 一覧 ─ -->
-<div class="sidebar">
-
-  <div class="section-title">📅 空き枠を追加</div>
-  <div class="card">
-    <div class="fi">
-      <label>日付 <span style="color:var(--red)">*</span></label>
-      <input type="date" id="slot-date">
+  <div class="toolbar">
+    <div class="week-nav">
+      <button class="week-btn" onclick="shiftWeek(-1)">◀</button>
+      <div class="week-label" id="week-label">—</div>
+      <button class="week-btn" onclick="shiftWeek(1)">▶</button>
+      <button class="week-btn" onclick="goToday()" style="margin-left:4px">今週</button>
     </div>
-    <div class="row" style="gap:8px;margin-bottom:10px">
-      <div class="fi" style="flex:1;margin:0">
-        <label>開始時刻</label>
-        <select id="slot-start">
-          <option value="09:00">09:00</option><option value="10:00">10:00</option>
-          <option value="11:00">11:00</option><option value="13:00">13:00</option>
-          <option value="14:00" selected>14:00</option><option value="15:00">15:00</option>
-          <option value="16:00">16:00</option><option value="17:00">17:00</option>
-          <option value="18:00">18:00</option>
-        </select>
-      </div>
-      <div class="fi" style="flex:1;margin:0">
-        <label>所要時間</label>
-        <select id="slot-dur">
-          <option value="60">60分</option>
-          <option value="90" selected>90分</option>
-          <option value="120">120分</option>
-        </select>
-      </div>
-    </div>
-    <div class="fi">
-      <label>メモ（任意）</label>
-      <input type="text" id="slot-memo" placeholder="例: 午後のみ可 など">
-    </div>
-    <button class="btn btn-gold btn-full" onclick="addSlot()">＋ 空き枠を登録</button>
+    <div class="stats" id="stats-bar"></div>
   </div>
-
-  <div class="section-title" style="margin-top:20px">📋 登録済み枠</div>
-  <div id="slot-list"><!-- JS生成 --></div>
-
+  <div class="cal-wrap" id="cal-wrap">
+    <div class="cal-grid" id="cal-grid"></div>
+  </div>
 </div>
-
-<!-- ─ Main: カレンダービュー ─ -->
-<div class="main">
-
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-    <div class="section-title" style="margin:0">週間カレンダー</div>
-    <div style="display:flex;align-items:center;gap:12px">
-      <div class="legend">
-        <span><span class="legend-dot" style="background:rgba(52,211,153,.4)"></span>空き</span>
-        <span><span class="legend-dot" style="background:rgba(79,156,249,.4)"></span>予約済</span>
+<div class="panel-overlay" id="panel-overlay" onclick="closePanel()"></div>
+<div class="day-panel" id="day-panel">
+  <div class="panel-hdr">
+    <div class="panel-title" id="panel-title">—</div>
+    <button class="close-btn" onclick="closePanel()">✕</button>
+  </div>
+  <div class="panel-body">
+    <div class="add-form">
+      <div class="form-lbl">⏱ 時間帯を追加</div>
+      <div class="time-row">
+        <select class="tsel" id="sel-start"></select>
+        <span class="arr">→</span>
+        <select class="tsel" id="sel-end"></select>
       </div>
+      <button class="btn-add" onclick="addSlotFromPanel()">＋ この時間帯を追加</button>
     </div>
+    <div class="list-lbl">登録済み時間帯</div>
+    <div id="panel-slots-list"></div>
   </div>
-
-  <div class="stat-row" id="stat-row"></div>
-
-  <div class="week-nav">
-    <button class="week-btn" onclick="shiftWeek(-1)">◀ 前週</button>
-    <div class="week-label" id="week-label">—</div>
-    <button class="week-btn" onclick="shiftWeek(1)">次週 ▶</button>
-  </div>
-
-  <div class="legend" style="margin-bottom:8px">
-    <span style="color:var(--sub);font-size:10px">※ 空き枠をクリックで削除、予約済みはクリック不可</span>
-  </div>
-
-  <div class="cal-grid" id="cal-grid"><!-- JS生成 --></div>
-
 </div>
-</div>
-
 <script>
-// ═══════════════════════════════════════════════
-// DATA STORE (localStorage for persistence demo)
-// ═══════════════════════════════════════════════
-const STORE_KEY = 'coreto_itsetsu_slots';
+const STORE_KEY='coreto_itsetsu_slots';
+function loadSlots(){try{return JSON.parse(localStorage.getItem(STORE_KEY)||'[]');}catch(e){return[];}}
+function saveSlots(s){localStorage.setItem(STORE_KEY,JSON.stringify(s));}
 
-function loadSlots() {
-  try { return JSON.parse(localStorage.getItem(STORE_KEY) || '[]'); } catch(e) { return []; }
-}
-function saveSlots(slots) {
-  localStorage.setItem(STORE_KEY, JSON.stringify(slots));
-}
+(function(){const u=window._SESSION||{};document.getElementById('agent-badge').textContent=(u.name||'—')+'　ID: '+(u.userId||'—');})();
 
-// Demo: pre-populate if empty
-(function initDemo(){
-  if (loadSlots().length > 0) return;
-  const today = new Date();
-  const demos = [];
-  const agentId = (window._SESSION && window._SESSION.userId) || 'AG-001';
-  const agentName = (window._SESSION && window._SESSION.name) || '重説担当';
-  // Add some open slots for the next 2 weeks
-  [[1,'14:00',90],[2,'10:00',90],[3,'15:00',60],[5,'14:00',90],[7,'10:00',90],[8,'15:00',90]].forEach(([doff,t,dur])=>{
-    const d = new Date(today); d.setDate(d.getDate()+doff);
-    const dateStr = d.toISOString().slice(0,10);
-    demos.push({
-      id: 'SL'+Date.now()+Math.random().toString(36).slice(2,5),
-      agentId, agentName, date: dateStr, start: t, dur,
-      status: 'open', memo: '', bookingToken: '',
-      bookedCase: null, bookedClient: null, meetUrl: ''
-    });
+function timeDiff(s,e){const[sh,sm]=s.split(':').map(Number);const[eh,em]=e.split(':').map(Number);return(eh*60+em)-(sh*60+sm);}
+function fmtDur(m){return m<60?m+'分':Math.floor(m/60)+'時間'+(m%60?m%60+'分':'')}
+
+// demo data
+(function(){
+  if(loadSlots().length>0)return;
+  const today=new Date(),u=window._SESSION||{};
+  const aid=u.userId||'AG-001',an=u.name||'重説担当';
+  const demos=[];
+  [[1,'09:30','11:00'],[1,'14:00','16:00'],[2,'10:00','12:00'],[3,'13:00','15:30'],[5,'09:00','10:30']].forEach(([off,s,e])=>{
+    const d=new Date(today);d.setDate(d.getDate()+off);
+    demos.push({id:'SL'+Date.now()+Math.random().toString(36).slice(2,5),agentId:aid,agentName:an,date:d.toISOString().slice(0,10),start:s,end:e,dur:timeDiff(s,e),status:'open',bookedCase:null,bookedClient:null,meetUrl:'',bookingToken:''});
   });
-  // One already booked
-  const bDate = new Date(today); bDate.setDate(bDate.getDate()+2);
-  demos[1].status = 'booked';
-  demos[1].bookedClient = '田中 雄介';
-  demos[1].bookedCase = 'R042857';
-  demos[1].meetUrl = 'https://meet.google.com/demo-abc-xyz';
+  demos[1].status='booked';demos[1].bookedClient='田中 雄介';demos[1].bookedCase='R042857';demos[1].meetUrl='https://meet.google.com/demo-abc-xyz';
   saveSlots(demos);
 })();
 
-// ═══════════════════════════════════════════════
-// WEEK NAVIGATION
-// ═══════════════════════════════════════════════
-let weekOffset = 0;
+let weekOffset=0,activePanelDate=null;
+const CELL_H=20;
+const DAYS_JP=['月','火','水','木','金','土','日'];
+const DAYS_F=['日','月','火','水','木','金','土'];
 
-function getWeekStart(offset = 0) {
-  const d = new Date();
-  d.setHours(0,0,0,0);
-  const day = d.getDay();
-  d.setDate(d.getDate() - day + (day===0?-6:1) + offset*7); // Monday
+function getWeekStart(off){
+  const d=new Date();d.setHours(0,0,0,0);
+  const day=d.getDay();
+  d.setDate(d.getDate()-(day===0?6:day-1)+off*7);
   return d;
 }
+function goToday(){weekOffset=0;renderCalendar();}
+function shiftWeek(dir){weekOffset+=dir;renderCalendar();}
 
-function shiftWeek(dir) { weekOffset += dir; renderCalendar(); }
+function buildTimeOptions(sel,val){
+  sel.innerHTML='';
+  for(let h=0;h<24;h++)for(let m=0;m<60;m+=30){
+    const v=String(h).padStart(2,'0'+'')+ ':'+String(m).padStart(2,'0'+'');
+    const o=document.createElement('option');
+    o.value=v;o.textContent=v;if(v===val)o.selected=true;
+    sel.appendChild(o);
+  }
+}
+function onStartChange(){
+  const s=document.getElementById('sel-start').value;
+  const[h,m]=s.split(':').map(Number);
+  let nh=h+1,nm=m;if(nh>=24){nh=23;nm=30;}
+  buildTimeOptions(document.getElementById('sel-end'),String(nh).padStart(2,'0')+':'+String(nm).padStart(2,'0'));
+}
 
-const HOURS = ['09','10','11','12','13','14','15','16','17','18'];
-const DAYS_JP = ['月','火','水','木','金','土','日'];
+function renderCalendar(){
+  const ws=getWeekStart(weekOffset);
+  const we=new Date(ws);we.setDate(we.getDate()+6);
+  document.getElementById('week-label').textContent=`${ws.getMonth()+1}/${ws.getDate()} 〜 ${we.getMonth()+1}/${we.getDate()}`;
 
-function renderCalendar() {
-  const ws = getWeekStart(weekOffset);
-  const we = new Date(ws); we.setDate(we.getDate()+6);
-  document.getElementById('week-label').textContent =
-    `${ws.getMonth()+1}/${ws.getDate()} (月) 〜 ${we.getMonth()+1}/${we.getDate()} (日)`;
+  const slots=loadSlots();
+  const today=new Date();today.setHours(0,0,0,0);
+  const nowH=new Date().getHours(),nowM=new Date().getMinutes();
+  const grid=document.getElementById('cal-grid');
+  grid.innerHTML='';
 
-  const slots = loadSlots();
-  const today = new Date(); today.setHours(0,0,0,0);
-  const grid = document.getElementById('cal-grid');
-  let html = '';
+  // corner
+  const corner=document.createElement('div');
+  corner.className='col-head';
+  corner.style.cssText='position:sticky;top:0;z-index:11;border-bottom:1px solid var(--border)';
+  grid.appendChild(corner);
 
-  // Header row
-  html += '<div class="cal-head" style="background:var(--bg2)">時刻</div>';
-  for (let d=0;d<7;d++) {
-    const dd = new Date(ws); dd.setDate(dd.getDate()+d);
-    const isToday = dd.toDateString()===today.toDateString();
-    const dateStr = `${dd.getMonth()+1}/${dd.getDate()}`;
-    html += `<div class="cal-head${isToday?' today':''}">${DAYS_JP[d]}<br><span style="font-weight:400;font-size:9px">${dateStr}</span></div>`;
+  // day headers
+  for(let d=0;d<7;d++){
+    const dd=new Date(ws);dd.setDate(dd.getDate()+d);
+    const isToday=dd.toDateString()===today.toDateString();
+    const isSat=d===5,isSun=d===6;
+    const dateStr=dd.toISOString().slice(0,10);
+    const open=slots.filter(s=>s.date===dateStr&&s.status==='open').length;
+    const booked=slots.filter(s=>s.date===dateStr&&s.status==='booked').length;
+    const col=isSat?'var(--blue)':isSun?'var(--red)':isToday?'var(--gold)':'';
+    const div=document.createElement('div');
+    div.className='col-head';
+    div.style.cssText='position:sticky;top:0;z-index:10;border-bottom:1px solid var(--border);border-left:1px solid var(--border);cursor:pointer';
+    div.innerHTML=`<div class="col-head-inner"><span style="font-size:9px;${col?'color:'+col:''}">${DAYS_JP[d]}</span><span class="day-num" style="${col?'color:'+col:''}">${dd.getDate()}</span><span style="font-size:8px;display:block">${open?'<span style="color:var(--green)">'+ open+'枠</span>':''} ${booked?'<span style="color:var(--blue)">'+booked+'予</span>':open?'':'-'}</span></div>`;
+    div.addEventListener('click',()=>openPanel(dateStr,dd));
+    grid.appendChild(div);
   }
 
-  // Time rows
-  HOURS.forEach(h => {
-    html += `<div class="cal-time">${h}:00</div>`;
-    for (let d=0;d<7;d++) {
-      const dd = new Date(ws); dd.setDate(dd.getDate()+d);
-      const dateStr = dd.toISOString().slice(0,10);
-      const timeStr = h+':00';
-      const isPast = dd < today || (dd.toDateString()===today.toDateString() && parseInt(h) <= new Date().getHours());
+  // time rows 00:00 - 23:30
+  for(let h=0;h<24;h++){
+    for(let m=0;m<60;m+=30){
+      const isHour=m===0;
+      const borderCol=isHour?'var(--border)':' rgba(30,36,53,.5)';
+      // time label
+      const tl=document.createElement('div');
+      tl.className='time-label';
+      tl.style.cssText='height:'+CELL_H+'px;border-bottom:1px solid '+borderCol;
+      if(isHour)tl.innerHTML='<span class="lbl">'+String(h).padStart(2,'0')+':00</span>';
+      grid.appendChild(tl);
 
-      // Find slot matching this cell (slot starts at this hour or spans it)
-      const slot = slots.find(s => {
-        if (s.date !== dateStr) return false;
-        const [sh] = s.start.split(':').map(Number);
-        return sh === parseInt(h);
-      });
+      // cells
+      for(let d=0;d<7;d++){
+        const dd=new Date(ws);dd.setDate(dd.getDate()+d);
+        const dateStr=dd.toISOString().slice(0,10);
+        const timeStr=String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');
+        const isPast=dd<today||(dd.toDateString()===today.toDateString()&&(h<nowH||(h===nowH&&m<=nowM)));
 
-      if (slot) {
-        const cls = slot.status === 'booked' ? 'slot-booked' : 'slot-open';
-        const labelCls = slot.status === 'booked' ? 'booked' : 'open';
-        const label = slot.status === 'booked'
-          ? `予約済\n${slot.bookedClient||''}`
-          : `空き\n${slot.dur}分`;
-        const onclick = slot.status === 'open'
-          ? `onclick="removeSlot('${slot.id}')"`
-          : '';
-        html += `<div class="cal-cell ${cls}${isPast?' slot-past':''}" ${onclick}>
-          <div class="slot-label ${labelCls}">${label}</div></div>`;
-      } else {
-        html += `<div class="cal-cell${isPast?' slot-past':''}" onclick="quickAdd('${dateStr}','${h}:00')"></div>`;
+        const cell=document.createElement('div');
+        cell.className='cell'+(isPast?' past':'');
+        cell.style.cssText='height:'+CELL_H+'px;border-bottom:1px solid '+borderCol;
+
+        if(!isPast)cell.addEventListener('click',()=>openPanel(dateStr,dd));
+
+        // render slot blocks starting at this exact time
+        slots.filter(s=>s.date===dateStr&&s.start===timeStr).forEach(slot=>{
+          const rows=Math.max(1,slot.dur/30);
+          const blk=document.createElement('div');
+          blk.className='slot-block '+(slot.status==='booked'?'booked':'open');
+          blk.style.height=(rows*CELL_H-2)+'px';
+          const label=slot.start+'〜'+slot.end;
+          if(slot.status==='booked'){
+            blk.innerHTML='<span>'+label+'<br>予約済</span>';
+          } else {
+            blk.innerHTML='<span>'+label+'</span>';
+            blk.addEventListener('click',e=>{
+              e.stopPropagation();
+              if(confirm(label+' を削除しますか？'))removeSlot(slot.id);
+            });
+          }
+          cell.appendChild(blk);
+        });
+        grid.appendChild(cell);
       }
     }
-  });
-
-  grid.innerHTML = html;
-  renderStats();
-  renderSlotList();
-}
-
-function quickAdd(date, time) {
-  document.getElementById('slot-date').value = date;
-  document.getElementById('slot-start').value = time;
-  document.getElementById('slot-date').scrollIntoView({behavior:'smooth'});
-}
-
-// ═══════════════════════════════════════════════
-// SLOT CRUD
-// ═══════════════════════════════════════════════
-function addSlot() {
-  const date  = document.getElementById('slot-date').value;
-  const start = document.getElementById('slot-start').value;
-  const dur   = parseInt(document.getElementById('slot-dur').value);
-  const memo  = document.getElementById('slot-memo').value.trim();
-  if (!date) { alert('日付を入力してください'); return; }
-
-  const u = window._SESSION || {};
-  const slots = loadSlots();
-
-  // Conflict check
-  const conflict = slots.find(s => s.date===date && s.start===start && s.status !== 'booked');
-  if (conflict) { alert('同じ日時に既に空き枠が登録されています'); return; }
-
-  const newSlot = {
-    id: 'SL'+Date.now(),
-    agentId:   u.userId || '—',
-    agentName: u.name   || '重説担当',
-    date, start, dur, memo,
-    status: 'open',
-    bookingToken: 'BK'+Math.random().toString(36).slice(2,8).toUpperCase(),
-    bookedCase: null, bookedClient: null, meetUrl: ''
-  };
-  slots.push(newSlot);
-  saveSlots(slots);
-
-  document.getElementById('slot-date').value = '';
-  document.getElementById('slot-memo').value = '';
-  renderCalendar();
-  toast('✅ 空き枠を登録しました');
-}
-
-function removeSlot(id) {
-  if (!confirm('この空き枠を削除しますか？')) return;
-  const slots = loadSlots().filter(s => s.id !== id);
-  saveSlots(slots);
-  renderCalendar();
-}
-
-// ═══════════════════════════════════════════════
-// SLOT LIST (sidebar)
-// ═══════════════════════════════════════════════
-function renderSlotList() {
-  const slots = loadSlots()
-    .filter(s => s.date >= new Date().toISOString().slice(0,10))
-    .sort((a,b) => (a.date+a.start).localeCompare(b.date+b.start));
-
-  if (!slots.length) {
-    document.getElementById('slot-list').innerHTML =
-      '<div style="font-size:11px;color:var(--muted);text-align:center;padding:16px">登録済みの空き枠はありません</div>';
-    return;
   }
-
-  document.getElementById('slot-list').innerHTML = slots.map(s => {
-    const isBooked = s.status === 'booked';
-    const dot = isBooked ? 'var(--blue)' : 'var(--green)';
-    const d = new Date(s.date);
-    const dStr = `${d.getMonth()+1}/${d.getDate()}（${['日','月','火','水','木','金','土'][d.getDay()]}）`;
-    return `
-      <div class="slot-item${isBooked?' booked':''}">
-        <div class="slot-dot" style="background:${dot}"></div>
-        <div class="slot-info">
-          <div style="font-weight:700;color:var(--text)">${dStr} ${s.start}</div>
-          <div style="color:var(--sub)">${s.dur}分${s.memo?' · '+s.memo:''}</div>
-          ${isBooked ? `<div style="color:var(--blue);font-size:10px">予約: ${s.bookedClient||'—'} (${s.bookedCase||'—'})</div>` : ''}
-          ${isBooked && s.meetUrl ? `<a href="${s.meetUrl}" target="_blank" style="color:var(--blue);font-size:10px">🔗 Meet: ${s.meetUrl}</a>` : ''}
-        </div>
-        <span class="slot-status ${isBooked?'status-booked':'status-open'}">${isBooked?'予約済':'空き'}</span>
-        ${!isBooked ? `<button class="btn btn-ghost" style="padding:4px 8px;font-size:10px" onclick="removeSlot('${s.id}')">削除</button>` : ''}
-      </div>`;
-  }).join('');
+  renderStats();
 }
 
-// ═══════════════════════════════════════════════
-// STATS
-// ═══════════════════════════════════════════════
-function renderStats() {
-  const slots = loadSlots().filter(s => s.date >= new Date().toISOString().slice(0,10));
-  const open   = slots.filter(s=>s.status==='open').length;
-  const booked = slots.filter(s=>s.status==='booked').length;
-  document.getElementById('stat-row').innerHTML = `
-    <div class="stat-box"><div class="stat-n" style="color:var(--green)">${open}</div><div class="stat-l">空き枠</div></div>
-    <div class="stat-box"><div class="stat-n" style="color:var(--blue)">${booked}</div><div class="stat-l">予約済</div></div>
-    <div class="stat-box"><div class="stat-n" style="color:var(--text)">${open+booked}</div><div class="stat-l">合計（今後）</div></div>`;
+function openPanel(dateStr,dateObj){
+  activePanelDate=dateStr;
+  const d=dateObj||new Date(dateStr);
+  document.getElementById('panel-title').textContent=`${d.getMonth()+1}月${d.getDate()}日（${DAYS_F[d.getDay()]}）`;
+  const ss=document.getElementById('sel-start'),se=document.getElementById('sel-end');
+  buildTimeOptions(ss,'09:00');buildTimeOptions(se,'10:00');
+  ss.onchange=onStartChange;
+  renderPanelSlots();
+  document.getElementById('day-panel').classList.add('open');
+  document.getElementById('panel-overlay').classList.add('show');
 }
-
-// ═══════════════════════════════════════════════
-// TOAST
-// ═══════════════════════════════════════════════
-function toast(msg) {
-  const el = document.createElement('div');
-  el.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);'
-    +'background:#1e2435;border:1px solid var(--border);color:var(--text);'
-    +'padding:10px 20px;border-radius:10px;font-size:12px;z-index:9999;white-space:nowrap';
-  el.textContent = msg;
-  document.body.appendChild(el);
-  setTimeout(()=>el.remove(), 2500);
+function closePanel(){
+  document.getElementById('day-panel').classList.remove('open');
+  document.getElementById('panel-overlay').classList.remove('show');
+  activePanelDate=null;
 }
+function renderPanelSlots(){
+  if(!activePanelDate)return;
+  const slots=loadSlots().filter(s=>s.date===activePanelDate).sort((a,b)=>a.start.localeCompare(b.start));
+  const el=document.getElementById('panel-slots-list');
+  if(!slots.length){el.innerHTML='<div class="no-slots">登録なし<br>上から時間帯を追加してください</div>';return;}
+  el.innerHTML=slots.map(s=>`<div class="sitem${s.status==='booked'?' booked':''}">
+    <div class="stime">${s.start} 〜 ${s.end}</div>
+    <div class="sdur">${fmtDur(s.dur)}</div>
+    <span class="spill ${s.status==='booked'?'pill-b':'pill-o'}">${s.status==='booked'?'予約済':'空き'}</span>
+    ${s.status==='open'?`<button class="del-btn" onclick="removeSlot('${s.id}')">削除</button>`:`<span style="font-size:9px;color:var(--blue)">${s.bookedClient||''}</span>`}
+  </div>`).join('');
+}
+function addSlotFromPanel(){
+  if(!activePanelDate)return;
+  const start=document.getElementById('sel-start').value;
+  const end=document.getElementById('sel-end').value;
+  if(start>=end){toast('⚠️ 終了は開始より後にしてください');return;}
+  const dur=timeDiff(start,end);
+  if(dur<=0){toast('⚠️ 時刻を確認してください');return;}
+  const slots=loadSlots();
+  if(slots.find(s=>s.date===activePanelDate&&!(end<=s.start||start>=s.end))){toast('⚠️ 他の時間帯と重複しています');return;}
+  const u=window._SESSION||{};
+  slots.push({id:'SL'+Date.now(),agentId:u.userId||'—',agentName:u.name||'重説担当',date:activePanelDate,start,end,dur,status:'open',bookedCase:null,bookedClient:null,meetUrl:'',bookingToken:'BK'+Math.random().toString(36).slice(2,8).toUpperCase()});
+  saveSlots(slots);renderPanelSlots();renderCalendar();
+  toast('✅ '+start+' 〜 '+end+' を追加');
+}
+function removeSlot(id){
+  saveSlots(loadSlots().filter(s=>s.id!==id));
+  renderPanelSlots();renderCalendar();
+}
+function renderStats(){
+  const today=new Date().toISOString().slice(0,10);
+  const sl=loadSlots().filter(s=>s.date>=today);
+  const o=sl.filter(s=>s.status==='open').length,b=sl.filter(s=>s.status==='booked').length;
+  document.getElementById('stats-bar').innerHTML=`<div class="stat"><div class="stat-dot" style="background:var(--green)"></div>空き: <strong>${o}</strong></div><div class="stat"><div class="stat-dot" style="background:var(--blue)"></div>予約済: <strong>${b}</strong></div><div class="stat" style="color:var(--muted)">合計: ${o+b}</div>`;
+}
+function toast(msg){const el=document.createElement('div');el.className='toast';el.textContent=msg;document.body.appendChild(el);setTimeout(()=>{el.style.opacity='0';setTimeout(()=>el.remove(),300);},2200);}
 
-// ── Init ──
-(function(){
-  // Set default date to tomorrow
-  const d = new Date(); d.setDate(d.getDate()+1);
-  document.getElementById('slot-date').value = d.toISOString().slice(0,10);
-  renderCalendar();
-})();
-</script>
+renderCalendar();
+setTimeout(()=>{document.getElementById('cal-wrap').scrollTop=16*CELL_H;},50);
+<\/script>
 </body>
 </html>
