@@ -216,6 +216,7 @@ function sortedAvailableSlots() {
 
 // ── State ──
 var selectedSlotId = null;
+var selectedFromCal = false;
 var mode = 'initial'; // 'initial' | 'booking' | 'changing' | 'existing'
 
 // ── Render ──
@@ -381,7 +382,7 @@ function renderCalGrid() {
       var isToday = iso === fmtIso(today);
       var bg = isToday ? 'background:rgba(201,168,64,.04)' : '';
       if (isPast) return '<td style="'+bg+'" class="'+col+'"><span class="cal-cell-past">—</span></td>';
-      var matching = (slotMap[iso]||[]).filter(function(s){ return s.start <= t && s.end > t; });
+      var matching = (slotMap[iso]||[]).filter(function(s){ return s.start === t; });
       if (matching.length) {
         // Use first matching slot (already priority-sorted)
         var slot = matching[0];
@@ -411,6 +412,7 @@ function shiftCalWeek(d) {
 
 function selSlotCal(slotId) {
   selectedSlotId = slotId;
+  selectedFromCal = true;
   // Re-render calendar to show selection
   renderCalGrid();
   // Also update confirm button
@@ -611,6 +613,7 @@ function renderChange(bk) {
 var app = document.getElementById('app');
 function selSlot(id, el) {
   selectedSlotId = id;
+  selectedFromCal = false;
   document.querySelectorAll('.slot-item').forEach(function(e){ e.classList.remove('selected'); });
   el.classList.add('selected');
   var btn = document.getElementById('confirm-btn');
@@ -631,6 +634,7 @@ function doBook() {
   var slot  = slots.find(function(s){ return s.id===selectedSlotId; });
   if (!slot || slot.status==='booked') { alert('この日程はすでに予約されています。別の日程をお選びください。'); selectedSlotId=null; renderNew(); return; }
   var meetUrl = genMeet();
+  if (selectedFromCal) slot.dur = 60;
   slot.status     = 'booked';
   slot.bookedCase = caseId;
   slot.bookedClient = clientN;
