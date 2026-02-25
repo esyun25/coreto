@@ -846,33 +846,35 @@ function renderSuccess(bk) {
   var appEl = document.getElementById('app');
   var changeUrl = location.href;
   var smsBody = encodeURIComponent(
-    '【重要事項説明（重説）予約完了】\n'
-    + fmtDate(bk.date) + ' ' + bk.start + '〜\n'
-    + '所要時間: 30〜45分\n'
-    + (bk.meetUrl ? '\nGoogle Meet\n' + bk.meetUrl + '\n' : '')
-    + '\n日程変更・キャンセルはこちら\n' + changeUrl
-    + '\n※24時間以上前まで変更可能です'
+    '【重説予約完了】\n'
+    + fmtDate(bk.date) + ' ' + bk.start + '〜（所要時間30〜45分）\n'
+    + (bk.meetUrl ? '\n🎥 Google Meet\n' + bk.meetUrl + '\n' : '')
+    + '\n📅 日程変更・キャンセル\n' + changeUrl
+    + '\n※24時間以上前まで変更可能'
   );
-  var smsHref = clientTel
-    ? 'sms:' + clientTel + (navigator.userAgent.match(/iPhone|iPad/) ? '&' : '?') + 'body=' + smsBody
-    : 'sms:?body=' + smsBody;
+  // クライアントが自分自身に送るSMSリンク
+  var smsHref = 'sms:' + (navigator.userAgent.match(/iPhone|iPad/) ? '&' : '?') + 'body=' + smsBody;
+
   appEl.innerHTML = '<div class="card">'
     +'<div class="success-icon">✅</div>'
-    +'<div class="success-title" style="color:var(--green)">予約完了</div>'
+    +'<div class="success-title" style="color:var(--green)">予約が完了しました</div>'
     +'<div class="booking-info" style="margin-top:14px">'
     +'<div class="booking-date">'+fmtDate(bk.date)+' '+bk.start+'〜</div>'
     +'<div style="font-size:10px;color:var(--sub);margin-top:3px">所要時間 30〜45分</div>'
     +(bk.meetUrl ? '<a class="meet-link" href="'+bk.meetUrl+'" target="_blank">🎥 Google Meet に参加する</a>' : '')
     +'</div>'
-    +'<div style="margin-top:14px;padding:12px 14px;background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.2);border-radius:10px">'
-    +'<div style="font-size:11px;font-weight:700;color:var(--green);margin-bottom:6px">📱 クライアントへSMSを送信</div>'
-    +'<div style="font-size:10px;color:var(--sub);margin-bottom:10px;line-height:1.8">'
-    +'予約日時・Google Meet URL・変更リンクをSMSで送ります。</div>'
-    +'<a href="'+smsHref+'" style="display:block;text-align:center;padding:10px;background:var(--green);color:#000;font-weight:700;font-size:13px;border-radius:8px;text-decoration:none">'
-    +(clientTel ? '📩 '+clientTel+' にSMSを送る' : '📩 SMSアプリで送る（番号手入力）')
-    +'</a>'
+    // 変更URL表示
+    +'<div style="margin-top:14px;padding:12px 14px;background:var(--card2);border:1px solid var(--border);border-radius:10px">'
+    +'<div style="font-size:10px;color:var(--sub);margin-bottom:6px">🔗 日程変更・キャンセル用URL</div>'
+    +'<div style="font-size:10px;word-break:break-all;font-family:monospace;color:var(--blue);line-height:1.6">'+changeUrl+'</div>'
+    +'<div style="font-size:10px;color:var(--sub);margin-top:6px">このURLをブックマークしておくと変更・キャンセルが可能です。</div>'
     +'</div>'
-    +'<div style="font-size:10px;color:var(--sub);line-height:1.9;margin-top:12px">'
+    // SMS自己送信ボタン
+    +'<a href="'+smsHref+'" style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px;'
+    +'padding:12px;background:rgba(79,156,249,.1);border:1px solid rgba(79,156,249,.3);'
+    +'border-radius:10px;color:var(--blue);font-weight:700;font-size:13px;text-decoration:none">'
+    +'📩 予約内容をSMSで自分に送る</a>'
+    +'<div style="font-size:10px;color:var(--sub);line-height:1.9;margin-top:12px;text-align:center">'
     +'変更・キャンセルはこのページに再度アクセスしてください。<br>'
     +'24時間以上前まで変更可能 / 24時間以内は2回まで'
     +'</div></div>';
