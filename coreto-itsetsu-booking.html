@@ -228,33 +228,34 @@ function sortedAvailableSlots() {
   var demos = [];
   var seed = 99;
   function rnd(){ seed=(seed*1103515245+12345)&0x7fffffff; return seed/0x7fffffff; }
-  // 1日1エージェント：現実的な割り当て
+  // 1日1エージェント、広い対応時間帯で登録（10:00〜19:00など）
+  var dayStarts = ['10:00','09:00','10:00','09:30','10:00','10:00','09:00',
+                   '10:00','09:00','10:00','09:30','10:00','10:00','09:00'];
+  var dayEnds   = ['19:00','20:00','18:00','19:30','20:00','19:00','18:00',
+                   '20:00','19:00','18:30','20:00','19:00','20:00','18:00'];
   for (var dayOff = 1; dayOff <= 14; dayOff++) {
     var d = new Date(today);
     d.setDate(today.getDate() + dayOff);
     var dow = d.getDay();
-    // 日曜は対応なし、その他は担当1名アサイン
-    if (dow === 0) continue;
+    if (dow === 0) continue; // 日曜対応なし
     var agent = agents[Math.floor(rnd() * agents.length)];
-    var fillRate = dow === 6 ? 0.6 : 0.75;
     var dateStr = d.toISOString().slice(0,10);
-    startHours.forEach(function(h) {
-      if (rnd() > fillRate) return;
-      var start = (h<10?'0':'')+h+':00';
-      var end   = (h+1)+':00';
-      var isBooked = rnd() < 0.12;
-      var slotId = 'SL'+dateStr.replace(/-/g,'')+h+agent.id;
-      demos.push({
-        id: slotId,
-        agentId: agent.id, agentName: agent.name,
-        agentRank: agent.rank, agentItCount: agent.itCount,
-        date: dateStr, start: start, end: end, dur: 60,
-        status: isBooked ? 'booked' : 'open',
-        bookedCase: isBooked ? 'R0'+Math.floor(rnd()*90000+10000) : null,
-        bookedClient: isBooked ? ['田中 雄介','佐藤 美咲','鈴木 健太'][Math.floor(rnd()*3)] : null,
-        meetUrl: isBooked ? 'https://meet.google.com/demo-'+slotId.slice(-6) : '',
-        bookingToken: 'BK'+slotId.slice(-6).toUpperCase()
-      });
+    var slotId = 'SL'+dateStr.replace(/-/g,'')+agent.id;
+    var startT = dow===6 ? '11:00' : dayStarts[dayOff-1];
+    var endT   = dow===6 ? '17:00' : dayEnds[dayOff-1];
+    // 稀に予約済みスロットを作る（=その日全体がbooked）
+    var isBooked = rnd() < 0.1;
+    demos.push({
+      id: slotId,
+      agentId: agent.id, agentName: agent.name,
+      agentRank: agent.rank, agentItCount: agent.itCount,
+      date: dateStr, start: startT, end: endT, dur: 60,
+      status: isBooked ? 'booked' : 'open',
+      bookedCase: isBooked ? 'R0'+Math.floor(rnd()*90000+10000) : null,
+      bookedClient: isBooked ? ['田中 雄介','佐藤 美咲','鈴木 健太'][Math.floor(rnd()*3)] : null,
+      bookedStart: isBooked ? startT : null, // 予約が入った具体的な開始時刻
+      meetUrl: isBooked ? 'https://meet.google.com/demo-'+slotId.slice(-6) : '',
+      bookingToken: 'BK'+slotId.slice(-6).toUpperCase()
     });
   }
   if (demos.length > 0) saveSlots(demos);
@@ -263,6 +264,7 @@ function sortedAvailableSlots() {
 // ── State ──
 var selectedSlotId = null;
 var selectedFromCal = false;
+var selectedCalTime = null;
 var mode = 'initial'; // 'initial' | 'booking' | 'changing' | 'existing'
 
 // ── Render ──
@@ -373,15 +375,44 @@ function fmtIso(d) {
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
 
+// 分数に変換
+function toMins(t) {
+  var p = t.split(':'); return parseInt(p[0])*60 + parseInt(p[1]);
+}
+function fromMins(m) {
+  var h = Math.floor(m/60), n = m%60;
+  return (h<10?'0':'')+h+':'+(n<10?'0':'')+n;
+}
+
 function renderCalGrid() {
   var cont = document.getElementById('cal-grid-wrap');
   if (!cont) return;
-  var slots = sortedAvailableSlots();
-  // Build slot lookup: date -> [slot, ...]
-  var slotMap = {};
-  slots.forEach(function(s) {
-    if (!slotMap[s.date]) slotMap[s.date] = [];
-    slotMap[s.date].push(s);
+  var allSlots = loadSlots();
+  var openSlots = allSlots.filter(function(s){ return s.status==='open'; });
+  var bookings  = loadBookings().filter(function(b){ return b.status==='active'; });
+
+  // date -> [{startMins, endMins, slotId, agentId}] の対応可能範囲
+  var availMap = {};
+  openSlots.forEach(function(s) {
+    if (!availMap[s.date]) availMap[s.date] = [];
+    availMap[s.date].push({
+      startMins: toMins(s.start),
+      endMins:   toMins(s.end),
+      slotId:    s.id,
+      agentId:   s.agentId
+    });
+  });
+
+  // date -> Set of blocked start-minutes (予約済み + 前後30分バッファ)
+  var blockedMap = {};
+  bookings.forEach(function(b) {
+    if (!blockedMap[b.date]) blockedMap[b.date] = {};
+    var bStart = toMins(b.start);
+    var bEnd   = bStart + (b.dur || 60);
+    // ブロック対象: bStart-30 〜 bEnd の範囲に重なる30分刻みの開始時刻
+    for (var m = Math.max(0, bStart-30); m < bEnd+30; m += 30) {
+      blockedMap[b.date][m] = true;
+    }
   });
 
   var weekDates = getWeekDates(calWeekOffset);
@@ -421,6 +452,7 @@ function renderCalGrid() {
 
   // Body rows
   var bodyRows = times.map(function(t) {
+    var tMins = toMins(t);
     var cells = weekDates.map(function(d, i) {
       var iso = fmtIso(d);
       var isPast = d < today;
@@ -428,18 +460,28 @@ function renderCalGrid() {
       var isToday = iso === fmtIso(today);
       var bg = isToday ? 'background:rgba(201,168,64,.04)' : '';
       if (isPast) return '<td style="'+bg+'" class="'+col+'"><span class="cal-cell-past">—</span></td>';
-      var matching = (slotMap[iso]||[]).filter(function(s){ return s.start === t; });
-      if (matching.length) {
-        // Use first matching slot (already priority-sorted)
-        var slot = matching[0];
-        var isSel = slot.id === selectedSlotId;
-        var cidAttr = ' data-sid="'+slot.id+'"';
-        return '<td style="'+bg+'" class="'+col+'">'+(isSel
-          ? '<span class="cal-cell-avail selected"'+cidAttr+' onclick="selSlotCal(this.dataset.sid)">◎</span>'
-          : '<span class="cal-cell-avail"'+cidAttr+' onclick="selSlotCal(this.dataset.sid)">◎</span>')
-          +'</td>';
+
+      // この時間が対応範囲内か（tMins〜tMins+60をカバーするスロットがあるか）
+      var avail = (availMap[iso]||[]).filter(function(a){
+        return a.startMins <= tMins && a.endMins >= tMins + 60;
+      });
+      if (!avail.length) {
+        return '<td style="'+bg+'" class="'+col+'"><span class="cal-cell-none">×</span></td>';
       }
-      return '<td style="'+bg+'" class="'+col+'"><span class="cal-cell-none">×</span></td>';
+      // ブロックされているか（予約済み + バッファ）
+      var blocked = blockedMap[iso] && blockedMap[iso][tMins];
+      if (blocked) {
+        return '<td style="'+bg+'" class="'+col+'"><span class="cal-cell-none" style="color:var(--red)">×</span></td>';
+      }
+      // 予約可能
+      // slotIdは対応スロットの中で最初のもの
+      var sid = avail[0].slotId;
+      var isSel = (sid+'_'+t) === selectedSlotId;
+      var cidAttr = ' data-sid="'+sid+'" data-t="'+t+'"';
+      return '<td style="'+bg+'" class="'+col+'">'+(isSel
+        ? '<span class="cal-cell-avail selected"'+cidAttr+' onclick="selSlotCal(this.dataset.sid,this.dataset.t)">◎</span>'
+        : '<span class="cal-cell-avail"'+cidAttr+' onclick="selSlotCal(this.dataset.sid,this.dataset.t)">◎</span>')
+        +'</td>';
     }).join('');
     return '<tr><td>'+t+'</td>'+cells+'</tr>';
   }).join('');
@@ -456,8 +498,10 @@ function shiftCalWeek(d) {
   renderCalGrid();
 }
 
-function selSlotCal(slotId) {
-  selectedSlotId = slotId;
+function selSlotCal(slotId, bookingTime) {
+  // selectedSlotId = slotId + '_' + time (composite key for calendar cells)
+  selectedSlotId = slotId + '_' + bookingTime;
+  selectedCalTime = bookingTime; // 実際に予約する開始時刻
   selectedFromCal = true;
   // Re-render calendar to show selection
   renderCalGrid();
@@ -471,9 +515,8 @@ function selSlotCal(slotId) {
     if (info) {
       info.innerHTML = '<div style="margin-top:8px;padding:8px 11px;background:rgba(201,168,64,.08);'
         +'border:1px solid rgba(201,168,64,.25);border-radius:7px;font-size:11px">'
-        +'✅ 選択: '+fmtDate(slot.date)+' '+slot.start+' / '+slot.agentName+'</div>';
+        +'✅ '+fmtDate(slot.date)+' '+bookingTime+'〜（所要時間30〜45分）</div>';
     }
-    // Scroll to confirm btn
     var confirmBtn = document.getElementById('confirm-btn');
     if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.scrollIntoView({behavior:'smooth',block:'nearest'}); }
   }
@@ -683,15 +726,22 @@ function startChange() {
 function doBook() {
   if (!selectedSlotId) return;
   var slots = loadSlots();
-  var slot  = slots.find(function(s){ return s.id===selectedSlotId; });
+  // From calendar: selectedSlotId is "slotId_HH:MM"
+  var realSlotId = selectedFromCal ? selectedSlotId.split('_')[0] : selectedSlotId;
+  var slot = slots.find(function(s){ return s.id===realSlotId; });
   if (!slot || slot.status==='booked') { alert('この日程はすでに予約されています。別の日程をお選びください。'); selectedSlotId=null; renderNew(); return; }
   var meetUrl = genMeet();
-  if (selectedFromCal) slot.dur = 60;
-  slot.status     = 'booked';
-  slot.bookedCase = caseId;
-  slot.bookedClient = clientN;
-  slot.meetUrl    = meetUrl;
-  slot.bookedAt   = new Date().toISOString();
+  var bookStart = selectedFromCal ? selectedCalTime : slot.start;
+  var bookDur   = 60; // 常に1時間固定
+  // カレンダー予約: スロット自体は維持（他の時間に別予約入る可能性）
+  // → スロットをbookedにはしない、代わりにbookingで時間を記録してブロック
+  if (!selectedFromCal) {
+    slot.status     = 'booked';
+    slot.bookedCase = caseId;
+    slot.bookedClient = clientN;
+    slot.meetUrl    = meetUrl;
+    slot.bookedAt   = new Date().toISOString();
+  }
   saveSlots(slots);
   var bookings = loadBookings();
   var bk = {
@@ -702,7 +752,7 @@ function doBook() {
     agentId: agentId, agentName: agentN,
     itAgentId: slot.agentId, itAgentName: slot.agentName,
     dedicatedAgentId: dedicatedId,
-    date: slot.date, start: slot.start, dur: slot.dur,
+    date: slot.date, start: bookStart, dur: bookDur,
     meetUrl: meetUrl,
     bookedAt: new Date().toISOString(),
     changeCount: 0,
