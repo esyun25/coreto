@@ -228,24 +228,27 @@ function sortedAvailableSlots() {
   var demos = [];
   var seed = 99;
   function rnd(){ seed=(seed*1103515245+12345)&0x7fffffff; return seed/0x7fffffff; }
+  // 1日1エージェント：現実的な割り当て
   for (var dayOff = 1; dayOff <= 14; dayOff++) {
     var d = new Date(today);
     d.setDate(today.getDate() + dayOff);
     var dow = d.getDay();
-    var fillRate = dow===0?0.4:dow===6?0.55:0.7;
+    // 日曜は対応なし、その他は担当1名アサイン
+    if (dow === 0) continue;
+    var agent = agents[Math.floor(rnd() * agents.length)];
+    var fillRate = dow === 6 ? 0.6 : 0.75;
+    var dateStr = d.toISOString().slice(0,10);
     startHours.forEach(function(h) {
       if (rnd() > fillRate) return;
       var start = (h<10?'0':'')+h+':00';
-      var end   = (h+1<21?h+1:21)+':00';
-      var agent = agents[Math.floor(rnd()*agents.length)];
-      var isBooked = rnd() < 0.15;
-      var slotId = 'SL'+d.toISOString().slice(0,10).replace(/-/g,'')+h+agent.id;
+      var end   = (h+1)+':00';
+      var isBooked = rnd() < 0.12;
+      var slotId = 'SL'+dateStr.replace(/-/g,'')+h+agent.id;
       demos.push({
         id: slotId,
         agentId: agent.id, agentName: agent.name,
         agentRank: agent.rank, agentItCount: agent.itCount,
-        date: d.toISOString().slice(0,10),
-        start: start, end: end, dur: 60,
+        date: dateStr, start: start, end: end, dur: 60,
         status: isBooked ? 'booked' : 'open',
         bookedCase: isBooked ? 'R0'+Math.floor(rnd()*90000+10000) : null,
         bookedClient: isBooked ? ['田中 雄介','佐藤 美咲','鈴木 健太'][Math.floor(rnd()*3)] : null,
@@ -348,7 +351,7 @@ function toggleCalendar() {
   var isOpen = sec.classList.contains('open');
   sec.classList.toggle('open', !isOpen);
   var btn = document.getElementById('cal-toggle-btn');
-  if (btn) btn.textContent = isOpen ? '▼ その他の日程を見る' : '▲ カレンダーを閉じる';
+  if (btn) btn.textContent = isOpen ? (btn.dataset.label || '▼ カレンダーで日程を確認する') : '▲ カレンダーを閉じる';
   if (!isOpen) { calWeekOffset = 0; renderCalGrid(); }
 }
 
@@ -553,31 +556,33 @@ function renderNew() {
   if (existingReq) { renderRequestSent(existingReq); return; }
   var slotsHtml = '';
   var hasSlots = slots.length > 0;
-  var topSlots = slots.slice(0, 3);
-  var hasMore  = slots.length > 3;
+  // 専任担当のスロットがある場合のみリスト表示、それ以外はカレンダーへ直行
+  var dedicatedSlots = slots.filter(function(s){ return s.agentId === dedicatedId; });
+  var showList = dedicatedSlots.length > 0;
+  var topSlots = dedicatedSlots.slice(0, 3);
+
   if (!hasSlots) {
     slotsHtml = '<div class="no-slots">😔 現在、空き日程がございません。</div>'
-      +'<button class="cal-toggle" id="cal-toggle-btn" onclick="toggleCalendar()">▼ カレンダーで空き日程を確認する</button>'      +'<div class="cal-section" id="cal-section">'      +'<div id="cal-grid-wrap"></div>'      +'<div id="cal-sel-info"></div></div>';
-  } else {
+      +'<button class="cal-toggle" id="cal-toggle-btn" onclick="toggleCalendar()">▼ カレンダーで空き日程を確認する</button>'
+      +'<div class="cal-section" id="cal-section"><div id="cal-grid-wrap"></div><div id="cal-sel-info"></div></div>';
+  } else if (showList) {
+    // 担当エージェントのスロットがある → リスト3枠 ＋ カレンダー
     slotsHtml = topSlots.map(function(s){
-      var isPriority = (s.agentId === dedicatedId);
-      var cls = 'slot-item' + (isPriority ? ' priority' : '') + (s.id === selectedSlotId ? ' selected' : '');
+      var cls = 'slot-item priority' + (s.id === selectedSlotId ? ' selected' : '');
       return '<div class="'+cls+'" onclick="selSlot(\'' + s.id + '\',this)">'
         +'<div class="radio"></div>'
         +'<div style="min-width:60px"><div class="slot-date">'+fmtDate(s.date)+'</div>'
         +'<div class="slot-time">'+s.start+'</div>'
         +'<div class="slot-dur">'+fmtDur(s.dur)+'</div></div>'
-        +(isPriority ? '<div class="slot-agent"><span class="priority-badge">専任担当</span></div>' : '')
+        +'<div class="slot-agent">担当 '+agentN+'</div>'
         +'</div>';
     }).join('');
-    // カレンダーは常に表示（スロット数に関わらず）
-    slotsHtml += '<button class="cal-toggle" id="cal-toggle-btn" onclick="toggleCalendar()">'
-      +(hasMore ? '▼ その他の日程を見る（'+(slots.length - 3)+'枠）' : '▼ カレンダーで日程を確認する')
-      +'</button>'
-      +'<div class="cal-section" id="cal-section">'
-      +'<div id="cal-grid-wrap"></div>'
-      +'<div id="cal-sel-info"></div>'
-      +'</div>';
+    slotsHtml += '<button class="cal-toggle" id="cal-toggle-btn" onclick="toggleCalendar()">▼ その他の日程をカレンダーで見る</button>'
+      +'<div class="cal-section" id="cal-section"><div id="cal-grid-wrap"></div><div id="cal-sel-info"></div></div>';
+  } else {
+    // 担当スロットなし → カレンダーを自動で開く
+    slotsHtml = '<button class="cal-toggle open" id="cal-toggle-btn" onclick="toggleCalendar()">▲ カレンダーを閉じる</button>'
+      +'<div class="cal-section open" id="cal-section"><div id="cal-grid-wrap"></div><div id="cal-sel-info"></div></div>';
   }
   var requestSection = caseId ? (
     '<div class="req-section">'
@@ -595,11 +600,16 @@ function renderNew() {
     +'<div style="margin-top:10px;padding:9px 11px;background:var(--card2);border-radius:7px;font-size:10px;color:var(--sub);line-height:1.9">'
     +'都合のよい日程を選んでください。選択後、担当からGoogle MeetのURLをお送りします。</div></div>'+contractNoticeHtml()+'</div>'
     +'<div class="card"><div class="card-title">🗓 日程を選択</div>'
-    +(dedicatedId ? '<div style="font-size:10px;color:var(--purple);margin-bottom:10px">🔮 担当者を優先的に表示しています</div>' : '')
     +'<div id="slot-list">'+slotsHtml+'</div>'
     +'<div class="btns" style="margin-top:14px"><button class="btn btn-gold" id="confirm-btn" onclick="doBook()" disabled>この日程で予約する</button></div>'
     +requestSection+'</div>';
   renderWishRows();
+  // カレンダーが既にopenの場合（担当スロットなし）は自動描画
+  var calSec = document.getElementById('cal-section');
+  if (calSec && calSec.classList.contains('open')) {
+    calWeekOffset = 0;
+    renderCalGrid();
+  }
 }
 
 function renderExisting(bk) {
