@@ -1,528 +1,1394 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <!-- ── Content Security Policy (XSS軽減) ──────────────────────────────────
-       変更時: 使用する外部サービスのオリジンを追加してください
-       Kintone追加時: connect-src に *.cybozu.com を追加
-  ─────────────────────────────────────────────────────────────────────── -->
-  <meta http-equiv="Content-Security-Policy" content="
-    default-src 'self';
-    script-src 'self' 'unsafe-inline'
-      https://cdnjs.cloudflare.com
-      https://js.stripe.com
-      https://cdn-cgi/scripts;
-    style-src 'self' 'unsafe-inline'
-      https://fonts.googleapis.com;
-    font-src 'self'
-      https://fonts.gstatic.com;
-    img-src 'self' data: blob:;
-    connect-src 'self'
-      https://hooks.slack.com
-      https://hooks.zapier.com
-      https://api.stripe.com
-      https://js.stripe.com
-      https://www.houjin-bangou.nta.go.jp
-      https://www.retio.or.jp;
-    frame-src 'none';
-    object-src 'none';
-    base-uri 'self';
-  ">
-
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>IT重説 管理パネル | CORETO HQ</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://hooks.slack.com https://hooks.zapier.com; frame-src 'none'; object-src 'none';">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'DM Sans','Hiragino Kaku Gothic ProN',sans-serif;background:#0b0d12;color:#e4e7f0;min-height:100vh;padding:16px}
-.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid #1e2435}
-.header h1{font-size:16px;font-weight:800;letter-spacing:.05em}
-.header a{font-size:11px;color:#4f9cf9;text-decoration:none}
-.tabs{display:flex;gap:6px;margin-bottom:16px;overflow-x:auto;padding-bottom:4px}
-.tab{padding:7px 14px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #1e2435;background:#141820;color:#7a86a0;white-space:nowrap;transition:.2s}
-.tab.active{background:rgba(79,156,249,.12);border-color:rgba(79,156,249,.3);color:#4f9cf9}
-.card{background:#141820;border:1px solid #1e2435;border-radius:12px;padding:14px;margin-bottom:10px}
-.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.badge{font-size:9px;padding:2px 8px;border-radius:12px;font-weight:700}
-.badge-wait{background:rgba(251,191,36,.12);color:#fbbf24;border:1px solid rgba(251,191,36,.2)}
-.badge-booked{background:rgba(79,156,249,.12);color:#4f9cf9;border:1px solid rgba(79,156,249,.2)}
-.badge-done{background:rgba(52,211,153,.12);color:#34d399;border:1px solid rgba(52,211,153,.2)}
-.badge-cancel{background:rgba(239,68,68,.1);color:#ef4444;border:1px solid rgba(239,68,68,.15)}
-.badge-request{background:rgba(167,139,250,.12);color:#a78bfa;border:1px solid rgba(167,139,250,.2)}
-.info-grid{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:10px}
-.info-label{color:#5a6080}
-.info-val{color:#c8d0e0}
-.info-val.highlight{color:#4f9cf9;font-weight:700}
-.info-val.green{color:#34d399;font-weight:700}
-.info-val.warn{color:#fbbf24}
-.stat-row{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
-.stat{background:#141820;border:1px solid #1e2435;border-radius:10px;padding:12px 16px;flex:1;min-width:100px;text-align:center}
-.stat-num{font-size:22px;font-weight:900;margin-bottom:2px}
-.stat-label{font-size:9px;color:#5a6080;letter-spacing:.05em}
-.empty{text-align:center;padding:32px;color:#3a4060;font-size:11px}
-.action-btn{background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.25);color:#34d399;border-radius:7px;padding:5px 12px;cursor:pointer;font-size:10px;font-family:inherit;font-weight:700;transition:.2s}
-.action-btn:hover{background:rgba(52,211,153,.18)}
-.warn-btn{background:rgba(251,146,60,.1);border:1px solid rgba(251,146,60,.25);color:#fb923c;border-radius:7px;padding:5px 12px;cursor:pointer;font-size:10px;font-family:inherit}
-.alert-box{background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:11px;color:#ef4444}
-.section-title{font-size:10px;font-weight:700;color:#5a6080;letter-spacing:.08em;margin:16px 0 8px;text-transform:uppercase}
-.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#34d399;color:#000;padding:8px 18px;border-radius:20px;font-size:12px;font-weight:700;pointer-events:none;opacity:0;transition:opacity .3s;z-index:9999}
-.meet-link{font-size:9px;color:#4f9cf9;word-break:break-all;font-family:monospace}
-.change-warn{background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:6px;padding:6px 10px;margin-top:6px;font-size:9px;color:#ef4444}
+:root{
+  --bg:#07090f;--bg2:#0c0e18;--card:#0f1119;--card2:#131621;
+  --border:#1e2235;--border2:#252a3d;
+  --gold:#c9a84c;--gold2:#e8c96a;
+  --blue:#4f9cf9;--blue2:#6ab0ff;
+  --green:#34d399;--red:#f87171;--orange:#fb923c;--purple:#a78bfa;
+  --muted:#4a5270;--sub:#7a849e;--text:#e2e6f3;
+  --urgent:#ff6b6b;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans-serif}
+body{display:grid;grid-template-rows:52px 1fr;overflow:hidden}
+
+/* ── ヘッダー ──────────────────────────────────────────── */
+.hdr{background:var(--bg2);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 20px;gap:16px;z-index:100}
+.hdr-logo{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;
+  color:var(--gold);letter-spacing:4px;margin-right:4px}
+.hdr-sep{color:var(--border2);font-size:18px}
+.hdr-title{font-size:12px;font-weight:700;color:var(--blue);letter-spacing:.5px}
+.hdr-badge{font-size:10px;padding:2px 8px;border-radius:10px;
+  background:rgba(79,156,249,.12);border:1px solid rgba(79,156,249,.25);color:var(--blue)}
+.hdr-r{margin-left:auto;display:flex;align-items:center;gap:12px}
+.hdr-user{font-size:11px;color:var(--sub)}
+.hdr-back{font-size:11px;color:var(--muted);text-decoration:none;
+  padding:4px 10px;border:1px solid var(--border2);border-radius:7px;transition:.15s}
+.hdr-back:hover{color:var(--text);border-color:var(--sub)}
+
+/* ── レイアウト ─────────────────────────────────────────── */
+.layout{display:grid;grid-template-columns:200px 1fr;height:100%;overflow:hidden}
+
+/* ── サイドナビ ─────────────────────────────────────────── */
+.sidenav{background:var(--bg2);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;overflow-y:auto;padding:12px 0}
+.nav-section{font-size:9px;font-weight:700;color:var(--muted);letter-spacing:1.5px;
+  padding:10px 16px 4px;text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:9px;padding:9px 16px;
+  font-size:12px;color:var(--sub);cursor:pointer;transition:.15s;
+  border-left:2px solid transparent;user-select:none}
+.nav-item:hover{color:var(--text);background:rgba(255,255,255,.03)}
+.nav-item.active{color:var(--blue);background:rgba(79,156,249,.06);border-left-color:var(--blue)}
+.nav-item .nav-icon{font-size:14px;width:18px;text-align:center;flex-shrink:0}
+.nav-badge{margin-left:auto;font-size:9px;font-weight:700;
+  background:var(--red);color:#fff;border-radius:8px;padding:1px 5px;min-width:16px;text-align:center}
+.nav-badge.warn{background:var(--orange)}
+.nav-badge.blue{background:var(--blue)}
+
+/* ── メインコンテンツ ───────────────────────────────────── */
+.main{overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:16px}
+
+/* ── 統計カード ─────────────────────────────────────────── */
+.stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;
+  padding:14px 16px;cursor:pointer;transition:all .15s}
+.stat-card:hover{border-color:var(--border2);transform:translateY(-1px)}
+.stat-card.alert{border-color:rgba(248,113,113,.3);background:rgba(248,113,113,.04)}
+.stat-card.ok{border-color:rgba(52,211,153,.2)}
+.stat-label{font-size:9px;font-weight:700;color:var(--muted);letter-spacing:1px;
+  text-transform:uppercase;margin-bottom:6px}
+.stat-val{font-family:'DM Mono',monospace;font-size:24px;font-weight:500;color:var(--text)}
+.stat-val.red{color:var(--red)}
+.stat-val.green{color:var(--green)}
+.stat-val.gold{color:var(--gold)}
+.stat-val.blue{color:var(--blue)}
+.stat-sub{font-size:10px;color:var(--muted);margin-top:3px}
+
+/* ── ページタイトル ─────────────────────────────────────── */
+.page-hdr{display:flex;align-items:center;gap:12px;margin-bottom:2px}
+.page-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--text)}
+.page-sub{font-size:11px;color:var(--muted)}
+
+/* ── カード ─────────────────────────────────────────────── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.card-hdr{display:flex;align-items:center;gap:10px;padding:14px 18px;
+  border-bottom:1px solid var(--border)}
+.card-hdr-title{font-size:13px;font-weight:700;color:var(--text)}
+.card-hdr-sub{font-size:10px;color:var(--muted);margin-left:auto}
+.card-body{padding:16px 18px}
+
+/* ── テーブル ───────────────────────────────────────────── */
+.tbl{width:100%;border-collapse:collapse;font-size:11px}
+.tbl th{font-size:9px;font-weight:700;color:var(--muted);letter-spacing:1px;
+  padding:6px 10px;text-align:left;border-bottom:1px solid var(--border);
+  text-transform:uppercase;white-space:nowrap}
+.tbl td{padding:10px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:rgba(255,255,255,.015)}
+.mono{font-family:'DM Mono',monospace;font-size:11px}
+
+/* ── バッジ ─────────────────────────────────────────────── */
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;
+  padding:2px 8px;border-radius:8px;white-space:nowrap}
+.b-wait  {background:rgba(251,146,60,.12);color:var(--orange);border:1px solid rgba(251,146,60,.25)}
+.b-booked{background:rgba(79,156,249,.12);color:var(--blue);border:1px solid rgba(79,156,249,.25)}
+.b-done  {background:rgba(52,211,153,.1);color:var(--green);border:1px solid rgba(52,211,153,.2)}
+.b-cancel{background:rgba(248,113,113,.1);color:var(--red);border:1px solid rgba(248,113,113,.2)}
+.b-urgent{background:rgba(255,107,107,.15);color:var(--urgent);border:1px solid rgba(255,107,107,.3)}
+.b-hq    {background:rgba(201,168,76,.12);color:var(--gold);border:1px solid rgba(201,168,76,.25)}
+
+/* ── ボタン ─────────────────────────────────────────────── */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;
+  border-radius:8px;border:none;cursor:pointer;font-size:11px;font-weight:700;
+  font-family:'Noto Sans JP',sans-serif;transition:all .15s;white-space:nowrap}
+.btn-primary{background:var(--blue);color:#fff}
+.btn-primary:hover{background:var(--blue2)}
+.btn-gold{background:var(--gold);color:#0a0c10}
+.btn-gold:hover{background:var(--gold2)}
+.btn-ghost{background:transparent;color:var(--sub);border:1px solid var(--border2)}
+.btn-ghost:hover{color:var(--text);border-color:var(--sub)}
+.btn-danger{background:rgba(248,113,113,.12);color:var(--red);border:1px solid rgba(248,113,113,.25)}
+.btn-danger:hover{background:rgba(248,113,113,.2)}
+.btn-sm{padding:4px 10px;font-size:10px}
+.btn-xs{padding:3px 8px;font-size:10px;border-radius:6px}
+
+/* ── フォーム部品 ───────────────────────────────────────── */
+input,select,textarea{background:var(--bg);border:1px solid var(--border2);border-radius:8px;
+  color:var(--text);font-family:'Noto Sans JP',sans-serif;font-size:12px;
+  padding:8px 12px;outline:none;transition:border-color .15s;width:100%}
+input:focus,select:focus,textarea:focus{border-color:var(--blue)}
+.fg{margin-bottom:12px}
+.fg label{display:block;font-size:10px;font-weight:700;color:var(--sub);
+  margin-bottom:5px;letter-spacing:.3px}
+.fg-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fg-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+
+/* ── カレンダー ─────────────────────────────────────────── */
+.cal-hdr{display:grid;grid-template-columns:140px repeat(7,1fr);
+  font-size:9px;font-weight:700;color:var(--muted);letter-spacing:.5px;
+  border-bottom:1px solid var(--border);padding:0 0 8px}
+.cal-hdr div{text-align:center;padding:4px 0}
+.cal-hdr div:first-child{text-align:left;padding-left:4px}
+.cal-row{display:grid;grid-template-columns:140px repeat(7,1fr);
+  border-bottom:1px solid var(--border);min-height:52px;align-items:start}
+.cal-row:last-child{border-bottom:none}
+.cal-agent{font-size:11px;font-weight:600;color:var(--text);
+  padding:10px 8px;align-self:center}
+.cal-agent-sub{font-size:9px;color:var(--muted);margin-top:1px}
+.cal-cell{padding:4px;border-left:1px solid var(--border);min-height:52px;
+  cursor:pointer;transition:.1s}
+.cal-cell:hover{background:rgba(79,156,249,.04)}
+.cal-slot{font-size:9px;padding:3px 5px;border-radius:4px;margin-bottom:2px;
+  line-height:1.3;cursor:pointer}
+.slot-open  {background:rgba(52,211,153,.1);color:var(--green);border:1px solid rgba(52,211,153,.2)}
+.slot-booked{background:rgba(79,156,249,.12);color:var(--blue);border:1px solid rgba(79,156,249,.25)}
+.slot-done  {background:rgba(90,90,120,.15);color:var(--muted)}
+.cal-add{font-size:10px;color:var(--muted);text-align:center;padding:6px 0;
+  border-radius:6px;border:1px dashed var(--border2);cursor:pointer;transition:.15s}
+.cal-add:hover{color:var(--blue);border-color:rgba(79,156,249,.4)}
+
+/* ── 介入ログ ───────────────────────────────────────────── */
+.log-item{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:11px}
+.log-item:last-child{border-bottom:none}
+.log-icon{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-size:13px;flex-shrink:0;margin-top:1px}
+.log-time{font-size:9px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:2px}
+.log-body{color:var(--sub);line-height:1.6}
+.log-body strong{color:var(--text)}
+
+/* ── モーダル ───────────────────────────────────────────── */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.75);
+  backdrop-filter:blur(6px);z-index:900;display:none;
+  align-items:center;justify-content:center;padding:20px}
+.modal-bg.open{display:flex}
+.modal{background:var(--card);border:1px solid var(--border2);
+  border-radius:16px;width:540px;max-width:100%;max-height:90vh;
+  overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,.6)}
+.modal-hdr{display:flex;align-items:center;justify-content:space-between;
+  padding:18px 22px;border-bottom:1px solid var(--border)}
+.modal-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:var(--text)}
+.modal-close{background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;line-height:1}
+.modal-close:hover{color:var(--text)}
+.modal-body{padding:20px 22px}
+.modal-footer{padding:14px 22px;border-top:1px solid var(--border);
+  display:flex;gap:8px;justify-content:flex-end}
+
+/* ── アラートバナー ─────────────────────────────────────── */
+.alert{border-radius:10px;padding:10px 14px;font-size:11px;line-height:1.8;margin-bottom:14px}
+.alert-warn{background:rgba(251,146,60,.07);border:1px solid rgba(251,146,60,.2);color:var(--orange)}
+.alert-info{background:rgba(79,156,249,.07);border:1px solid rgba(79,156,249,.2);color:var(--blue)}
+.alert-danger{background:rgba(248,113,113,.07);border:1px solid rgba(248,113,113,.2);color:var(--red)}
+
+/* ── マッチングUI ───────────────────────────────────────── */
+.match-card{background:var(--card2);border:1px solid var(--border);border-radius:12px;
+  padding:14px 16px;margin-bottom:10px}
+.match-req{font-size:11px;font-weight:700;color:var(--text);margin-bottom:6px}
+.match-meta{font-size:10px;color:var(--sub);margin-bottom:10px;line-height:1.7}
+.match-slots{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+.match-slot-opt{display:flex;align-items:center;gap:10px;padding:8px 12px;
+  background:var(--bg);border:1px solid var(--border2);border-radius:8px;cursor:pointer;
+  transition:.15s;font-size:11px}
+.match-slot-opt:hover{border-color:var(--blue);background:rgba(79,156,249,.04)}
+.match-slot-opt.selected{border-color:var(--green);background:rgba(52,211,153,.05)}
+.slot-time{font-family:'DM Mono',monospace;font-weight:700;color:var(--text)}
+.slot-agent{color:var(--sub);margin-left:auto;font-size:10px}
+.slot-score{font-size:9px;padding:2px 6px;border-radius:5px;
+  background:rgba(52,211,153,.1);color:var(--green);font-weight:700}
+
+/* ── タイムライン ───────────────────────────────────────── */
+.timeline{display:flex;flex-direction:column;gap:0}
+.tl-item{display:flex;gap:12px;position:relative;padding-bottom:16px}
+.tl-item::before{content:'';position:absolute;left:13px;top:28px;
+  bottom:0;width:1px;background:var(--border)}
+.tl-item:last-child::before{display:none}
+.tl-item:last-child{padding-bottom:0}
+.tl-dot{width:28px;height:28px;border-radius:50%;background:var(--card2);
+  border:2px solid var(--border2);display:flex;align-items:center;
+  justify-content:center;font-size:12px;flex-shrink:0;z-index:1}
+.tl-dot.active{border-color:var(--blue);background:rgba(79,156,249,.1)}
+.tl-dot.done{border-color:var(--green);background:rgba(52,211,153,.08)}
+.tl-dot.warn{border-color:var(--orange);background:rgba(251,146,60,.08)}
+.tl-content{flex:1;padding-top:4px}
+.tl-title{font-size:11px;font-weight:700;color:var(--text)}
+.tl-time{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:1px}
+
+/* ── スクロールバー ─────────────────────────────────────── */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+
+/* ── トースト ───────────────────────────────────────────── */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--card2);
+  border:1px solid var(--border2);border-radius:10px;padding:10px 16px;
+  font-size:12px;color:var(--text);opacity:0;transition:opacity .3s;
+  z-index:999;pointer-events:none;max-width:360px}
+.toast.show{opacity:1}
+
+/* ── 空状態 ─────────────────────────────────────────────── */
+.empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:12px}
+.empty-icon{font-size:32px;margin-bottom:8px}
+
+/* ── 週切替ナビ ─────────────────────────────────────────── */
+.week-nav{display:flex;align-items:center;gap:12px}
+.week-label{font-size:13px;font-weight:700;color:var(--text);min-width:180px;text-align:center}
+.week-btn{width:28px;height:28px;border-radius:7px;border:1px solid var(--border2);
+  background:transparent;color:var(--sub);cursor:pointer;display:flex;
+  align-items:center;justify-content:center;font-size:13px;transition:.15s}
+.week-btn:hover{color:var(--text);border-color:var(--sub)}
+
+/* ── スロット追加フォーム ───────────────────────────────── */
+.slot-form{background:rgba(79,156,249,.04);border:1px solid rgba(79,156,249,.15);
+  border-radius:10px;padding:14px;margin-top:10px}
+.slot-form-title{font-size:11px;font-weight:700;color:var(--blue);margin-bottom:10px}
+
+/* ── アコーディオン ─────────────────────────────────────── */
+.accordion-item{border-bottom:1px solid var(--border)}
+.accordion-item:last-child{border-bottom:none}
+.accordion-hdr{display:flex;align-items:center;gap:10px;padding:12px 0;
+  cursor:pointer;user-select:none}
+.accordion-hdr:hover .accordion-title{color:var(--text)}
+.accordion-title{font-size:12px;font-weight:700;color:var(--sub);flex:1}
+.accordion-arrow{font-size:12px;color:var(--muted);transition:transform .2s}
+.accordion-body{display:none;padding-bottom:14px}
+.accordion-item.open .accordion-arrow{transform:rotate(180deg)}
+.accordion-item.open .accordion-body{display:block}
+.accordion-item.open .accordion-title{color:var(--text)}
 </style>
 </head>
 <body>
-<div class="header">
-  <h1>📅 IT重説 管理パネル</h1>
-  <a href="coreto-hub.html">← Hub</a>
+
+<!-- ヘッダー -->
+<div class="hdr">
+  <span class="hdr-logo">CORETO</span>
+  <span class="hdr-sep">|</span>
+  <span class="hdr-title">IT重説 管理パネル</span>
+  <span class="hdr-badge" id="hdr-role-badge">HQ</span>
+  <div class="hdr-r">
+    <span class="hdr-user" id="hdr-user">——</span>
+    <a href="coreto-hub.html" class="hdr-back">← 管理ポータル</a>
+  </div>
 </div>
 
-<div id="alert-area"></div>
+<div class="layout">
+  <!-- サイドナビ -->
+  <nav class="sidenav">
+    <div class="nav-section">ダッシュボード</div>
+    <div class="nav-item active" data-view="dashboard" onclick="switchView('dashboard',this)">
+      <span class="nav-icon">📊</span>概要
+    </div>
 
-<div class="stat-row" id="stats"></div>
+    <div class="nav-section">マッチング管理</div>
+    <div class="nav-item" data-view="matching" onclick="switchView('matching',this)">
+      <span class="nav-icon">🎯</span>未マッチング
+      <span class="nav-badge" id="nav-badge-match">0</span>
+    </div>
+    <div class="nav-item" data-view="reassign" onclick="switchView('reassign',this)">
+      <span class="nav-icon">🔄</span>担当者変更
+    </div>
 
-<div class="tabs">
-  <div class="tab active" onclick="showTab('waiting')">⏳ 重説待ち</div>
-  <div class="tab" onclick="showTab('booked')">📅 予約確定</div>
-  <div class="tab" onclick="showTab('requests')">📨 リクエスト</div>
-  <div class="tab" onclick="showTab('payment')">💰 入金確認</div>
-  <div class="tab" onclick="showTab('done')">✅ 完了済み</div>
+    <div class="nav-section">予約管理</div>
+    <div class="nav-item" data-view="bookings" onclick="switchView('bookings',this)">
+      <span class="nav-icon">📅</span>予約一覧
+      <span class="nav-badge warn" id="nav-badge-today">0</span>
+    </div>
+    <div class="nav-item" data-view="calendar" onclick="switchView('calendar',this)">
+      <span class="nav-icon">🗓</span>カレンダー
+    </div>
+    <div class="nav-item" data-view="slots" onclick="switchView('slots',this)">
+      <span class="nav-icon">➕</span>スロット管理
+    </div>
+
+    <div class="nav-section">案件・履歴</div>
+    <div class="nav-item" data-view="requests" onclick="switchView('requests',this)">
+      <span class="nav-icon">📋</span>リクエスト履歴
+    </div>
+    <div class="nav-item" data-view="log" onclick="switchView('log',this)">
+      <span class="nav-icon">📝</span>介入ログ
+    </div>
+  </nav>
+
+  <!-- メインコンテンツ -->
+  <main class="main" id="main-content">
+    <!-- 動的レンダリング -->
+  </main>
 </div>
 
-<div id="tab-content"></div>
+<!-- モーダル -->
+<div class="modal-bg" id="modal-bg">
+  <div class="modal" id="modal">
+    <div class="modal-hdr">
+      <span class="modal-title" id="modal-title"></span>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-footer" id="modal-footer"></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
+<script src="db.js"></script>
 <script>
-  // ── Slack通知設定 ──────────────────────────────────────────────────────
-  // 本番運用前に Slack Incoming Webhook URL を設定してください
-  // Slack管理画面 → アプリ → Incoming Webhooks → Webhook URLをコピー
-  var SLACK_WEBHOOK = window.SLACK_CONFIG
-    ? window.SLACK_CONFIG.GENERAL   // db.jsが読み込まれている場合
-    : 'YOUR_SLACK_WEBHOOK_URL';     // 直接設定する場合はここに貼り付け
-
-  function notifySlack(msg) {
-    if (!SLACK_WEBHOOK || SLACK_WEBHOOK === 'YOUR_SLACK_WEBHOOK_URL') {
-      console.log('[Slack（未設定）]', msg);
-      return;
-    }
-    fetch(SLACK_WEBHOOK, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: msg }),
-      mode: 'no-cors'
-    }).catch(e => console.error('[Slack送信エラー]', e));
-  }
-  // ─────────────────────────────────────────────────────────────────────
-
+// ══ AUTH GUARD ══════════════════════════════════════════════════
 (function(){
   var s = null;
   try { s = JSON.parse(sessionStorage.getItem('coreto_session')||'null'); } catch(e){}
-  if (!s || !s.userId || !s.sessionToken || s.sessionToken.length !== 64) { sessionStorage.removeItem('coreto_session'); location.replace('coreto-login.html'); return; }
-  var _la = new Date(s.loginAt).getTime();
-  if (isNaN(_la) || (Date.now() - _la) > 28800000) { sessionStorage.removeItem('coreto_session'); alert('セッションの有効期限が切れました。'); location.replace('coreto-login.html'); return; }
-  if (s.type !== 'hq') { location.replace('coreto-login.html'); return; }
+  if (!s||!s.userId||!s.sessionToken||s.sessionToken.length!==64){
+    sessionStorage.removeItem('coreto_session');
+    location.replace('coreto-login-hq.html'); return;
+  }
+  var la = new Date(s.loginAt).getTime();
+  if (isNaN(la)||(Date.now()-la)>28800000){
+    sessionStorage.removeItem('coreto_session');
+    alert('セッションの有効期限が切れました。');
+    location.replace('coreto-login-hq.html'); return;
+  }
+  if (s.type!=='hq'){ location.replace('coreto-login.html'); return; }
   window._SESSION = s;
 })();
 
-var activeTab = 'waiting';
+const SESSION = window._SESSION || {};
+document.getElementById('hdr-user').textContent = SESSION.name || SESSION.userId || '——';
+document.getElementById('hdr-role-badge').textContent =
+  SESSION.hqRole==='exec'?'統括':SESSION.hqRole==='manager'?'管理職':'HQスタッフ';
 
-// ── Storage readers (shared with booking/schedule)
-var BOOKINGS_KEY = 'coreto_itsetsu_bookings';
-var SLOTS_KEY    = 'coreto_itsetsu_slots';
-var REQUESTS_KEY = 'coreto_itsetsu_requests';
+// ══ 設定 ════════════════════════════════════════════════════════
+var SLACK_WEBHOOK = (typeof window.SLACK_CONFIG !== 'undefined' && window.SLACK_CONFIG)
+  ? window.SLACK_CONFIG.IT_SETSU || window.SLACK_CONFIG.GENERAL
+  : 'YOUR_SLACK_WEBHOOK_URL';
 
-function loadBookings() { try { return JSON.parse(localStorage.getItem(BOOKINGS_KEY)||'[]'); } catch(e){ return []; } }
-function loadSlots()    { try { return JSON.parse(localStorage.getItem(SLOTS_KEY)||'[]');    } catch(e){ return []; } }
-function loadRequests() { try { return JSON.parse(localStorage.getItem(REQUESTS_KEY)||'[]'); } catch(e){ return []; } }
-function saveBookings(b){ localStorage.setItem(BOOKINGS_KEY, JSON.stringify(b)); }
+const KEYS = {
+  bookings : 'coreto_itsetsu_bookings',
+  slots    : 'coreto_itsetsu_slots',
+  requests : 'coreto_itsetsu_requests',
+  hqLog    : 'coreto_itsetsu_hq_log',
+};
 
+// ── 宅建士マスタ（本番: db.jsのUSERSまたはKintoneから取得）
+const TAKKEN_AGENTS = [
+  { id:'10008', name:'佐藤 花子', takken:'東京(2)098765', color:'var(--purple)' },
+  { id:'10012', name:'山田 誠',   takken:'東京(1)123456', color:'var(--gold)' },
+  { id:'10041', name:'渡辺 隆',   takken:'埼玉(1)234567', color:'var(--green)' },
+  { id:'00001', name:'HQ 統括',   takken:'東京(1)999001', color:'var(--blue)' },
+  { id:'00347', name:'HQマネージャー', takken:'東京(2)998501', color:'var(--blue)' },
+];
+
+// ══ ストレージ操作 ══════════════════════════════════════════════
+function load(key){ try{ return JSON.parse(localStorage.getItem(key)||'[]'); }catch(e){ return []; } }
+function save(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
+function loadBookings(){ return load(KEYS.bookings); }
+function loadSlots()   { return load(KEYS.slots); }
+function loadRequests(){ return load(KEYS.requests); }
+function loadHqLog()   { return load(KEYS.hqLog); }
+
+function saveHqLog(action, detail){
+  var logs = loadHqLog();
+  logs.unshift({
+    id: 'LOG-'+Date.now(),
+    action, detail,
+    operator: SESSION.name || SESSION.userId,
+    at: new Date().toISOString()
+  });
+  if (logs.length > 200) logs = logs.slice(0, 200);
+  save(KEYS.hqLog, logs);
+}
+
+// ══ ユーティリティ ══════════════════════════════════════════════
 function today(){ return new Date().toISOString().slice(0,10); }
 function fmtDate(d){
   if (!d) return '—';
   var dt = new Date(d+'T00:00:00');
-  var WD = ['日','月','火','水','木','金','土'];
-  return (dt.getMonth()+1)+'月'+dt.getDate()+'日（'+WD[dt.getDay()]+'）';
+  return dt.toLocaleDateString('ja-JP',{month:'short',day:'numeric',weekday:'short'});
 }
-function minsUntil(dateStr, timeStr){
-  if (!dateStr || !timeStr) return 9999;
-  var dt = new Date(dateStr+'T'+timeStr+':00');
-  return (dt - new Date()) / 60000;
+function fmtDt(iso){
+  if (!iso) return '—';
+  return iso.slice(0,16).replace('T',' ');
+}
+function uid(){ return 'HQ-'+Date.now().toString(36).toUpperCase(); }
+function minsUntil(date, time){
+  var dt = new Date(date+'T'+time+':00');
+  return Math.floor((dt.getTime()-Date.now())/60000);
+}
+function agentName(id){
+  var a = TAKKEN_AGENTS.find(function(x){ return x.id===id; });
+  return a ? a.name : id || '——';
+}
+function escHtml(s){
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-// ── 直前変更検知（24時間以内）
-function isLateChange(bk){
-  if (!bk.changeHistory || !bk.changeHistory.length) return false;
-  var last = bk.changeHistory[bk.changeHistory.length-1];
-  if (!last || !last.at) return false;
-  var minsSinceChange = (new Date() - new Date(last.at)) / 60000;
-  var minsUntilAppt   = minsUntil(bk.date, bk.start);
-  return minsUntilAppt < 1440 && minsSinceChange < 2880;
-}
-
-function renderStats(){
-  var bks = loadBookings();
-  var active = bks.filter(function(b){ return b.status==='active'; });
-  var cancelled = bks.filter(function(b){ return b.status==='cancelled'; });
-  var reqs = loadRequests().filter(function(r){ return r.status==='open'; });
-  var today_ = today();
-  var todayBks = active.filter(function(b){ return b.date === today_; });
-  var lateChanges = active.filter(isLateChange);
-
-  var html = '';
-  // パイプラインから入金待ち案件を取得（CASES共有）
-  var allCases = [];
-  try { allCases = (window.CASES || []); } catch(e){}
-  var payWait = allCases.filter(function(c){
-    return c.step === 'prekey' && !(c.taskDone && c.taskDone.paid) && !c.adOnly;
-  });
-  var stats = [
-    { num: active.length,      label:'予約中',           color:'#4f9cf9' },
-    { num: todayBks.length,    label:'本日の重説',        color:'#34d399' },
-    { num: reqs.length,        label:'未対応リクエスト',   color:'#a78bfa' },
-    { num: payWait.length,     label:'入金待ち',          color:'#fbbf24' },
-    { num: lateChanges.length, label:'直前変更（要確認）', color:'#ef4444' },
-  ];
-  stats.forEach(function(s){
-    html += '<div class="stat"><div class="stat-num" style="color:'+s.color+'">'+s.num+'</div><div class="stat-label">'+s.label+'</div></div>';
-  });
-  document.getElementById('stats').innerHTML = html;
-
-  // アラート：直前変更
-  var alertHtml = '';
-  if (lateChanges.length) {
-    alertHtml += '<div class="alert-box">⚠️ 直前変更（24時間以内）が '+lateChanges.length+' 件あります。コミッションから¥3,000が差し引かれます。</div>';
+function notifySlack(msg, channel){
+  if (!SLACK_WEBHOOK || SLACK_WEBHOOK==='YOUR_SLACK_WEBHOOK_URL'){
+    console.log('[Slack未設定]', msg); return;
   }
-  document.getElementById('alert-area').innerHTML = alertHtml;
+  fetch(SLACK_WEBHOOK, {
+    method:'POST', mode:'no-cors',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ text: '[IT重説HQ] '+msg })
+  }).catch(function(e){ console.error('[Slack]', e); });
 }
 
-function showTab(tab){
-  activeTab = tab;
-  document.querySelectorAll('.tab').forEach(function(t,i){
-    var tabs = ['waiting','booked','requests','payment','done'];
-    t.classList.toggle('active', tabs[i] === tab);
-  });
-  renderTab();
+function toast(msg, type){
+  var t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast show';
+  setTimeout(function(){ t.className = 'toast'; }, 3000);
 }
 
-function renderTab(){
-  var el = document.getElementById('tab-content');
-  if (activeTab === 'waiting')  renderWaiting(el);
-  if (activeTab === 'booked')   renderBooked(el);
-  if (activeTab === 'requests') renderRequests(el);
-  if (activeTab === 'payment')  renderPayment(el);
-  if (activeTab === 'done')     renderDone(el);
+// ══ ビュー切替 ══════════════════════════════════════════════════
+var currentView = 'dashboard';
+function switchView(view, el){
+  currentView = view;
+  document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); });
+  if (el) el.classList.add('active');
+  renderView(view);
+}
+function renderView(view){
+  var views = {
+    dashboard : renderDashboard,
+    matching  : renderMatching,
+    reassign  : renderReassign,
+    bookings  : renderBookings,
+    calendar  : renderCalendar,
+    slots     : renderSlots,
+    requests  : renderRequests,
+    log       : renderLog,
+  };
+  if (views[view]) views[view]();
 }
 
-// ── ① 重説待ち: pipeline上でprekey状態だが booking未確定の案件
-//    ※ localStorageのbookingsにない caseId を重説待ちとして扱う
-function renderWaiting(el){
+// ══ 統計 ════════════════════════════════════════════════════════
+function calcStats(){
+  var bks   = loadBookings();
+  var reqs  = loadRequests();
+  var slots = loadSlots();
+  var today_= today();
+
+  var active   = bks.filter(function(b){ return b.status==='active'; });
+  var todayBks = active.filter(function(b){ return b.date===today_; });
+  var unmatched= reqs.filter(function(r){ return r.status==='open'; });
+  var lateBks  = active.filter(function(b){ return (b.changeCount||0)>=2; });
+  var openSlots= slots.filter(function(s){ return s.status==='open' && s.date>=today_; });
+  var doneBks  = bks.filter(function(b){ return b.status==='active' && b.hqForceCompleted; });
+
+  return { active:active.length, todayBks:todayBks.length,
+           unmatched:unmatched.length, lateBks:lateBks.length,
+           openSlots:openSlots.length, doneBks:doneBks.length };
+}
+
+function updateNavBadges(){
+  var s = calcStats();
+  document.getElementById('nav-badge-match').textContent = s.unmatched;
+  document.getElementById('nav-badge-today').textContent = s.todayBks;
+  if (s.unmatched===0) document.getElementById('nav-badge-match').style.display='none';
+  if (s.todayBks===0)  document.getElementById('nav-badge-today').style.display='none';
+}
+
+// ══ DASHBOARD ══════════════════════════════════════════════════
+function renderDashboard(){
+  var s = calcStats();
   var bks = loadBookings();
-  var bookedCases = bks.filter(function(b){ return b.status==='active'; }).map(function(b){ return b.caseId; });
-  // caseIdなしでbookingが未予約のものはrequestsにある
-  var reqs = loadRequests().filter(function(r){ return r.status === 'open'; });
-  if (!reqs.length && !bookedCases.length) {
-    el.innerHTML = '<div class="empty">重説待ちの案件はありません</div>';
+  var reqs = loadRequests();
+  var today_ = today();
+
+  var html = '<div class="page-hdr"><span style="font-size:20px">📊</span>'
+    + '<div><div class="page-title">ダッシュボード</div>'
+    + '<div class="page-sub">IT重説システム全体の状況をリアルタイム確認</div></div></div>';
+
+  // 統計カード
+  html += '<div class="stats-row">'
+    + statCard('未マッチング', s.unmatched, s.unmatched>0?'red':'green', '即対応要', s.unmatched>0?'alert':'ok')
+    + statCard('本日の予約', s.todayBks, s.todayBks>0?'blue':'', '件', '')
+    + statCard('予約確定中', s.active, 'gold', '件', '')
+    + statCard('変更2回以上', s.lateBks, s.lateBks>0?'red':'', '件', s.lateBks>0?'alert':'')
+    + statCard('空きスロット', s.openSlots, 'green', '枠', 'ok')
+    + '</div>';
+
+  // 本日の予約
+  var todayBks = bks.filter(function(b){ return b.status==='active' && b.date===today_; });
+  todayBks.sort(function(a,b){ return a.start.localeCompare(b.start); });
+
+  html += '<div class="card"><div class="card-hdr">'
+    + '<span style="font-size:14px">📅</span><span class="card-hdr-title">本日の重説予約</span>'
+    + '<span class="card-hdr-sub">'+today_+'</span></div><div class="card-body">';
+
+  if (!todayBks.length){
+    html += '<div class="empty"><div class="empty-icon">🎉</div>本日の予約はありません</div>';
+  } else {
+    html += '<table class="tbl"><thead><tr>'
+      + '<th>時間</th><th>クライアント</th><th>Case ID</th>'
+      + '<th>担当エージェント</th><th>重説担当</th><th>状態</th><th>操作</th></tr></thead><tbody>';
+    todayBks.forEach(function(bk){
+      var mins = minsUntil(bk.date, bk.start);
+      var statusBadge = mins<0
+        ? '<span class="badge b-wait">実施済（確認待）</span>'
+        : mins<60 ? '<span class="badge b-urgent">⚡ 直前</span>'
+        : '<span class="badge b-booked">本日</span>';
+      html += '<tr>'
+        + '<td class="mono" style="color:var(--gold);font-weight:700">'+escHtml(bk.start)+'〜</td>'
+        + '<td style="font-weight:600">'+escHtml(bk.clientName)+'</td>'
+        + '<td class="mono" style="color:var(--sub)">'+escHtml(bk.caseId)+'</td>'
+        + '<td>'+escHtml(bk.agentName)+'</td>'
+        + '<td style="color:var(--blue)">'+escHtml(bk.itAgentName)+'</td>'
+        + '<td>'+statusBadge+'</td>'
+        + '<td><div style="display:flex;gap:4px">'
+        + '<button class="btn btn-ghost btn-xs" onclick="openReassignModal(\''+bk.id+'\')">担当変更</button>'
+        + '<button class="btn btn-ghost btn-xs" onclick="openRescheduleModal(\''+bk.id+'\')">日程変更</button>'
+        + '</div></td></tr>';
+    });
+    html += '</tbody></table>';
+  }
+  html += '</div></div>';
+
+  // 未マッチング警告
+  var unmatched = reqs.filter(function(r){ return r.status==='open'; });
+  if (unmatched.length){
+    html += '<div class="alert alert-danger">⚠️ 未マッチングのリクエストが <strong>'+unmatched.length+'件</strong> あります。'
+      + '<button class="btn btn-danger btn-sm" style="margin-left:12px" onclick="switchView(\'matching\',document.querySelector(\'[data-view=matching]\'))">今すぐ対応</button></div>';
+  }
+
+  // 直近の介入ログ
+  var logs = loadHqLog().slice(0,5);
+  html += '<div class="card"><div class="card-hdr">'
+    + '<span style="font-size:14px">📝</span><span class="card-hdr-title">最近のHQ介入</span>'
+    + '<button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="switchView(\'log\',document.querySelector(\'[data-view=log]\'))">すべて見る</button>'
+    + '</div><div class="card-body">';
+
+  if (!logs.length){
+    html += '<div class="empty">介入履歴はまだありません</div>';
+  } else {
+    html += '<div class="timeline">';
+    logs.forEach(function(l){
+      html += '<div class="tl-item">'
+        + '<div class="tl-dot done">🏢</div>'
+        + '<div class="tl-content">'
+        + '<div class="tl-title">'+escHtml(l.action)+'</div>'
+        + '<div style="font-size:10px;color:var(--sub);margin-top:2px">'+escHtml(l.detail)+'</div>'
+        + '<div class="tl-time">'+fmtDt(l.at)+' — '+escHtml(l.operator)+'</div>'
+        + '</div></div>';
+    });
+    html += '</div>';
+  }
+  html += '</div></div>';
+
+  document.getElementById('main-content').innerHTML = html;
+}
+
+function statCard(label, val, cls, sub, cardCls){
+  return '<div class="stat-card '+cardCls+'">'
+    + '<div class="stat-label">'+label+'</div>'
+    + '<div class="stat-val '+(cls||'')+'">'+val+'</div>'
+    + '<div class="stat-sub">'+sub+'</div></div>';
+}
+
+// ══ MATCHING（手動マッチング） ══════════════════════════════════
+function renderMatching(){
+  var reqs   = loadRequests().filter(function(r){ return r.status==='open'; });
+  var slots  = loadSlots().filter(function(s){ return s.status==='open' && s.date>=today(); });
+  var today_ = today();
+
+  var html = '<div class="page-hdr"><span style="font-size:20px">🎯</span>'
+    + '<div><div class="page-title">未マッチング処理</div>'
+    + '<div class="page-sub">リクエストに最適なスロットを選択して確定します</div></div></div>';
+
+  if (!reqs.length){
+    html += '<div class="empty" style="padding:80px"><div class="empty-icon">✅</div>'
+      + '<div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px">すべてマッチング済みです</div>'
+      + '<div>未対応のリクエストはありません</div></div>';
+    document.getElementById('main-content').innerHTML = html;
     return;
   }
-  // 今日以降で空き枠のある担当エージェント情報
-  var slots = loadSlots();
-  var today_ = today();
-  var availSlots = slots.filter(function(s){ return s.status==='open' && s.date >= today_; });
 
-  var html = '';
-  if (reqs.length) {
-    html += '<div class="section-title">リクエスト未マッチング</div>';
-    reqs.forEach(function(r){
-      var matchable = availSlots.some(function(s){
-        return r.wishes.some(function(w){ return s.date===w.date && s.start<=w.start && s.end>=w.end; });
-      });
-      html += '<div class="card">'
-        + '<div class="card-header">'
-        + '<div><div style="font-size:12px;font-weight:700">'+r.clientName+' 様</div>'
-        + '<div style="font-size:10px;color:#5a6080;margin-top:2px">'+r.caseId+' / '+r.propName+'</div></div>'
-        + '<span class="badge badge-request">リクエスト中</span>'
-        + '</div>'
-        + '<div class="info-grid">'
-        + '<span class="info-label">担当AG</span><span class="info-val">'+r.agentName+'</span>'
-        + '<span class="info-label">希望日時</span><span class="info-val">'
-        + r.wishes.map(function(w,i){ return (i+1)+'. '+fmtDate(w.date)+' '+w.start+'〜'+w.end; }).join(' / ')
-        + '</span>'
-        + '<span class="info-label">マッチ可能</span><span class="info-val '+(matchable?'green':'warn')+'">'+(matchable?'✅ 空き枠あり':'⚠️ 空き枠なし')+'</span>'
-        + '</div>'
-        + '<div style="margin-top:10px"><a href="coreto-itsetsu-schedule.html" style="display:block;text-align:center;padding:8px;background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.25);color:#a78bfa;border-radius:8px;font-size:11px;font-weight:700;text-decoration:none">📅 スケジュール管理でマッチング</a></div>'
-        + '</div>';
-    });
-  }
-  el.innerHTML = html || '<div class="empty">未マッチングのリクエストはありません</div>';
-}
+  html += '<div class="alert alert-info">📌 リクエストを選択し、最適なスロットをクリックして「確定」してください。自動スコアリング（希望時間一致度）でスロットをソートしています。</div>';
 
-// ── ② 予約確定一覧
-function renderBooked(el){
-  var bks = loadBookings().filter(function(b){ return b.status==='active'; });
-  bks.sort(function(a,b){ return a.date.localeCompare(b.date) || a.start.localeCompare(b.start); });
-  if (!bks.length){ el.innerHTML = '<div class="empty">予約確定中の案件はありません</div>'; return; }
+  reqs.forEach(function(r){
+    // 希望日時と一致するスロットをスコアリング
+    var candidateSlots = slots.map(function(s){
+      var score = r.wishes.reduce(function(acc, w){
+        if (s.date===w.date){
+          if (s.start<=w.start && s.end>=w.end) return acc+10;
+          if (s.start<=w.start && s.end>w.start) return acc+5;
+        }
+        return acc;
+      }, 0);
+      return { slot:s, score:score };
+    }).filter(function(x){ return x.slot.date>=today_; })
+      .sort(function(a,b){ return b.score-a.score; });
 
-  var today_ = today();
-  var html = '';
-  bks.forEach(function(bk){
-    var mins = minsUntil(bk.date, bk.start);
-    var isPast = mins < 0;
-    var isToday = bk.date === today_;
-    var isSoon = mins >= 0 && mins < 1440;
-    var lateChg = isLateChange(bk);
-
-    var statusBadge = isPast
-      ? '<span class="badge badge-wait">実施待ち確認</span>'
-      : isToday
-        ? '<span class="badge badge-done">本日</span>'
-        : isSoon
-          ? '<span class="badge badge-booked">明日以内</span>'
-          : '<span class="badge badge-booked">予約済</span>';
-
-    html += '<div class="card">';
-    if (lateChg) html += '<div class="change-warn">⚠️ 直前変更あり — ¥3,000差し引き対象</div>';
-    html += '<div class="card-header">'
-      + '<div><div style="font-size:12px;font-weight:700">'+bk.clientName+' 様</div>'
-      + '<div style="font-size:10px;color:#5a6080;margin-top:2px">'+bk.caseId+' / '+(bk.propName||'—')+'</div></div>'
-      + statusBadge
+    html += '<div class="match-card" id="req-'+r.id+'">'
+      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
+      + '<span class="badge b-wait">未マッチング</span>'
+      + '<span style="font-size:13px;font-weight:700;color:var(--text)">'+escHtml(r.clientName)+'様</span>'
+      + '<span class="mono" style="font-size:10px;color:var(--sub)">'+escHtml(r.caseId)+'</span>'
       + '</div>'
-      + '<div class="info-grid">'
-      + '<span class="info-label">日時</span><span class="info-val highlight">'+fmtDate(bk.date)+'　'+bk.start+'〜</span>'
-      + '<span class="info-label">重説担当</span><span class="info-val">'+bk.itAgentName+'</span>'
-      + '<span class="info-label">担当AG</span><span class="info-val">'+bk.agentName+'</span>'
-      + '<span class="info-label">変更回数</span><span class="info-val '+(bk.changeCount>=2?'warn':'')+'">'+bk.changeCount+'回</span>'
+      + '<div class="match-meta">'
+      + '担当エージェント: <strong>'+escHtml(r.agentName)+'</strong>　'
+      + '受付日時: '+fmtDt(r.submittedAt)+'<br>'
+      + '希望日時:<br>'
+      + r.wishes.map(function(w,i){ return '　'+(i+1)+'. '+fmtDate(w.date)+' '+w.start+'〜'+w.end; }).join('<br>')
       + '</div>';
-    if (bk.meetUrl) html += '<div class="meet-link" style="margin-top:8px">🎥 '+bk.meetUrl+'</div>';
-    if (isPast) {
-      html += '<button class="action-btn" style="margin-top:10px;width:100%" onclick="forceComplete(\''+bk.id+'\')">✅ 完了確認（過去の予約）</button>';
+
+    if (!candidateSlots.length){
+      html += '<div class="alert alert-warn">⚠️ 対応可能なスロットがありません。<button class="btn btn-ghost btn-sm" onclick="switchView(\'slots\',document.querySelector(\'[data-view=slots]\'))">スロットを追加</button></div>';
+    } else {
+      html += '<div style="font-size:10px;font-weight:700;color:var(--sub);margin-bottom:6px;letter-spacing:.5px">対応可能なスロット（スコア順）</div>';
+      html += '<div class="match-slots" id="slots-'+r.id+'">';
+      candidateSlots.slice(0,5).forEach(function(x){
+        var s = x.slot;
+        html += '<div class="match-slot-opt" id="opt-'+s.id+'" onclick="selectSlot(\''+r.id+'\',\''+s.id+'\')">'
+          + '<span class="slot-time">'+fmtDate(s.date)+' '+s.start+'〜'+s.end+'</span>'
+          + '<span class="slot-agent">'+agentName(s.agentId)+'</span>'
+          + (x.score>0?'<span class="slot-score">★ 希望一致</span>':'')
+          + '</div>';
+      });
+      html += '</div>';
+      html += '<div style="display:flex;gap:8px;margin-top:10px">'
+        + '<button class="btn btn-gold" id="match-btn-'+r.id+'" disabled onclick="confirmMatch(\''+r.id+'\')" style="opacity:.4">✅ マッチング確定</button>'
+        + '<button class="btn btn-ghost" onclick="openManualSlotModal(\''+r.id+'\')">🗓 手動で日程を指定</button>'
+        + '</div>';
     }
     html += '</div>';
   });
-  el.innerHTML = html;
+
+  document.getElementById('main-content').innerHTML = html;
 }
 
-// ── ③ リクエスト一覧（全ステータス）
-function renderRequests(el){
+var selectedSlots = {}; // reqId → slotId
+function selectSlot(reqId, slotId){
+  if (selectedSlots[reqId]) {
+    var prev = document.getElementById('opt-'+selectedSlots[reqId]);
+    if (prev) prev.classList.remove('selected');
+  }
+  selectedSlots[reqId] = slotId;
+  var el = document.getElementById('opt-'+slotId);
+  if (el) el.classList.add('selected');
+  var btn = document.getElementById('match-btn-'+reqId);
+  if (btn){ btn.disabled=false; btn.style.opacity='1'; }
+}
+
+function confirmMatch(reqId){
+  var slotId = selectedSlots[reqId];
+  if (!slotId) return;
+  var reqs  = loadRequests();
+  var slots = loadSlots();
+  var bks   = loadBookings();
+  var req   = reqs.find(function(r){ return r.id===reqId; });
+  var slot  = slots.find(function(s){ return s.id===slotId; });
+  if (!req||!slot) return toast('データが見つかりません', 'error');
+
+  // スロット→予約確定
+  slot.status      = 'booked';
+  slot.bookedCase  = req.caseId;
+  slot.bookedClient= req.clientName;
+  req.status       = 'matched';
+  req.matchedAt    = new Date().toISOString();
+  req.matchedSlot  = slotId;
+
+  var newBk = {
+    id: uid(), caseId: req.caseId, clientName: req.clientName,
+    propName: req.propName||'', agentId: req.agentId, agentName: req.agentName,
+    itAgentId: slot.agentId, itAgentName: agentName(slot.agentId),
+    slotId: slotId, date: slot.date, start: slot.start, end: slot.end,
+    status: 'active', meetUrl: '', changeCount: 0,
+    hqMatched: true, matchedBy: SESSION.name || SESSION.userId,
+    matchedAt: new Date().toISOString(),
+  };
+  bks.push(newBk);
+
+  save(KEYS.requests, reqs);
+  save(KEYS.slots, slots);
+  save(KEYS.bookings, bks);
+
+  var detail = req.caseId+'（'+req.clientName+'）→ '+fmtDate(slot.date)+' '+slot.start+'〜 / 担当: '+agentName(slot.agentId);
+  saveHqLog('HQマッチング確定', detail);
+  notifySlack('✅ HQマッチング確定: '+detail);
+
+  toast('✅ マッチングを確定しました');
+  delete selectedSlots[reqId];
+  renderMatching();
+  updateNavBadges();
+}
+
+function openManualSlotModal(reqId){
   var reqs = loadRequests();
-  reqs.sort(function(a,b){ return b.submittedAt.localeCompare(a.submittedAt); });
-  if (!reqs.length){ el.innerHTML = '<div class="empty">リクエストはありません</div>'; return; }
+  var req  = reqs.find(function(r){ return r.id===reqId; });
+  if (!req) return;
 
-  var html = '';
-  reqs.forEach(function(r){
-    var cls = r.status==='open' ? 'badge-request' : r.status==='matched' ? 'badge-done' : 'badge-cancel';
-    var lbl = r.status==='open' ? '受付中' : r.status==='matched' ? 'マッチング済' : 'キャンセル';
-    html += '<div class="card">'
-      + '<div class="card-header">'
-      + '<div><div style="font-size:12px;font-weight:700">'+r.clientName+' 様</div>'
-      + '<div style="font-size:10px;color:#5a6080;margin-top:2px">'+r.caseId+'</div></div>'
-      + '<span class="badge '+cls+'">'+lbl+'</span>'
-      + '</div>'
-      + '<div class="info-grid">'
-      + '<span class="info-label">担当AG</span><span class="info-val">'+r.agentName+'</span>'
-      + '<span class="info-label">受付日時</span><span class="info-val">'+r.submittedAt.slice(0,16).replace('T',' ')+'</span>'
-      + '<span class="info-label">希望日時</span><span class="info-val">'
-      + r.wishes.map(function(w,i){ return (i+1)+'. '+fmtDate(w.date)+' '+w.start+'〜'+w.end; }).join('<br>')
-      + '</span>'
-      + (r.matchedAt ? '<span class="info-label">確定日時</span><span class="info-val green">'+r.matchedAt.slice(0,16).replace('T',' ')+'</span>' : '')
-      + '</div>'
-      + '</div>';
-  });
-  el.innerHTML = html;
+  var agentOpts = TAKKEN_AGENTS.map(function(a){
+    return '<option value="'+a.id+'">'+a.name+'（'+a.takken+'）</option>';
+  }).join('');
+
+  openModal('手動で日程・担当者を指定',
+    '<div class="alert alert-info" style="margin-bottom:16px">案件: <strong>'+escHtml(req.caseId)+'</strong> / '+escHtml(req.clientName)+'様</div>'
+    + '<div class="fg"><label>重説担当者</label><select id="m-agent">'+agentOpts+'</select></div>'
+    + '<div class="fg-row"><div class="fg"><label>日付</label><input type="date" id="m-date" min="'+today()+'" value="'+today()+'"></div>'
+    + '<div class="fg"><label>開始時刻</label><input type="time" id="m-start" value="10:00"></div>'
+    + '<div class="fg"><label>終了時刻</label><input type="time" id="m-end" value="11:00"></div></div>'
+    + '<div class="fg"><label>Google Meet / Zoom URL</label><input type="text" id="m-url" placeholder="https://meet.google.com/..."></div>'
+    + '<div class="fg"><label>HQメモ（任意）</label><textarea id="m-memo" rows="2" placeholder="日程調整の経緯など"></textarea></div>',
+    [
+      { label:'キャンセル', cls:'btn-ghost', fn:'closeModal()' },
+      { label:'✅ 確定する', cls:'btn-gold', fn:'execManualMatch("'+reqId+'")' }
+    ]
+  );
 }
 
-// ── ③.5 入金確認タブ
-function renderPayment(el) {
-  // CASES が pipeline.html から読めない場合はlocalStorage経由
-  // ここでは pipeline.html と同一ブラウザセッションで WINDOW.CASES が共有されない前提で
-  // Slack通知ベースの運用案内＋pipeline.htmlへのリンクを提供
-  var html = '<div style="background:rgba(79,156,249,.06);border:1px solid rgba(79,156,249,.15);'
-    + 'border-radius:10px;padding:16px;margin-bottom:14px;font-size:11px;color:#a0b0c8">'
-    + '<div style="font-size:12px;font-weight:700;color:#4f9cf9;margin-bottom:8px">💰 入金確認について</div>'
-    + '<div style="line-height:1.9">'
-    + '入金確認はパイプライン画面（本部ログイン時）の各案件から実行します。<br>'
-    + 'エージェントには「入金待ち」表示のみ、確認ボタンは本部ログイン時のみ表示されます。<br>'
-    + '<br>'
-    + '• 振込確認後、<strong style="color:#e0e8f0">実際の振込日</strong>を入力して確定してください<br>'
-    + '• GMO入金通知メール等を参照し、振込日・備考を記録することを推奨します<br>'
-    + '• 確認後 Slack #入金確認 に通知が送信され、担当エージェントに連絡が届きます<br>'
-    + '</div>'
-    + '</div>';
+function execManualMatch(reqId){
+  var agentId = document.getElementById('m-agent').value;
+  var date    = document.getElementById('m-date').value;
+  var start   = document.getElementById('m-start').value;
+  var end     = document.getElementById('m-end').value;
+  var url     = document.getElementById('m-url').value;
+  var memo    = document.getElementById('m-memo').value;
 
-  // 入金確認済み履歴（CASES から paid: true のものを表示）
-  // pipeline と同じ localStorage キーがあれば読み込む
-  var cases = [];
-  try {
-    var raw = localStorage.getItem('coreto_cases');
-    if (raw) cases = JSON.parse(raw);
-    else cases = window.CASES || [];
-  } catch(e) { cases = window.CASES || []; }
+  if (!date||!start||!end){ toast('日付・時刻を入力してください', 'error'); return; }
 
-  var paidCases = cases.filter(function(c){
-    return c.taskDone && c.taskDone.paid;
-  }).sort(function(a,b){
-    return (b.dates&&b.dates.paid||'').localeCompare(a.dates&&a.dates.paid||'');
-  });
+  var reqs = loadRequests();
+  var bks  = loadBookings();
+  var req  = reqs.find(function(r){ return r.id===reqId; });
+  if (!req) return;
 
-  var waitCases = cases.filter(function(c){
-    return c.step === 'prekey' && !(c.taskDone && c.taskDone.paid) && !c.adOnly;
-  });
+  req.status    = 'matched';
+  req.matchedAt = new Date().toISOString();
 
-  if (waitCases.length) {
-    html += '<div style="font-size:10px;font-weight:700;color:#fbbf24;letter-spacing:.08em;margin-bottom:8px;text-transform:uppercase">⏳ 入金待ち（' + waitCases.length + '件）</div>';
-    waitCases.forEach(function(c) {
-      var inv = c.invoice;
-      var totalAmt = inv ? (inv.grandTotal || (inv.commAmt||0)+(inv.adAmt||0) || 0) : 0;
-      var prop = (c.apps&&c.apps.find(function(a){return a.status==='approved';})||{}).prop || c.sub || '—';
-      html += '<div class="card">'
-        + '<div class="card-header">'
-        + '<div><div style="font-size:12px;font-weight:700">'+c.name+' 様</div>'
-        + '<div style="font-size:10px;color:#5a6080;margin-top:2px">'+c.id+' / '+prop+'</div></div>'
-        + '<span class="badge badge-wait">入金待ち</span>'
-        + '</div>'
-        + '<div class="info-grid">'
-        + '<span class="info-label">担当AG</span><span class="info-val">'+c.agent+'</span>'
-        + (totalAmt ? '<span class="info-label">請求金額</span><span class="info-val warn">¥'+totalAmt.toLocaleString()+'</span>' : '')
-        + '</div>'
-        + '<div style="margin-top:10px;display:flex;gap:6px">'
-        + '<input type="date" id="pd-'+c.id+'" value="'+today_()+'" style="flex:1;background:#090b13;border:1px solid #2a3050;border-radius:7px;padding:7px 8px;color:#e0e8f0;font-family:inherit;font-size:11px;outline:none">'
-        + '<button onclick="hqPaymentConfirm(\'' + c.id + '\')" class="action-btn">✅ 入金確認</button>'
-        + '</div>'
-        + '<div style="font-size:9px;color:#3a4060;margin-top:4px">↑ GMO通知等で確認した実際の振込日を入力してください</div>'
-        + '</div>';
-    });
-    html += '<div style="margin-bottom:16px"></div>';
-  }
+  var newBk = {
+    id: uid(), caseId: req.caseId, clientName: req.clientName,
+    propName: req.propName||'', agentId: req.agentId, agentName: req.agentName,
+    itAgentId: agentId, itAgentName: agentName(agentId),
+    slotId: null, date, start, end, status: 'active',
+    meetUrl: url, changeCount: 0,
+    hqMatched: true, hqManual: true,
+    matchedBy: SESSION.name || SESSION.userId,
+    matchedAt: new Date().toISOString(),
+    hqMemo: memo,
+  };
+  bks.push(newBk);
 
-  if (paidCases.length) {
-    html += '<div style="font-size:10px;font-weight:700;color:#34d399;letter-spacing:.08em;margin-bottom:8px;text-transform:uppercase">✅ 入金確認済み（' + paidCases.length + '件）</div>';
-    paidCases.slice(0,20).forEach(function(c) {
-      var inv = c.invoice;
-      var totalAmt = inv ? (inv.grandTotal || (inv.commAmt||0)+(inv.adAmt||0) || 0) : 0;
-      html += '<div class="card">'
-        + '<div class="card-header">'
-        + '<div><div style="font-size:12px;font-weight:700">'+c.name+' 様</div>'
-        + '<div style="font-size:10px;color:#5a6080;margin-top:2px">'+c.id+'</div></div>'
-        + '<span class="badge badge-done">確認済</span>'
-        + '</div>'
-        + '<div class="info-grid">'
-        + '<span class="info-label">振込日</span><span class="info-val green">'+(c.dates&&c.dates.paid||'—')+'</span>'
-        + (totalAmt ? '<span class="info-label">金額</span><span class="info-val">¥'+totalAmt.toLocaleString()+'</span>' : '')
-        + '</div></div>';
-    });
-  }
+  save(KEYS.requests, reqs);
+  save(KEYS.bookings, bks);
 
-  if (!waitCases.length && !paidCases.length) {
-    html += '<div class="empty">入金関連の案件データがありません<br><span style="font-size:10px">パイプライン画面からデータを読み込んでいます</span></div>';
-  }
+  var detail = req.caseId+'（'+req.clientName+'）→ HQ手動指定: '+fmtDate(date)+' '+start+'〜 / 担当: '+agentName(agentId);
+  saveHqLog('HQ手動マッチング', detail);
+  notifySlack('🏢 HQ手動マッチング: '+detail+(memo?' メモ: '+memo:''));
 
-  el.innerHTML = html;
+  closeModal();
+  toast('✅ 手動マッチングを確定しました');
+  renderMatching();
+  updateNavBadges();
 }
 
-function hqPaymentConfirm(caseId) {
-  // pipeline.html と同じ CASES を参照できる場合のみ実行
-  var cases = [];
-  try {
-    var raw = localStorage.getItem('coreto_cases');
-    if (raw) cases = JSON.parse(raw);
-    else cases = window.CASES || [];
-  } catch(e) { cases = window.CASES || []; }
+// ══ REASSIGN（担当者変更） ══════════════════════════════════════
+function renderReassign(){
+  var bks = loadBookings().filter(function(b){ return b.status==='active'; });
+  bks.sort(function(a,b){ return a.date.localeCompare(b.date)||a.start.localeCompare(b.start); });
 
-  var c = cases.find(function(x){ return x.id === caseId; });
-  if (!c) {
-    alert('案件データが見つかりません。パイプライン画面から入金確認してください。');
+  var html = '<div class="page-hdr"><span style="font-size:20px">🔄</span>'
+    + '<div><div class="page-title">担当者変更</div>'
+    + '<div class="page-sub">確定済み予約の重説担当者を変更します</div></div></div>';
+
+  if (!bks.length){
+    html += '<div class="empty"><div class="empty-icon">📭</div>対象の予約はありません</div>';
+    document.getElementById('main-content').innerHTML = html;
     return;
   }
-  var inp = document.getElementById('pd-' + caseId);
-  var paidDate = inp ? inp.value : today_();
-  if (!paidDate) { toast('振込日を入力してください'); return; }
 
-  if(!c.taskDone) c.taskDone = {};
-  c.taskDone.paid = true;
-  c.dates.paid = paidDate;
-  c.hist = c.hist || [];
-  c.hist.unshift(paidDate + ' 入金確認済【本部確認: ' + (window._SESSION.name||window._SESSION.userId) + '】');
+  html += '<div class="alert alert-warn">⚠️ 担当者変更後、エージェントとクライアントへSlack通知が送信されます。変更前に双方の同意を確認してください。</div>';
+  html += '<div class="card"><div class="card-body" style="padding:0"><table class="tbl"><thead><tr>'
+    + '<th>日時</th><th>クライアント</th><th>Case ID</th><th>担当AG</th><th>現在の重説担当</th><th>状態</th><th>操作</th></tr></thead><tbody>';
 
-  // localStorage に保存（CASES配列全体）
-  try {
-    if (localStorage.getItem('coreto_cases')) {
-      localStorage.setItem('coreto_cases', JSON.stringify(cases));
-    }
-  } catch(e) {}
+  bks.forEach(function(bk){
+    var mins = minsUntil(bk.date, bk.start);
+    var isUrgent = mins>=0 && mins<1440;
+    html += '<tr>'
+      + '<td class="mono" style="'+(isUrgent?'color:var(--orange)':'color:var(--sub)')+'">'+fmtDate(bk.date)+' '+bk.start+'</td>'
+      + '<td style="font-weight:600">'+escHtml(bk.clientName)+'</td>'
+      + '<td class="mono" style="color:var(--sub)">'+escHtml(bk.caseId)+'</td>'
+      + '<td>'+escHtml(bk.agentName)+'</td>'
+      + '<td style="color:var(--blue)">'+escHtml(bk.itAgentName)+'</td>'
+      + '<td>'+(isUrgent?'<span class="badge b-urgent">直前変更</span>':'<span class="badge b-booked">通常</span>')+'</td>'
+      + '<td><button class="btn btn-primary btn-xs" onclick="openReassignModal(\''+bk.id+'\')">担当変更</button></td></tr>';
+  });
 
-  notifySlack('[Slack #入金確認] 入金確認 案件:' + caseId + ' 振込日:' + paidDate
-    + ' 確認者:' + (window._SESSION.name||window._SESSION.userId)));
-  toast('✅ 入金確認しました（振込日: ' + paidDate + '）');
-  renderTab();
-  renderStats();
+  html += '</tbody></table></div></div>';
+  document.getElementById('main-content').innerHTML = html;
 }
 
-// ── ④ 完了済み
-function renderDone(el){
-  var slots = loadSlots().filter(function(s){ return s.itDone; });
-  var cancelled = loadBookings().filter(function(b){ return b.status==='cancelled'; });
-  if (!slots.length && !cancelled.length){ el.innerHTML = '<div class="empty">完了・キャンセル済みはありません</div>'; return; }
-
-  var html = '';
-  if (slots.length) {
-    html += '<div class="section-title">重説完了（担当報告済み）</div>';
-    slots.forEach(function(s){
-      var bk = loadBookings().find(function(b){ return b.slotId===s.id; });
-      html += '<div class="card">'
-        + '<div class="card-header">'
-        + '<div><div style="font-size:12px;font-weight:700">'+(s.bookedClient||'—')+' 様</div>'
-        + '<div style="font-size:10px;color:#5a6080;margin-top:2px">'+(s.bookedCase||'—')+'</div></div>'
-        + '<span class="badge badge-done">完了</span>'
-        + '</div>'
-        + '<div class="info-grid">'
-        + '<span class="info-label">実施日</span><span class="info-val green">'+fmtDate(s.date)+'</span>'
-        + '<span class="info-label">重説担当</span><span class="info-val">'+s.agentName+'</span>'
-        + (bk ? '<span class="info-label">担当AG</span><span class="info-val">'+bk.agentName+'</span>' : '')
-        + '<span class="info-label">報告日時</span><span class="info-val">'+(s.itDoneAt||'').slice(0,16).replace('T',' ')+'</span>'
-        + '</div></div>';
-    });
-  }
-  if (cancelled.length) {
-    html += '<div class="section-title">キャンセル済み</div>';
-    cancelled.sort(function(a,b){ return b.cancelledAt.localeCompare(a.cancelledAt); }).slice(0,20).forEach(function(bk){
-      html += '<div class="card">'
-        + '<div class="card-header">'
-        + '<div><div style="font-size:12px;font-weight:700">'+bk.clientName+' 様</div>'
-        + '<div style="font-size:10px;color:#5a6080;margin-top:2px">'+bk.caseId+'</div></div>'
-        + '<span class="badge badge-cancel">キャンセル</span>'
-        + '</div>'
-        + '<div class="info-grid">'
-        + '<span class="info-label">予定日時</span><span class="info-val">'+fmtDate(bk.date)+'　'+bk.start+'</span>'
-        + '<span class="info-label">キャンセル日</span><span class="info-val">'+(bk.cancelledAt||'').slice(0,16).replace('T',' ')+'</span>'
-        + '<span class="info-label">担当AG</span><span class="info-val">'+bk.agentName+'</span>'
-        + '</div></div>';
-    });
-  }
-  el.innerHTML = html;
-}
-
-// ── HQ権限: 過去予約の完了強制確認
-function forceComplete(bkId){
-  if (!confirm('この予約を「完了」としてマークしますか？\n（重説担当から完了報告がない場合のHQ手動処理）')) return;
+function openReassignModal(bkId){
   var bks = loadBookings();
-  var bk = bks.find(function(b){ return b.id===bkId; });
+  var bk  = bks.find(function(b){ return b.id===bkId; });
+  if (!bk) return;
+
+  var mins = minsUntil(bk.date, bk.start);
+  var warning = mins>=0 && mins<1440
+    ? '<div class="alert alert-danger">⚠️ 直前変更（24時間以内）です。変更手数料 ¥3,000 が発生します。</div>'
+    : '';
+
+  var agentOpts = TAKKEN_AGENTS.map(function(a){
+    var sel = a.id===bk.itAgentId ? ' selected' : '';
+    return '<option value="'+a.id+'"'+sel+'>'+a.name+'（'+a.takken+'）</option>';
+  }).join('');
+
+  openModal('重説担当者の変更',
+    warning
+    + '<div style="background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:11px">'
+    + '<div style="color:var(--sub);margin-bottom:4px">変更対象</div>'
+    + '<div style="font-weight:700;font-size:13px;color:var(--text)">'+escHtml(bk.clientName)+'様 — '+escHtml(bk.caseId)+'</div>'
+    + '<div style="color:var(--sub);margin-top:4px">'+fmtDate(bk.date)+' '+bk.start+'〜 / 現在の担当: <span style="color:var(--blue)">'+escHtml(bk.itAgentName)+'</span></div>'
+    + '</div>'
+    + '<div class="fg"><label>新しい重説担当者</label><select id="ra-agent">'+agentOpts+'</select></div>'
+    + '<div class="fg"><label>変更理由（Slack通知に含まれます）</label><textarea id="ra-reason" rows="2" placeholder="急病のため / 日程調整のため など"></textarea></div>',
+    [
+      { label:'キャンセル', cls:'btn-ghost', fn:'closeModal()' },
+      { label:'🔄 担当者を変更する', cls:'btn-primary', fn:'execReassign("'+bkId+'")' }
+    ]
+  );
+}
+
+function execReassign(bkId){
+  var newAgentId = document.getElementById('ra-agent').value;
+  var reason     = document.getElementById('ra-reason').value;
+  var bks        = loadBookings();
+  var bk         = bks.find(function(b){ return b.id===bkId; });
+  if (!bk) return;
+
+  var prevName = bk.itAgentName;
+  bk.prevItAgentId   = bk.itAgentId;
+  bk.prevItAgentName = bk.itAgentName;
+  bk.itAgentId   = newAgentId;
+  bk.itAgentName = agentName(newAgentId);
+  bk.changeCount = (bk.changeCount||0) + 1;
+  bk.changeHistory = bk.changeHistory || [];
+  bk.changeHistory.push({
+    at: new Date().toISOString(), from: prevName, to: bk.itAgentName,
+    reason: reason, by: SESSION.name||SESSION.userId
+  });
+  save(KEYS.bookings, bks);
+
+  var detail = bk.caseId+' 担当変更: '+prevName+' → '+bk.itAgentName+(reason?' 理由: '+reason:'');
+  saveHqLog('担当者変更', detail);
+  notifySlack('🔄 重説担当変更: '+detail);
+
+  closeModal();
+  toast('✅ 担当者を変更しました');
+  renderReassign();
+}
+
+// ══ BOOKINGS（予約一覧） ════════════════════════════════════════
+function renderBookings(){
+  var bks = loadBookings();
+  bks.sort(function(a,b){ return a.date.localeCompare(b.date)||a.start.localeCompare(b.start); });
+
+  var html = '<div class="page-hdr"><span style="font-size:20px">📅</span>'
+    + '<div><div class="page-title">予約一覧</div>'
+    + '<div class="page-sub">全ステータスの重説予約を管理</div></div></div>';
+
+  // フィルター
+  html += '<div style="display:flex;gap:8px;margin-bottom:16px">'
+    + '<button class="btn btn-ghost btn-sm active-filter" id="f-all"    onclick="filterBk(\'all\')"   >すべて</button>'
+    + '<button class="btn btn-ghost btn-sm" id="f-active" onclick="filterBk(\'active\')" >確定中</button>'
+    + '<button class="btn btn-ghost btn-sm" id="f-today"  onclick="filterBk(\'today\')"  >本日</button>'
+    + '<button class="btn btn-ghost btn-sm" id="f-late"   onclick="filterBk(\'late\')"   >要注意</button>'
+    + '<button class="btn btn-ghost btn-sm" id="f-cancel" onclick="filterBk(\'cancel\')" >キャンセル</button>'
+    + '</div>';
+
+  if (!bks.length){
+    html += '<div class="empty"><div class="empty-icon">📭</div>予約データがありません</div>';
+    document.getElementById('main-content').innerHTML = html;
+    return;
+  }
+
+  html += '<div class="card" id="bk-list-wrap"><div class="card-body" style="padding:0"><table class="tbl" id="bk-tbl"><thead><tr>'
+    + '<th>日時</th><th>クライアント</th><th>Case ID</th>'
+    + '<th>担当AG</th><th>重説担当</th><th>変更回数</th><th>状態</th><th>操作</th></tr></thead>'
+    + '<tbody id="bk-tbody">';
+
+  bks.forEach(function(bk){
+    var mins = minsUntil(bk.date, bk.start);
+    var isPast = mins<0, isUrgent = mins>=0&&mins<1440;
+    var st = bk.status==='active'
+      ? isPast ? '<span class="badge b-wait">要確認</span>'
+        : isUrgent ? '<span class="badge b-urgent">直前</span>'
+        : '<span class="badge b-booked">予約済</span>'
+      : '<span class="badge b-cancel">キャンセル</span>';
+
+    html += '<tr class="bk-row" data-status="'+bk.status+'" data-date="'+bk.date+'" data-change="'+(bk.changeCount||0)+'">'
+      + '<td class="mono">'+fmtDate(bk.date)+' '+bk.start+'</td>'
+      + '<td style="font-weight:600">'+escHtml(bk.clientName)+'</td>'
+      + '<td class="mono" style="color:var(--sub)">'+escHtml(bk.caseId)+'</td>'
+      + '<td>'+escHtml(bk.agentName)+'</td>'
+      + '<td style="color:var(--blue)">'+escHtml(bk.itAgentName)+'</td>'
+      + '<td class="mono" style="'+(bk.changeCount>=2?'color:var(--red)':'')+'">'+((bk.changeCount||0)+'回')+'</td>'
+      + '<td>'+st+'</td>'
+      + '<td><div style="display:flex;gap:4px">'
+      + (bk.status==='active' ? [
+          '<button class="btn btn-ghost btn-xs" onclick="openReassignModal(\''+bk.id+'\')">担当変更</button>',
+          '<button class="btn btn-ghost btn-xs" onclick="openRescheduleModal(\''+bk.id+'\')">日程変更</button>',
+          '<button class="btn btn-danger btn-xs" onclick="openCancelModal(\''+bk.id+'\')">取消</button>',
+          (isPast?'<button class="btn btn-gold btn-xs" onclick="execForceComplete(\''+bk.id+'\')">完了確認</button>':'')
+        ].join('') : '')
+      + '</div></td></tr>';
+  });
+
+  html += '</tbody></table></div></div>';
+  document.getElementById('main-content').innerHTML = html;
+}
+
+function filterBk(type){
+  var rows = document.querySelectorAll('.bk-row');
+  var today_ = today();
+  rows.forEach(function(r){
+    var status = r.dataset.status;
+    var date   = r.dataset.date;
+    var change = parseInt(r.dataset.change)||0;
+    var show = true;
+    if (type==='active') show = status==='active';
+    else if (type==='today') show = date===today_;
+    else if (type==='late') show = status==='active' && change>=2;
+    else if (type==='cancel') show = status==='cancelled';
+    r.style.display = show ? '' : 'none';
+  });
+}
+
+function openRescheduleModal(bkId){
+  var bks = loadBookings();
+  var bk  = bks.find(function(b){ return b.id===bkId; });
+  if (!bk) return;
+
+  openModal('日程変更',
+    '<div style="background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:11px">'
+    + '<div style="font-weight:700;font-size:13px;color:var(--text)">'+escHtml(bk.clientName)+'様 — '+escHtml(bk.caseId)+'</div>'
+    + '<div style="color:var(--sub);margin-top:4px">現在: '+fmtDate(bk.date)+' '+bk.start+'〜 / 担当: '+escHtml(bk.itAgentName)+'</div>'
+    + '</div>'
+    + '<div class="fg-row"><div class="fg"><label>新しい日付</label><input type="date" id="rs-date" min="'+today()+'" value="'+bk.date+'"></div>'
+    + '<div class="fg"><label>開始時刻</label><input type="time" id="rs-start" value="'+bk.start+'"></div>'
+    + '<div class="fg"><label>終了時刻</label><input type="time" id="rs-end" value="'+(bk.end||'')+'"></div></div>'
+    + '<div class="fg"><label>Google Meet URL（変更する場合）</label><input type="text" id="rs-url" value="'+(bk.meetUrl||'')+'" placeholder="https://meet.google.com/..."></div>'
+    + '<div class="fg"><label>変更理由</label><textarea id="rs-reason" rows="2" placeholder="理由を入力"></textarea></div>',
+    [
+      { label:'キャンセル', cls:'btn-ghost', fn:'closeModal()' },
+      { label:'📅 日程を変更する', cls:'btn-primary', fn:'execReschedule("'+bkId+'")' }
+    ]
+  );
+}
+
+function execReschedule(bkId){
+  var date   = document.getElementById('rs-date').value;
+  var start  = document.getElementById('rs-start').value;
+  var end    = document.getElementById('rs-end').value;
+  var url    = document.getElementById('rs-url').value;
+  var reason = document.getElementById('rs-reason').value;
+  if (!date||!start){ toast('日付・時刻を入力してください', 'error'); return; }
+
+  var bks = loadBookings();
+  var bk  = bks.find(function(b){ return b.id===bkId; });
+  if (!bk) return;
+
+  var prevDate = bk.date, prevStart = bk.start;
+  bk.date  = date; bk.start = start; bk.end = end;
+  if (url) bk.meetUrl = url;
+  bk.changeCount = (bk.changeCount||0)+1;
+  bk.changeHistory = bk.changeHistory||[];
+  bk.changeHistory.push({
+    at: new Date().toISOString(), type:'reschedule',
+    from: prevDate+' '+prevStart, to: date+' '+start,
+    reason, by: SESSION.name||SESSION.userId
+  });
+  save(KEYS.bookings, bks);
+
+  var detail = bk.caseId+' 日程変更: '+fmtDate(prevDate)+' '+prevStart+' → '+fmtDate(date)+' '+start+(reason?' 理由: '+reason:'');
+  saveHqLog('日程変更', detail);
+  notifySlack('📅 日程変更: '+detail);
+
+  closeModal();
+  toast('✅ 日程を変更しました（変更回数: '+bk.changeCount+'回）');
+  renderBookings();
+}
+
+function openCancelModal(bkId){
+  var bks = loadBookings();
+  var bk  = bks.find(function(b){ return b.id===bkId; });
+  if (!bk) return;
+
+  var mins = minsUntil(bk.date, bk.start);
+  var penalty = mins>=0&&mins<1440 ? '<div class="alert alert-danger">⚠️ 直前キャンセル（24時間以内）のため ¥3,000 のペナルティが発生します。</div>' : '';
+
+  openModal('予約キャンセル',
+    penalty
+    + '<div style="background:var(--bg);border:1px solid rgba(248,113,113,.2);border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:11px">'
+    + '<div style="font-weight:700;font-size:13px;color:var(--text)">'+escHtml(bk.clientName)+'様 — '+escHtml(bk.caseId)+'</div>'
+    + '<div style="color:var(--sub);margin-top:4px">'+fmtDate(bk.date)+' '+bk.start+'〜 / 担当: '+escHtml(bk.itAgentName)+'</div>'
+    + '</div>'
+    + '<div class="fg"><label>キャンセル理由 <span style="color:var(--red)">*</span></label><textarea id="ca-reason" rows="2" placeholder="クライアント都合 / 担当者都合 など"></textarea></div>'
+    + '<div class="fg"><label>Slack通知先</label><select id="ca-notify"><option value="both">エージェント・担当者両方</option><option value="agent">担当エージェントのみ</option><option value="none">通知しない</option></select></div>',
+    [
+      { label:'戻る', cls:'btn-ghost', fn:'closeModal()' },
+      { label:'🚫 キャンセルする', cls:'btn-danger', fn:'execCancel("'+bkId+'")' }
+    ]
+  );
+}
+
+function execCancel(bkId){
+  var reason = document.getElementById('ca-reason').value.trim();
+  if (!reason){ toast('キャンセル理由を入力してください', 'error'); return; }
+
+  var bks = loadBookings();
+  var bk  = bks.find(function(b){ return b.id===bkId; });
+  if (!bk) return;
+
+  bk.status      = 'cancelled';
+  bk.cancelledAt = new Date().toISOString();
+  bk.cancelReason= reason;
+  bk.cancelledBy = SESSION.name||SESSION.userId;
+
+  // スロットを空きに戻す
+  if (bk.slotId){
+    var slots = loadSlots();
+    var slot  = slots.find(function(s){ return s.id===bk.slotId; });
+    if (slot){ slot.status='open'; slot.bookedCase=null; slot.bookedClient=null; save(KEYS.slots, slots); }
+  }
+  save(KEYS.bookings, bks);
+
+  var detail = bk.caseId+'（'+bk.clientName+'）キャンセル 理由: '+reason;
+  saveHqLog('予約キャンセル', detail);
+  notifySlack('🚫 予約キャンセル: '+detail);
+
+  closeModal();
+  toast('予約をキャンセルしました');
+  renderBookings();
+}
+
+function execForceComplete(bkId){
+  if (!confirm('この予約を「完了済み」としてマークしますか？\n（重説担当からの報告がない場合のHQ手動処理）')) return;
+  var bks = loadBookings();
+  var bk  = bks.find(function(b){ return b.id===bkId; });
   if (!bk) return;
   bk.hqForceCompleted = true;
-  bk.hqCompletedAt = new Date().toISOString();
-  saveBookings(bks);
-  notifySlack('[Slack #IT重説日程調整] HQ手動完了確認 案件:'+bk.caseId+' クライアント:'+bk.clientName));
-  toast('✅ 完了確認しました。担当AGにSlack通知しました。');
-  renderTab();
-  renderStats();
+  bk.hqCompletedAt    = new Date().toISOString();
+  bk.hqCompletedBy    = SESSION.name||SESSION.userId;
+  save(KEYS.bookings, bks);
+
+  saveHqLog('強制完了確認', bk.caseId+'（'+bk.clientName+'）');
+  notifySlack('✅ HQ手動完了確認: '+bk.caseId+' '+bk.clientName);
+  toast('✅ 完了確認しました');
+  renderBookings();
 }
 
-function toast(msg){
-  var t = document.getElementById('toast');
-  t.textContent = msg; t.style.opacity = 1;
-  setTimeout(function(){ t.style.opacity = 0; }, 2500);
+// ══ CALENDAR（週次カレンダー） ══════════════════════════════════
+var calOffset = 0; // 週のオフセット
+function renderCalendar(){
+  var bks   = loadBookings().filter(function(b){ return b.status==='active'; });
+  var slots  = loadSlots();
+
+  // 今週の開始日（月曜日）
+  var base = new Date();
+  base.setDate(base.getDate() - base.getDay() + 1 + (calOffset*7));
+  var weekDays = [];
+  for (var i=0;i<7;i++){
+    var d = new Date(base); d.setDate(base.getDate()+i);
+    weekDays.push(d.toISOString().slice(0,10));
+  }
+  var weekStart = weekDays[0], weekEnd = weekDays[6];
+
+  var weekLabel = fmtDate(weekStart)+' 〜 '+fmtDate(weekEnd);
+
+  var html = '<div class="page-hdr"><span style="font-size:20px">🗓</span>'
+    + '<div><div class="page-title">カレンダービュー</div>'
+    + '<div class="page-sub">宅建士別の週次スケジュール</div></div>'
+    + '<div style="margin-left:auto" class="week-nav">'
+    + '<button class="week-btn" onclick="calOffset--;renderCalendar()">‹</button>'
+    + '<span class="week-label">'+weekLabel+'</span>'
+    + '<button class="week-btn" onclick="calOffset++;renderCalendar()">›</button>'
+    + '<button class="btn btn-ghost btn-sm" onclick="calOffset=0;renderCalendar()" style="margin-left:8px">今週</button>'
+    + '</div></div>';
+
+  html += '<div class="card"><div class="card-body">';
+
+  // ヘッダー（曜日）
+  var dayNames = ['月','火','水','木','金','土','日'];
+  html += '<div class="cal-hdr"><div>宅建士</div>';
+  weekDays.forEach(function(d,i){
+    var isToday = d===today();
+    html += '<div style="'+(isToday?'color:var(--blue);font-weight:700':'')+'">'
+      + d.slice(8)+' <span style="font-weight:400;font-size:8px">('+dayNames[i]+')</span></div>';
+  });
+  html += '</div>';
+
+  // 各宅建士行
+  TAKKEN_AGENTS.forEach(function(ag){
+    html += '<div class="cal-row"><div class="cal-agent">'
+      + '<div>'+escHtml(ag.name)+'</div>'
+      + '<div class="cal-agent-sub">'+escHtml(ag.takken)+'</div>'
+      + '</div>';
+
+    weekDays.forEach(function(d){
+      html += '<div class="cal-cell" onclick="openAddSlotModal(\''+ag.id+'\',\''+d+'\')">';
+
+      // このエージェント・この日のスロット
+      var daySlots = slots.filter(function(s){ return s.agentId===ag.id && s.date===d; });
+      var dayBks   = bks.filter(function(b){ return b.itAgentId===ag.id && b.date===d; });
+
+      dayBks.forEach(function(bk){
+        html += '<div class="cal-slot slot-booked" title="'+escHtml(bk.clientName)+' '+bk.start+'" onclick="event.stopPropagation();openReassignModal(\''+bk.id+'\')">'
+          + bk.start+' '+escHtml(bk.clientName.slice(0,3))+'..</div>';
+      });
+
+      daySlots.filter(function(s){ return s.status==='open'; }).forEach(function(s){
+        html += '<div class="cal-slot slot-open" title="空き '+s.start+'〜'+s.end+'" onclick="event.stopPropagation()">'
+          + s.start+' 空き</div>';
+      });
+
+      if (!dayBks.length && !daySlots.length){
+        html += '<div class="cal-add">+ 追加</div>';
+      }
+
+      html += '</div>';
+    });
+    html += '</div>';
+  });
+
+  html += '</div></div>';
+
+  // 凡例
+  html += '<div style="display:flex;gap:12px;flex-wrap:wrap;font-size:10px;color:var(--sub)">'
+    + '<span><span class="cal-slot slot-booked" style="display:inline-block;padding:2px 6px">▪</span> 予約確定</span>'
+    + '<span><span class="cal-slot slot-open" style="display:inline-block;padding:2px 6px">▪</span> 空きスロット</span>'
+    + '<span style="margin-left:4px">セルをクリック → スロット追加　青いバーをクリック → 担当者変更</span>'
+    + '</div>';
+
+  document.getElementById('main-content').innerHTML = html;
 }
 
-// ── init
-renderStats();
-renderTab();
-setInterval(function(){ renderStats(); }, 30000);
+// ══ SLOTS（スロット管理） ════════════════════════════════════════
+function renderSlots(){
+  var slots = loadSlots();
+  var today_= today();
+  var future= slots.filter(function(s){ return s.date>=today_; });
+  future.sort(function(a,b){ return a.date.localeCompare(b.date)||a.start.localeCompare(b.start); });
+
+  var html = '<div class="page-hdr"><span style="font-size:20px">➕</span>'
+    + '<div><div class="page-title">スロット管理</div>'
+    + '<div class="page-sub">宅建士の空き枠を追加・削除します</div></div>'
+    + '<button class="btn btn-gold" style="margin-left:auto" onclick="openAddSlotModal()">＋ スロット追加</button></div>';
+
+  // エージェント別フィルター
+  html += '<div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">'
+    + '<button class="btn btn-ghost btn-sm" onclick="filterSlots(\'all\')">全員</button>';
+  TAKKEN_AGENTS.forEach(function(a){
+    html += '<button class="btn btn-ghost btn-sm" onclick="filterSlots(\''+a.id+'\')">'+a.name+'</button>';
+  });
+  html += '</div>';
+
+  if (!future.length){
+    html += '<div class="empty"><div class="empty-icon">📭</div>スロットがありません<br>'
+      + '<button class="btn btn-primary" style="margin-top:12px" onclick="openAddSlotModal()">＋ 最初のスロットを追加</button></div>';
+    document.getElementById('main-content').innerHTML = html;
+    return;
+  }
+
+  html += '<div class="card"><div class="card-body" style="padding:0"><table class="tbl"><thead><tr>'
+    + '<th>日付</th><th>時間</th><th>担当宅建士</th><th>状態</th><th>予約案件</th><th>操作</th></tr></thead>'
+    + '<tbody id="slots-tbody">';
+
+  future.forEach(function(s){
+    var badge = s.status==='open'
+      ? '<span class="badge b-done">空き</span>'
+      : s.status==='booked'
+      ? '<span class="badge b-booked">予約済</span>'
+      : '<span class="badge b-cancel">完了</span>';
+
+    html += '<tr class="slot-row" data-agent="'+s.agentId+'">'
+      + '<td class="mono">'+fmtDate(s.date)+'</td>'
+      + '<td class="mono" style="color:var(--text)">'+s.start+'〜'+s.end+'</td>'
+      + '<td style="color:var(--blue)">'+agentName(s.agentId)+'</td>'
+      + '<td>'+badge+'</td>'
+      + '<td style="font-size:10px;color:var(--sub)">'+(s.bookedCase||'—')+'</td>'
+      + '<td><div style="display:flex;gap:4px">'
+      + (s.status==='open'?'<button class="btn btn-danger btn-xs" onclick="deleteSlot(\''+s.id+'\')">削除</button>':'')
+      + '</div></td></tr>';
+  });
+
+  html += '</tbody></table></div></div>';
+  document.getElementById('main-content').innerHTML = html;
+}
+
+function filterSlots(agentId){
+  document.querySelectorAll('.slot-row').forEach(function(r){
+    r.style.display = agentId==='all'||r.dataset.agent===agentId ? '' : 'none';
+  });
+}
+
+function openAddSlotModal(preAgentId, preDate){
+  var agentOpts = TAKKEN_AGENTS.map(function(a){
+    var sel = preAgentId&&a.id===preAgentId ? ' selected' : '';
+    return '<option value="'+a.id+'"'+sel+'>'+a.name+'（'+a.takken+'）</option>';
+  }).join('');
+
+  openModal('スロット追加',
+    '<div class="alert alert-info" style="margin-bottom:14px">空き枠を追加します。エージェントがリクエスト時にこの枠を選択できます。</div>'
+    + '<div class="fg"><label>担当宅建士</label><select id="sl-agent">'+agentOpts+'</select></div>'
+    + '<div class="fg-row">'
+    + '<div class="fg"><label>日付</label><input type="date" id="sl-date" min="'+today()+'" value="'+(preDate||today())+'"></div>'
+    + '<div class="fg"><label>開始時刻</label><input type="time" id="sl-start" value="10:00"></div>'
+    + '<div class="fg"><label>終了時刻</label><input type="time" id="sl-end" value="11:00"></div>'
+    + '</div>'
+    + '<div class="fg"><label>備考（任意）</label><input type="text" id="sl-note" placeholder="例: Zoom優先 / 首都圏のみ"></div>',
+    [
+      { label:'キャンセル', cls:'btn-ghost', fn:'closeModal()' },
+      { label:'➕ スロットを追加', cls:'btn-gold', fn:'execAddSlot()' }
+    ]
+  );
+}
+
+function execAddSlot(){
+  var agentId = document.getElementById('sl-agent').value;
+  var date    = document.getElementById('sl-date').value;
+  var start   = document.getElementById('sl-start').value;
+  var end     = document.getElementById('sl-end').value;
+  var note    = document.getElementById('sl-note').value;
+  if (!date||!start||!end){ toast('日付・時刻を入力してください', 'error'); return; }
+
+  var slots = loadSlots();
+  var newSlot = {
+    id: 'SL-'+Date.now().toString(36).toUpperCase(),
+    agentId, agentName: agentName(agentId),
+    date, start, end, status: 'open',
+    note, addedBy: SESSION.name||SESSION.userId,
+    addedAt: new Date().toISOString(),
+    bookedCase: null, bookedClient: null,
+  };
+  slots.push(newSlot);
+  save(KEYS.slots, slots);
+
+  var detail = agentName(agentId)+' '+fmtDate(date)+' '+start+'〜'+end;
+  saveHqLog('スロット追加', detail);
+
+  closeModal();
+  toast('✅ スロットを追加しました');
+  renderSlots();
+  updateNavBadges();
+}
+
+function deleteSlot(slotId){
+  if (!confirm('このスロットを削除しますか？')) return;
+  var slots = loadSlots().filter(function(s){ return s.id!==slotId; });
+  save(KEYS.slots, slots);
+  saveHqLog('スロット削除', slotId);
+  toast('スロットを削除しました');
+  renderSlots();
+}
+
+// ══ REQUESTS（リクエスト履歴） ══════════════════════════════════
+function renderRequests(){
+  var reqs = loadRequests();
+  reqs.sort(function(a,b){ return b.submittedAt.localeCompare(a.submittedAt); });
+
+  var html = '<div class="page-hdr"><span style="font-size:20px">📋</span>'
+    + '<div><div class="page-title">リクエスト履歴</div>'
+    + '<div class="page-sub">全リクエストの受付・マッチング履歴</div></div></div>';
+
+  if (!reqs.length){
+    html += '<div class="empty"><div class="empty-icon">📭</div>リクエストはまだありません</div>';
+    document.getElementById('main-content').innerHTML = html;
+    return;
+  }
+
+  html += '<div class="card"><div class="card-body" style="padding:0"><table class="tbl"><thead><tr>'
+    + '<th>受付日時</th><th>クライアント</th><th>Case ID</th>'
+    + '<th>担当AG</th><th>希望日時</th><th>状態</th><th>確定日時</th></tr></thead><tbody>';
+
+  reqs.forEach(function(r){
+    var badge = r.status==='open'
+      ? '<span class="badge b-wait">受付中</span>'
+      : r.status==='matched'
+      ? '<span class="badge b-done">マッチング済</span>'
+      : '<span class="badge b-cancel">キャンセル</span>';
+
+    html += '<tr>'
+      + '<td class="mono" style="font-size:10px">'+fmtDt(r.submittedAt)+'</td>'
+      + '<td style="font-weight:600">'+escHtml(r.clientName)+'</td>'
+      + '<td class="mono" style="color:var(--sub)">'+escHtml(r.caseId)+'</td>'
+      + '<td>'+escHtml(r.agentName)+'</td>'
+      + '<td style="font-size:10px;line-height:1.6">'
+      + r.wishes.map(function(w){ return fmtDate(w.date)+' '+w.start+'〜'+w.end; }).join('<br>')
+      + '</td>'
+      + '<td>'+badge+'</td>'
+      + '<td class="mono" style="font-size:10px;color:var(--sub)">'+(r.matchedAt?fmtDt(r.matchedAt):'—')+'</td></tr>';
+  });
+
+  html += '</tbody></table></div></div>';
+  document.getElementById('main-content').innerHTML = html;
+}
+
+// ══ LOG（介入ログ） ═════════════════════════════════════════════
+function renderLog(){
+  var logs = loadHqLog();
+
+  var html = '<div class="page-hdr"><span style="font-size:20px">📝</span>'
+    + '<div><div class="page-title">HQ介入ログ</div>'
+    + '<div class="page-sub">すべての管理操作の記録</div></div>'
+    + '<button class="btn btn-danger btn-sm" style="margin-left:auto" onclick="if(confirm(\'ログをすべてクリアしますか？\')){localStorage.removeItem(\''+KEYS.hqLog+'\');renderLog();}">ログをクリア</button>'
+    + '</div>';
+
+  if (!logs.length){
+    html += '<div class="empty"><div class="empty-icon">📋</div>操作ログはまだありません</div>';
+    document.getElementById('main-content').innerHTML = html;
+    return;
+  }
+
+  html += '<div class="card"><div class="card-body">';
+  logs.forEach(function(l){
+    var icon = {
+      'HQマッチング確定':'🎯', 'HQ手動マッチング':'🏢', 'HQ強制完了':'✅',
+      '担当者変更':'🔄', '日程変更':'📅', '予約キャンセル':'🚫',
+      'スロット追加':'➕', 'スロット削除':'🗑', '強制完了確認':'✅',
+    }[l.action] || '📝';
+    var iconBg = {
+      '🎯':'rgba(52,211,153,.1)', '🏢':'rgba(79,156,249,.1)',
+      '🔄':'rgba(79,156,249,.1)', '📅':'rgba(251,146,60,.1)',
+      '🚫':'rgba(248,113,113,.1)', '✅':'rgba(52,211,153,.1)',
+    }[icon] || 'var(--card2)';
+
+    html += '<div class="log-item">'
+      + '<div class="log-icon" style="background:'+iconBg+'">'+icon+'</div>'
+      + '<div><div class="log-body"><strong>'+escHtml(l.action)+'</strong>　'+escHtml(l.detail)+'</div>'
+      + '<div style="display:flex;gap:10px;margin-top:2px">'
+      + '<span class="log-time">'+fmtDt(l.at)+'</span>'
+      + '<span style="font-size:9px;color:var(--muted)">操作者: '+escHtml(l.operator)+'</span>'
+      + '</div></div></div>';
+  });
+  html += '</div></div>';
+  document.getElementById('main-content').innerHTML = html;
+}
+
+// ══ モーダルユーティリティ ══════════════════════════════════════
+function openModal(title, bodyHtml, buttons){
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').innerHTML = bodyHtml;
+  document.getElementById('modal-footer').innerHTML = buttons.map(function(b){
+    return '<button class="btn '+b.cls+'" onclick="'+b.fn+'">'+b.label+'</button>';
+  }).join('');
+  document.getElementById('modal-bg').classList.add('open');
+}
+function closeModal(){
+  document.getElementById('modal-bg').classList.remove('open');
+}
+document.getElementById('modal-bg').addEventListener('click', function(e){
+  if (e.target===this) closeModal();
+});
+
+// ══ INIT ════════════════════════════════════════════════════════
+updateNavBadges();
+renderView('dashboard');
+setInterval(function(){ updateNavBadges(); }, 30000);
 </script>
 </body>
 </html>
