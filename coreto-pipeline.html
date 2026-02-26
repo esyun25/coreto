@@ -234,6 +234,44 @@ input[type=date]{color-scheme:dark}
 }
 #ref-float-btn:hover { background: rgba(201,168,76,.32); }
 </style>
+
+<style>
+@media(max-width:768px){
+  /* ヘッダー */
+  .hdr{padding:0 14px!important;height:50px!important}
+  .logo{font-size:14px!important;letter-spacing:2px!important}
+  /* ヘッダー右側のボタンを減らす */
+  .hdr>div:last-child button:not(:last-child){display:none!important}
+  /* toolbarを隠す（sp-toolbarで代替） */
+  .toolbar{display:none!important}
+  /* board-wrapは board.sp-mode で隠される（coreto-sp.css） */
+  /* main をフル高に */
+  .main{overflow:hidden!important;position:relative!important}
+  /* sp-list-view をメインエリアに配置 */
+  .sp-list-view{
+    position:absolute!important;top:0!important;left:0!important;right:0!important;bottom:0!important;
+    padding:0 12px 80px!important;
+    overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;
+  }
+  .sp-toolbar{position:absolute!important;top:0!important;left:0!important;right:0!important;z-index:10!important}
+  .sp-filter-scroll{position:absolute!important;top:58px!important;left:0!important;right:0!important;z-index:10!important}
+  /* sp-listの開始位置を下げる */
+  .sp-list-view{padding-top:110px!important}
+  /* パネルをフルスクリーンに */
+  .panel.open{
+    position:fixed!important;inset:0!important;
+    width:100vw!important;height:100dvh!important;
+    z-index:8000!important;overflow-y:auto!important;
+  }
+  /* パネル内のstep-bar（横スクロール対応） */
+  .step-bar{overflow-x:auto!important;-webkit-overflow-scrolling:touch!important}
+  .step-node{min-width:54px!important}
+  /* パネルのボタン */
+  .panel .btn{min-height:44px!important}
+  /* 申込一覧のテーブルをスクロール可能に */
+  .panel table{display:block!important;overflow-x:auto!important}
+}
+</style>
 </head>
 <body>
 <div class="layout">
@@ -2273,7 +2311,8 @@ body{font-family:'Noto Sans JP',sans-serif;background:#fff;color:#000;padding:20
 .card-logo{font-size:13px;color:#1a2744;font-weight:900;letter-spacing:2px;font-family:monospace}
 .card-mobile-lg{font-size:10px;font-weight:700;color:#1a2744;font-family:monospace;margin-bottom:2px}
 .card-license{font-size:6.5px;color:#777;text-align:right;line-height:1.5}
-</style></head><body>
+</style>
+<link rel="stylesheet" href="coreto-sp.css"></head><body>
 <div class="title">内　見　依　頼　書</div>
 <div class="header">
   <div>
@@ -2327,6 +2366,213 @@ ${place ? '<div class="field-row"><div class="field-label">集合場所</div><di
     </div>
   </div>
 </div>
+
+<!-- ═══ SP LIST VIEW HTML ═══ -->
+<div class="sp-toolbar" id="sp-toolbar">
+  <input class="sp-search-input" id="sp-search" type="text" placeholder="🔍 名前・物件・ID で検索..." autocomplete="off">
+  <button style="background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.2);color:#c9a84c;border-radius:10px;padding:0 12px;font-family:'Noto Sans JP',sans-serif;font-size:11px;font-weight:700;min-height:42px;cursor:pointer;white-space:nowrap" onclick="spOpenAddModal()">＋</button>
+</div>
+<div class="sp-filter-scroll" id="sp-filter-scroll">
+  <button class="sp-filter-chip on" data-spf="all">すべて</button>
+  <button class="sp-filter-chip" data-spf="reLet">🏠 賃貸</button>
+  <button class="sp-filter-chip" data-spf="reSale">🏢 売買</button>
+  <button class="sp-filter-chip" data-spf="sannai">🔄 三為</button>
+  <button class="sp-filter-chip" data-spf="hr">👥 人材</button>
+  <button class="sp-filter-chip" data-spf="stale">⚠️ 停滞</button>
+  <button class="sp-filter-chip" data-spf="active">進行中</button>
+</div>
+<div class="sp-list-view" id="sp-list-view"></div>
+
+<!-- SP パネル閉じるバー -->
+<div class="sp-panel-close" id="sp-panel-close" onclick="spClosePanel()">
+  ← 案件リストに戻る
+</div>
+
+<!-- SP ボトムナビ -->
+<nav class="sp-bottom-nav" id="sp-pipe-nav" style="display:none">
+  <a href="coreto-agent-mypage.html" class="sp-nav-item">
+    <span class="sp-nav-icon">🏠</span>
+    <span class="sp-nav-label">ホーム</span>
+  </a>
+  <button class="sp-nav-item on">
+    <span class="sp-nav-icon">📋</span>
+    <span class="sp-nav-label">案件</span>
+  </button>
+  <a href="coreto-sale-report.html" class="sp-nav-item">
+    <span class="sp-nav-icon">📝</span>
+    <span class="sp-nav-label">報告書</span>
+  </a>
+  <a href="coreto-instant-pay.html" class="sp-nav-item">
+    <span class="sp-nav-icon">💸</span>
+    <span class="sp-nav-label">即時払い</span>
+  </a>
+  <a href="coreto-account-settings.html" class="sp-nav-item">
+    <span class="sp-nav-icon">⚙️</span>
+    <span class="sp-nav-label">設定</span>
+  </a>
+</nav>
+
+<script>
+// ─── SP MODE INITIALIZATION ───────────────────────────────────
+(function(){
+  if(window.innerWidth > 768) return;
+
+  // 1) body に sp-mode クラスを付与 → CSS でカンバンを隠す
+  document.body.classList.add('sp-mode');
+
+  // 2) ボトムナビを表示
+  var nav = document.getElementById('sp-pipe-nav');
+  if(nav) nav.style.display = 'flex';
+
+  // 3) パネル閉じるバーをパネルの先頭に挿入
+  var panel = document.querySelector('.panel');
+  var closeBar = document.getElementById('sp-panel-close');
+  if(panel && closeBar) panel.insertBefore(closeBar, panel.firstChild);
+
+  // 4) 元のtoolbarのフィルターと同期
+  document.querySelectorAll('.sp-filter-chip[data-spf]').forEach(function(chip){
+    chip.addEventListener('click', function(){
+      document.querySelectorAll('.sp-filter-chip').forEach(function(c){ c.classList.remove('on'); });
+      chip.classList.add('on');
+      spRenderList();
+    });
+  });
+
+  // 5) 検索フィールド
+  document.getElementById('sp-search').addEventListener('input', spRenderList);
+
+  // 6) 初回描画
+  setTimeout(spRenderList, 300);
+})();
+
+// ─── SP LIST RENDERER ──────────────────────────────────────────
+var SP_COLS = null;
+function spGetCases(){
+  // pipeline.html の COLS オブジェクトから案件を収集
+  if(!SP_COLS){
+    // pipeline.html は COLS グローバル変数を持つ
+    if(typeof COLS !== 'undefined') SP_COLS = COLS;
+    else return [];
+  }
+  var all = [];
+  Object.keys(SP_COLS).forEach(function(colId){
+    var col = SP_COLS[colId];
+    if(col && col.cases){
+      col.cases.forEach(function(c){ all.push({col:colId, colLabel:col.label||colId, colColor:col.color||'#4f9cf9', case:c}); });
+    }
+  });
+  return all;
+}
+
+var SP_TYPE_LABELS = {reLet:'賃貸', reSale:'売買', sannai:'三為', hr:'人材'};
+
+function spRenderList(){
+  var q = (document.getElementById('sp-search').value || '').trim().toLowerCase();
+  var filterChip = document.querySelector('.sp-filter-chip.on');
+  var filterVal = filterChip ? filterChip.dataset.spf : 'all';
+  var allCases = spGetCases();
+
+  // フィルタリング
+  var filtered = allCases.filter(function(item){
+    var c = item.case;
+    if(!c) return false;
+    var type = c.type || '';
+    var isStale = c.stale || false;
+    var step = item.col || '';
+    if(filterVal === 'reLet'  && type !== 'reLet')   return false;
+    if(filterVal === 'reSale' && type !== 'reSale')  return false;
+    if(filterVal === 'sannai' && type !== 'sannai')  return false;
+    if(filterVal === 'hr'     && type !== 'hr')      return false;
+    if(filterVal === 'stale'  && !isStale)           return false;
+    if(filterVal === 'active' && (step==='done'||step==='cancel')) return false;
+    if(q){
+      var hay = ((c.id||'')+(c.name||'')+(c.sub||'')+( c.agent||'')).toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
+  // グループ化（ステップ別）
+  var groups = {};
+  filtered.forEach(function(item){
+    var key = item.col;
+    if(!groups[key]) groups[key] = { label: item.colLabel, color: item.colColor, cases: [] };
+    groups[key].cases.push(item.case);
+  });
+
+  // 描画
+  var listEl = document.getElementById('sp-list-view');
+  if(!listEl) return;
+  var html = '';
+  if(filtered.length === 0){
+    html = '<div class="sp-empty"><div class="sp-empty-icon">📋</div>案件が見つかりません</div>';
+    listEl.innerHTML = html; return;
+  }
+  Object.keys(groups).forEach(function(colId){
+    var g = groups[colId];
+    html += '<div class="sp-section-hdr">'
+      + '<span class="sp-section-dot" style="background:'+g.color+'"></span>'
+      + g.label
+      + '<span class="sp-section-count">'+g.cases.length+'</span>'
+      + '</div>';
+    g.cases.forEach(function(c){
+      if(!c) return;
+      var typeClass = 'sp-type-' + (c.type||'reLet');
+      var typeLabel = SP_TYPE_LABELS[c.type] || (c.type||'');
+      var ageNum = parseInt(c.age)||0;
+      var ageClass = ageNum >= 7 ? 'age-old' : ageNum >= 3 ? 'age-mid' : 'age-new';
+      var ageText = ageNum === 0 ? '本日' : ageNum + '日前';
+      var staleHtml = c.stale ? '<span class="sp-stale-dot"></span>' : '';
+      html += '<div class="sp-case-row'+(c.stale?' stale-row':'')+'" onclick="spOpenCase(''+esc(c.id)+'')">'
+        + '<div class="sp-row-top">'
+        + '<span class="sp-row-id">'+esc(c.id||'')+'</span>'
+        + '<span class="sp-type-pill '+typeClass+'">'+typeLabel+'</span>'
+        + (c.corp ? '<span style="font-size:8px;padding:1px 5px;border-radius:3px;background:rgba(167,139,250,.1);color:#a78bfa;border:1px solid rgba(167,139,250,.2);font-weight:700">法人</span>' : '')
+        + staleHtml
+        + '</div>'
+        + '<div class="sp-row-name">'+esc(c.name||'')+'</div>'
+        + '<div class="sp-row-sub">'+esc(c.sub||'')+'</div>'
+        + '<div class="sp-row-foot">'
+        + '<span class="sp-row-agent">'+esc(c.agentName||c.agent||'——')+'</span>'
+        + '<span class="sp-row-step">'+esc(colId)+'</span>'
+        + '<span class="sp-row-age '+ageClass+'">'+ageText+'</span>'
+        + '</div></div>';
+    });
+  });
+  listEl.innerHTML = html;
+}
+
+function spOpenCase(id){
+  // 既存のopenCase()を呼ぶ（pipeline.htmlで定義）
+  if(typeof openCase === 'function') openCase(id);
+  else if(typeof selectCard === 'function') selectCard(id);
+  // パネルを表示（CSS で position:fixed にする）
+  var panel = document.querySelector('.panel');
+  if(panel) panel.classList.add('open');
+}
+
+function spClosePanel(){
+  var panel = document.querySelector('.panel');
+  if(panel) panel.classList.remove('open');
+}
+
+function spOpenAddModal(){
+  // 既存の新規案件追加モーダル
+  if(typeof openNewCaseModal === 'function') openNewCaseModal();
+  else if(typeof showAddModal === 'function') showAddModal();
+}
+
+// esc ユーティリティ（pipeline.html に既にある場合は上書きを避ける）
+if(typeof esc !== 'function'){
+  window.esc = function(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+}
+
+// COLS が後から設定される場合の再描画
+var _spOrigInit = window.onload;
+window.addEventListener('load', function(){
+  if(window.innerWidth <= 768){ setTimeout(spRenderList, 500); }
+});
+</script>
 </body></html>`;
 }
 
@@ -4336,5 +4582,7 @@ function copyRefLink() {
 </div>
 
 <button id="ref-float-btn" onclick="openRefModal()">🔗 紹介リンク発行</button>
+
+<script src="coreto-sp-init.js" data-nav="sp-bottom-nav"></script>
 </body>
 </html>
