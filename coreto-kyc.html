@@ -1,6 +1,33 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
+  <!-- ── Content Security Policy (XSS軽減) ──────────────────────────────────
+       変更時: 使用する外部サービスのオリジンを追加してください
+       Kintone追加時: connect-src に *.cybozu.com を追加
+  ─────────────────────────────────────────────────────────────────────── -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' 'unsafe-inline'
+      https://cdnjs.cloudflare.com
+      https://js.stripe.com
+      https://cdn-cgi/scripts;
+    style-src 'self' 'unsafe-inline'
+      https://fonts.googleapis.com;
+    font-src 'self'
+      https://fonts.gstatic.com;
+    img-src 'self' data: blob:;
+    connect-src 'self'
+      https://hooks.slack.com
+      https://hooks.zapier.com
+      https://api.stripe.com
+      https://js.stripe.com
+      https://www.houjin-bangou.nta.go.jp
+      https://www.retio.or.jp;
+    frame-src 'none';
+    object-src 'none';
+    base-uri 'self';
+  ">
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CORETO — 本人確認・口座管理</title>
@@ -456,12 +483,29 @@ html,body{height:100%;font-family:'Noto Sans JP',sans-serif;background:var(--bg)
 </div>
 
 <!-- ═══ VIEW 2: HQ 審査 ═══ -->
+<script src="db.js"></script>
 <script>
 // ══ AUTH GUARD (要ログイン) ════════════════════════════════════
 (function() {
   var s = null;
   try { s = JSON.parse(sessionStorage.getItem('coreto_session') || 'null'); } catch(e) {}
-  if (!s) { location.replace('coreto-hub.html'); }
+  if (!s || !s.userId || !s.type) {
+    sessionStorage.setItem('coreto_redirect', window.location.href);
+    location.replace('coreto-login.html');
+    return;
+  }
+  if (!s.sessionToken || s.sessionToken.length !== 64) {
+    sessionStorage.removeItem('coreto_session');
+    location.replace('coreto-login.html');
+    return;
+  }
+  var _la = new Date(s.loginAt).getTime();
+  if (isNaN(_la) || (Date.now() - _la) > 28800000) {
+    sessionStorage.removeItem('coreto_session');
+    alert('セッションの有効期限が切れました。再度ログインしてください。');
+    location.replace('coreto-login.html');
+    return;
+  }
   window._SESSION = s;
 })();
 
@@ -491,9 +535,54 @@ function selDoc(n){
 
 // ─── Upload ──────────────────────────────────────────────────────
 function trig(id){document.getElementById(id).click();}
+// ── ファイルアップロード検証定数 ─────────────────────────────────────────
+var FILE_TYPES = {
+  allowed: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heic', 'application/pdf'],
+  maxSize: 10 * 1024 * 1024,   // 10MB
+  maxSizeMB: 10,
+};
+
+// ── ファイル検証関数 ──────────────────────────────────────────────────────
+function validateUploadFile(file) {
+  // 1. ファイルタイプチェック（MIMEタイプ + 拡張子）
+  if (!FILE_TYPES.allowed.includes(file.type)) {
+    return { ok: false, msg: '対応形式はJPEG・PNG・WebP・HEIC・PDFのみです（送信されたタイプ: ' + (file.type || '不明') + '）' };
+  }
+
+  // 2. 拡張子チェック（MIMEタイプ偽装対策）
+  var ext = file.name.split('.').pop().toLowerCase();
+  var allowedExts = ['jpg', 'jpeg', 'png', 'webp', 'heic', 'pdf'];
+  if (!allowedExts.includes(ext)) {
+    return { ok: false, msg: 'ファイル拡張子が無効です（許可: jpg, png, webp, heic, pdf）' };
+  }
+
+  // 3. ファイルサイズチェック
+  if (file.size > FILE_TYPES.maxSize) {
+    var sizeMB = (file.size / 1024 / 1024).toFixed(1);
+    return { ok: false, msg: 'ファイルサイズが大きすぎます（' + sizeMB + 'MB）。' + FILE_TYPES.maxSizeMB + 'MB以下のファイルを選択してください。' };
+  }
+
+  // 4. ファイルサイズが0の空ファイルチェック
+  if (file.size === 0) {
+    return { ok: false, msg: 'ファイルが空です。正しいファイルを選択してください。' };
+  }
+
+  return { ok: true };
+}
+
 function up(input,side){
   if(!input.files[0])return;
   const file=input.files[0];
+
+  // ── ファイル検証 ──────────────────────────────────────────────
+  const validation = validateUploadFile(file);
+  if (!validation.ok) {
+    alert('⚠️ ' + validation.msg);
+    input.value = '';  // input をリセット
+    return;
+  }
+  // ─────────────────────────────────────────────────────────────
+
   const reader=new FileReader();
   reader.onload=e=>{
     const zone=document.getElementById('uz-'+side);

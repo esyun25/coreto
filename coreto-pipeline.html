@@ -19,6 +19,33 @@
   },TYPE html>
 <html lang="ja">
 <head>
+  <!-- ── Content Security Policy (XSS軽減) ──────────────────────────────────
+       変更時: 使用する外部サービスのオリジンを追加してください
+       Kintone追加時: connect-src に *.cybozu.com を追加
+  ─────────────────────────────────────────────────────────────────────── -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' 'unsafe-inline'
+      https://cdnjs.cloudflare.com
+      https://js.stripe.com
+      https://cdn-cgi/scripts;
+    style-src 'self' 'unsafe-inline'
+      https://fonts.googleapis.com;
+    font-src 'self'
+      https://fonts.gstatic.com;
+    img-src 'self' data: blob:;
+    connect-src 'self'
+      https://hooks.slack.com
+      https://hooks.zapier.com
+      https://api.stripe.com
+      https://js.stripe.com
+      https://www.houjin-bangou.nta.go.jp
+      https://www.retio.or.jp;
+    frame-src 'none';
+    object-src 'none';
+    base-uri 'self';
+  ">
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CORETO — 案件管理</title>
@@ -250,6 +277,18 @@ input[type=date]{color-scheme:dark}
 <div class="toast" id="toast"></div>
 
 <script>
+// ── XSSエスケープ関数 ──────────────────────────────────────────────────────
+function escHtml(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+}
+// ─────────────────────────────────────────────────────────────────────────
+
   // ── Slack通知設定 ──────────────────────────────────────────────────────
   // 本番運用前に Slack Incoming Webhook URL を設定してください
   // Slack管理画面 → アプリ → Incoming Webhooks → Webhook URLをコピー
@@ -275,7 +314,23 @@ input[type=date]{color-scheme:dark}
 (function() {
   var s = null;
   try { s = JSON.parse(sessionStorage.getItem('coreto_session') || 'null'); } catch(e) {}
-  if (!s) { location.replace('coreto-hub.html'); }
+  if (!s || !s.userId || !s.type) {
+    sessionStorage.setItem('coreto_redirect', window.location.href);
+    location.replace('coreto-login.html');
+    return;
+  }
+  if (!s.sessionToken || s.sessionToken.length !== 64) {
+    sessionStorage.removeItem('coreto_session');
+    location.replace('coreto-login.html');
+    return;
+  }
+  var _la = new Date(s.loginAt).getTime();
+  if (isNaN(_la) || (Date.now() - _la) > 28800000) {
+    sessionStorage.removeItem('coreto_session');
+    alert('セッションの有効期限が切れました。再度ログインしてください。');
+    location.replace('coreto-login.html');
+    return;
+  }
   window._SESSION = s;
 })();
 
@@ -967,7 +1022,7 @@ function openQuitModal(cid) {
       <div style="padding:16px 20px;border-bottom:1px solid #2a1515;display:flex;align-items:center;justify-content:space-between">
         <div>
           <div style="font-size:15px;font-weight:800;color:#f87171;font-family:'Syne',sans-serif">⚠️ 退職報告</div>
-          <div style="font-size:10px;color:#a06060;margin-top:2px">${c.name} — ${companyName}</div>
+          <div style="font-size:10px;color:#a06060;margin-top:2px">${escHtml(c.name)} — ${companyName}</div>
         </div>
         <button onclick="document.getElementById('quit-modal-overlay').remove()" style="background:transparent;border:none;color:#7a5050;cursor:pointer;font-size:18px;padding:4px 8px">✕</button>
       </div>
@@ -975,7 +1030,7 @@ function openQuitModal(cid) {
 
         <!-- 基本情報（読み取り専用） -->
         <div style="background:#0d0a0a;border:1px solid #2a1515;border-radius:8px;padding:12px;margin-bottom:16px;font-size:11px;line-height:2;color:#c0a0a0">
-          <div><span style="color:#7a5050">候補者：</span><strong style="color:#f0e0e0">${c.name}</strong></div>
+          <div><span style="color:#7a5050">候補者：</span><strong style="color:#f0e0e0">${escHtml(c.name)}</strong></div>
           <div><span style="color:#7a5050">入社企業：</span>${companyName}</div>
           ${startDate ? '<div><span style="color:#7a5050">入社日：</span>' + startDate + '</div>' : ''}
           ${feeStr ? '<div><span style="color:#7a5050">手数料：</span>' + feeStr + '</div>' : ''}
@@ -2402,7 +2457,7 @@ function launchBookingLink(cid) {
     <div style="background:#11141f;border:1px solid #2a3050;border-radius:16px;width:min(460px,100%);font-family:inherit">
       <div style="padding:16px 20px;border-bottom:1px solid #1e2235">
         <div style="font-size:14px;font-weight:800;color:#e06060;font-family:'Syne',sans-serif">⚠️ 重説日程調整リンク発行</div>
-        <div style="font-size:10px;color:#5a6080;margin-top:2px">${c.name} 様 / ${c.id}</div>
+        <div style="font-size:10px;color:#5a6080;margin-top:2px">${escHtml(c.name)} 様 / ${c.id}</div>
       </div>
       <div style="padding:18px 20px">
         <div class="warn-agree-box">
@@ -3379,7 +3434,7 @@ function invSendSlack(c, grandTotal, adAmt, adDesc, dualInv) {
     '🧾 *請求書発行通知*',
     '━━━━━━━━━━━━━━━━━━━━━━',
     `📁 *案件ID*：${c.id}`,
-    `👤 *クライアント*：${c.name}`,
+    `👤 *クライアント*：${escHtml(c.name)}`,
     `🏠 *物件*：${inv.prop||c.sub||'—'}`,
     `📋 *種別*：${typeLabel}`,
     isSaleType && inv.salePrice ? `💴 *売買価格*：¥${parseInt(inv.salePrice).toLocaleString()}` : null,
@@ -3437,7 +3492,7 @@ function openPaymentConfirmModal(id) {
     <div style="background:#11141f;border:1px solid #2a3050;border-radius:16px;width:min(440px,100%);font-family:inherit">
       <div style="padding:16px 20px;border-bottom:1px solid #1e2235">
         <div style="font-size:14px;font-weight:800;color:#e0e8f0">💰 入金確認（本部処理）</div>
-        <div style="font-size:10px;color:#5a6080;margin-top:2px">${c.name} 様 / ${c.id}</div>
+        <div style="font-size:10px;color:#5a6080;margin-top:2px">${escHtml(c.name)} 様 / ${c.id}</div>
       </div>
       <div style="padding:18px 20px">
         <div style="background:rgba(79,156,249,.06);border:1px solid rgba(79,156,249,.15);border-radius:8px;padding:12px;margin-bottom:16px;font-size:11px">

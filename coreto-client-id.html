@@ -1,6 +1,33 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
+  <!-- ── Content Security Policy (XSS軽減) ──────────────────────────────────
+       変更時: 使用する外部サービスのオリジンを追加してください
+       Kintone追加時: connect-src に *.cybozu.com を追加
+  ─────────────────────────────────────────────────────────────────────── -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' 'unsafe-inline'
+      https://cdnjs.cloudflare.com
+      https://js.stripe.com
+      https://cdn-cgi/scripts;
+    style-src 'self' 'unsafe-inline'
+      https://fonts.googleapis.com;
+    font-src 'self'
+      https://fonts.gstatic.com;
+    img-src 'self' data: blob:;
+    connect-src 'self'
+      https://hooks.slack.com
+      https://hooks.zapier.com
+      https://api.stripe.com
+      https://js.stripe.com
+      https://www.houjin-bangou.nta.go.jp
+      https://www.retio.or.jp;
+    frame-src 'none';
+    object-src 'none';
+    base-uri 'self';
+  ">
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CORETO 顧客ID管理システム</title>
@@ -630,7 +657,7 @@ function renderList() {
     const nc = (NOTES[id]||[]).length;
     return `<tr class="clickable" onclick="openDetail('${id}')">
       <td><span style="font-family:'DM Mono',monospace;color:var(--gold)">${id}</span></td>
-      <td style="font-weight:500">${c.name}</td>
+      <td style="font-weight:500">${escHtml(c.name)}</td>
       <td><span class="tag tag-${c.type}">${c.type==='re'?'不動産':c.type==='hr'?'人材':'両方'}</span></td>
       <td style="font-size:11px;color:var(--sub)">${c.agentName}</td>
       <td><span class="tag ${c.status==='案件進行中'?'tag-active':c.status==='リード'?'tag-lead':'tag-done'}">${c.status}</span></td>
@@ -753,13 +780,13 @@ function renderNotes(id) {
       <div class="note-header">
         <div>
           <div class="note-author">
-            ${n.byName}
-            <span style="font-size:10px;color:var(--muted);font-weight:400;margin-left:4px">${n.byLabel}</span>
+            ${escHtml(n.byName)}
+            <span style="font-size:10px;color:var(--muted);font-weight:400;margin-left:4px">${escHtml(n.byLabel)}</span>
             ${n.by===ME ? `<span class="pb pb-own" style="margin-left:6px">自分</span>` : ''}
             ${ME==='hq'&&n.by!==ME ? `<span class="pb pb-hq" style="margin-left:6px">本部</span>` : ''}
             ${!canEdit ? `<span class="pb pb-lock" style="margin-left:6px">閲覧のみ</span>` : ''}
           </div>
-          <div class="note-time">${n.at}${n.edited?` <span style="color:var(--muted)">（編集済：${n.edited}）</span>`:''}</div>
+          <div class="note-time">${escHtml(n.at)}${n.edited?` <span style="color:var(--muted)">（編集済：${escHtml(String(n.edited||""))}）</span>`:''}</div>
         </div>
         ${canEdit ? `
         <div style="display:flex;gap:4px">

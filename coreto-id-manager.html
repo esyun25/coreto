@@ -1,6 +1,33 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
+  <!-- ── Content Security Policy (XSS軽減) ──────────────────────────────────
+       変更時: 使用する外部サービスのオリジンを追加してください
+       Kintone追加時: connect-src に *.cybozu.com を追加
+  ─────────────────────────────────────────────────────────────────────── -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' 'unsafe-inline'
+      https://cdnjs.cloudflare.com
+      https://js.stripe.com
+      https://cdn-cgi/scripts;
+    style-src 'self' 'unsafe-inline'
+      https://fonts.googleapis.com;
+    font-src 'self'
+      https://fonts.gstatic.com;
+    img-src 'self' data: blob:;
+    connect-src 'self'
+      https://hooks.slack.com
+      https://hooks.zapier.com
+      https://api.stripe.com
+      https://js.stripe.com
+      https://www.houjin-bangou.nta.go.jp
+      https://www.retio.or.jp;
+    frame-src 'none';
+    object-src 'none';
+    base-uri 'self';
+  ">
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CORETO — ID採番管理</title>
@@ -394,22 +421,40 @@ function genCaseIdInternal(prefix) {
   </div>
 </div>
 
+<script src="db.js"></script>
 <script>
-  // ── 認証ガード ────────────────────────────────────────────────
+
+  // ═══════════════════════════════════════════════════════════════
+  //  CORETO 認証ガード v2 — HQ専用 + セッション整合性チェック付き
+  // ═══════════════════════════════════════════════════════════════
   (function() {
-    var s = JSON.parse(sessionStorage.getItem('coreto_session') || 'null');
-    if (!s || !s.userId) {
+    var s;
+    try { s = JSON.parse(sessionStorage.getItem('coreto_session') || 'null'); } catch(e) { s = null; }
+    if (!s || !s.userId || !s.type) {
       sessionStorage.setItem('coreto_redirect', window.location.href);
       window.location.replace('coreto-login.html');
       return;
     }
-    // HQ専用ページ
+    if (!s.sessionToken || s.sessionToken.length !== 64) {
+      sessionStorage.removeItem('coreto_session');
+      window.location.replace('coreto-login.html');
+      return;
+    }
+    var loginAt = new Date(s.loginAt).getTime();
+    if (isNaN(loginAt) || (Date.now() - loginAt) > 28800000) {
+      sessionStorage.removeItem('coreto_session');
+      alert('セッションの有効期限が切れました。再度ログインしてください。');
+      window.location.replace('coreto-login.html');
+      return;
+    }
     if (s.type !== 'hq') {
       window.location.replace('coreto-hub.html');
       return;
     }
+    window._SESSION = s;
   })();
-  // ─────────────────────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════
+
 
 // ── Issued ID sets (demo: pre-filled with known IDs) ──────────────
 const issuedMemberIds = new Set([1,2,3, 10008,10012,10023,10041, 20005, 30007]);

@@ -1,6 +1,33 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
+  <!-- ── Content Security Policy (XSS軽減) ──────────────────────────────────
+       変更時: 使用する外部サービスのオリジンを追加してください
+       Kintone追加時: connect-src に *.cybozu.com を追加
+  ─────────────────────────────────────────────────────────────────────── -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' 'unsafe-inline'
+      https://cdnjs.cloudflare.com
+      https://js.stripe.com
+      https://cdn-cgi/scripts;
+    style-src 'self' 'unsafe-inline'
+      https://fonts.googleapis.com;
+    font-src 'self'
+      https://fonts.gstatic.com;
+    img-src 'self' data: blob:;
+    connect-src 'self'
+      https://hooks.slack.com
+      https://hooks.zapier.com
+      https://api.stripe.com
+      https://js.stripe.com
+      https://www.houjin-bangou.nta.go.jp
+      https://www.retio.or.jp;
+    frame-src 'none';
+    object-src 'none';
+    base-uri 'self';
+  ">
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>CORETO — 全エージェント管理【経営陣専用】</title>
@@ -261,12 +288,26 @@ td{padding:10px 14px;vertical-align:middle}
 </div>
 
 <script>
+// ── XSS対策: ユーザー入力値のエスケープ ──────────────────────────────
+function escHtml(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 // ══ AUTH GUARD (経営陣専用) ════════════════════════════════════
 (function() {
   var s = null;
   try { s = JSON.parse(sessionStorage.getItem('coreto_session') || 'null'); } catch(e) {}
   var HQ_LEVEL = { exec: 3, manager: 2, staff: 1 };
-  if (!s || s.type !== 'hq' || (HQ_LEVEL[s.hqRole] || 0) < 3) { location.replace('coreto-hub.html'); }
+  if (!s || !s.userId || !s.sessionToken || s.sessionToken.length !== 64) { sessionStorage.removeItem('coreto_session'); location.replace('coreto-login.html'); return; }
+  var _la = new Date(s.loginAt).getTime();
+  if (isNaN(_la) || (Date.now() - _la) > 28800000) { sessionStorage.removeItem('coreto_session'); alert('セッションの有効期限が切れました。'); location.replace('coreto-login.html'); return; }
+  if (s.type !== 'hq' || (HQ_LEVEL[s.hqRole] || 0) < 3) { location.replace('coreto-hub.html'); return; }
   window._SESSION = s;
 })();
 
@@ -443,7 +484,7 @@ function renderTable() {
       : `<span style="color:var(--muted)">無料</span>`;
     return `<tr onclick="selectAgent('${a.id}')" class="${selected===a.id?'selected':''}">
       <td class="mono">${a.id}</td>
-      <td style="font-weight:500">${a.name}</td>
+      <td style="font-weight:500">${escHtml(a.name)}</td>
       <td><span class="type-badge tb-${a.type}">${TYPE_LABEL[a.type]}</span></td>
       <td>${rankHtml}</td>
       <td style="font-size:11px">${statusHtml}</td>
@@ -484,13 +525,13 @@ function showDetail(id) {
         ${a.rank?`<span class="rank-badge ${rankClass}">${a.rank}</span>`:''}
         <span style="font-size:10px;padding:2px 7px;border-radius:4px;background:var(--border);color:${a.status==='active'?'var(--green)':a.status==='suspended'?'var(--red)':'var(--muted)'}">${STATUS_LABEL[a.status]}</span>
       </div>
-      <div class="det-name">${a.name}</div>
+      <div class="det-name">${escHtml(a.name)}</div>
       <div class="det-meta">#${a.id} · 参加 ${a.joined}${a.sennin?' · 専任宅建士':''}</div>
       ${a.note?`<div style="font-size:11px;color:var(--sub);background:var(--bg3);padding:8px 10px;border-radius:7px;line-height:1.8;margin-bottom:4px">${a.note}</div>`:''}
     </div>
 
     <div class="det-sec">連絡先</div>
-    <div class="det-row"><div class="det-row-l">メール</div><div class="det-row-v">${a.email}</div></div>
+    <div class="det-row"><div class="det-row-l">メール</div><div class="det-row-v">${escHtml(a.email)}</div></div>
     <div class="det-row"><div class="det-row-l">電話</div><div class="det-row-v">${a.tel}</div></div>
     <div class="det-row"><div class="det-row-l">得意エリア</div><div class="det-row-v" style="color:var(--sub)">${a.area||'—'}</div></div>
     ${a.takken?`<div class="det-row"><div class="det-row-l">宅建士証</div><div class="det-row-v" style="font-size:10px">${a.takken}</div></div>`:''}
@@ -540,11 +581,11 @@ function closeDetail() {
 let pendingAction = null;
 
 const ACTION_DEFS = {
-  suspend:       { title:'アカウント停止', body:(a)=>`<strong>${a.name}</strong> (#${a.id}) のアカウントを停止します。<br>エージェントはログインできなくなります。この操作はログに記録されます。`, confirm:'停止する', cls:'' },
-  deactivate:    { title:'休眠ステータスに変更', body:(a)=>`<strong>${a.name}</strong> を休眠ステータスに変更します。<br>案件の新規受付が停止されます。`, confirm:'休眠にする', cls:'gold' },
-  restore:       { title:'アカウント復旧', body:(a)=>`<strong>${a.name}</strong> のアカウントを稼働中に戻します。`, confirm:'復旧する', cls:'gold' },
-  terminate:     { title:'除名処理', body:(a)=>`<strong>${a.name}</strong> を完全に除名します。<br>この操作は取り消せません。データはアーカイブされます。`, confirm:'除名する', cls:'' },
-  senninToggle:  { title:'専任宅建士 登録/解除', body:(a)=>`<strong>${a.name}</strong> の専任宅建士ステータスを変更します。<br>月会費・名刺費に影響します。`, confirm:'変更する', cls:'gold' },
+  suspend:       { title:'アカウント停止', body:(a)=>`<strong>${escHtml(a.name)}</strong> (#${a.id}) のアカウントを停止します。<br>エージェントはログインできなくなります。この操作はログに記録されます。`, confirm:'停止する', cls:'' },
+  deactivate:    { title:'休眠ステータスに変更', body:(a)=>`<strong>${escHtml(a.name)}</strong> を休眠ステータスに変更します。<br>案件の新規受付が停止されます。`, confirm:'休眠にする', cls:'gold' },
+  restore:       { title:'アカウント復旧', body:(a)=>`<strong>${escHtml(a.name)}</strong> のアカウントを稼働中に戻します。`, confirm:'復旧する', cls:'gold' },
+  terminate:     { title:'除名処理', body:(a)=>`<strong>${escHtml(a.name)}</strong> を完全に除名します。<br>この操作は取り消せません。データはアーカイブされます。`, confirm:'除名する', cls:'' },
+  senninToggle:  { title:'専任宅建士 登録/解除', body:(a)=>`<strong>${escHtml(a.name)}</strong> の専任宅建士ステータスを変更します。<br>月会費・名刺費に影響します。`, confirm:'変更する', cls:'gold' },
 };
 
 function confirmAction(id, action) {
@@ -564,7 +605,7 @@ function confirmRankChange(id, newRank) {
   const a = byId[id];
   pendingAction = { id, action:'rankChange', newRank };
   document.getElementById('modal-title').textContent = 'ランク変更';
-  document.getElementById('modal-body').innerHTML = `<strong>${a.name}</strong> のランクを <strong>${a.rank}</strong> → <strong>${newRank}</strong> に変更します。<br>月会費・報酬率に即時反映されます。`;
+  document.getElementById('modal-body').innerHTML = `<strong>${escHtml(a.name)}</strong> のランクを <strong>${a.rank}</strong> → <strong>${newRank}</strong> に変更します。<br>月会費・報酬率に即時反映されます。`;
   const btn = document.getElementById('modal-confirm');
   btn.textContent = '変更する';
   btn.className = 'modal-btn modal-confirm gold';

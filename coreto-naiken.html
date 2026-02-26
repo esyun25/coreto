@@ -1,6 +1,33 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
+  <!-- ── Content Security Policy (XSS軽減) ──────────────────────────────────
+       変更時: 使用する外部サービスのオリジンを追加してください
+       Kintone追加時: connect-src に *.cybozu.com を追加
+  ─────────────────────────────────────────────────────────────────────── -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' 'unsafe-inline'
+      https://cdnjs.cloudflare.com
+      https://js.stripe.com
+      https://cdn-cgi/scripts;
+    style-src 'self' 'unsafe-inline'
+      https://fonts.googleapis.com;
+    font-src 'self'
+      https://fonts.gstatic.com;
+    img-src 'self' data: blob:;
+    connect-src 'self'
+      https://hooks.slack.com
+      https://hooks.zapier.com
+      https://api.stripe.com
+      https://js.stripe.com
+      https://www.houjin-bangou.nta.go.jp
+      https://www.retio.or.jp;
+    frame-src 'none';
+    object-src 'none';
+    base-uri 'self';
+  ">
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CORETO 内見依頼書システム</title>
@@ -406,12 +433,41 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
   </div>
 </div>
 
+<script src="db.js"></script>
 <script>
+// ── XSSエスケープ関数 ──────────────────────────────────────────────────────
+function escHtml(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+}
+// ─────────────────────────────────────────────────────────────────────────
+
 // ══ AUTH GUARD (要ログイン) ════════════════════════════════════
 (function() {
   var s = null;
   try { s = JSON.parse(sessionStorage.getItem('coreto_session') || 'null'); } catch(e) {}
-  if (!s) { location.replace('coreto-hub.html'); }
+  if (!s || !s.userId || !s.type) {
+    sessionStorage.setItem('coreto_redirect', window.location.href);
+    location.replace('coreto-login.html');
+    return;
+  }
+  if (!s.sessionToken || s.sessionToken.length !== 64) {
+    sessionStorage.removeItem('coreto_session');
+    location.replace('coreto-login.html');
+    return;
+  }
+  var _la = new Date(s.loginAt).getTime();
+  if (isNaN(_la) || (Date.now() - _la) > 28800000) {
+    sessionStorage.removeItem('coreto_session');
+    alert('セッションの有効期限が切れました。再度ログインしてください。');
+    location.replace('coreto-login.html');
+    return;
+  }
   window._SESSION = s;
 })();
 
@@ -773,7 +829,7 @@ function renderDb(){
     <div class="customer-card${selectedCustomer===c.id?' selected':''}" onclick="selectCustomer('${c.id}')">
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
         <div>
-          <div class="cc-name">${c.name}</div>
+          <div class="cc-name">${escHtml(c.name)}</div>
           <div class="cc-id">${c.id}</div>
         </div>
         <div style="text-align:right">
@@ -829,7 +885,7 @@ function selectCustomer(id){
 
   document.getElementById('db-detail').innerHTML = `
   <div class="panel">
-    <div class="panel-title">${c.name} の内見履歴</div>
+    <div class="panel-title">${escHtml(c.name)} の内見履歴</div>
     <div style="font-size:11px;color:var(--sub);margin-bottom:14px">
       ${c.id} ・ ${c.tel}<br>
       内見合計：${c.history.length}件
@@ -899,10 +955,10 @@ function initClientSearch(inputId, idHiddenId, nameHiddenId, dropdownId, onSelec
     ).slice(0, 8);
     if (!matches.length) { dropdown.style.display='none'; return; }
     dropdown.innerHTML = matches.map((c,i) =>
-      `<div class="cl-option" data-idx="${i}" data-id="${c.id}" data-name="${c.name}"
-            onmousedown="event.preventDefault()" onclick="pickClient('${inputId}','${idHiddenId}','${nameHiddenId}','${dropdownId}','${c.id}','${c.name}',${JSON.stringify(onSelect).replace(/"/g,'&quot;')})">
+      `<div class="cl-option" data-idx="${i}" data-id="${c.id}" data-name="${escHtml(c.name)}"
+            onmousedown="event.preventDefault()" onclick="pickClient('${inputId}','${idHiddenId}','${nameHiddenId}','${dropdownId}','${c.id}','${escHtml(c.name)}',${JSON.stringify(onSelect).replace(/"/g,'&quot;')})">
         <span class="cl-opt-id">${c.id}</span>
-        <span class="cl-opt-name">${c.name}</span>
+        <span class="cl-opt-name">${escHtml(c.name)}</span>
         <span class="cl-opt-kana">${c.kana||''}</span>
       </div>`
     ).join('') + `<div class="cl-new-hint">一致しない場合はそのまま入力してください</div>`;

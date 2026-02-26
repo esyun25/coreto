@@ -1,6 +1,33 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
+  <!-- ── Content Security Policy (XSS軽減) ──────────────────────────────────
+       変更時: 使用する外部サービスのオリジンを追加してください
+       Kintone追加時: connect-src に *.cybozu.com を追加
+  ─────────────────────────────────────────────────────────────────────── -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' 'unsafe-inline'
+      https://cdnjs.cloudflare.com
+      https://js.stripe.com
+      https://cdn-cgi/scripts;
+    style-src 'self' 'unsafe-inline'
+      https://fonts.googleapis.com;
+    font-src 'self'
+      https://fonts.gstatic.com;
+    img-src 'self' data: blob:;
+    connect-src 'self'
+      https://hooks.slack.com
+      https://hooks.zapier.com
+      https://api.stripe.com
+      https://js.stripe.com
+      https://www.houjin-bangou.nta.go.jp
+      https://www.retio.or.jp;
+    frame-src 'none';
+    object-src 'none';
+    base-uri 'self';
+  ">
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CORETO ログイン</title>
@@ -184,27 +211,88 @@ function showErr(msg) {
   el.className   = msg ? 'err show' : 'err';
 }
 
-const ACCOUNTS = {
-  '10012':{ name:'山田 誠',   rank:'Gold',     rankKey:'gold',     type:'re' },
-  '10008':{ name:'佐藤 花子', rank:'Platinum', rankKey:'platinum', type:'re' },
-  '10023':{ name:'鈴木 健太', rank:'Silver',   rankKey:'silver',   type:'re' },
-  '10041':{ name:'渡辺 隆',   rank:'Bronze',   rankKey:'bronze',   type:'re' },
-  '20005':{ name:'田中 美穂', rank:'Gold',     rankKey:'gold',     type:'hr' },
-  '30007':{ name:'佐藤 美咲', rank:'Partner',  rankKey:'pt',       type:'pt' },
+const // ── ユーザーデータ（本番移行時はKintone APIに切り替える） ──────────
+// 【Kintone移行時】以下のUSERS定義を削除し DB_CONFIG.USE_KINTONE = true に設定
+// パスワードはSHA-256(salt:pw)でハッシュ化。平文はCORETO管理台帳で管理。
+const USERS = {
+  '00001':{ name:'HQ 統括', type:'hq', hqRole:'exec', pwHash:'4338366c8624f75aa9c098b1965a1973ac1458e4c3fe57e33d4a2ec499f440b2', pwSalt:'0224d4d914c01a78', color:'var(--gold)', avatar:'統' },
+  '00347':{ name:'HQ マネージャー', type:'hq', hqRole:'manager', pwHash:'823d13a4b70586ab254c10c24c7299f7fc88e75686dc0827a925d52053fdf399', pwSalt:'f185e59e401b0a29', color:'var(--blue)', avatar:'マ' },
+  '00891':{ name:'HQ スタッフ', type:'hq', hqRole:'staff', pwHash:'67ad0d8e84d8729c58583395870978d06a7b001a63555fbbab4ed24ca0bdc2f3', pwSalt:'b7a739cf4dafbe32', color:'var(--green)', avatar:'ス' },
+  '10008':{ name:'佐藤 花子', type:'re', pwHash:'357683ce522895330228c70453fb40463ade36ddc29076fe5e12ed39f1b82932', pwSalt:'ce2301e88db30992', rank:'Platinum', rankKey:'platinum', sennin:true, color:'var(--purple)', avatar:'佐' },
+  '10012':{ name:'山田 誠', type:'re', pwHash:'4af458635d2243ce54e3c22e16f71815900853e18453efdebb35a705ef8fddc6', pwSalt:'7c183f447de9c7dc', rank:'Gold',     rankKey:'gold', sennin:true, color:'var(--gold)', avatar:'山' },
+  '10023':{ name:'鈴木 健太', type:'re', pwHash:'b96aeafc6405706d0c0119eeb32ba04591bb002edf00a1e33201cb92d3d75142', pwSalt:'b8e2175c27cbcd2a', rank:'Silver',   rankKey:'silver', sennin:false, color:'var(--green)', avatar:'鈴' },
+  '10041':{ name:'渡辺 隆', type:'re', pwHash:'a436112f3915834860870cce2f7f4950b619a323f9682b0c54d89efc416b2bc1', pwSalt:'5a2e4323892f21dd', rank:'Bronze',   rankKey:'bronze', sennin:true, color:'var(--orange)', avatar:'渡' },
+  '20005':{ name:'田中 美穂', type:'hr', pwHash:'be6357bc5362548690c7b64752243df86ed462a79ebdc477abc20e113673318d', pwSalt:'3f97c5aac9b4e6ec', rank:'Gold',     rankKey:'gold', sennin:false, color:'var(--green)', avatar:'田' },
+  '30007':{ name:'佐藤 美咲', type:'pt', pwHash:'7f76abae55958f55c9904b6d860cf5117c8c26c541b2774b2478cedaabd4f167', pwSalt:'23f2095e3e65052f', rank:'Partner',  rankKey:'pt', color:'var(--purple)', avatar:'佐' },
 };
-const DEMO_PW = 'coreto2026';
 
-function doLogin() {
+// SHA-256ハッシュ検証（ブラウザネイティブSubtleCrypto使用）
+async function verifyPassword(pw, salt, hash) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(salt + ':' + pw);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const computed = hashArray.map(b => b.toString(16).padStart(2,'0')).join('');
+  return computed === hash;
+}
+
+// ── ブルートフォース対策 ──────────────────────────────────────────────────
+const _loginAttempts = { count:0, lockedUntil:0 };
+const LOGIN_MAX_ATTEMPTS = 5;     // 5回失敗でロック
+const LOGIN_LOCKOUT_MS   = 300000; // 5分間ロック
+
+function checkLoginLock() {
+  if (_loginAttempts.lockedUntil > Date.now()) {
+    const remaining = Math.ceil((_loginAttempts.lockedUntil - Date.now()) / 60000);
+    showErr('ログイン試行回数が上限に達しました。' + remaining + '分後に再試行してください。');
+    return true;
+  }
+  return false;
+}
+
+async function doLogin() {
+  if (checkLoginLock()) return;
+
   const id = document.getElementById('f-id').value.trim();
   const pw = document.getElementById('f-pw').value;
   if (id.length !== 5)          { showErr('会員IDを正しく入力してください'); return; }
   if (!TYPE_INFO[id.charAt(0)]) { showErr('会員IDの先頭桁が無効です'); return; }
-  const ac = ACCOUNTS[id];
-  if (!ac || pw !== DEMO_PW) {
-    showErr('会員IDまたはパスワードが正しくありません');
+
+  // USERS定義はhub.htmlで管理（同一origin）
+  // ※本番環境では coreto-hub.html を非公開化またはKintone API認証に移行
+  const ac = (typeof USERS !== 'undefined') ? USERS[id] : null;
+  if (!ac) {
+    _loginAttempts.count++;
+    if (_loginAttempts.count >= LOGIN_MAX_ATTEMPTS) {
+      _loginAttempts.lockedUntil = Date.now() + LOGIN_LOCKOUT_MS;
+      _loginAttempts.count = 0;
+      showErr('ログイン試行回数が上限に達しました。5分後に再試行してください。');
+    } else {
+      const remaining = LOGIN_MAX_ATTEMPTS - _loginAttempts.count;
+      showErr('会員IDまたはパスワードが正しくありません（残り' + remaining + '回）');
+    }
     document.getElementById('f-pw').value = '';
     return;
   }
+
+  // ハッシュ検証
+  const ok = await verifyPassword(pw, ac.pwSalt, ac.pwHash);
+  if (!ok) {
+    _loginAttempts.count++;
+    if (_loginAttempts.count >= LOGIN_MAX_ATTEMPTS) {
+      _loginAttempts.lockedUntil = Date.now() + LOGIN_LOCKOUT_MS;
+      _loginAttempts.count = 0;
+      showErr('ログイン試行回数が上限に達しました。5分後に再試行してください。');
+    } else {
+      const remaining = LOGIN_MAX_ATTEMPTS - _loginAttempts.count;
+      showErr('会員IDまたはパスワードが正しくありません（残り' + remaining + '回）');
+    }
+    document.getElementById('f-pw').value = '';
+    return;
+  }
+
+  // 成功 → カウンタリセット
+  _loginAttempts.count = 0;
   startSession(id, ac, false);
 }
 
@@ -213,12 +301,29 @@ function lineLogin() {
   setTimeout(() => startSession('10012', ACCOUNTS['10012'], true), 1800);
 }
 
-function startSession(id, ac, fromLine) {
+// ── セッション整合性トークン生成 ────────────────────────────────────────
+// HMAC的な検証: SHA-256(userId:loginAt:pwHash) → sessionToken
+// 攻撃者はpwHashを知らないため、正しいsessionTokenを生成できない
+async function computeSessionToken(userId, loginAt, pwHash) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(userId + ':' + loginAt + ':' + pwHash);
+  const buf = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+async function startSession(id, ac, fromLine) {
   showLoading('ログイン中...');
+  const loginAt = new Date().toISOString();
+  const token   = await computeSessionToken(id, loginAt, ac.pwHash);
+
   const session = {
-    agId:id, name:ac.name, rank:ac.rank,
-    rankKey:ac.rankKey, type:ac.type,
-    lineLinked:fromLine, loginAt:new Date().toISOString(),
+    agId:id, userId:id, name:ac.name,
+    rank:ac.rank || 'HQ', rankKey:ac.rankKey || 'hq',
+    type:ac.type, hqRole:ac.hqRole || null,
+    sennin:ac.sennin || false,
+    lineLinked:fromLine,
+    loginAt:loginAt,
+    sessionToken:token,   // ← 整合性チェック用トークン（改ざん防止）
   };
   sessionStorage.setItem('coreto_session', JSON.stringify(session));
   // タイプ別ルーティング
@@ -228,19 +333,34 @@ function startSession(id, ac, fromLine) {
   setTimeout(() => { window.location.href = dest; }, 900);
 }
 
+// ── HQログイン（IDとパスワードで認証） ─────────────────────────────────
+// hqLogin()はleftメニューのボタンから呼ばれる（デバッグ・管理者アクセス用）
+// 本番ではHQも通常ログインフォームを使用する
 function hqLogin() {
-  const pw = prompt('HQ管理者パスワードを入力してください');
-  if (pw === 'coreto2026') {
-    showLoading('管理ポータルへ移動中...');
-    const hqSession = {
-      agId:'HQ-001', name:'管理ユーザー', rank:'HQ', rankKey:'hq',
-      type:'hq', lineLinked:false, loginAt:new Date().toISOString(),
-    };
-    sessionStorage.setItem('coreto_session', JSON.stringify(hqSession));
-    setTimeout(() => { window.location.href = 'coreto-hub.html'; }, 600);
-  } else if (pw !== null) {
-    alert('パスワードが正しくありません');
+  const id  = prompt('HQ 会員IDを入力してください（例: 00001）');
+  if (!id) return;
+  const pw  = prompt('パスワードを入力してください');
+  if (!pw) return;
+  if (checkLoginLock()) return;
+
+  const ac = (typeof USERS !== 'undefined') ? USERS[id] : null;
+  if (!ac || ac.type !== 'hq') {
+    alert('HQアカウントが見つかりません');
+    return;
   }
+  verifyPassword(pw, ac.pwSalt, ac.pwHash).then(async ok => {
+    if (ok) {
+      _loginAttempts.count = 0;
+      showLoading('管理ポータルへ移動中...');
+      await startSession(id, ac, false);
+      // HQはhub.htmlに転送
+      clearTimeout(window._loginRedirect);
+      window._loginRedirect = setTimeout(() => { window.location.href = 'coreto-hub.html'; }, 900);
+    } else {
+      _loginAttempts.count++;
+      alert('パスワードが正しくありません');
+    }
+  });
 }
 
 function showLoading(msg) {

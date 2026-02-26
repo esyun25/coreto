@@ -1,6 +1,33 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
+  <!-- ── Content Security Policy (XSS軽減) ──────────────────────────────────
+       変更時: 使用する外部サービスのオリジンを追加してください
+       Kintone追加時: connect-src に *.cybozu.com を追加
+  ─────────────────────────────────────────────────────────────────────── -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' 'unsafe-inline'
+      https://cdnjs.cloudflare.com
+      https://js.stripe.com
+      https://cdn-cgi/scripts;
+    style-src 'self' 'unsafe-inline'
+      https://fonts.googleapis.com;
+    font-src 'self'
+      https://fonts.gstatic.com;
+    img-src 'self' data: blob:;
+    connect-src 'self'
+      https://hooks.slack.com
+      https://hooks.zapier.com
+      https://api.stripe.com
+      https://js.stripe.com
+      https://www.houjin-bangou.nta.go.jp
+      https://www.retio.or.jp;
+    frame-src 'none';
+    object-src 'none';
+    base-uri 'self';
+  ">
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CORETO IT重説 &amp; 契約書管理</title>
@@ -499,12 +526,40 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
 </div>
 </div>
 
+<script src="db.js">
+// ── XSS対策: ユーザー入力値のエスケープ ──────────────────────────────
+function escHtml(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+</script>
 <script>
 // ══ AUTH GUARD (要ログイン) ════════════════════════════════════
 (function() {
   var s = null;
   try { s = JSON.parse(sessionStorage.getItem('coreto_session') || 'null'); } catch(e) {}
-  if (!s) { location.replace('coreto-hub.html'); }
+  if (!s || !s.userId || !s.type) {
+    sessionStorage.setItem('coreto_redirect', window.location.href);
+    location.replace('coreto-login.html');
+    return;
+  }
+  if (!s.sessionToken || s.sessionToken.length !== 64) {
+    sessionStorage.removeItem('coreto_session');
+    location.replace('coreto-login.html');
+    return;
+  }
+  var _la = new Date(s.loginAt).getTime();
+  if (isNaN(_la) || (Date.now() - _la) > 28800000) {
+    sessionStorage.removeItem('coreto_session');
+    alert('セッションの有効期限が切れました。再度ログインしてください。');
+    location.replace('coreto-login.html');
+    return;
+  }
   window._SESSION = s;
 })();
 
@@ -1077,7 +1132,7 @@ function renderCaseList() {
       <div class="case-item ${active?'active':''}" onclick="selectCase('${c.id}')">
         <div class="ci-status ${STATUS_CLS[c.status]||'st-waiting'}"></div>
         <div class="ci-id">${c.id}</div>
-        <div class="ci-name">${c.name}</div>
+        <div class="ci-name">${escHtml(c.name)}</div>
         <div class="ci-meta">
           <span style="font-size:10px;color:var(--sub)">${c.prop.slice(0,18)}…</span>
           <span class="ci-badge" style="background:${clr}22;color:${clr};border:1px solid ${clr}44">${lbl}</span>
@@ -1164,7 +1219,7 @@ function renderCaseHeader() {
   } catch(e) {}
 
   document.getElementById('c-meta').innerHTML = `
-    <span class="prop-tag">🏠 ${c.prop}</span>
+    <span class="prop-tag">🏠 ${escHtml(c.prop)}</span>
     <span class="case-detail-row">担当：${c.agent}</span>
     <span class="case-detail-row">管理会社：${c.mgmt}</span>
     <span class="case-detail-row">家賃：¥${c.rent.toLocaleString()}</span>

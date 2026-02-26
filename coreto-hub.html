@@ -1,6 +1,33 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
+  <!-- ── Content Security Policy (XSS軽減) ──────────────────────────────────
+       変更時: 使用する外部サービスのオリジンを追加してください
+       Kintone追加時: connect-src に *.cybozu.com を追加
+  ─────────────────────────────────────────────────────────────────────── -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' 'unsafe-inline'
+      https://cdnjs.cloudflare.com
+      https://js.stripe.com
+      https://cdn-cgi/scripts;
+    style-src 'self' 'unsafe-inline'
+      https://fonts.googleapis.com;
+    font-src 'self'
+      https://fonts.gstatic.com;
+    img-src 'self' data: blob:;
+    connect-src 'self'
+      https://hooks.slack.com
+      https://hooks.zapier.com
+      https://api.stripe.com
+      https://js.stripe.com
+      https://www.houjin-bangou.nta.go.jp
+      https://www.retio.or.jp;
+    frame-src 'none';
+    object-src 'none';
+    base-uri 'self';
+  ">
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>CORETO — Business Management System</title>
@@ -523,23 +550,36 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto S
   </div>
 </div>
 
-<script src="db.js"></script>
+<script src="db.js">
+// ── XSSエスケープ関数 ──────────────────────────────────────────────────────
+function escHtml(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+}
+// ─────────────────────────────────────────────────────────────────────────
+</script>
 <script>
 // ════════════════════════════════════════════════════════════
 //  USERS & AUTH
 // ════════════════════════════════════════════════════════════
 // ── ユーザーデータ（本番移行時はKintone APIに切り替える） ──────────
 // 【Kintone移行時】以下のUSERS定義を削除し DB_CONFIG.USE_KINTONE = true に設定
+// パスワードはSHA-256(salt:pw)でハッシュ化。平文はCORETO管理台帳で管理。
 const USERS = {
-  '00001':{ name:'HQ 統括',        type:'hq', hqRole:'exec',    pw:'coreto2026', color:'var(--gold)',   avatar:'統' },
-  '00347':{ name:'HQ マネージャー',type:'hq', hqRole:'manager', pw:'coreto2026', color:'var(--blue)',   avatar:'マ' },
-  '00891':{ name:'HQ スタッフ',    type:'hq', hqRole:'staff',   pw:'coreto2026', color:'var(--green)',  avatar:'ス' },
-  '10008':{ name:'佐藤 花子', type:'re', rank:'Platinum', rankKey:'platinum', pw:'coreto2026', color:'var(--purple)', avatar:'佐', sennin:true  },
-  '10012':{ name:'山田 誠',   type:'re', rank:'Gold',     rankKey:'gold',     pw:'coreto2026', color:'var(--gold)',   avatar:'山', sennin:true  },
-  '10023':{ name:'鈴木 健太', type:'re', rank:'Silver',   rankKey:'silver',   pw:'coreto2026', color:'var(--green)',  avatar:'鈴', sennin:false },
-  '10041':{ name:'渡辺 隆',   type:'re', rank:'Bronze',   rankKey:'bronze',   pw:'coreto2026', color:'var(--orange)', avatar:'渡', sennin:true  },
-  '20005':{ name:'田中 美穂', type:'hr', rank:'Gold',     rankKey:'gold',     pw:'coreto2026', color:'var(--green)',  avatar:'田', sennin:false },
-  '30007':{ name:'佐藤 美咲', type:'pt', rank:'Partner',  rankKey:'pt',       pw:'coreto2026', color:'var(--purple)', avatar:'佐' },
+  '00001':{ name:'HQ 統括', type:'hq', hqRole:'exec', pwHash:'4338366c8624f75aa9c098b1965a1973ac1458e4c3fe57e33d4a2ec499f440b2', pwSalt:'0224d4d914c01a78', color:'var(--gold)', avatar:'統' },
+  '00347':{ name:'HQ マネージャー', type:'hq', hqRole:'manager', pwHash:'823d13a4b70586ab254c10c24c7299f7fc88e75686dc0827a925d52053fdf399', pwSalt:'f185e59e401b0a29', color:'var(--blue)', avatar:'マ' },
+  '00891':{ name:'HQ スタッフ', type:'hq', hqRole:'staff', pwHash:'67ad0d8e84d8729c58583395870978d06a7b001a63555fbbab4ed24ca0bdc2f3', pwSalt:'b7a739cf4dafbe32', color:'var(--green)', avatar:'ス' },
+  '10008':{ name:'佐藤 花子', type:'re', pwHash:'357683ce522895330228c70453fb40463ade36ddc29076fe5e12ed39f1b82932', pwSalt:'ce2301e88db30992', rank:'Platinum', rankKey:'platinum', sennin:true, color:'var(--purple)', avatar:'佐' },
+  '10012':{ name:'山田 誠', type:'re', pwHash:'4af458635d2243ce54e3c22e16f71815900853e18453efdebb35a705ef8fddc6', pwSalt:'7c183f447de9c7dc', rank:'Gold',     rankKey:'gold', sennin:true, color:'var(--gold)', avatar:'山' },
+  '10023':{ name:'鈴木 健太', type:'re', pwHash:'b96aeafc6405706d0c0119eeb32ba04591bb002edf00a1e33201cb92d3d75142', pwSalt:'b8e2175c27cbcd2a', rank:'Silver',   rankKey:'silver', sennin:false, color:'var(--green)', avatar:'鈴' },
+  '10041':{ name:'渡辺 隆', type:'re', pwHash:'a436112f3915834860870cce2f7f4950b619a323f9682b0c54d89efc416b2bc1', pwSalt:'5a2e4323892f21dd', rank:'Bronze',   rankKey:'bronze', sennin:true, color:'var(--orange)', avatar:'渡' },
+  '20005':{ name:'田中 美穂', type:'hr', pwHash:'be6357bc5362548690c7b64752243df86ed462a79ebdc477abc20e113673318d', pwSalt:'3f97c5aac9b4e6ec', rank:'Gold',     rankKey:'gold', sennin:false, color:'var(--green)', avatar:'田' },
+  '30007':{ name:'佐藤 美咲', type:'pt', pwHash:'7f76abae55958f55c9904b6d860cf5117c8c26c541b2774b2478cedaabd4f167', pwSalt:'23f2095e3e65052f', rank:'Partner',  rankKey:'pt', color:'var(--purple)', avatar:'佐' },
 };
 
 // HQ role hierarchy
@@ -551,6 +591,17 @@ let currentPage = 'dashboard';
 // ─ Restore session ─
 (function(){
   const s = JSON.parse(sessionStorage.getItem('coreto_session') || 'null');
+  if (s && (!s.sessionToken || s.sessionToken.length !== 64)) {
+    // 古いセッション（整合性トークンなし）を無効化
+    sessionStorage.removeItem('coreto_session');
+  }
+  // セッション有効期限チェック（8時間）
+  if (s && s.loginAt) {
+    var _la = new Date(s.loginAt).getTime();
+    if (isNaN(_la) || (Date.now() - _la) > 28800000) {
+      sessionStorage.removeItem('coreto_session');
+    }
+  }
   if(s && USERS[s.userId] && USERS[s.userId].type === s.type) {
     // Merge sennin overrides from localStorage (HQが変更した場合)
     const senninOverrides = JSON.parse(localStorage.getItem('coreto_sennin_overrides') || '{}');
@@ -658,7 +709,16 @@ function buildSidebar() {
         // External pages: use same-tab to preserve sessionStorage
         el.onclick = () => { location.href = item.url; };
       } else if(item.onclick) {
-        el.onclick = () => eval(item.onclick);
+        // eval() を安全な関数ディスパッチテーブルに置き換え（V-10 XSS修正）
+        const ONCLICK_FNS = {
+          'openSenninMgmt()': () => typeof openSenninMgmt === 'function' && openSenninMgmt(),
+        };
+        const fn = ONCLICK_FNS[item.onclick];
+        if (fn) {
+          el.onclick = fn;
+        } else {
+          console.warn('[Hub] 未知のonclick:', item.onclick);
+        }
       } else if(item.id === 'ref-link') {
         el.onclick = () => openRefModal();
       } else {
@@ -846,7 +906,7 @@ function openSenninMgmt() {
       : '<span style="font-size:9px;padding:1px 7px;border-radius:10px;background:rgba(62,69,101,.3);color:#5a6280">一般</span>';
     return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid #1e2435">
       <div style="min-width:52px;font-family:'DM Mono',monospace;font-size:10px;color:#7a82a0">${a.id}</div>
-      <div style="flex:1;font-size:12px;font-weight:700">${a.name}</div>
+      <div style="flex:1;font-size:12px;font-weight:700">${escHtml(a.name)}</div>
       <div style="font-size:10px;color:#5a6280">${a.type} / ${a.rank}</div>
       ${badge}
       <label style="position:relative;display:inline-block;width:36px;height:20px;flex-shrink:0">
@@ -1686,8 +1746,8 @@ function ptDashPage() {
             <tbody>
               ${PT_CASES.slice(0,5).map(c => `
               <tr>
-                <td class="fw-700">${c.client}</td>
-                <td style="font-size:11px;color:var(--sub)">${c.prop}</td>
+                <td class="fw-700">${escHtml(c.client)}</td>
+                <td style="font-size:11px;color:var(--sub)">${escHtml(c.prop)}</td>
                 <td style="font-size:11px">${c.ag}</td>
                 <td><span class="pill ${c.status==='done'?'pill-green':'pill-blue'}">${c.status==='done'?'✓ 成約':'進行中'}</span></td>
                 <td class="mono" style="color:${c.reward?'var(--gold)':'var(--muted)'}">${c.reward?PT_YEN(c.reward):'—'}</td>
@@ -1747,8 +1807,8 @@ function ptRenderCases(filter) {
     <tbody>
       ${rows.map(c => `
       <tr>
-        <td class="fw-700">${c.client}</td>
-        <td style="font-size:11px;color:var(--sub)">${c.prop}</td>
+        <td class="fw-700">${escHtml(c.client)}</td>
+        <td style="font-size:11px;color:var(--sub)">${escHtml(c.prop)}</td>
         <td style="font-size:11px">${c.ag}</td>
         <td style="font-size:11px;color:var(--muted)">${c.date}</td>
         <td>${ptStepperHtml(c.step)}</td>
@@ -1806,7 +1866,7 @@ function ptCodePage() {
             ${PT_CASES.slice(0,6).map(c => `
             <tr>
               <td style="font-size:11px;color:var(--muted)">${c.date}</td>
-              <td class="fw-700">${c.client}</td>
+              <td class="fw-700">${escHtml(c.client)}</td>
               <td><span class="pill ${c.status==='done'?'pill-green':'pill-blue'}">${c.status==='done'?'成約':'進行中'}</span></td>
             </tr>`).join('')}
           </tbody>
@@ -1976,7 +2036,7 @@ function ptRenderMessages() {
       <div class="mc-avatar" style="background:${c.id===2?'rgba(201,168,64,.15)':'rgba(79,156,249,.12)'}">${c.icon}</div>
       <div style="flex:1;overflow:hidden">
         <div style="display:flex;align-items:center;gap:6px">
-          <div class="mc-name">${c.name}</div>
+          <div class="mc-name">${escHtml(c.name)}</div>
           ${c.unread?`<span class="mc-unread">${c.unread}</span>`:''}
         </div>
         <div class="mc-last">${c.msgs[c.msgs.length-1].text}</div>
@@ -1997,7 +2057,7 @@ function ptOpenChat(id) {
     <div class="msg-hdr">
       <div class="mc-avatar" style="background:${id===2?'rgba(201,168,64,.15)':'rgba(79,156,249,.12)'}">${c.icon}</div>
       <div>
-        <div style="font-size:13px;font-weight:700">${c.name}</div>
+        <div style="font-size:13px;font-weight:700">${escHtml(c.name)}</div>
         <div style="font-size:10px;color:var(--sub)">${c.role}</div>
       </div>
     </div>

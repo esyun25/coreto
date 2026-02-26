@@ -1,6 +1,33 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
+  <!-- ── Content Security Policy (XSS軽減) ──────────────────────────────────
+       変更時: 使用する外部サービスのオリジンを追加してください
+       Kintone追加時: connect-src に *.cybozu.com を追加
+  ─────────────────────────────────────────────────────────────────────── -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' 'unsafe-inline'
+      https://cdnjs.cloudflare.com
+      https://js.stripe.com
+      https://cdn-cgi/scripts;
+    style-src 'self' 'unsafe-inline'
+      https://fonts.googleapis.com;
+    font-src 'self'
+      https://fonts.gstatic.com;
+    img-src 'self' data: blob:;
+    connect-src 'self'
+      https://hooks.slack.com
+      https://hooks.zapier.com
+      https://api.stripe.com
+      https://js.stripe.com
+      https://www.houjin-bangou.nta.go.jp
+      https://www.retio.or.jp;
+    frame-src 'none';
+    object-src 'none';
+    base-uri 'self';
+  ">
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>CORETO — エージェント入会申込</title>
@@ -162,6 +189,11 @@ html,body{min-height:100%;font-family:'Noto Sans JP',sans-serif;background:var(-
 </div>
 
 <div class="wrap" id="wrap"></div>
+<!-- ハニーポット: 人間には見えないフィールド。botが自動入力する -->
+<div style="display:none;position:absolute;left:-9999px" aria-hidden="true">
+  <label for="hp-field">会社名（入力しないでください）</label>
+  <input type="text" id="hp-field" name="company_name" tabindex="-1" autocomplete="off">
+</div>
 
 <script>
   // ── Slack通知設定 ──────────────────────────────────────────────────────
@@ -201,10 +233,12 @@ var form = {
   kyc_front:'', kyc_back:'',
   // 口座
   bankName:'', bankBranch:'', bankBranchCode:'', bankType:'普通', bankNum:'', bankHolder:'',
-  // 決済
-  cardNo:'', cardExp:'', cardCvv:'', cardName:'',
+  // 決済 — カード情報はStripeが管理（COREOTOでは保持しない）
+  stripePaymentMethodId: '',  // Stripeが発行するPaymentMethod ID のみ保持
 };
 
+// ── スパム対策: フォーム表示タイムスタンプ ──────────────────────────
+window._signupOpenedAt = Date.now();
 var demoOtp = '';
 var otpTimer = null;
 var otpSec = 300;
@@ -254,18 +288,81 @@ function step0() {
     '</div></div>';
 }
 
-function validateStep0() {
+// ── 紹介コード検証 ────────────────────────────────────────────────────────
+// 有効な紹介コード形式:
+//   - エージェントID: 5桁数字 (10001〜19999 RE / 20001〜29999 HR)
+//   - キャンペーンコード: 英大文字+数字 4〜16文字 (例: WELCOME2026)
+function validateReferralCode(code) {
+  if (!code) return { valid: true, msg: '' }; // 任意項目 → 空でも通す
+
+  // パターン1: エージェントID (5桁数字)
+  if (/^[12]\d{4}$/.test(code)) {
+    // IDレンジチェック (10001-29999)
+    var n = parseInt(code, 10);
+    if (n >= 10001 && n <= 29999) {
+      return { valid: true, msg: '' };
+    }
+    return { valid: false, msg: '紹介エージェントIDが無効です（10001〜29999の範囲）' };
+  }
+
+  // パターン2: キャンペーンコード (英大文字・数字・ハイフン, 4〜16文字)
+  if (/^[A-Z0-9\-]{4,16}$/.test(code)) {
+    return { valid: true, msg: '' };
+  }
+
+  // それ以外は無効
+  return {
+    valid: false,
+    msg: '紹介コードの形式が正しくありません（エージェントID 5桁、またはキャンペーンコード 英大文字・数字 4〜16文字）'
+  };
+}
+
+async function validateStep0() {
   var name  = document.getElementById('f-name').value.trim();
   var kana  = document.getElementById('f-kana').value.trim();
   var phone = document.getElementById('f-phone').value.trim();
   var email = document.getElementById('f-email').value.trim();
   if (!name || !kana || !phone || !email) { alert('必須項目をすべて入力してください'); return; }
+
+  // メールアドレス形式チェック
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    alert('メールアドレスの形式が正しくありません'); return;
+  }
+
+  // 電話番号形式チェック（日本の携帯・固定）
+  var phoneClean = phone.replace(/[-\s]/g, '');
+  if (!/^(0[789]0\d{8}|0\d{9,10})$/.test(phoneClean)) {
+    alert('電話番号の形式が正しくありません（例: 090-1234-5678）'); return;
+  }
+
+  // 紹介コード検証
+  var refInput = (document.getElementById('f-ref')||{value:''}).value.trim().toUpperCase();
+  if (!form._refLocked && refInput) {
+    var refResult = validateReferralCode(refInput);
+    if (!refResult.valid) {
+      alert(refResult.msg); return;
+    }
+    // Zapier URL設定済みの場合: 実在確認を非同期で試行
+    if (typeof ZAPIER_CONFIG !== 'undefined' && ZAPIER_CONFIG.ENABLED) {
+      var btn = document.querySelector('button[onclick*="validateStep0"]');
+      if (btn) { btn.disabled = true; btn.textContent = '紹介コード確認中...'; }
+      try {
+        await DB.sendToZapier('SIGNUP', { action: 'verify_referral', code: refInput });
+        // Zapierからの応答はno-corsのため直接確認できないが、送信は記録される
+      } catch(e) {
+        console.warn('[referral verify] Zapier未設定のためスキップ');
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = '次へ →'; }
+      }
+    }
+  }
+
   form.name      = name; form.nameKana = kana;
-  form.phone     = phone; form.email   = email;
+  form.phone     = phoneClean; form.email   = email;
   form.zip       = document.getElementById('f-zip').value.trim();
   form.addr      = document.getElementById('f-addr').value.trim();
   form.agentType = document.getElementById('f-type').value;
-  if (!form._refLocked) form.referral = (document.getElementById('f-ref')||{value:''}).value.trim();
+  if (!form._refLocked) form.referral = refInput;
   goStep(1);
 }
 
@@ -396,14 +493,54 @@ function validateStep1() {
 // ══════════════════════════════════════
 //  STEP 2: SMS認証
 // ══════════════════════════════════════
+// ── SMS OTP 設定 ─────────────────────────────────────────────────────────
+// Twilio または Zapier 経由でSMSを送信します。
+// Zapier設定: Webhooks → Catch Hook → Twilio SMS送信 アクション
+// ZAPIER_CONFIG.ENABLED = true に設定後、ZAPIER_CONFIG.SMS_WEBHOOK にURLを追加
+var OTP_CONFIG = {
+  SMS_WEBHOOK: 'YOUR_ZAPIER_SMS_WEBHOOK',  // ← Zapier SMS Webhook URLをここに設定
+  // 開発環境: console.log で表示（SMS未送信）
+  DEV_MODE: true,   // 本番前に false に変更
+};
+
+// OTPブルートフォース制限
+var _otpAttempts = 0;
+var _otpResends  = 0;
+var OTP_MAX_ATTEMPTS = 5;
+var OTP_MAX_RESENDS  = 3;
+
+async function sendOtpSms(phone, otp) {
+  if (OTP_CONFIG.DEV_MODE || !OTP_CONFIG.SMS_WEBHOOK || OTP_CONFIG.SMS_WEBHOOK === 'YOUR_ZAPIER_SMS_WEBHOOK') {
+    console.log('[OTP 開発モード] コード:', otp, '→ 電話:', phone);
+    // 開発中は画面に表示（本番では絶対に表示しない）
+    var devEl = document.getElementById('otp-dev-hint');
+    if (devEl) devEl.textContent = '[開発] コード: ' + otp;
+    return;
+  }
+  try {
+    await fetch(OTP_CONFIG.SMS_WEBHOOK, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to: phone, code: otp, message: 'COREOTOの認証コードは ' + otp + ' です（5分間有効）' }),
+      mode: 'no-cors'
+    });
+  } catch(e) {
+    console.error('[OTP] SMS送信エラー:', e);
+  }
+}
+
 function step2() {
   demoOtp = String(Math.floor(100000+Math.random()*900000));
+  _otpAttempts = 0;
   otpSec = 300;
+
+  // SMS送信（非同期）
+  sendOtpSms(form.phone, demoOtp);
 
   document.getElementById('wrap').innerHTML =
     '<div class="card"><div class="ch"><div class="ch-t">SMS本人確認</div><span class="pill pb">3 / 5</span></div><div class="cb">' +
     '<div class="al al-info">📱 <div><strong>' + form.phone + '</strong> にSMSで6桁の認証コードを送信しました。<br>' +
-    '<span style="font-size:10px;color:var(--muted)">[デモ用コード: ' + demoOtp + ']</span></div></div>' +
+    '<span id="otp-dev-hint" style="font-size:10px;color:var(--amber)"></span></div></div>' +
     '<div class="otp-wrap">' +
     [0,1,2,3,4,5].map(function(i){ return '<input class="otp-cell" maxlength="1" type="text" inputmode="numeric" id="oc-'+i+'" oninput="otpIn(this,'+i+')" onkeydown="otpKey(event,'+i+')">'; }).join('') +
     '</div>' +
@@ -437,7 +574,17 @@ function otpKey(e, i) {
 }
 function checkOtp() {
   var entered = [0,1,2,3,4,5].map(function(i){ return document.getElementById('oc-'+i).value; }).join('');
+  // ブルートフォース制限
+  _otpAttempts++;
+  if (_otpAttempts > OTP_MAX_ATTEMPTS) {
+    clearInterval(otpTimer);
+    alert('認証コードの試行回数が上限に達しました。最初からやり直してください。');
+    goStep(0);
+    return;
+  }
+
   if (entered === demoOtp) {
+    _otpAttempts = 0;
     [0,1,2,3,4,5].forEach(function(i){ document.getElementById('oc-'+i).className='otp-cell success'; });
     clearInterval(otpTimer);
     setTimeout(function(){ goStep(3); }, 600);
@@ -450,8 +597,15 @@ function checkOtp() {
   }
 }
 function resendOtp() {
+  _otpResends++;
+  if (_otpResends > OTP_MAX_RESENDS) {
+    alert('再送信回数の上限に達しました。最初からやり直してください。');
+    goStep(0);
+    return;
+  }
   demoOtp = String(Math.floor(100000+Math.random()*900000));
-  alert('[デモ] 新しい認証コード: ' + demoOtp);
+  _otpAttempts = 0;
+  sendOtpSms(form.phone, demoOtp);  // 新しいコードを送信
   otpSec = 300;
   document.getElementById('resend-btn').disabled = true;
   clearInterval(otpTimer);
@@ -514,15 +668,45 @@ function kycSelDoc(n) {
   step3();
 }
 
+// ── KYCファイル検証定数 ──────────────────────────────────────────────────
+var KYC_FILE_TYPES = ['image/jpeg','image/jpg','image/png','image/webp','image/heic','application/pdf'];
+var KYC_MAX_SIZE   = 10 * 1024 * 1024; // 10MB
+
 function kycUpload(input, side) {
   if (!input.files[0]) return;
+  var file = input.files[0];
+
+  // ── ファイル検証 ────────────────────────────────────────────────
+  if (!KYC_FILE_TYPES.includes(file.type)) {
+    alert('⚠️ 対応形式はJPEG・PNG・WebP・HEIC・PDFのみです');
+    input.value = '';
+    return;
+  }
+  var ext = file.name.split('.').pop().toLowerCase();
+  if (!['jpg','jpeg','png','webp','heic','pdf'].includes(ext)) {
+    alert('⚠️ ファイル拡張子が無効です（許可: jpg, png, webp, heic, pdf）');
+    input.value = '';
+    return;
+  }
+  if (file.size > KYC_MAX_SIZE) {
+    alert('⚠️ ファイルサイズが大きすぎます（最大10MB）。現在: ' + (file.size/1024/1024).toFixed(1) + 'MB');
+    input.value = '';
+    return;
+  }
+  if (file.size === 0) {
+    alert('⚠️ ファイルが空です。正しいファイルを選択してください。');
+    input.value = '';
+    return;
+  }
+  // ─────────────────────────────────────────────────────────────
+
   var reader = new FileReader();
   reader.onload = function(e) {
-    kycUploads[side] = { name: input.files[0].name, data: e.target.result };
-    form['kyc_'+side] = input.files[0].name;
+    kycUploads[side] = { name: file.name, data: e.target.result };
+    form['kyc_'+side] = file.name;
     step3();
   };
-  reader.readAsDataURL(input.files[0]);
+  reader.readAsDataURL(file);
 }
 
 // ══════════════════════════════════════
@@ -590,13 +774,17 @@ function step5() {
     '<div class="card"><div class="ch"><div class="ch-t">決済情報</div><span class="pill pb">4 / 5</span></div><div class="cb">' +
     feeNote +
     (form.takkenSennin ? '' :
-      '<div class="field"><label>カード番号<span class="req">*</span></label>' +
-      '<input id="f-card" type="tel" maxlength="19" value="'+form.cardNo+'" placeholder="0000 0000 0000 0000" oninput="fmtCard(this)" style="font-family:\'DM Mono\',monospace;font-size:16px"></div>' +
-      '<div class="g2">' +
-      '<div class="field"><label>有効期限<span class="req">*</span></label><input id="f-exp" maxlength="5" value="'+form.cardExp+'" placeholder="MM/YY" oninput="fmtExp(this)" style="font-family:\'DM Mono\',monospace"></div>' +
-      '<div class="field"><label>セキュリティコード<span class="req">*</span></label><input id="f-cvv" maxlength="4" type="password" value="'+form.cardCvv+'" placeholder="000" style="font-family:\'DM Mono\',monospace"></div>' +
-      '</div>' +
-      '<div class="field"><label>カード名義（ローマ字）<span class="req">*</span></label><input id="f-cname" value="'+form.cardName+'" placeholder="MAKOTO YAMADA" style="font-family:\'DM Mono\',monospace;text-transform:uppercase"></div>'
+      // ────────────────────────────────────────────────────────────
+      // 🔒 PCI DSS 対応: カード情報はStripe Elements経由で収集
+      //    COREOTOのJSはカード番号・CVV・有効期限に一切アクセスしない
+      //    本番設定: Stripeダッシュボード → API Keys → Publishable key を
+      //    下記 STRIPE_PUBLISHABLE_KEY に設定してください
+      // ────────────────────────────────────────────────────────────
+      '<div class="field"><label>クレジットカード情報<span class="req">*</span></label>' +
+      '<div id="stripe-card-element" style="border:1px solid var(--border);border-radius:8px;padding:12px 14px;background:var(--card2);font-size:15px;min-height:44px;" >' +
+      '<div style="color:var(--muted);font-size:12px;padding:4px 0">🔒 Stripe安全決済 — カード番号・CVVはStripeが直接処理します（COREOTOには届きません）</div>' +
+      '</div></div>' +
+      '<div id="stripe-card-errors" style="color:var(--danger);font-size:12px;margin-top:4px"></div>'
     ) +
     '<div style="display:flex;gap:10px;margin-top:8px">' +
     '<button class="btn btn-ghost" onclick="goStep(4)" style="width:auto;padding:10px 20px">← 戻る</button>' +
@@ -619,9 +807,8 @@ function validateStep3() {
     var card = document.getElementById('f-card') ? document.getElementById('f-card').value.trim() : '';
     var exp  = document.getElementById('f-exp')  ? document.getElementById('f-exp').value.trim()  : '';
     var cvv  = document.getElementById('f-cvv')  ? document.getElementById('f-cvv').value.trim()  : '';
-    var cname= document.getElementById('f-cname')? document.getElementById('f-cname').value.trim(): '';
-    if (!card || !exp || !cvv || !cname) { alert('カード情報をすべて入力してください'); return; }
-    form.cardNo=card; form.cardExp=exp; form.cardCvv=cvv; form.cardName=cname;
+    // カード情報はStripe Elementsが管理 (form.cardNo等はCORETO側に存在しない)
+    // StripeのPaymentMethod IDは submitSignup() 時に取得される
   }
   goStep(6);
 }
@@ -801,9 +988,26 @@ function step6() {
 
 async function submitSignup() {
   // ── 送信先設定（本番前にURLを設定してください） ──────────────────
-  // ZapierのWebhook URLをここに設定（Zapier → Webhooks by Zapier → Catch Hook）
   var ZAPIER_WEBHOOK_URL = 'YOUR_ZAPIER_WEBHOOK_URL_HERE';
+  // ── Webhook 送信元検証シークレット ────────────────────────────────
+  // Zapier側のフィルター: payload.source_sig === HMAC_SECRET の最初の8文字
+  // 本番前に変更してください（GitHubに公開されるため完全な秘匿は不可）
+  var WEBHOOK_SHARED_SECRET = 'CRTv1-changeMe';
   // ────────────────────────────────────────────────────────────────
+
+  // ── ハニーポット: botが入力するフィールドがあれば送信拒否 ──────────
+  var honeypot = document.getElementById('hp-field');
+  if (honeypot && honeypot.value !== '') {
+    console.warn('[Signup] ハニーポット検知 — bot送信をブロック');
+    return; // botは何も知らせずに静かにブロック
+  }
+
+  // ── タイミング攻撃対策: フォーム表示から最低5秒経過しているか ──────
+  var formOpenedAt = window._signupOpenedAt || Date.now();
+  if ((Date.now() - formOpenedAt) < 5000) {
+    console.warn('[Signup] 送信が速すぎます（botの可能性）');
+    return;
+  }
 
   var appNo = 'APP-' + String(Date.now()).slice(-8);
   var submitBtn = document.querySelector('button[onclick*="submitSignup"]') || document.activeElement;
@@ -938,5 +1142,87 @@ function startOnboarding() {
 // ── Init ──
 checkToken();
 </script>
+
+  <!-- ── Stripe.js (PCI DSS準拠のカード収集) ─────────────────────────────── -->
+  <!-- 本番前に Stripe アカウントを作成し、publishable key を設定してください -->
+  <!-- https://stripe.com/jp → ダッシュボード → 開発者 → API キー              -->
+  <script src="https://js.stripe.com/v3/"></script>
+  <script>
+    // ── Stripe 設定 ────────────────────────────────────────────────────────
+    var STRIPE_PUBLISHABLE_KEY = 'YOUR_STRIPE_PUBLISHABLE_KEY'; // ← ここに設定
+    var _stripe = null;
+    var _stripeCardElement = null;
+
+    function initStripeElements() {
+      if (!STRIPE_PUBLISHABLE_KEY || STRIPE_PUBLISHABLE_KEY === 'YOUR_STRIPE_PUBLISHABLE_KEY') {
+        // 開発環境: Stripeが未設定の場合はプレースホルダー表示のみ
+        var el = document.getElementById('stripe-card-element');
+        if (el) el.innerHTML = '<div style="color:var(--amber);font-size:12px;padding:4px 0">⚠️ Stripe未設定（開発環境）— 本番前に STRIPE_PUBLISHABLE_KEY を設定してください</div>';
+        return;
+      }
+      _stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
+      var elements = _stripe.elements({
+        fonts: [{ cssSrc: 'https://fonts.googleapis.com/css2?family=DM+Mono' }],
+        locale: 'ja'
+      });
+      _stripeCardElement = elements.create('card', {
+        style: {
+          base: {
+            color: '#e8e8e8', fontFamily: "'DM Mono', monospace", fontSize: '15px',
+            '::placeholder': { color: '#4a5568' }
+          },
+          invalid: { color: '#fc8181' }
+        },
+        hidePostalCode: true
+      });
+      var mountEl = document.getElementById('stripe-card-element');
+      if (mountEl) {
+        _stripeCardElement.mount('#stripe-card-element');
+        _stripeCardElement.on('change', function(e) {
+          var errEl = document.getElementById('stripe-card-errors');
+          if (errEl) errEl.textContent = e.error ? e.error.message : '';
+        });
+      }
+    }
+
+    // 決済ステップ表示時にStripeをマウント
+    var _origGoStep = window.goStep;
+    document.addEventListener('DOMContentLoaded', function() {
+      // Watch for card step rendering
+      var observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(m) {
+          if (document.getElementById('stripe-card-element') && !_stripeCardElement) {
+            setTimeout(initStripeElements, 100);
+          }
+        });
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+    });
+
+    // submitSignup でStripeからPaymentMethod IDを取得
+    var _origSubmit = window.submitSignup;
+    window.submitSignup = async function() {
+      // Stripe未設定（開発環境）の場合はそのまま送信
+      if (!_stripe || !_stripeCardElement) {
+        console.warn('[Stripe] 未設定のため決済処理をスキップ（開発環境）');
+        if (_origSubmit) await _origSubmit();
+        return;
+      }
+      // Stripe PaymentMethod を作成
+      var result = await _stripe.createPaymentMethod({
+        type: 'card',
+        card: _stripeCardElement,
+        billing_details: { name: form.name }
+      });
+      if (result.error) {
+        document.getElementById('stripe-card-errors').textContent = result.error.message;
+        return;
+      }
+      // PaymentMethod IDのみ保持（カード番号はCORETO側に届かない）
+      form.stripePaymentMethodId = result.paymentMethod.id;
+      console.log('[Stripe] PaymentMethod作成成功:', result.paymentMethod.id);
+      if (_origSubmit) await _origSubmit();
+    };
+  </script>
 </body>
 </html>

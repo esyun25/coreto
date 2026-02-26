@@ -1,6 +1,33 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
+  <!-- ── Content Security Policy (XSS軽減) ──────────────────────────────────
+       変更時: 使用する外部サービスのオリジンを追加してください
+       Kintone追加時: connect-src に *.cybozu.com を追加
+  ─────────────────────────────────────────────────────────────────────── -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' 'unsafe-inline'
+      https://cdnjs.cloudflare.com
+      https://js.stripe.com
+      https://cdn-cgi/scripts;
+    style-src 'self' 'unsafe-inline'
+      https://fonts.googleapis.com;
+    font-src 'self'
+      https://fonts.gstatic.com;
+    img-src 'self' data: blob:;
+    connect-src 'self'
+      https://hooks.slack.com
+      https://hooks.zapier.com
+      https://api.stripe.com
+      https://js.stripe.com
+      https://www.houjin-bangou.nta.go.jp
+      https://www.retio.or.jp;
+    frame-src 'none';
+    object-src 'none';
+    base-uri 'self';
+  ">
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CORETO パートナーポータル</title>
@@ -781,7 +808,18 @@ html,body{height:100%;font-family:'Noto Sans JP',sans-serif;background:var(--bg)
 </div><!-- /content -->
 </div><!-- /layout -->
 
-<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js">
+// ── XSS対策: ユーザー入力値のエスケープ ──────────────────────────────
+function escHtml(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+</script><script>
 // ═══════════════════════════════════════
 //  Data
 // ═══════════════════════════════════════
@@ -880,8 +918,8 @@ function renderDash() {
          onmouseover="this.style.background='rgba(255,255,255,.012)'" onmouseout="this.style.background=''"
          onclick="nav(1,null)">
       <div>
-        <div style="font-weight:700">${c.client}</div>
-        <div style="font-size:10px;color:var(--muted)">${c.prop}</div>
+        <div style="font-weight:700">${escHtml(c.client)}</div>
+        <div style="font-size:10px;color:var(--muted)">${escHtml(c.prop)}</div>
       </div>
       <div style="color:var(--sub);font-size:11px">${c.ag}</div>
       <div>${statusPill(c.status)}</div>
@@ -930,8 +968,8 @@ function renderCases() {
                 gap:12px;font-size:12px;cursor:pointer;transition:background .12s;align-items:center"
          onmouseover="this.style.background='rgba(255,255,255,.012)'" onmouseout="this.style.background=''">
       <div>
-        <div style="font-weight:700">${c.client}</div>
-        <div style="font-size:10px;color:var(--muted)">${c.prop}</div>
+        <div style="font-weight:700">${escHtml(c.client)}</div>
+        <div style="font-size:10px;color:var(--muted)">${escHtml(c.prop)}</div>
       </div>
       <div>
         <div style="font-size:11px">${c.ag}</div>
@@ -989,7 +1027,7 @@ function renderMessages() {
       <div class="mc-avatar" style="background:${c.id===2?'rgba(201,168,76,.15)':'rgba(79,156,249,.12)'}">${c.icon}</div>
       <div style="flex:1;overflow:hidden">
         <div style="display:flex;align-items:center;gap:6px">
-          <div class="mc-name">${c.name}</div>
+          <div class="mc-name">${escHtml(c.name)}</div>
           ${c.unread?`<span class="mc-unread">${c.unread}</span>`:''}
         </div>
         <div class="mc-last">${c.msgs[c.msgs.length-1].text}</div>
@@ -1009,7 +1047,7 @@ function openChat(id) {
     <div class="msg-hdr">
       <div class="mc-avatar" style="background:${id===2?'rgba(201,168,76,.15)':'rgba(79,156,249,.12)'};">${c.icon}</div>
       <div>
-        <div style="font-weight:700;font-size:13px">${c.name}</div>
+        <div style="font-weight:700;font-size:13px">${escHtml(c.name)}</div>
         <div style="font-size:10px;color:var(--sub)">${c.role}</div>
       </div>
     </div>
@@ -1101,6 +1139,18 @@ function doLogout() {
 window.addEventListener('DOMContentLoaded', ()=>{
   // セッション反映
   const s = JSON.parse(sessionStorage.getItem('coreto_session') || 'null');
+  if (!s || !s.userId || !s.sessionToken || s.sessionToken.length !== 64) {
+    sessionStorage.removeItem('coreto_session');
+    window.location.replace('coreto-login.html');
+    return;
+  }
+  var _la = new Date(s.loginAt).getTime();
+  if (isNaN(_la) || (Date.now() - _la) > 28800000) {
+    sessionStorage.removeItem('coreto_session');
+    alert('セッションの有効期限が切れました。再度ログインしてください。');
+    window.location.replace('coreto-login.html');
+    return;
+  }
   if (s && s.type === 'pt') {
     const nameEl = document.querySelector('.pt-name');
     const idEl   = document.querySelector('.pt-id');

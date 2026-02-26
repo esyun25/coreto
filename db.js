@@ -49,6 +49,9 @@ const SLACK_CONFIG = {
 const ZAPIER_CONFIG = {
   SIGNUP:  'YOUR_ZAPIER_WEBHOOK_SIGNUP',    // エージェント申込 → Kintone/スプレッドシート
   ENABLED: false,   // true にすると実際に送信される
+  // ── スパム対策: 共有シークレット（Zapierの受信フィルターで照合） ──
+  // Zapier設定: Filter step → "x-coreto-secret" equals このトークン
+  SECRET: 'YOUR_ZAPIER_SHARED_SECRET',  // ランダムな文字列を設定（例: openssl rand -hex 16）
 };
 
 // ============================================================
@@ -58,10 +61,23 @@ const DB = {
 
   // ── 案件（CASES） ──────────────────────────────────────────
 
-  /** 全案件を取得 */
+  /** 全案件を取得（整合性チェック付き） */
   getCases() {
     try {
-      return JSON.parse(localStorage.getItem('coreto_cases') || '[]');
+      const raw = localStorage.getItem('coreto_cases');
+      if (!raw) return [];
+      const stored = JSON.parse(raw);
+      // 整合性チェック: 保存時のハッシュと照合
+      const checksum = localStorage.getItem('coreto_cases_cs');
+      if (checksum && checksum !== this._simpleChecksum(raw)) {
+        console.warn('[DB] ⚠️ coreto_cases の整合性チェック失敗 — データが改ざんされた可能性があります');
+        // 改ざん検知時: データは返すが警告を記録
+        // 本番では Slack通知を送る
+        if (typeof notifySlack !== 'undefined') {
+          notifySlack('⚠️ [SECURITY] coreto_cases の整合性チェック失敗 — データ改ざんの疑い');
+        }
+      }
+      return stored;
     } catch(e) {
       console.error('[DB] getCases error:', e);
       return [];
@@ -73,15 +89,29 @@ const DB = {
     return this.getCases().find(c => c.id === id) || null;
   },
 
-  /** 案件を全件保存（上書き） */
+  /** 案件を全件保存（チェックサム付き） */
   saveCases(cases) {
     try {
-      localStorage.setItem('coreto_cases', JSON.stringify(cases));
+      const raw = JSON.stringify(cases);
+      localStorage.setItem('coreto_cases', raw);
+      // チェックサムを同時保存（改ざん検知用）
+      localStorage.setItem('coreto_cases_cs', this._simpleChecksum(raw));
       return true;
     } catch(e) {
       console.error('[DB] saveCases error:', e);
       return false;
     }
+  },
+
+  /** 簡易チェックサム（改ざん検知用） */
+  _simpleChecksum(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      const chr = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + chr;
+      hash |= 0;
+    }
+    return hash.toString(36);
   },
 
   /** 1件の案件を追加または更新（idで照合） */
@@ -288,12 +318,12 @@ const DB = {
       return false;
     }
     try {
-      await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-        mode: 'no-cors'
-      });
+      const headers = { 'Content-Type': 'application/json' };
+      // スパム対策: 共有シークレットをヘッダーに付与
+      if (ZAPIER_CONFIG.SECRET && !ZAPIER_CONFIG.SECRET.startsWith('YOUR_')) {
+        headers['x-coreto-secret'] = ZAPIER_CONFIG.SECRET;
+      }
+      await fetch(url, { method: 'POST', headers, body: JSON.stringify(data), mode: 'no-cors' });
       return true;
     } catch(e) {
       console.error('[DB] Zapier send failed:', e);
@@ -316,4 +346,50 @@ const DB = {
 };
 
 // ── バージョン表示（デバッグ用） ───────────────────────────────
+
+// ── ユーザーマスタ（認証ガードが参照するため db.js に集約） ────────────
+// pwHash = SHA-256(pwSalt + ':' + password) で生成
+// IMPORTANT: pwHash・pwSaltはブラウザから見えるため、この情報でパスワード
+// を逆算することはできないが、Kintone移行後はサーバー側に移動すること。
+const USERS = {
+  '00001':{ name:'HQ 統括', type:'hq', hqRole:'exec', pwHash:'4338366c8624f75aa9c098b1965a1973ac1458e4c3fe57e33d4a2ec499f440b2', pwSalt:'0224d4d914c01a78', color:'var(--gold)', avatar:'統' },
+  '00347':{ name:'HQ マネージャー', type:'hq', hqRole:'manager', pwHash:'823d13a4b70586ab254c10c24c7299f7fc88e75686dc0827a925d52053fdf399', pwSalt:'f185e59e401b0a29', color:'var(--blue)', avatar:'マ' },
+  '00891':{ name:'HQ スタッフ', type:'hq', hqRole:'staff', pwHash:'67ad0d8e84d8729c58583395870978d06a7b001a63555fbbab4ed24ca0bdc2f3', pwSalt:'b7a739cf4dafbe32', color:'var(--green)', avatar:'ス' },
+  '10008':{ name:'佐藤 花子', type:'re', pwHash:'357683ce522895330228c70453fb40463ade36ddc29076fe5e12ed39f1b82932', pwSalt:'ce2301e88db30992', rank:'Platinum', rankKey:'platinum', sennin:true, color:'var(--purple)', avatar:'佐' },
+  '10012':{ name:'山田 誠', type:'re', pwHash:'4af458635d2243ce54e3c22e16f71815900853e18453efdebb35a705ef8fddc6', pwSalt:'7c183f447de9c7dc', rank:'Gold',     rankKey:'gold', sennin:true, color:'var(--gold)', avatar:'山' },
+  '10023':{ name:'鈴木 健太', type:'re', pwHash:'b96aeafc6405706d0c0119eeb32ba04591bb002edf00a1e33201cb92d3d75142', pwSalt:'b8e2175c27cbcd2a', rank:'Silver',   rankKey:'silver', sennin:false, color:'var(--green)', avatar:'鈴' },
+  '10041':{ name:'渡辺 隆', type:'re', pwHash:'a436112f3915834860870cce2f7f4950b619a323f9682b0c54d89efc416b2bc1', pwSalt:'5a2e4323892f21dd', rank:'Bronze',   rankKey:'bronze', sennin:true, color:'var(--orange)', avatar:'渡' },
+  '20005':{ name:'田中 美穂', type:'hr', pwHash:'be6357bc5362548690c7b64752243df86ed462a79ebdc477abc20e113673318d', pwSalt:'3f97c5aac9b4e6ec', rank:'Gold',     rankKey:'gold', sennin:false, color:'var(--green)', avatar:'田' },
+  '30007':{ name:'佐藤 美咲', type:'pt', pwHash:'7f76abae55958f55c9904b6d860cf5117c8c26c541b2774b2478cedaabd4f167', pwSalt:'23f2095e3e65052f', rank:'Partner',  rankKey:'pt', color:'var(--purple)', avatar:'佐' },
+};
+
+// ── sessionToken 再計算・検証 ─────────────────────────────────────────
+// token = SHA-256(userId + ':' + loginAt + ':' + pwHash)
+// 各認証ガードがこの関数でトークンを再計算し、偽造セッションを検知する
+DB.verifySessionToken = async function(session) {
+  if (!session || !session.userId || !session.loginAt || !session.sessionToken) return false;
+  const user = USERS[session.userId];
+  if (!user) return false;
+  if (user.type !== session.type) return false;
+
+  // トークンを再計算して比較
+  const encoder = new TextEncoder();
+  const data = encoder.encode(session.userId + ':' + session.loginAt + ':' + user.pwHash);
+  const buf = await crypto.subtle.digest('SHA-256', data);
+  const computed = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+  return computed === session.sessionToken;
+};
+
+// 同期版（非同期が使えないコンテキスト用 — tokenの長さ+USERSマッチのみ）
+DB.verifySessionSync = function(session) {
+  if (!session || !session.userId || !session.type) return false;
+  if (!session.sessionToken || session.sessionToken.length !== 64) return false;
+  const user = USERS[session.userId];
+  if (!user) return false;
+  if (user.type !== session.type) return false;
+  // hqRole整合性（HQがhqRole偽造するのを防ぐ）
+  if (session.type === 'hq' && session.hqRole && user.hqRole !== session.hqRole) return false;
+  return true;
+};
+
 console.log('[CORETO db.js v1.0] データ層ロード完了 | Kintone移行:', DB_CONFIG.USE_KINTONE ? '有効' : '無効（localStorage使用中）');

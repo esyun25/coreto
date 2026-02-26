@@ -1,6 +1,33 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
+  <!-- ── Content Security Policy (XSS軽減) ──────────────────────────────────
+       変更時: 使用する外部サービスのオリジンを追加してください
+       Kintone追加時: connect-src に *.cybozu.com を追加
+  ─────────────────────────────────────────────────────────────────────── -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' 'unsafe-inline'
+      https://cdnjs.cloudflare.com
+      https://js.stripe.com
+      https://cdn-cgi/scripts;
+    style-src 'self' 'unsafe-inline'
+      https://fonts.googleapis.com;
+    font-src 'self'
+      https://fonts.gstatic.com;
+    img-src 'self' data: blob:;
+    connect-src 'self'
+      https://hooks.slack.com
+      https://hooks.zapier.com
+      https://api.stripe.com
+      https://js.stripe.com
+      https://www.houjin-bangou.nta.go.jp
+      https://www.retio.or.jp;
+    frame-src 'none';
+    object-src 'none';
+    base-uri 'self';
+  ">
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CORETO — FAQナレッジベース</title>
@@ -101,17 +128,46 @@ html,body{height:100%;font-family:'Noto Sans JP',sans-serif;background:var(--bg)
     <div id="faq-list"></div>
   </div>
 </div>
+<script src="db.js"></script>
 <script>
-  // ── 認証ガード ────────────────────────────────────────────────
+
+  // ═══════════════════════════════════════════════════════════════
+  //  CORETO 認証ガード v2 — セッション整合性チェック付き
+  // ═══════════════════════════════════════════════════════════════
   (function() {
-    var s = JSON.parse(sessionStorage.getItem('coreto_session') || 'null');
-    if (!s || !s.userId) {
+    var s;
+    try { s = JSON.parse(sessionStorage.getItem('coreto_session') || 'null'); } catch(e) { s = null; }
+
+    // 1. セッションなし → ログインへ
+    if (!s || !s.userId || !s.type) {
       sessionStorage.setItem('coreto_redirect', window.location.href);
       window.location.replace('coreto-login.html');
       return;
     }
+
+    // 2. セッション整合性検証（改ざん・偽造検知）
+    //    DB.verifySessionSync: USERSとのtype/hqRole照合 + tokenLength確認
+    if (typeof DB === 'undefined' || !DB.verifySessionSync(s)) {
+      console.warn('[CORETO Auth] セッション整合性エラー（偽造または改ざん）— ログアウト');
+      sessionStorage.removeItem('coreto_session');
+      window.location.replace('coreto-login.html');
+      return;
+    }
+
+    // 3. セッション有効期限チェック（8時間）
+    var loginAt = new Date(s.loginAt).getTime();
+    var SESSION_TTL = 8 * 60 * 60 * 1000; // 8時間
+    if (isNaN(loginAt) || (Date.now() - loginAt) > SESSION_TTL) {
+      sessionStorage.removeItem('coreto_session');
+      alert('セッションの有効期限が切れました。再度ログインしてください。');
+      window.location.replace('coreto-login.html');
+      return;
+    }
+
+    window._SESSION = s;
   })();
-  // ─────────────────────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════
+
 
 const FAQS = [
   // ─── 報酬・支払い ───────────────────────────────────────────────
