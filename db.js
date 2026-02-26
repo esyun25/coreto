@@ -352,15 +352,15 @@ const DB = {
 // IMPORTANT: pwHash・pwSaltはブラウザから見えるため、この情報でパスワード
 // を逆算することはできないが、Kintone移行後はサーバー側に移動すること。
 const USERS = {
-  '00001':{ name:'HQ 統括', type:'hq', hqRole:'exec', pwHash:'4338366c8624f75aa9c098b1965a1973ac1458e4c3fe57e33d4a2ec499f440b2', pwSalt:'0224d4d914c01a78', color:'var(--gold)', avatar:'統' },
-  '00347':{ name:'HQ マネージャー', type:'hq', hqRole:'manager', pwHash:'823d13a4b70586ab254c10c24c7299f7fc88e75686dc0827a925d52053fdf399', pwSalt:'f185e59e401b0a29', color:'var(--blue)', avatar:'マ' },
-  '00891':{ name:'HQ スタッフ', type:'hq', hqRole:'staff', pwHash:'67ad0d8e84d8729c58583395870978d06a7b001a63555fbbab4ed24ca0bdc2f3', pwSalt:'b7a739cf4dafbe32', color:'var(--green)', avatar:'ス' },
-  '10008':{ name:'佐藤 花子', type:'re', pwHash:'357683ce522895330228c70453fb40463ade36ddc29076fe5e12ed39f1b82932', pwSalt:'ce2301e88db30992', rank:'Platinum', rankKey:'platinum', sennin:true, color:'var(--purple)', avatar:'佐' },
-  '10012':{ name:'山田 誠', type:'re', pwHash:'4af458635d2243ce54e3c22e16f71815900853e18453efdebb35a705ef8fddc6', pwSalt:'7c183f447de9c7dc', rank:'Gold',     rankKey:'gold', sennin:true, color:'var(--gold)', avatar:'山' },
-  '10023':{ name:'鈴木 健太', type:'re', pwHash:'b96aeafc6405706d0c0119eeb32ba04591bb002edf00a1e33201cb92d3d75142', pwSalt:'b8e2175c27cbcd2a', rank:'Silver',   rankKey:'silver', sennin:false, color:'var(--green)', avatar:'鈴' },
-  '10041':{ name:'渡辺 隆', type:'re', pwHash:'a436112f3915834860870cce2f7f4950b619a323f9682b0c54d89efc416b2bc1', pwSalt:'5a2e4323892f21dd', rank:'Bronze',   rankKey:'bronze', sennin:true, color:'var(--orange)', avatar:'渡' },
-  '20005':{ name:'田中 美穂', type:'hr', pwHash:'be6357bc5362548690c7b64752243df86ed462a79ebdc477abc20e113673318d', pwSalt:'3f97c5aac9b4e6ec', rank:'Gold',     rankKey:'gold', sennin:false, color:'var(--green)', avatar:'田' },
-  '30007':{ name:'佐藤 美咲', type:'pt', pwHash:'7f76abae55958f55c9904b6d860cf5117c8c26c541b2774b2478cedaabd4f167', pwSalt:'23f2095e3e65052f', rank:'Partner',  rankKey:'pt', color:'var(--purple)', avatar:'佐' },
+  '00001':{ name:'HQ 統括', type:'hq', hqRole:'exec',    hasTakken:true,  hqCommissionRate:0.30, pwHash:'eb1e0856fec75f317597d25eb0e678e10ed9fce1e251f0192ecafa1660f30c84', pwSalt:'c7812afc9e553f8c', color:'var(--gold)',   avatar:'統' },
+  '00347':{ name:'HQ マネージャー', type:'hq', hqRole:'manager', hasTakken:true,  hqCommissionRate:0.30, pwHash:'9fb81e3af4296bdc1bdee8ef7d97e420acfbaf89bfefea1032625205cff9f456', pwSalt:'d02182601c4e2264', color:'var(--blue)',   avatar:'マ' },
+  '00891':{ name:'HQ スタッフ',     type:'hq', hqRole:'staff',   hasTakken:false, hqCommissionRate:0.15, pwHash:'18f5223691ee27d3d7acfe60c713e140f576bc8a05076eb29a5393588df1ff83', pwSalt:'4fd76d0c7463d3f7', color:'var(--green)', avatar:'ス' },
+  '10008':{ name:'佐藤 花子', type:'re', pwHash:'a130eb887972c5c0bf75275b46c9c966fae3df1d255ee0abc16d509995a7d9a9', pwSalt:'94cc4b1c61e9ab56', rank:'Platinum', rankKey:'platinum', sennin:true,  color:'var(--purple)', avatar:'佐' },
+  '10012':{ name:'山田 誠',   type:'re', pwHash:'0b57f451d250726d3b167096bc05df3f3af4c5a19783413223e668f29a1b91f3', pwSalt:'e324c511f94ecbb8', rank:'Gold',     rankKey:'gold',     sennin:true,  color:'var(--gold)',   avatar:'山' },
+  '10023':{ name:'鈴木 健太', type:'re', pwHash:'9cbb2909cc55d4c8d31b61157d1de7937c17542fb08d07d93f6b03f5d85a885e', pwSalt:'1263ca96ae742a3b', rank:'Silver',   rankKey:'silver',   sennin:false, color:'var(--green)', avatar:'鈴' },
+  '10041':{ name:'渡辺 隆',   type:'re', pwHash:'010725de15fe430e5ec6362203c17538ff3d3d4f0d15650a6bcfba8974246218', pwSalt:'c4da02336cab95eb', rank:'Bronze',   rankKey:'bronze',   sennin:true,  color:'var(--orange)',avatar:'渡' },
+  '20005':{ name:'田中 美穂', type:'hr', pwHash:'d5094eff7ae374647ae832eb7907fbe0cc6072e1e92ef1bec5e0be81c1eff603', pwSalt:'097d188fb733e460', rank:'Gold',     rankKey:'gold',     sennin:false, color:'var(--green)', avatar:'田' },
+  '30007':{ name:'佐藤 美咲', type:'pt', pwHash:'e4fff87e9b8a9af026990e454963e60ba66cdfe689290a410efb5057066d609b', pwSalt:'3a69764b0975009a', rank:'Partner',  rankKey:'pt',                     color:'var(--purple)',avatar:'佐' },
 };
 
 // ── sessionToken 再計算・検証 ─────────────────────────────────────────
