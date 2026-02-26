@@ -378,10 +378,10 @@ input[readonly]{background:#0c0e18;border-color:rgba(79,156,249,.25);color:var(-
         </div>
       </div>
       <div>
-        <div class="s-label" style="margin-top:0">エージェント報酬</div>
-        <div class="result-box">
+        <div class="s-label" style="margin-top:0" id="lbl-reward-section">エージェント報酬</div>
+        <div class="result-box" id="box-agent-reward">
           <div class="result-row">
-            <span style="color:var(--sub)">報酬率（ランク別）</span>
+            <span style="color:var(--sub)" id="lbl-rate-row">報酬率（ランク別）</span>
             <span class="mono" id="disp-rate">65%</span>
           </div>
           <div class="result-row">
@@ -395,6 +395,39 @@ input[readonly]{background:#0c0e18;border-color:rgba(79,156,249,.25);color:var(-
           <div class="result-row total">
             <span>振込額（税引後）</span>
             <span class="mono" id="disp-payout">¥—</span>
+          </div>
+        </div>
+        <!-- HQ exec（経営者）専用の報酬内訳 -->
+        <div id="box-exec-reward" style="display:none">
+          <div class="result-box">
+            <div class="result-row">
+              <span style="color:var(--sub)">会社取り分（10%）</span>
+              <span class="mono" id="disp-exec-company">¥—</span>
+            </div>
+            <div class="result-row">
+              <span style="color:var(--sub)">本人コミッション（5%）</span>
+              <span class="mono" id="disp-exec-self">¥—</span>
+            </div>
+            <div class="result-row">
+              <span style="color:var(--sub)">源泉徴収（10.21%）</span>
+              <span class="mono" id="disp-exec-withholding" style="color:var(--red)">¥—</span>
+            </div>
+            <div class="result-row total">
+              <span>本人振込額（税引後）</span>
+              <span class="mono" id="disp-exec-payout">¥—</span>
+            </div>
+          </div>
+          <div class="s-label" style="margin-top:12px">パートナー法人（85%）</div>
+          <div class="result-box">
+            <div class="result-row">
+              <span style="color:var(--sub)">指定法人名</span>
+              <input type="text" id="exec-partner-name" class="mono"
+                style="width:200px;padding:4px 8px;font-size:12px" placeholder="法人名を入力">
+            </div>
+            <div class="result-row total">
+              <span>法人振込額</span>
+              <span class="mono" id="disp-exec-partner" style="color:var(--gold)">¥—</span>
+            </div>
           </div>
         </div>
       </div>
@@ -566,8 +599,10 @@ function calcAll() {
   const actualFee = parseFloat(document.getElementById('actual-fee').value) || 0;
   const src = gv('g-source');
   const rankKey = session.rankKey || 'bronze';
-  const rate = RANK_RATE[rankKey] || 0.65;
   const isPt = src === 'pt';
+
+  // HQ exec（経営者）かどうか判定
+  const isExec = session.type === 'hq' && session.hqRole === 'exec';
 
   // 法定上限（3%+6万円+消費税）
   let legalBase = 0;
@@ -576,32 +611,70 @@ function calcAll() {
   else legalBase = price * 0.03 + 60000;
   const legalMax = Math.round(legalBase * 1.1);
 
-  // 表示
   document.getElementById('disp-price').textContent = price ? '¥' + price.toLocaleString() : '¥—';
   document.getElementById('disp-legal-max').textContent = legalMax ? '¥' + legalMax.toLocaleString() : '¥—';
-  document.getElementById('disp-rate').textContent = Math.round(rate*100) + '%';
+
+  // ── exec専用 vs 通常エージェント/非execHQ ───────────────
+  if (isExec) {
+    // execは通常の報酬ボックスを非表示
+    document.getElementById('box-agent-reward').style.display = 'none';
+    document.getElementById('box-exec-reward').style.display = 'block';
+    document.getElementById('lbl-reward-section').textContent = '報酬内訳（経営者）';
+    document.getElementById('disp-rate').textContent = '—';
+
+    if (actualFee > 0) {
+      const feeExTax = Math.round(actualFee / 1.1);
+      const companyShare  = Math.round(feeExTax * 0.10); // 会社10%
+      const selfShare     = Math.round(feeExTax * 0.05); // 本人5%
+      const partnerShare  = Math.round(feeExTax * 0.85); // 法人85%
+      const withholding   = Math.round(selfShare * 0.1021);
+      const selfPayout    = selfShare - withholding;
+
+      document.getElementById('disp-exec-company').textContent     = '¥' + companyShare.toLocaleString();
+      document.getElementById('disp-exec-self').textContent        = '¥' + selfShare.toLocaleString();
+      document.getElementById('disp-exec-withholding').textContent = '¥' + withholding.toLocaleString();
+      document.getElementById('disp-exec-payout').textContent      = '¥' + selfPayout.toLocaleString();
+      document.getElementById('disp-exec-partner').textContent     = '¥' + partnerShare.toLocaleString();
+    }
+  } else {
+    // 通常エージェント / 非execHQ（ランク別）
+    document.getElementById('box-agent-reward').style.display = 'block';
+    document.getElementById('box-exec-reward').style.display = 'none';
+    document.getElementById('lbl-reward-section').textContent = 'エージェント報酬';
+
+    const rate = RANK_RATE[rankKey] || 0.65;
+    document.getElementById('disp-rate').textContent = Math.round(rate*100) + '%';
+    document.getElementById('lbl-rate-row').textContent = '報酬率（ランク別）';
+
+    if (actualFee > 0) {
+      const feeExTax = Math.round(actualFee / 1.1);
+      const agReward = Math.round(feeExTax * rate);
+      const withholding = Math.round(agReward * 0.1021);
+      const payout = agReward - withholding;
+      document.getElementById('disp-ag-reward').textContent = '¥' + agReward.toLocaleString();
+      document.getElementById('disp-withholding').textContent = '¥' + withholding.toLocaleString();
+      document.getElementById('disp-payout').textContent = '¥' + payout.toLocaleString();
+
+      // パートナー報酬
+      if (isPt) {
+        const ptReward = Math.round(feeExTax * 0.25);
+        document.getElementById('disp-pt-payout').textContent = '¥' + ptReward.toLocaleString();
+      }
+    }
+  }
 
   if (actualFee > 0) {
-    const feeExTax = Math.round(actualFee / 1.1);
-    const agReward = Math.round(feeExTax * rate);
-    const withholding = Math.round(agReward * 0.1021);
-    const payout = agReward - withholding;
-    document.getElementById('disp-ag-reward').textContent = '¥' + agReward.toLocaleString();
-    document.getElementById('disp-withholding').textContent = '¥' + withholding.toLocaleString();
-    document.getElementById('disp-payout').textContent = '¥' + payout.toLocaleString();
-
-    // パートナー報酬
-    if (isPt) {
-      const ptReward = Math.round(feeExTax * 0.25);
-      document.getElementById('disp-pt-payout').textContent = '¥' + ptReward.toLocaleString();
+    // ポイント計算（execはポイント制度対象外）
+    if (!isExec) {
+      const feePts = Math.floor(actualFee / 100000) * (isPt ? 0.5 : 1.0);
+      const bonusPts = isPt ? 0.5 : 1.0;
+      const totalPts = feePts + bonusPts;
+      document.getElementById('pt-fee-pts').textContent = feePts.toFixed(1) + ' pt';
+      document.getElementById('pt-total').textContent = totalPts.toFixed(1) + ' pt';
+    } else {
+      document.getElementById('pt-fee-pts').textContent = '—（対象外）';
+      document.getElementById('pt-total').textContent = '—';
     }
-
-    // ポイント計算
-    const feePts = Math.floor(actualFee / 100000) * (isPt ? 0.5 : 1.0);
-    const bonusPts = isPt ? 0.5 : 1.0;
-    const totalPts = feePts + bonusPts;
-    document.getElementById('pt-fee-pts').textContent = feePts.toFixed(1) + ' pt';
-    document.getElementById('pt-total').textContent = totalPts.toFixed(1) + ' pt';
   }
 }
 
