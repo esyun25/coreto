@@ -61,16 +61,6 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;
   background:linear-gradient(90deg,transparent,rgba(201,168,76,.5),transparent)}
 .card-title{font-size:12px;color:var(--sub);text-align:center;
   margin-bottom:24px;letter-spacing:1.5px;text-transform:uppercase;font-weight:600}
-.btn-line{width:100%;padding:15px 20px;border-radius:13px;border:none;cursor:pointer;
-  background:var(--line);color:#fff;font-size:14px;font-weight:700;
-  font-family:'Noto Sans JP',sans-serif;display:flex;align-items:center;
-  justify-content:center;gap:12px;transition:all .22s;letter-spacing:.5px;
-  box-shadow:0 4px 20px rgba(6,199,85,.2)}
-.btn-line:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(6,199,85,.35)}
-.btn-line:active{transform:translateY(0)}
-.line-icon{width:26px;height:26px;background:#fff;border-radius:6px;
-  display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.line-icon svg{width:18px;height:18px}
 .divider{display:flex;align-items:center;gap:10px;margin:22px 0}
 .divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
 .divider span{font-size:10px;color:var(--muted);letter-spacing:1px;white-space:nowrap}
@@ -88,6 +78,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;
 .tb-re{background:rgba(79,156,249,.12);color:var(--blue);border:1px solid rgba(79,156,249,.25)}
 .tb-hr{background:rgba(20,184,166,.12);color:#2dd4bf;border:1px solid rgba(20,184,166,.25)}
 .tb-pt{background:rgba(52,211,153,.12);color:var(--green);border:1px solid rgba(52,211,153,.25)}
+.tb-hq{background:rgba(201,168,76,.12);color:var(--gold);border:1px solid rgba(201,168,76,.25)}
 .pw-wrap{position:relative}
 .pw-wrap input{padding-right:52px}
 .pw-toggle{position:absolute;right:12px;top:50%;transform:translateY(-50%);
@@ -135,17 +126,6 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;
   <div class="card">
     <div class="card-title">エージェント・パートナーログイン</div>
 
-    <button class="btn-line" onclick="lineLogin()">
-      <div class="line-icon">
-        <svg viewBox="0 0 24 24" fill="#06c755">
-          <path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63h2.386c.346 0 .627.285.627.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63.346 0 .628.285.628.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/>
-        </svg>
-      </div>
-      LINEでログイン（推奨）
-    </button>
-
-    <div class="divider"><span>または 会員ID でログイン</span></div>
-
     <div class="err" id="err"></div>
 
     <div class="fg">
@@ -173,16 +153,17 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;
   <div class="footer">
     <a href="#" onclick="openPasswordReset()" style="color:var(--blue)">パスワードを忘れた方</a>
     <a href="#">新規登録</a>
-    <a href="#" onclick="hqLogin()">本部HQログイン</a>
+    <a href="coreto-login-hq.html" style="color:var(--muted)">本部スタッフの方</a>
   </div>
 </div>
 
 <script src="db.js"></script>
 <script>
 const TYPE_INFO = {
-  '1':{ type:'re', label:'🏠 不動産エージェント', cls:'tb-re' },
-  '2':{ type:'hr', label:'👥 人材エージェント',   cls:'tb-hr' },
-  '3':{ type:'pt', label:'🤝 パートナー',         cls:'tb-pt' },
+  '0':{ type:'hq', label:'🏢 本部HQスタッフ',       cls:'tb-hq' },
+  '1':{ type:'re', label:'🏠 不動産エージェント',     cls:'tb-re' },
+  '2':{ type:'hr', label:'👥 人材エージェント',       cls:'tb-hr' },
+  '3':{ type:'pt', label:'🤝 パートナー',             cls:'tb-pt' },
 };
 
 function onIdChange(el) {
@@ -296,11 +277,6 @@ async function doLogin() {
   startSession(id, ac, false);
 }
 
-function lineLogin() {
-  showLoading('ログイン中...');
-  setTimeout(() => startSession('10012', ACCOUNTS['10012'], true), 1800);
-}
-
 // ── セッション整合性トークン生成 ────────────────────────────────────────
 // HMAC的な検証: SHA-256(userId:loginAt:pwHash) → sessionToken
 // 攻撃者はpwHashを知らないため、正しいsessionTokenを生成できない
@@ -327,40 +303,11 @@ async function startSession(id, ac, fromLine) {
   };
   sessionStorage.setItem('coreto_session', JSON.stringify(session));
   // タイプ別ルーティング
-  const dest = ac.type === 'pt'
-    ? 'coreto-partner.html'
-    : 'coreto-agent-mypage.html';
-  setTimeout(() => { window.location.href = dest; }, 900);
-}
-
-// ── HQログイン（IDとパスワードで認証） ─────────────────────────────────
-// hqLogin()はleftメニューのボタンから呼ばれる（デバッグ・管理者アクセス用）
-// 本番ではHQも通常ログインフォームを使用する
-function hqLogin() {
-  const id  = prompt('HQ 会員IDを入力してください（例: 00001）');
-  if (!id) return;
-  const pw  = prompt('パスワードを入力してください');
-  if (!pw) return;
-  if (checkLoginLock()) return;
-
-  const ac = (typeof USERS !== 'undefined') ? USERS[id] : null;
-  if (!ac || ac.type !== 'hq') {
-    alert('HQアカウントが見つかりません');
-    return;
-  }
-  verifyPassword(pw, ac.pwSalt, ac.pwHash).then(async ok => {
-    if (ok) {
-      _loginAttempts.count = 0;
-      showLoading('管理ポータルへ移動中...');
-      await startSession(id, ac, false);
-      // HQはhub.htmlに転送
-      clearTimeout(window._loginRedirect);
-      window._loginRedirect = setTimeout(() => { window.location.href = 'coreto-hub.html'; }, 900);
-    } else {
-      _loginAttempts.count++;
-      alert('パスワードが正しくありません');
-    }
-  });
+  let dest;
+  if      (ac.type === 'hq') dest = 'coreto-hub.html';         // HQ → 管理ポータル
+  else if (ac.type === 'pt') dest = 'coreto-partner.html';     // パートナー
+  else                        dest = 'coreto-agent-mypage.html'; // RE / HR エージェント
+  window._sessionRedirect = setTimeout(() => { window.location.href = dest; }, 900);
 }
 
 function showLoading(msg) {
@@ -389,7 +336,7 @@ function showLoading(msg) {
         <div style="font-size:12px;color:var(--sub);line-height:1.8;margin-bottom:16px;
                     padding:10px 14px;background:rgba(79,156,249,.07);
                     border:1px solid rgba(79,156,249,.2);border-radius:9px">
-          ℹ️ 登録済みの LINE または メールアドレスに再設定リンクを送信します。<br>
+          ℹ️ 登録済みのメールアドレスに再設定リンクを送信します。<br>
           リンク有効期限：<strong style="color:var(--orange)">30分</strong>
         </div>
 
@@ -406,32 +353,19 @@ function showLoading(msg) {
             onblur="this.style.borderColor='var(--border2)'">
         </div>
 
-        <!-- 送信先選択（ID確認後に表示） -->
+        <!-- 送信先（ID確認後に表示） -->
         <div id="rst-methods" style="display:none">
-          <div style="font-size:10px;color:var(--sub);margin-bottom:8px;font-weight:600">送信先を選択</div>
-          <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
-            <label id="rst-line-opt"
-              style="display:flex;align-items:center;gap:10px;padding:12px;
+          <div style="font-size:10px;color:var(--sub);margin-bottom:8px;font-weight:600">送信先</div>
+          <div style="margin-bottom:16px">
+            <div style="display:flex;align-items:center;gap:10px;padding:12px;
                      background:var(--card2);border:1px solid var(--border);
-                     border-radius:10px;cursor:pointer">
-              <input type="radio" name="rst-method" value="line" checked>
-              <span style="font-size:18px">💬</span>
-              <div>
-                <div style="font-size:12px;font-weight:700">LINE</div>
-                <div style="font-size:10px;color:var(--muted)" id="rst-line-hint">登録済みLINEに送信</div>
-              </div>
-            </label>
-            <label id="rst-email-opt"
-              style="display:flex;align-items:center;gap:10px;padding:12px;
-                     background:var(--card2);border:1px solid var(--border);
-                     border-radius:10px;cursor:pointer">
-              <input type="radio" name="rst-method" value="email">
+                     border-radius:10px">
               <span style="font-size:18px">📧</span>
               <div>
                 <div style="font-size:12px;font-weight:700">メール</div>
                 <div style="font-size:10px;color:var(--muted)" id="rst-email-hint">登録済みメールに送信</div>
               </div>
-            </label>
+            </div>
           </div>
         </div>
 
@@ -538,11 +472,11 @@ const RESET_// ── ユーザーデータ（本番移行時はKintone APIに�
 // TODO: DB_CONFIG.USE_KINTONE = true にするとKintone認証に切り替わる
 // 現在はlocalStorage/ハードコード認証（モック）
 USERS = {
-  '10012': { line:'@yamada_makoto',  email:'yama***@gmail.com', name:'山田 誠' },
-  '10008': { line:'@sato_hanako',    email:'sato***@gmail.com', name:'佐藤 花子' },
-  '10023': { line:'@suzuki_kenta',   email:'suzu***@gmail.com', name:'鈴木 健太' },
-  '20005': { line:'@tanaka_miho',    email:'tana***@gmail.com', name:'田中 美穂' },
-  '30007': { line:'@sato_misaki',    email:'misa***@gmail.com', name:'佐藤 美咲' },
+  '10012': { email:'yama***@gmail.com', name:'山田 誠' },
+  '10008': { email:'sato***@gmail.com', name:'佐藤 花子' },
+  '10023': { email:'suzu***@gmail.com', name:'鈴木 健太' },
+  '20005': { email:'tana***@gmail.com', name:'田中 美穂' },
+  '30007': { email:'misa***@gmail.com', name:'佐藤 美咲' },
 };
 // 【Kintone移行時】上のUSERS定義を削除し、以下を有効化:
 // async function loadUsers() {
@@ -573,7 +507,6 @@ function lookupResetUser(val) {
   const sendBtn = document.getElementById('rst-send-btn');
   if (user) {
     methods.style.display='block';
-    document.getElementById('rst-line-hint').textContent = user.line;
     document.getElementById('rst-email-hint').textContent = user.email;
     sendBtn.disabled=false; sendBtn.style.opacity='1';
   } else {
@@ -583,14 +516,12 @@ function lookupResetUser(val) {
 }
 function sendResetLink() {
   const id = document.getElementById('rst-id').value.trim();
-  const method = document.querySelector('input[name="rst-method"]:checked').value;
   const user = RESET_USERS[id];
   if (!user) return;
-  const dest = method==='line' ? 'LINE（'+user.line+'）' : 'メール（'+user.email+'）';
   document.getElementById('rst-s0').style.display='none';
   document.getElementById('rst-s1').style.display='block';
   _rstOtp = String(Math.floor(100000+Math.random()*900000));
-  document.getElementById('rst-otp-desc').textContent = dest+' に6桁のコードを送信しました（'+user.name+'様）';
+  document.getElementById('rst-otp-desc').textContent = 'メール（'+user.email+'）に6桁のコードを送信しました（'+user.name+'様）';
   document.getElementById('rst-demo-hint').textContent = '【デモ用コード: '+_rstOtp+'】';
   document.getElementById('rst-timer').textContent = '5:00';
   document.getElementById('rst-timer').style.color = 'var(--orange)';

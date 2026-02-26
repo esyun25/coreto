@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com;
+    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+    font-src 'self' https://fonts.gstatic.com;
+    img-src 'self' data: blob:;
+    connect-src 'self' https://hooks.slack.com https://hooks.zapier.com;
+    frame-src 'none'; object-src 'none'; base-uri 'self';
+  ">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CORETO HQ ログイン</title>
+  <style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090f;--card:#0f1119;--border:#1e2235;--border2:#252a3d;
+  --gold:#c9a84c;--gold-l:#e8c96a;--gold-dim:#7a5f22;
+  --green:#34d399;--red:#f87171;--blue:#4f9cf9;--orange:#fb923c;
+  --muted:#4a5270;--sub:#7a849e;--text:#e2e6f3;
+}
+html,body{height:100%}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);
+  display:flex;align-items:center;justify-content:center;min-height:100vh;
+  background-image:
+    radial-gradient(ellipse 80% 60% at 50% -20%,rgba(79,156,249,.07) 0%,transparent 60%),
+    radial-gradient(ellipse 50% 40% at 100% 100%,rgba(201,168,76,.04) 0%,transparent 60%)}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;
+  background-image:linear-gradient(rgba(79,156,249,.02) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(79,156,249,.02) 1px,transparent 1px);
+  background-size:48px 48px}
+
+.wrap{width:100%;max-width:420px;padding:20px}
+
+/* ロゴエリア */
+.logo-area{text-align:center;margin-bottom:36px}
+.logo{font-family:'Syne',sans-serif;font-size:38px;font-weight:800;color:var(--gold);
+  letter-spacing:8px;display:block;text-shadow:0 0 40px rgba(201,168,76,.3)}
+.hq-label{display:inline-flex;align-items:center;gap:6px;margin-top:8px;
+  padding:4px 14px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:1px;
+  background:rgba(79,156,249,.1);border:1px solid rgba(79,156,249,.25);color:var(--blue)}
+
+/* カード */
+.card{background:var(--card);border:1px solid var(--border);border-radius:20px;
+  padding:32px 28px;position:relative;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+.card::before{content:'';position:absolute;top:0;left:10%;right:10%;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(79,156,249,.4),transparent)}
+.card-title{font-size:11px;color:var(--sub);text-align:center;
+  margin-bottom:24px;letter-spacing:1.5px;text-transform:uppercase;font-weight:600}
+
+/* 部署バッジ */
+.role-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;
+  border-radius:6px;font-size:10px;font-weight:700;margin-top:6px;opacity:0;
+  transition:opacity .2s;font-family:'Noto Sans JP',sans-serif}
+.role-badge.visible{opacity:1}
+.rb-exec   {background:rgba(201,168,76,.12);color:var(--gold);border:1px solid rgba(201,168,76,.25)}
+.rb-manager{background:rgba(79,156,249,.12);color:var(--blue);border:1px solid rgba(79,156,249,.25)}
+.rb-staff  {background:rgba(52,211,153,.12);color:var(--green);border:1px solid rgba(52,211,153,.25)}
+
+/* フォーム */
+.fg{margin-bottom:16px}
+.fg label{font-size:11px;color:var(--sub);display:block;margin-bottom:5px;font-weight:600;letter-spacing:.3px}
+.fg input{width:100%;background:#090b13;border:1px solid var(--border2);border-radius:10px;
+  padding:12px 14px;color:var(--text);font-family:'DM Mono',monospace;
+  font-size:14px;letter-spacing:2px;transition:border-color .15s,box-shadow .15s}
+.fg input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(79,156,249,.1)}
+.pw-wrap{position:relative}
+.pw-wrap input{padding-right:52px}
+.pw-toggle{position:absolute;right:12px;top:50%;transform:translateY(-50%);
+  font-size:11px;color:var(--muted);cursor:pointer;font-family:'Noto Sans JP',sans-serif;
+  user-select:none}
+.pw-toggle:hover{color:var(--sub)}
+
+/* エラー */
+.err{background:rgba(248,113,113,.07);border:1px solid rgba(248,113,113,.25);
+  border-radius:9px;padding:10px 13px;font-size:11px;color:var(--red);
+  margin-bottom:12px;display:none;line-height:1.7}
+.err.show{display:block}
+
+/* ボタン */
+.btn-login{width:100%;padding:14px;border-radius:12px;border:none;cursor:pointer;
+  background:linear-gradient(135deg,var(--blue) 0%,#3070c0 100%);color:#fff;
+  font-size:13px;font-weight:700;font-family:'Noto Sans JP',sans-serif;
+  letter-spacing:.5px;transition:all .2s;margin-top:4px}
+.btn-login:hover{background:linear-gradient(135deg,#6ab0ff 0%,var(--blue) 100%);
+  transform:translateY(-1px);box-shadow:0 8px 24px rgba(79,156,249,.3)}
+.btn-login:active{transform:translateY(0)}
+.btn-login:disabled{opacity:.5;cursor:not-allowed;transform:none}
+
+/* セキュリティバナー */
+.sec-banner{background:rgba(251,146,60,.06);border:1px solid rgba(251,146,60,.2);
+  border-radius:10px;padding:10px 14px;margin-bottom:20px;
+  font-size:10px;color:var(--orange);line-height:1.8}
+
+/* フッター */
+.footer{text-align:center;margin-top:20px;font-size:10px;color:var(--muted)}
+.footer a{color:var(--sub);text-decoration:none;margin:0 8px}
+.footer a:hover{color:var(--gold)}
+
+/* ローディング */
+.loading{position:fixed;inset:0;background:rgba(7,9,15,.9);backdrop-filter:blur(8px);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  z-index:999;opacity:0;pointer-events:none;transition:opacity .3s}
+.loading.show{opacity:1;pointer-events:all}
+.spinner{width:44px;height:44px;border:2px solid rgba(79,156,249,.2);
+  border-top-color:var(--blue);border-radius:50%;
+  animation:spin .75s linear infinite;margin-bottom:18px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-msg{font-size:12px;color:var(--sub);letter-spacing:1.5px}
+
+/* ロック警告 */
+.lock-banner{background:rgba(248,113,113,.07);border:1px solid rgba(248,113,113,.2);
+  border-radius:10px;padding:12px 14px;font-size:11px;color:var(--red);
+  line-height:1.8;display:none;margin-bottom:14px}
+.lock-banner.show{display:block}
+  </style>
+</head>
+<body>
+
+<div class="loading" id="loading">
+  <div class="spinner"></div>
+  <div class="loading-msg" id="loading-msg">認証中...</div>
+</div>
+
+<div class="wrap">
+  <div class="logo-area">
+    <span class="logo">CORETO</span>
+    <div class="hq-label">🏢 本部 HQ 専用ポータル</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">スタッフ認証</div>
+
+    <div class="sec-banner">
+      🔒 このページはCORETO本部スタッフ専用です。<br>
+      エージェント・パートナーの方は<a href="coreto-login.html" style="color:var(--blue);text-decoration:underline">こちら</a>からログインしてください。
+    </div>
+
+    <div class="lock-banner" id="lock-banner"></div>
+    <div class="err" id="err"></div>
+
+    <div class="fg">
+      <label>スタッフID</label>
+      <input type="text" id="f-id" inputmode="numeric" maxlength="5"
+             autocomplete="username" placeholder="例：00001"
+             oninput="onIdChange(this)"
+             onkeydown="if(event.key==='Enter')document.getElementById('f-pw').focus()">
+      <div class="role-badge" id="role-badge"></div>
+    </div>
+
+    <div class="fg">
+      <label>パスワード</label>
+      <div class="pw-wrap">
+        <input type="password" id="f-pw" placeholder="パスワードを入力"
+               autocomplete="current-password"
+               onkeydown="if(event.key==='Enter')doLogin()">
+        <span class="pw-toggle" id="pw-toggle" onclick="togglePw()">表示</span>
+      </div>
+    </div>
+
+    <button class="btn-login" id="login-btn" onclick="doLogin()">🏢 HQポータルへ</button>
+  </div>
+
+  <div class="footer">
+    <a href="coreto-login.html">← エージェントログインへ</a>
+    <a href="#" onclick="openPasswordReset()">パスワードを忘れた方</a>
+  </div>
+</div>
+
+<!-- パスワード再設定モーダル -->
+<div id="reset-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);
+     backdrop-filter:blur(5px);z-index:400;align-items:center;justify-content:center">
+  <div style="background:var(--card);border:1px solid var(--border2);border-radius:16px;
+              width:420px;max-width:95vw;overflow:hidden">
+    <div style="display:flex;align-items:center;justify-content:space-between;
+                padding:16px 22px;border-bottom:1px solid var(--border)">
+      <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:var(--blue)">
+        パスワード再設定
+      </div>
+      <button onclick="closePasswordReset()"
+              style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer">✕</button>
+    </div>
+    <div style="padding:20px 22px">
+      <div style="font-size:11px;color:var(--sub);line-height:1.8;margin-bottom:16px;
+                  padding:10px 14px;background:rgba(79,156,249,.07);
+                  border:1px solid rgba(79,156,249,.2);border-radius:9px">
+        ℹ️ 登録済みのメールアドレスに再設定リンクを送信します。<br>
+        リンク有効期限：<strong style="color:var(--orange)">30分</strong>
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="display:block;font-size:10px;color:var(--sub);margin-bottom:5px;font-weight:600">
+          スタッフID <span style="color:var(--red)">*</span>
+        </label>
+        <input type="text" id="rst-id" placeholder="例：00001"
+          style="width:100%;background:#090b13;border:1px solid var(--border2);border-radius:9px;
+                 padding:10px 14px;color:var(--text);font-size:14px;font-family:'DM Mono',monospace;
+                 outline:none;transition:.15s"
+          oninput="lookupResetUser(this.value)"
+          onfocus="this.style.borderColor='var(--blue)'"
+          onblur="this.style.borderColor='var(--border2)'">
+      </div>
+      <div id="rst-methods" style="display:none;margin-bottom:16px">
+        <div style="display:flex;align-items:center;gap:10px;padding:12px;
+                    background:var(--card2);border:1px solid var(--border);border-radius:10px">
+          <span style="font-size:18px">📧</span>
+          <div>
+            <div style="font-size:12px;font-weight:700">メール</div>
+            <div style="font-size:10px;color:var(--muted)" id="rst-email-hint">登録済みメールに送信</div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button onclick="closePasswordReset()"
+          style="padding:8px 16px;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;
+                 background:transparent;border:1px solid var(--border2);color:var(--sub);
+                 font-family:'Noto Sans JP',sans-serif">キャンセル</button>
+        <button id="rst-send-btn" onclick="sendResetLink()" disabled
+          style="padding:8px 16px;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;
+                 background:linear-gradient(135deg,var(--blue),#3070c0);color:#fff;border:none;
+                 font-family:'Noto Sans JP',sans-serif;transition:.15s;opacity:.4">
+          📨 リンクを送信
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="db.js"></script>
+<script>
+// ── HQロール表示マスタ ───────────────────────────────────────
+const HQ_ROLES = {
+  exec:    { label:'🏆 統括・役員',       cls:'rb-exec' },
+  manager: { label:'📋 マネージャー',     cls:'rb-manager' },
+  staff:   { label:'👤 スタッフ',         cls:'rb-staff' },
+};
+
+// ── ログイン試行管理 ─────────────────────────────────────────
+const LOGIN_MAX_ATTEMPTS = 5;
+const LOGIN_LOCKOUT_MS   = 15 * 60 * 1000; // 15分（HQは5分延長）
+const _loginAttempts     = { count:0, lockedUntil:0 };
+
+function checkLoginLock() {
+  if (_loginAttempts.lockedUntil > Date.now()) {
+    const remaining = Math.ceil((_loginAttempts.lockedUntil - Date.now()) / 60000);
+    showLockBanner(`🔒 ログイン試行回数が上限に達しました。${remaining}分後に再試行してください。`);
+    return true;
+  }
+  return false;
+}
+
+// ── ID入力時：HQロール自動判定 ─────────────────────────────
+function onIdChange(el) {
+  el.value = el.value.replace(/\D/g,'').slice(0,5);
+  showErr('');
+  const badge = document.getElementById('role-badge');
+  // HQ IDは0xxxx。入力中にUSERSを参照してhqRoleを表示
+  if (el.value.length >= 1 && el.value.charAt(0) === '0') {
+    const ac = (typeof USERS !== 'undefined') ? USERS[el.value] : null;
+    if (ac && ac.hqRole && HQ_ROLES[ac.hqRole]) {
+      const info = HQ_ROLES[ac.hqRole];
+      badge.textContent = info.label;
+      badge.className   = 'role-badge visible ' + info.cls;
+    } else {
+      badge.className = 'role-badge';
+    }
+  } else {
+    badge.className = 'role-badge';
+  }
+}
+
+// ── パスワード表示切替 ────────────────────────────────────
+function togglePw() {
+  const inp = document.getElementById('f-pw');
+  const tog = document.getElementById('pw-toggle');
+  if (inp.type === 'password') { inp.type = 'text';  tog.textContent = '非表示'; }
+  else                          { inp.type = 'password'; tog.textContent = '表示'; }
+}
+
+// ── エラー・ロック表示 ────────────────────────────────────
+function showErr(msg) {
+  const el = document.getElementById('err');
+  if (msg) { el.textContent = msg; el.classList.add('show'); }
+  else      { el.classList.remove('show'); }
+}
+function showLockBanner(msg) {
+  const el = document.getElementById('lock-banner');
+  el.textContent = msg; el.classList.add('show');
+  document.getElementById('login-btn').disabled = true;
+}
+
+// ── ログイン処理 ─────────────────────────────────────────
+async function verifyPassword(pw, salt, hash) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(salt + ':' + pw);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const computed = Array.from(new Uint8Array(hashBuffer)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  return computed === hash;
+}
+
+async function doLogin() {
+  if (checkLoginLock()) return;
+  const id = document.getElementById('f-id').value.trim();
+  const pw = document.getElementById('f-pw').value;
+  showErr('');
+
+  if (!id || !pw) { showErr('スタッフIDとパスワードを入力してください。'); return; }
+
+  const ac = (typeof USERS !== 'undefined') ? USERS[id] : null;
+  if (!ac || ac.type !== 'hq') {
+    _loginAttempts.count++;
+    if (_loginAttempts.count >= LOGIN_MAX_ATTEMPTS) {
+      _loginAttempts.lockedUntil = Date.now() + LOGIN_LOCKOUT_MS;
+      _loginAttempts.count = 0;
+      showLockBanner('🔒 ログイン試行上限に達しました。15分後に再試行してください。');
+    } else {
+      showErr(`HQアカウントが見つかりません。残り ${LOGIN_MAX_ATTEMPTS - _loginAttempts.count} 回`);
+    }
+    document.getElementById('f-pw').value = '';
+    return;
+  }
+
+  const ok = await verifyPassword(pw, ac.pwSalt, ac.pwHash);
+  if (!ok) {
+    _loginAttempts.count++;
+    if (_loginAttempts.count >= LOGIN_MAX_ATTEMPTS) {
+      _loginAttempts.lockedUntil = Date.now() + LOGIN_LOCKOUT_MS;
+      _loginAttempts.count = 0;
+      showLockBanner('🔒 ログイン試行上限に達しました。15分後に再試行してください。');
+    } else {
+      showErr(`パスワードが正しくありません。残り ${LOGIN_MAX_ATTEMPTS - _loginAttempts.count} 回`);
+    }
+    document.getElementById('f-pw').value = '';
+    return;
+  }
+
+  _loginAttempts.count = 0;
+  await startSession(id, ac);
+}
+
+// ── セッション開始 ────────────────────────────────────────
+async function computeSessionToken(userId, loginAt, pwHash) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(userId + ':' + loginAt + ':' + pwHash);
+  const buf = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+async function startSession(id, ac) {
+  showLoading('HQポータルへ移動中...');
+  const loginAt = new Date().toISOString();
+  const token   = await computeSessionToken(id, loginAt, ac.pwHash);
+  const session = {
+    agId:id, userId:id, name:ac.name,
+    rank:'HQ', rankKey:'hq',
+    type:'hq', hqRole:ac.hqRole,
+    hasTakken:ac.hasTakken || false,
+    hqCommissionRate:ac.hqCommissionRate || 0.15,
+    sennin:false,
+    lineLinked:false,
+    loginAt:loginAt,
+    sessionToken:token,
+  };
+  sessionStorage.setItem('coreto_session', JSON.stringify(session));
+  setTimeout(() => { window.location.href = 'coreto-hub.html'; }, 800);
+}
+
+function showLoading(msg) {
+  document.getElementById('loading-msg').textContent = msg;
+  document.getElementById('loading').classList.add('show');
+}
+
+// ── パスワード再設定 ─────────────────────────────────────
+const RESET_HQ_USERS = {
+  '00001': { email:'hq-admin@coreto.jp',   name:'HQ 統括' },
+  '00347': { email:'manager@coreto.jp',    name:'HQ マネージャー' },
+  '00891': { email:'staff@coreto.jp',      name:'HQ スタッフ' },
+};
+function openPasswordReset() {
+  document.getElementById('reset-overlay').style.display = 'flex';
+  document.getElementById('rst-id').value = '';
+  document.getElementById('rst-methods').style.display = 'none';
+  const btn = document.getElementById('rst-send-btn');
+  btn.disabled = true; btn.style.opacity = '.4';
+}
+function closePasswordReset() {
+  document.getElementById('reset-overlay').style.display = 'none';
+}
+function lookupResetUser(val) {
+  const user = RESET_HQ_USERS[val.trim()];
+  const methods = document.getElementById('rst-methods');
+  const btn = document.getElementById('rst-send-btn');
+  if (user) {
+    methods.style.display = 'block';
+    document.getElementById('rst-email-hint').textContent = user.email;
+    btn.disabled = false; btn.style.opacity = '1';
+  } else {
+    methods.style.display = 'none';
+    btn.disabled = true; btn.style.opacity = '.4';
+  }
+}
+function sendResetLink() {
+  const id = document.getElementById('rst-id').value.trim();
+  const user = RESET_HQ_USERS[id];
+  if (!user) return;
+  closePasswordReset();
+  alert(`✅ ${user.email} に再設定リンクを送信しました。\nメールを確認してください。`);
+}
+</script>
+</body>
+</html>
