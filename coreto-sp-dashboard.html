@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://hooks.slack.com https://hooks.zapier.com https://api.stripe.com https://js.stripe.com https://www.houjin-bangou.nta.go.jp https://www.retio.or.jp; frame-src 'none'; object-src 'none'; base-uri 'self';">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#07090f">
+<title>CORETO ダッシュボード</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+input,button,select,textarea{touch-action:manipulation;font-family:inherit}
+:root{
+  --bg:#07090f;--card:#0f1119;--card2:#13161f;--border:#1e2235;--border2:#252a3d;
+  --gold:#c9a84c;--gold-l:#e8c96a;--gold-dim:#7a5f22;--gold-glow:rgba(201,168,76,.12);
+  --blue:#4f9cf9;--green:#34d399;--red:#f87171;--orange:#fb923c;--purple:#a78bfa;
+  --muted:#4a5270;--sub:#7a849e;--text:#e2e6f3;
+  --nav-h:calc(60px + env(safe-area-inset-bottom,0px));
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bot:env(safe-area-inset-bottom,0px);
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans-serif;overflow:hidden}
+::-webkit-scrollbar{display:none}
+/* ─── アプリシェル ─── */
+.app{display:flex;flex-direction:column;height:100dvh;overflow:hidden;position:relative}
+
+/* ─── ヘッダー ─── */
+.header{flex-shrink:0;padding:calc(var(--safe-top) + 10px) 14px 10px;background:rgba(7,9,15,.96);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);z-index:100;position:relative}
+.hdr-logo{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:var(--gold);letter-spacing:3px;flex-shrink:0}
+.hdr-user{flex:1;min-width:0}
+.hdr-name{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hdr-id{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)}
+.hdr-btns{display:flex;gap:8px;flex-shrink:0}
+.hdr-btn{width:36px;height:36px;border-radius:10px;border:1px solid var(--border2);background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;position:relative;flex-shrink:0}
+.hdr-btn:active{background:var(--border2)}
+.notif-dot{position:absolute;top:5px;right:5px;width:8px;height:8px;background:var(--red);border-radius:50%;border:1.5px solid var(--bg)}
+
+/* ─── スクロール本体 ─── */
+.body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(var(--nav-h) + 8px)}
+
+/* ─── セクション共通 ─── */
+.sec{padding:14px 14px 0}
+.sec-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.sec-title{font-size:9px;font-weight:700;color:var(--muted);letter-spacing:2px;text-transform:uppercase;display:flex;align-items:center;gap:6px}
+.sec-title::before{content:'';display:inline-block;width:3px;height:10px;background:var(--gold);border-radius:2px}
+.sec-link{font-size:10px;color:var(--blue);text-decoration:none;font-weight:700;cursor:pointer}
+.sec-link:active{opacity:.7}
+
+/* ─── プロフィールカード ─── */
+.profile-card{background:linear-gradient(135deg,rgba(201,168,76,.1),rgba(201,168,76,.03));border:1px solid rgba(201,168,76,.2);border-radius:16px;padding:16px 16px 14px;position:relative;overflow:hidden}
+.profile-card::before{content:'';position:absolute;right:-40px;top:-40px;width:160px;height:160px;border-radius:50%;background:radial-gradient(circle,rgba(201,168,76,.06) 0%,transparent 70%)}
+.pc-top{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.avatar{width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,var(--gold-dim),rgba(201,168,76,.3));display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;border:2px solid rgba(201,168,76,.3)}
+.pc-info{flex:1;min-width:0}
+.pc-greeting{font-size:10px;color:var(--sub);margin-bottom:2px}
+.pc-name{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pc-meta{display:flex;align-items:center;gap:8px;margin-top:5px;flex-wrap:wrap}
+.rank-badge{font-size:10px;font-weight:700;padding:3px 9px;border-radius:5px;letter-spacing:.5px}
+.rb-gold{background:rgba(201,168,76,.2);color:var(--gold);border:1px solid rgba(201,168,76,.3)}
+.rb-platinum{background:rgba(167,139,250,.2);color:var(--purple);border:1px solid rgba(167,139,250,.3)}
+.rb-silver{background:rgba(160,160,160,.15);color:#c0c0c0;border:1px solid rgba(160,160,160,.3)}
+.rb-bronze{background:rgba(180,120,60,.15);color:#cd7f32;border:1px solid rgba(180,120,60,.3)}
+.rb-pt{background:rgba(52,211,153,.15);color:var(--green);border:1px solid rgba(52,211,153,.3)}
+.pc-id{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)}
+/* 進捗バー */
+.rp-bar-wrap{margin-top:10px}
+.rp-labels{display:flex;justify-content:space-between;font-size:9px;color:var(--muted);margin-bottom:4px}
+.rp-bar{height:3px;background:var(--border2);border-radius:2px;overflow:hidden}
+.rp-fill{height:100%;background:linear-gradient(90deg,var(--gold-dim),var(--gold));border-radius:2px;transition:width .6s ease}
+/* 統計 */
+.pc-stats{display:flex;gap:0;margin-top:12px;padding-top:12px;border-top:1px solid rgba(30,34,53,.7)}
+.ps-item{flex:1;text-align:center}
+.ps-item+.ps-item{border-left:1px solid var(--border)}
+.ps-val{font-family:'DM Mono',monospace;font-size:18px;font-weight:500;color:var(--gold)}
+.ps-lbl{font-size:9px;color:var(--muted);margin-top:2px}
+
+/* ─── クイックアクション ─── */
+.action-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.ac{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:14px 12px;cursor:pointer;transition:all .15s;position:relative;overflow:hidden;display:flex;flex-direction:column;gap:7px;min-height:88px;text-decoration:none;color:inherit}
+.ac:active{transform:scale(.97);opacity:.9}
+.ac::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.ac.primary{border-color:rgba(201,168,76,.3);background:rgba(201,168,76,.04)}
+.ac.primary::before{background:linear-gradient(90deg,var(--gold-dim),var(--gold))}
+.ac.blue::before{background:linear-gradient(90deg,rgba(79,156,249,.3),var(--blue))}
+.ac.green::before{background:linear-gradient(90deg,rgba(52,211,153,.3),var(--green))}
+.ac.orange::before{background:linear-gradient(90deg,rgba(251,146,60,.3),var(--orange))}
+.ac.purple::before{background:linear-gradient(90deg,rgba(167,139,250,.3),var(--purple))}
+.ac-icon{font-size:22px}
+.ac-title{font-size:12px;font-weight:700;line-height:1.2}
+.ac-desc{font-size:9px;color:var(--muted);line-height:1.4}
+.ac-badge{position:absolute;top:8px;right:8px;background:var(--red);color:#fff;font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px}
+
+/* ─── 案件リスト ─── */
+.case-item{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:12px 13px;margin-bottom:8px;display:flex;align-items:center;gap:11px;cursor:pointer;transition:border-color .15s}
+.case-item:active{border-color:rgba(201,168,76,.3);background:rgba(201,168,76,.03)}
+.ci-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.ci-info{flex:1;min-width:0}
+.ci-title{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ci-meta{font-size:9px;color:var(--muted);margin-top:2px;font-family:'DM Mono',monospace}
+.ci-status{font-size:9px;padding:3px 8px;border-radius:4px;font-weight:600;white-space:nowrap;flex-shrink:0}
+.s-active{background:rgba(52,211,153,.12);color:var(--green)}
+.s-wait{background:rgba(251,146,60,.12);color:var(--orange)}
+.s-draft{background:rgba(79,156,249,.12);color:var(--blue)}
+
+/* ─── 実績パネル ─── */
+.perf-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.perf-card{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:12px}
+.pv{font-family:'DM Mono',monospace;font-size:18px;font-weight:500}
+.pl{font-size:9px;color:var(--muted);margin-top:3px}
+.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:9px}
+.bar-lbl{color:var(--muted);width:24px;text-align:right;flex-shrink:0;font-family:'DM Mono',monospace}
+.bar-wrap{flex:1;height:5px;background:var(--border2);border-radius:3px;overflow:hidden}
+.bar-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--gold-dim),var(--gold))}
+.bar-val{color:var(--sub);width:28px;text-align:right;font-family:'DM Mono',monospace}
+
+/* ─── ボトムナビ ─── */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;z-index:200;background:rgba(10,12,18,.97);border-top:1px solid var(--border);display:flex;padding-bottom:var(--safe-bot);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 4px 8px;cursor:pointer;position:relative;text-decoration:none;color:var(--muted);transition:color .15s}
+.nav-item.on{color:var(--gold)}
+.nav-item:active{opacity:.7}
+.nav-icon{font-size:20px;line-height:1}
+.nav-lbl{font-size:9px;margin-top:3px;font-weight:600;letter-spacing:.3px}
+.nav-badge{position:absolute;top:6px;left:50%;margin-left:4px;background:var(--red);color:#fff;font-size:8px;font-weight:700;padding:1px 5px;border-radius:8px;min-width:16px;text-align:center}
+
+/* ─── ボトムシート共通 ─── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);z-index:300;display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:opacity .25s}
+.overlay.show{opacity:1;pointer-events:all}
+.sheet{width:100%;background:var(--card);border-radius:22px 22px 0 0;border:1px solid var(--border);border-bottom:none;padding-bottom:calc(var(--safe-bot) + 12px);transform:translateY(100%);transition:transform .32s cubic-bezier(.32,0,.67,0);overflow:hidden;display:flex;flex-direction:column}
+.overlay.show .sheet{transform:translateY(0);transition-timing-function:cubic-bezier(.33,1,.68,1)}
+.sheet-handle{width:40px;height:4px;background:var(--border2);border-radius:2px;margin:11px auto 0;flex-shrink:0}
+.sheet-hdr{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;position:sticky;top:0;background:var(--card);z-index:10}
+.sheet-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:var(--gold)}
+.sheet-close{background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;line-height:1;padding:4px}
+.sheet-body{overflow-y:auto;padding:16px 18px;-webkit-overflow-scrolling:touch}
+.sheet-max{max-height:88dvh}
+
+/* 通知 */
+.notif-item{display:flex;gap:10px;padding:11px 0;border-bottom:1px solid rgba(30,34,53,.5)}
+.notif-item:last-child{border-bottom:none}
+.ni-icon{font-size:18px;flex-shrink:0;margin-top:1px}
+.ni-body{flex:1}
+.ni-text{font-size:12px;line-height:1.6}
+.ni-time{font-size:10px;color:var(--muted);margin-top:2px;font-family:'DM Mono',monospace}
+.ni-new{width:7px;height:7px;border-radius:50%;background:var(--blue);flex-shrink:0;margin-top:5px}
+
+/* 名刺パネル */
+.bc-preview{background:white;border-radius:9px;padding:13px 16px;margin-bottom:14px;position:relative}
+.bc-logo{font-size:8px;color:#888;letter-spacing:2px;margin-bottom:7px}
+.bc-name-main{font-size:15px;font-weight:700;color:#1a1a1a;margin-bottom:2px}
+.bc-kana{font-size:10px;color:#888;font-family:monospace;margin-bottom:9px}
+.bc-divider{width:100%;height:1px;background:#eee;margin-bottom:9px}
+.bc-contact{font-size:9px;color:#555;line-height:1.9}
+.bc-takken-row{display:flex;align-items:center;gap:10px;padding:12px 13px;background:var(--card2);border:1px solid var(--border);border-radius:11px;margin-bottom:10px;cursor:pointer}
+.bc-takken-row input[type=checkbox]{width:18px;height:18px;accent-color:var(--gold)}
+.bc-check-label{flex:1}
+.bc-check-title{font-size:12px;font-weight:700}
+.bc-check-sub{font-size:10px;color:var(--muted)}
+.bc-note-wrap{margin-bottom:12px}
+.bc-note-label{font-size:10px;color:var(--sub);margin-bottom:5px;font-weight:600}
+.bc-note{width:100%;background:#090b13;border:1px solid var(--border2);border-radius:9px;padding:10px 12px;color:var(--text);font-size:14px;font-family:'Noto Sans JP',sans-serif;resize:vertical;outline:none;min-height:56px}
+.bc-note:focus{border-color:var(--gold)}
+.bc-card-info{display:flex;align-items:center;justify-content:space-between;padding:11px 13px;background:var(--card2);border:1px solid var(--border);border-radius:10px;margin-bottom:12px}
+.bc-btn{width:100%;padding:14px;border-radius:12px;border:none;cursor:pointer;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:7px}
+.bc-btn.order{background:linear-gradient(135deg,var(--gold),#a8742a);color:#0a0c10;margin-top:2px}
+.bc-btn.order:active{transform:scale(.98)}
+.bc-btn.preview{background:rgba(79,156,249,.1);border:1px solid rgba(79,156,249,.3);color:var(--blue);margin-bottom:8px}
+.bc-btn.slack{background:rgba(74,82,112,.1);border:1px solid var(--border2);color:var(--sub)}
+.bc-btn-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.bc-info-box{padding:11px 13px;background:rgba(201,168,76,.05);border:1px solid var(--gold-dim);border-radius:9px;font-size:10px;color:var(--sub);line-height:1.9;margin-bottom:12px}
+/* 発注履歴 */
+.bc-hist-hdr{font-size:9px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;padding-top:14px;border-top:1px solid var(--border)}
+.bc-hist-item{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--card2);border-radius:9px;font-size:11px;margin-bottom:6px}
+
+/* メニューパネル */
+.menu-list{display:grid;gap:8px}
+.menu-item{display:flex;align-items:center;gap:12px;padding:14px 14px;background:var(--card2);border:1px solid var(--border);border-radius:12px;cursor:pointer;text-decoration:none;color:inherit;transition:border-color .15s}
+.menu-item:active{border-color:var(--gold-dim);background:rgba(201,168,76,.04)}
+.menu-icon{font-size:20px;flex-shrink:0}
+.menu-info{flex:1}
+.menu-title{font-size:13px;font-weight:700}
+.menu-sub{font-size:10px;color:var(--muted);margin-top:2px}
+.menu-arrow{color:var(--muted);font-size:12px;flex-shrink:0}
+
+/* 紹介リンクモーダル */
+.ref-url{background:var(--card2);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;font-family:'DM Mono',monospace;font-size:10px;color:var(--sub);word-break:break-all;margin:10px 0;min-height:36px}
+.copy-btn{width:100%;padding:12px;border-radius:10px;border:none;cursor:pointer;font-size:13px;font-weight:700;background:var(--gold);color:#0a0c10;margin-top:4px}
+.copy-btn:active{opacity:.9}
+
+/* ローディング */
+.loading-overlay{position:fixed;inset:0;background:rgba(7,9,15,.94);backdrop-filter:blur(10px);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9000;opacity:0;pointer-events:none;transition:opacity .3s}
+.loading-overlay.show{opacity:1;pointer-events:all}
+.spinner{width:44px;height:44px;border:2.5px solid rgba(201,168,76,.2);border-top-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite;margin-bottom:18px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ユーティリティ */
+.gold-badge{font-size:9px;padding:3px 9px;border-radius:6px;font-weight:700;background:rgba(201,168,76,.13);color:var(--gold);border:1px solid var(--gold-dim)}
+.green-badge{font-size:9px;padding:3px 9px;border-radius:6px;font-weight:700;background:rgba(52,211,153,.13);color:var(--green);border:1px solid rgba(52,211,153,.3)}
+.page-bottom-pad{height:16px}
+</style>
+</head>
+<body>
+
+<!-- ローディング -->
+<div class="loading-overlay" id="loading-overlay">
+  <div class="spinner"></div>
+</div>
+
+<!-- ── アプリシェル ── -->
+<div class="app">
+
+  <!-- ヘッダー -->
+  <div class="header">
+    <div class="hdr-logo">CORETO</div>
+    <div class="hdr-user">
+      <div class="hdr-name" id="hdr-name">—</div>
+      <div class="hdr-id" id="hdr-id">—</div>
+    </div>
+    <div class="hdr-btns">
+      <!-- 通知ベル -->
+      <div class="hdr-btn" onclick="openNotif()" id="notif-btn">
+        🔔
+        <div class="notif-dot" id="notif-dot" style="display:none"></div>
+      </div>
+      <!-- メニュー -->
+      <div class="hdr-btn" onclick="openMenu()">☰</div>
+    </div>
+  </div>
+
+  <!-- スクロール本体 -->
+  <div class="body" id="body">
+
+    <!-- プロフィール -->
+    <div class="sec">
+      <div class="profile-card" id="profile-card">
+        <div class="pc-top">
+          <div class="avatar" id="avatar">👤</div>
+          <div class="pc-info">
+            <div class="pc-greeting">こんにちは</div>
+            <div class="pc-name" id="profile-name">—</div>
+            <div class="pc-meta">
+              <span class="rank-badge" id="rank-badge">—</span>
+              <span class="pc-id" id="profile-id">—</span>
+            </div>
+          </div>
+        </div>
+        <div class="rp-bar-wrap" id="rp-wrap">
+          <div class="rp-labels"><span id="rp-lbl">—</span></div>
+          <div class="rp-bar"><div class="rp-fill" id="rp-fill" style="width:0%"></div></div>
+        </div>
+        <div class="pc-stats">
+          <div class="ps-item">
+            <div class="ps-val" id="ps-cases">0</div>
+            <div class="ps-lbl">今月成約</div>
+          </div>
+          <div class="ps-item">
+            <div class="ps-val" id="ps-reward" style="font-size:14px">¥—</div>
+            <div class="ps-lbl">今月報酬見込み</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- クイックアクション -->
+    <div class="sec" style="margin-top:16px">
+      <div class="sec-hdr">
+        <div class="sec-title">クイックアクション</div>
+      </div>
+      <div class="action-grid" id="action-grid"><!-- JS生成 --></div>
+    </div>
+
+    <!-- 進行中案件 -->
+    <div class="sec" style="margin-top:16px">
+      <div class="sec-hdr">
+        <div class="sec-title">進行中の案件</div>
+        <a class="sec-link" onclick="goto('coreto-matching.html')">すべて見る →</a>
+      </div>
+      <div id="cases-list"><!-- JS生成 --></div>
+    </div>
+
+    <!-- 実績 -->
+    <div class="sec" style="margin-top:16px">
+      <div class="sec-hdr">
+        <div class="sec-title">今月の実績</div>
+      </div>
+      <div class="perf-row">
+        <div class="perf-card">
+          <div class="pv" id="perf-cases" style="color:var(--gold)">0</div>
+          <div class="pl">成約件数</div>
+        </div>
+        <div class="perf-card">
+          <div class="pv" id="perf-reward" style="color:var(--green);font-size:14px">¥0</div>
+          <div class="pl">報酬額（手取り）</div>
+        </div>
+      </div>
+      <div id="bar-chart" style="background:var(--card);border:1px solid var(--border);border-radius:11px;padding:12px"><!-- JS生成 --></div>
+    </div>
+
+    <!-- 名刺発注セクション -->
+    <div class="sec" style="margin-top:16px" id="bc-section">
+      <div class="sec-hdr">
+        <div class="sec-title">名刺発注</div>
+        <span class="gold-badge">¥2,000 / セット</span>
+      </div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:13px;padding:14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="openBc()">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:22px">🪪</span>
+          <div>
+            <div style="font-size:13px;font-weight:700">名刺を発注する</div>
+            <div style="font-size:10px;color:var(--muted)">100枚セット・片面カラー・1週間納期</div>
+          </div>
+        </div>
+        <span style="color:var(--muted);font-size:14px">›</span>
+      </div>
+    </div>
+
+    <!-- 紹介リンク -->
+    <div class="sec" style="margin-top:14px">
+      <div style="background:var(--card);border:1px solid rgba(201,168,76,.25);border-radius:13px;padding:14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;background:rgba(201,168,76,.04)" onclick="openRef()">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:22px">🔗</span>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:var(--gold)">紹介リンク発行</div>
+            <div style="font-size:10px;color:var(--muted)">リンクから入会で自動コード付与</div>
+          </div>
+        </div>
+        <span style="color:var(--muted);font-size:14px">›</span>
+      </div>
+    </div>
+
+    <div class="page-bottom-pad"></div>
+  </div>
+
+  <!-- ボトムナビ -->
+  <div class="bottom-nav" id="bottom-nav"><!-- JS生成 --></div>
+</div>
+
+<!-- ══ 通知パネル ══ -->
+<div class="overlay" id="notif-overlay" onclick="if(event.target===this)closeNotif()">
+  <div class="sheet sheet-max">
+    <div class="sheet-handle"></div>
+    <div class="sheet-hdr">
+      <div class="sheet-title">🔔 通知</div>
+      <button class="sheet-close" onclick="closeNotif()">✕</button>
+    </div>
+    <div class="sheet-body" id="notif-body"><!-- JS生成 --></div>
+  </div>
+</div>
+
+<!-- ══ 名刺パネル ══ -->
+<div class="overlay" id="bc-overlay" onclick="if(event.target===this)closeBc()">
+  <div class="sheet sheet-max">
+    <div class="sheet-handle"></div>
+    <div class="sheet-hdr">
+      <div class="sheet-title">🪪 名刺発注</div>
+      <button class="sheet-close" onclick="closeBc()">✕</button>
+    </div>
+    <div class="sheet-body">
+      <!-- プレビュー -->
+      <div class="bc-preview">
+        <div class="bc-logo">CORETO</div>
+        <div id="bc-takken-title" style="font-size:10px;color:#c9a84c;font-weight:700;margin-bottom:4px;display:none">宅地建物取引士</div>
+        <div class="bc-name-main" id="bc-name">—</div>
+        <div class="bc-kana" id="bc-kana">—</div>
+        <div class="bc-divider"></div>
+        <div class="bc-contact" id="bc-contact">—</div>
+      </div>
+      <!-- 宅建チェック -->
+      <div class="bc-takken-row" onclick="document.getElementById('bc-takken').click()">
+        <input type="checkbox" id="bc-takken" onchange="updateBcPreview()" onclick="event.stopPropagation()">
+        <span style="font-size:18px">🏛</span>
+        <div class="bc-check-label">
+          <div class="bc-check-title">宅地建物取引士</div>
+          <div class="bc-check-sub">チェックで名刺に肩書きを追加</div>
+        </div>
+        <div id="bc-takken-badge" style="display:none" class="gold-badge">宅建士</div>
+      </div>
+      <!-- 特記事項 -->
+      <div class="bc-note-wrap">
+        <div class="bc-note-label">特記事項（任意）</div>
+        <textarea class="bc-note" id="bc-note" rows="2" placeholder="例：旧姓を表記希望・役職追加など"></textarea>
+      </div>
+      <!-- アクションボタン -->
+      <div class="bc-btn-row">
+        <button class="bc-btn preview" onclick="previewBcPdf()">👁 PDFプレビュー</button>
+        <button class="bc-btn slack" onclick="sendToSlack()">💬 Slack送信</button>
+      </div>
+      <!-- カード情報 -->
+      <div class="bc-info-box">
+        💳 発注すると登録カード（Visa ···4242）より <strong style="color:var(--gold)">¥2,000</strong> が即時決済されます。<br>
+        ・<strong style="color:var(--text)">PDFプレビュー</strong>：91×55mmの名刺PDFを生成<br>
+        ・<strong style="color:var(--text)">Slack送信</strong>：本部へ発注情報を送信（本部がAIで作成）
+      </div>
+      <div class="bc-card-info">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:20px">💳</span>
+          <div>
+            <div style="font-size:11px;font-weight:700">Visa ···4242</div>
+            <div style="font-size:10px;color:var(--muted)">登録済みカード</div>
+          </div>
+        </div>
+        <span class="green-badge">✓ 有効</span>
+      </div>
+      <button class="bc-btn order" id="bc-order-btn" onclick="orderBusinessCard()">🪪 発注する（¥2,000 即時決済）</button>
+      <!-- 発注履歴 -->
+      <div class="bc-hist-hdr">発注履歴</div>
+      <div id="bc-history">
+        <div class="bc-hist-item">
+          <div><div style="font-weight:700">2026/01/10 発注</div><div style="color:var(--muted);font-size:10px">100枚 / 通常デザイン</div></div>
+          <div style="text-align:right"><div style="font-family:'DM Mono',monospace;color:var(--red)">-¥2,000</div><span class="green-badge" style="font-size:8px">納品済み</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ メニューパネル ══ -->
+<div class="overlay" id="menu-overlay" onclick="if(event.target===this)closeMenu()">
+  <div class="sheet sheet-max">
+    <div class="sheet-handle"></div>
+    <div class="sheet-hdr">
+      <div class="sheet-title">メニュー</div>
+      <button class="sheet-close" onclick="closeMenu()">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div class="menu-list" id="menu-list"><!-- JS生成 --></div>
+      <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+        <div class="menu-item" onclick="doLogout()" style="border-color:rgba(248,113,113,.2)">
+          <span class="menu-icon">🚪</span>
+          <div class="menu-info"><div class="menu-title" style="color:var(--red)">ログアウト</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 紹介リンクモーダル ══ -->
+<div class="overlay" id="ref-overlay" onclick="if(event.target===this)closeRef()">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-hdr">
+      <div class="sheet-title">🔗 紹介リンク発行</div>
+      <button class="sheet-close" onclick="closeRef()">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div style="font-size:11px;color:var(--sub);margin-bottom:14px;line-height:1.8">このリンクから入会すると紹介コードが自動入力されます。</div>
+      <div id="ref-code-selector"></div>
+      <div style="font-size:10px;color:var(--muted);margin-bottom:4px;font-weight:600">発行リンク</div>
+      <div class="ref-url" id="ref-url-display">—</div>
+      <button class="copy-btn" onclick="copyRefLink()">📋 コピー</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── XSSエスケープ ──
+function esc(s){if(s==null)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;')}
+
+// ══ AUTH GUARD ════════════════════════════════════════════════
+(function(){
+  var s=null;
+  try{s=JSON.parse(sessionStorage.getItem('coreto_session')||'null');}catch(e){}
+  if(!s||!s.userId||!s.type){sessionStorage.setItem('coreto_redirect',window.location.href);location.replace('coreto-sp-login.html');return;}
+  if(!s.sessionToken||s.sessionToken.length!==64){sessionStorage.removeItem('coreto_session');location.replace('coreto-sp-login.html');return;}
+  var _la=new Date(s.loginAt).getTime();
+  if(isNaN(_la)||(Date.now()-_la)>28800000){sessionStorage.removeItem('coreto_session');alert('セッションの有効期限が切れました。再度ログインしてください。');location.replace('coreto-sp-login.html');return;}
+  window._SESSION=s;
+})();
+
+// ── セッション ──
+const session=JSON.parse(sessionStorage.getItem('coreto_session')||'null')||{agId:'10012',name:'山田 誠',rank:'Gold',rankKey:'gold',type:'re'};
+
+// ── ダミーデータ ──
+const AGENT_DATA={
+  '10012':{cases:3,rewardEstimate:847000,progress:72,progressLabel:'Gold → Platinum まで 28%',
+    cases_list:[{id:'CASE-0234',title:'池袋エリア 賃貸 1K',status:'active',statusLabel:'入金待ち',color:'#fb923c'},{id:'CASE-0228',title:'新宿エリア 賃貸 1LDK',status:'active',statusLabel:'契約書送付済み',color:'#34d399'},{id:'CASE-0220',title:'渋谷 売買仲介',status:'wait',statusLabel:'IT重説調整中',color:'#4f9cf9'}],
+    notifs:[{icon:'💰',text:'CASE-0228 全額入金が確認されました。成約報告（/close）を送信してください。',time:'10分前',isNew:true},{icon:'📦',text:'CASE-0234 の契約書が配達されました。',time:'2時間前',isNew:true},{icon:'🏆',text:'今月の成約数が3件に達しました！',time:'昨日',isNew:false}],
+    monthly:[{label:'10月',val:1},{label:'11月',val:2},{label:'12月',val:1},{label:'1月',val:2},{label:'2月',val:3}]},
+  '10008':{cases:2,rewardEstimate:1250000,progress:90,progressLabel:'Platinum 維持中',
+    cases_list:[{id:'CASE-0230',title:'中野 賃貸 1K',status:'active',statusLabel:'申込審査中',color:'#4f9cf9'},{id:'CASE-0218',title:'代々木 売買',status:'wait',statusLabel:'契約書到着待ち',color:'#fb923c'}],
+    notifs:[{icon:'📩',text:'管理会社から書類が届いています。確認してください。',time:'1時間前',isNew:true},{icon:'💰',text:'2月分 振込完了 ¥980,500',time:'2日前',isNew:false}],
+    monthly:[{label:'10月',val:2},{label:'11月',val:3},{label:'12月',val:2},{label:'1月',val:3},{label:'2月',val:2}]},
+  '20005':{cases:1,rewardEstimate:382000,progress:45,progressLabel:'Gold → Platinum まで 55%',
+    cases_list:[{id:'CASE-0231',title:'ITエンジニア 転職支援',status:'draft',statusLabel:'面接調整中',color:'#4f9cf9'}],
+    notifs:[{icon:'👥',text:'CASE-0231 候補者から連絡が来ています。',time:'30分前',isNew:true},{icon:'💰',text:'1月分 第2回払い ¥187,500 振込完了',time:'1週間前',isNew:false}],
+    monthly:[{label:'10月',val:1},{label:'11月',val:0},{label:'12月',val:1},{label:'1月',val:1},{label:'2月',val:1}]},
+  '10023':{cases:1,rewardEstimate:226000,progress:30,progressLabel:'Silver → Gold まで 70%',
+    cases_list:[{id:'CASE-0236',title:'豊島区 賃貸 1LDK',status:'draft',statusLabel:'物件探し中',color:'#4f9cf9'}],
+    notifs:[{icon:'📋',text:'新しい案件がボードに掲載されました（池袋エリア）。',time:'1時間前',isNew:true}],
+    monthly:[{label:'10月',val:0},{label:'11月',val:1},{label:'12月',val:0},{label:'1月',val:1},{label:'2月',val:1}]},
+  '30007':{cases:2,rewardEstimate:156000,progress:0,progressLabel:'パートナー',
+    cases_list:[{id:'CASE-0234',title:'紹介案件：池袋エリア賃貸',status:'active',statusLabel:'エージェント対応中',color:'#34d399'},{id:'CASE-0235',title:'紹介案件：新宿エリア賃貸',status:'wait',statusLabel:'マッチング待ち',color:'#fb923c'}],
+    notifs:[{icon:'🎉',text:'CASE-0228 が成約しました！紹介報酬 ¥78,000 が確定しました。',time:'1日前',isNew:true}],
+    monthly:[{label:'10月',val:1},{label:'11月',val:2},{label:'12月',val:1},{label:'1月',val:3},{label:'2月',val:2}]},
+};
+
+// ── ツール定義 ──
+const TOOLS={
+  re:[
+    {id:'matching',icon:'📋',title:'案件ボード',     desc:'新規案件・マッチング確認',     color:'blue',   url:'coreto-matching.html'},
+    {id:'close',   icon:'🎯',title:'成約報告',        desc:'審査通過→入金確認後に送信',     color:'primary',url:'coreto-batch-close.html'},
+    {id:'naiken',  icon:'🏠',title:'内見依頼書',      desc:'FAX送付・日程登録',            color:'green',  url:'coreto-naiken.html'},
+    {id:'it-setsu',icon:'📝',title:'IT重説・契約書',  desc:'IT重説チェック・スキャン管理', color:'blue',   url:'coreto-it-setsu.html'},
+    {id:'client',  icon:'👤',title:'顧客DB',          desc:'顧客登録・相談履歴確認',       color:'orange', url:'coreto-client-id.html'},
+    {id:'rank',    icon:'⭐',title:'ランクダッシュボード',desc:'ポイント・報酬シミュレーター',color:'',      url:'coreto-rank.html'},
+    {id:'payment', icon:'💴',title:'支払明細書',      desc:'月次報酬明細の確認',           color:'',       url:'coreto-payment.html'},
+    {id:'sim',     icon:'💰',title:'報酬シミュレーター',desc:'手取り額を事前確認',          color:'',       url:'coreto-commission-simulator.html'},
+  ],
+  hr:[
+    {id:'matching',   icon:'📋',title:'案件ボード',        desc:'新規案件・マッチング確認',  color:'blue',   url:'coreto-matching.html'},
+    {id:'close',      icon:'🎯',title:'成約報告',          desc:'入社確定後に送信',          color:'primary',url:'coreto-batch-close.html'},
+    {id:'early-quit', icon:'⚠️',title:'早期退職管理',      desc:'返金条件登録・退職報告',   color:'',       url:'coreto-early-quit.html'},
+    {id:'client',     icon:'👤',title:'顧客DB',            desc:'求職者情報・面接履歴',     color:'orange', url:'coreto-client-id.html'},
+    {id:'rank',       icon:'⭐',title:'ランクダッシュボード',desc:'ポイント・報酬シミュレーター',color:'',   url:'coreto-rank.html'},
+    {id:'payment',    icon:'💴',title:'支払明細書',        desc:'月次報酬明細の確認',       color:'',       url:'coreto-payment.html'},
+    {id:'sim',        icon:'💰',title:'報酬シミュレーター',desc:'2回払いスケジュール確認',  color:'',       url:'coreto-commission-simulator.html'},
+  ],
+  pt:[
+    {id:'portal',  icon:'🏠',title:'パートナーポータル',desc:'紹介案件・報酬・コードの確認',color:'primary',url:'coreto-partner.html'},
+    {id:'matching',icon:'📋',title:'案件ボード',        desc:'紹介案件の進捗確認',         color:'blue',   url:'coreto-matching.html'},
+    {id:'rank',    icon:'⭐',title:'ランクダッシュボード',desc:'ポイント・報酬シミュレーター',color:'',    url:'coreto-rank.html'},
+    {id:'payment', icon:'💴',title:'支払明細書',        desc:'月次報酬明細の確認',         color:'',       url:'coreto-payment.html'},
+    {id:'sim',     icon:'💰',title:'報酬シミュレーター',desc:'紹介報酬額を確認',           color:'',       url:'coreto-commission-simulator.html'},
+  ],
+};
+
+// ── ナビ定義 ──
+const NAVS={
+  re:[
+    {icon:'🏠',label:'ホーム',   id:'home',  url:null},
+    {icon:'📋',label:'案件',     id:'cases', url:'coreto-matching.html'},
+    {icon:'📝',label:'IT重説',   id:'itsetsu',url:'coreto-it-setsu.html'},
+    {icon:'💸',label:'即時払い', id:'pay',   url:'coreto-instant-pay.html'},
+    {icon:'⚙️',label:'設定',     id:'acct',  url:'coreto-account-settings.html'},
+  ],
+  hr:[
+    {icon:'🏠',label:'ホーム',   id:'home',  url:null},
+    {icon:'📋',label:'案件',     id:'cases', url:'coreto-matching.html'},
+    {icon:'⚠️',label:'早期退職', id:'eq',    url:'coreto-early-quit.html'},
+    {icon:'💸',label:'即時払い', id:'pay',   url:'coreto-instant-pay.html'},
+    {icon:'⚙️',label:'設定',     id:'acct',  url:'coreto-account-settings.html'},
+  ],
+  pt:[
+    {icon:'🏠',label:'ホーム',   id:'home',  url:null},
+    {icon:'📋',label:'案件',     id:'cases', url:'coreto-matching.html'},
+    {icon:'🔗',label:'紹介',     id:'ref',   url:null,action:'openRef'},
+    {icon:'💰',label:'報酬',     id:'reward',url:'coreto-partner.html'},
+    {icon:'⚙️',label:'設定',     id:'acct',  url:'coreto-account-settings.html'},
+  ],
+};
+
+const RANK_BADGE_CLASS={gold:'rb-gold',platinum:'rb-platinum',silver:'rb-silver',bronze:'rb-bronze',pt:'rb-pt'};
+const TYPE_LABEL={re:'不動産エージェント',hr:'人材エージェント',pt:'パートナー'};
+const AVATAR_ICON={re:'🏠',hr:'👥',pt:'🤝'};
+const MENU_ITEMS={
+  re:[
+    {icon:'📋',title:'案件ボード',sub:'マッチング・案件確認',url:'coreto-matching.html'},
+    {icon:'🎯',title:'成約報告',sub:'審査通過→入金確認後',url:'coreto-batch-close.html'},
+    {icon:'🏠',title:'内見依頼書',sub:'FAX送付・日程登録',url:'coreto-naiken.html'},
+    {icon:'📝',title:'IT重説・契約書',sub:'重説チェック・スキャン管理',url:'coreto-it-setsu.html'},
+    {icon:'⭐',title:'ランクダッシュボード',sub:'ポイント・報酬シミュレーター',url:'coreto-rank.html'},
+    {icon:'💴',title:'支払明細書',sub:'月次報酬明細',url:'coreto-payment.html'},
+    {icon:'💰',title:'報酬シミュレーター',sub:'手取り額を事前確認',url:'coreto-commission-simulator.html'},
+    {icon:'📅',title:'IT重説 日程予約',sub:'予約スロット管理',url:'coreto-itsetsu-booking.html'},
+    {icon:'🧾',title:'領収書・請求書',sub:'発行・管理',url:'coreto-receipt.html'},
+    {icon:'👤',title:'顧客DB',sub:'顧客登録・相談履歴',url:'coreto-client-id.html'},
+    {icon:'⚙️',title:'アカウント設定',sub:'プロフィール・口座',url:'coreto-account-settings.html'},
+    {icon:'❓',title:'FAQ',sub:'よくある質問',url:'coreto-faq.html'},
+    {icon:'📚',title:'研修・オンボーディング',sub:'マニュアル・ルール',url:'coreto-onboarding.html'},
+    {icon:'🔍',title:'本人確認・口座',sub:'KYC・振込先管理',url:'coreto-kyc.html'},
+  ],
+  hr:[
+    {icon:'📋',title:'案件ボード',sub:'マッチング・案件確認',url:'coreto-matching.html'},
+    {icon:'🎯',title:'成約報告',sub:'入社確定後に送信',url:'coreto-batch-close.html'},
+    {icon:'⚠️',title:'早期退職管理',sub:'返金条件・退職報告',url:'coreto-early-quit.html'},
+    {icon:'⭐',title:'ランクダッシュボード',sub:'ポイント・報酬シミュレーター',url:'coreto-rank.html'},
+    {icon:'💴',title:'支払明細書',sub:'月次報酬明細',url:'coreto-payment.html'},
+    {icon:'💰',title:'報酬シミュレーター',sub:'2回払いスケジュール確認',url:'coreto-commission-simulator.html'},
+    {icon:'⚙️',title:'アカウント設定',sub:'プロフィール・口座',url:'coreto-account-settings.html'},
+    {icon:'❓',title:'FAQ',sub:'よくある質問',url:'coreto-faq.html'},
+  ],
+  pt:[
+    {icon:'🏠',title:'パートナーポータル',sub:'紹介案件・報酬・コード',url:'coreto-partner.html'},
+    {icon:'📋',title:'案件ボード',sub:'紹介案件の進捗確認',url:'coreto-matching.html'},
+    {icon:'⭐',title:'ランクダッシュボード',sub:'ポイント・報酬シミュレーター',url:'coreto-rank.html'},
+    {icon:'💴',title:'支払明細書',sub:'月次報酬明細',url:'coreto-payment.html'},
+    {icon:'💰',title:'報酬シミュレーター',sub:'紹介報酬額を確認',url:'coreto-commission-simulator.html'},
+    {icon:'⚙️',title:'アカウント設定',sub:'プロフィール・口座',url:'coreto-account-settings.html'},
+  ],
+};
+
+// ── 初期化 ──
+let _bcAgent=null;
+function init(){
+  const ag=session;
+  const data=AGENT_DATA[ag.agId]||AGENT_DATA['10012'];
+
+  document.getElementById('hdr-name').textContent=ag.name;
+  document.getElementById('hdr-id').textContent='ID: '+(ag.agId||'—');
+
+  // プロフィール
+  document.getElementById('avatar').textContent=AVATAR_ICON[ag.type]||'👤';
+  document.getElementById('profile-name').textContent=ag.name+' 様';
+  document.getElementById('profile-id').textContent=ag.agId;
+  const rb=document.getElementById('rank-badge');
+  rb.textContent=ag.rank;
+  rb.className='rank-badge '+(RANK_BADGE_CLASS[ag.rankKey]||'rb-gold');
+  document.getElementById('ps-cases').textContent=data.cases+'件';
+  document.getElementById('ps-reward').textContent='¥'+data.rewardEstimate.toLocaleString();
+  document.getElementById('perf-cases').textContent=data.cases;
+  document.getElementById('perf-reward').textContent='¥'+Math.floor(data.rewardEstimate*.85).toLocaleString();
+
+  if(ag.type==='pt'){
+    document.getElementById('rp-wrap').style.display='none';
+  }else{
+    document.getElementById('rp-lbl').textContent=data.progressLabel;
+    document.getElementById('rp-fill').style.width=data.progress+'%';
+  }
+
+  renderActions(ag.type);
+  renderCases(data.cases_list);
+  renderNotifs(data.notifs);
+  renderChart(data.monthly);
+  renderNav(ag.type);
+  renderMenu(ag.type);
+  initBc(ag);
+  _bcAgent=ag;
+
+  // ローディング非表示
+  document.getElementById('loading-overlay').classList.remove('show');
+}
+
+function renderActions(type){
+  const tools=TOOLS[type]||TOOLS['re'];
+  document.getElementById('action-grid').innerHTML=tools.map(t=>`
+    <div class="ac ${t.color}" onclick="goto('${t.url}')">
+      ${t.id==='close'?'<span class="ac-badge">要対応</span>':''}
+      <div class="ac-icon">${t.icon}</div>
+      <div><div class="ac-title">${t.title}</div><div class="ac-desc">${t.desc}</div></div>
+    </div>`).join('');
+}
+
+function renderCases(list){
+  if(!list.length){
+    document.getElementById('cases-list').innerHTML='<div style="text-align:center;padding:20px;color:var(--muted);font-size:12px">進行中の案件はありません</div>';
+    return;
+  }
+  document.getElementById('cases-list').innerHTML=list.map(c=>`
+    <div class="case-item" onclick="goto('coreto-matching.html')">
+      <div class="ci-dot" style="background:${c.color}"></div>
+      <div class="ci-info"><div class="ci-title">${esc(c.title)}</div><div class="ci-meta">${c.id}</div></div>
+      <div class="ci-status s-${c.status}">${esc(c.statusLabel)}</div>
+    </div>`).join('');
+}
+
+function renderNotifs(list){
+  const newCount=list.filter(n=>n.isNew).length;
+  const dot=document.getElementById('notif-dot');
+  if(newCount>0){dot.style.display='block';}
+  const navBadge=document.getElementById('nav-notif-badge');
+  if(navBadge&&newCount>0)navBadge.textContent=newCount;
+  document.getElementById('notif-body').innerHTML=list.map(n=>`
+    <div class="notif-item">
+      <div class="ni-icon">${n.icon}</div>
+      <div class="ni-body"><div class="ni-text">${esc(n.text)}</div><div class="ni-time">${n.time}</div></div>
+      ${n.isNew?'<div class="ni-new"></div>':''}
+    </div>`).join('');
+}
+
+function renderChart(monthly){
+  const max=Math.max(...monthly.map(m=>m.val),1);
+  document.getElementById('bar-chart').innerHTML=monthly.map(m=>`
+    <div class="bar-row">
+      <div class="bar-lbl">${m.label}</div>
+      <div class="bar-wrap"><div class="bar-fill" style="width:${Math.round(m.val/max*100)}%"></div></div>
+      <div class="bar-val">${m.val}件</div>
+    </div>`).join('');
+}
+
+function renderNav(type){
+  const items=NAVS[type]||NAVS['re'];
+  document.getElementById('bottom-nav').innerHTML=items.map(n=>`
+    <div class="nav-item ${n.id==='home'?'on':''}"
+         onclick="${n.action?n.action+'()':n.url?'goto(\''+n.url+'\')':''}"
+         id="nav-${n.id}">
+      <span class="nav-icon">${n.icon}</span>
+      <span class="nav-lbl">${n.label}</span>
+    </div>`).join('');
+}
+
+function renderMenu(type){
+  const items=MENU_ITEMS[type]||MENU_ITEMS['re'];
+  document.getElementById('menu-list').innerHTML=items.map(m=>`
+    <div class="menu-item" onclick="goto('${m.url}')">
+      <span class="menu-icon">${m.icon}</span>
+      <div class="menu-info"><div class="menu-title">${m.title}</div><div class="menu-sub">${m.sub}</div></div>
+      <span class="menu-arrow">›</span>
+    </div>`).join('');
+}
+
+function goto(url){if(url)window.location.href=url;}
+
+// ── パネル開閉 ──
+function openNotif(){document.getElementById('notif-overlay').classList.add('show');document.getElementById('notif-dot').style.display='none';}
+function closeNotif(){document.getElementById('notif-overlay').classList.remove('show');}
+function openBc(){document.getElementById('bc-overlay').classList.add('show');}
+function closeBc(){document.getElementById('bc-overlay').classList.remove('show');}
+function openMenu(){document.getElementById('menu-overlay').classList.add('show');}
+function closeMenu(){document.getElementById('menu-overlay').classList.remove('show');}
+function openRef(){
+  closeMenu();
+  const ov=document.getElementById('ref-overlay');
+  const ag=session;
+  const isExec=ag&&ag.hqRole==='exec';
+  const agId=ag&&ag.agId?ag.agId:'10012';
+  if(isExec){
+    const SPECIAL=['FOUNDER2026','WELCOME2026','GOLD_START','HR_PRO75'];
+    document.getElementById('ref-code-selector').innerHTML=
+      '<div style="margin-bottom:12px"><div style="font-size:10px;color:var(--sub);font-weight:600;margin-bottom:5px">コード種別</div>'
+      +'<select id="ref-code-select" onchange="updateRefLink()" style="width:100%;padding:10px 12px;background:var(--card2);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-size:14px">'
+      +'<option value="'+agId+'">自分のID（'+agId+'）</option>'
+      +'<optgroup label="── 特別コード ──">'+SPECIAL.map(c=>'<option value="'+c+'">⭐ '+c+'</option>').join('')+'</optgroup>'
+      +'</select></div>';
+  }else{
+    document.getElementById('ref-code-selector').innerHTML=
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:9px 12px;background:rgba(201,168,76,.06);border:1px solid rgba(201,168,76,.2);border-radius:9px">'
+      +'<span style="font-size:11px;color:var(--muted)">紹介コード：</span>'
+      +'<span style="font-family:\'DM Mono\',monospace;font-size:14px;font-weight:700;color:var(--gold)">'+agId+'</span>'
+      +'</div>';
+  }
+  updateRefLink();
+  ov.classList.add('show');
+}
+function closeRef(){document.getElementById('ref-overlay').classList.remove('show');}
+var _refCode='';
+function updateRefLink(){
+  const sel=document.getElementById('ref-code-select');
+  if(sel)_refCode=sel.value;else _refCode=(session&&session.agId)||'10012';
+  const base=location.origin+location.pathname.replace(/[^\/]*$/,'')+'/coreto-agent-signup.html';
+  document.getElementById('ref-url-display').textContent=base+'?ref='+encodeURIComponent(_refCode);
+}
+function copyRefLink(){
+  const url=document.getElementById('ref-url-display').textContent;
+  navigator.clipboard.writeText(url).then(function(){
+    const btn=document.querySelector('.copy-btn');
+    btn.textContent='✅ コピーしました';
+    setTimeout(function(){btn.textContent='📋 コピー';},2000);
+  }).catch(function(){
+    const ta=document.createElement('textarea');ta.value=url;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);
+  });
+}
+
+// ── ログアウト ──
+function doLogout(){
+  closeMenu();
+  if(confirm('ログアウトしますか？')){
+    sessionStorage.removeItem('coreto_session');
+    location.href='coreto-sp-login.html';
+  }
+}
+
+// ── 名刺 ──
+function initBc(ag){
+  const nameEl=document.getElementById('bc-name');
+  const kanaEl=document.getElementById('bc-kana');
+  const contactEl=document.getElementById('bc-contact');
+  const nameDisplay=ag.nameOld&&ag.showOldOnCard?ag.name.split(' ')[0]+'（旧姓：'+ag.nameOld+'）'+(ag.name.split(' ')[1]||''):(ag.name||'—');
+  if(nameEl)nameEl.textContent=nameDisplay;
+  if(kanaEl)kanaEl.textContent=ag.nameKana||'—';
+  if(contactEl)contactEl.innerHTML=(ag.phone||'—')+'<br>'+(ag.email||'—');
+}
+function updateBcPreview(){
+  const hasTakken=document.getElementById('bc-takken').checked;
+  const badge=document.getElementById('bc-takken-badge');
+  const title=document.getElementById('bc-takken-title');
+  if(badge)badge.style.display=hasTakken?'inline-flex':'none';
+  if(title)title.style.display=hasTakken?'block':'none';
+}
+function getBcData(){
+  const ag=_bcAgent||{};
+  const hasTakken=(document.getElementById('bc-takken')||{}).checked||false;
+  const note=(document.getElementById('bc-note')||{}).value||'';
+  const nameMain=ag.nameOld&&ag.showOldOnCard?ag.name.split(' ')[0]+'（旧姓：'+ag.nameOld+'）'+(ag.name.split(' ')[1]||''):(ag.name||'—');
+  return{nameMain,nameKana:ag.nameKana||'—',phone:ag.phone||'—',email:ag.email||'—',agentId:ag.agId||'—',hasTakken,note,company:'株式会社CORETO',address:'東京都渋谷区恵比寿1-1-1 COREBLDGビル8F',url:'https://coreto.jp'};
+}
+function previewBcPdf(){
+  const d=getBcData();
+  const html=`<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>名刺 — ${d.nameMain}</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+<style>*{margin:0;padding:0;box-sizing:border-box}html,body{background:#f0f0f0;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:'Noto Sans JP',sans-serif}.card-wrap{background:white;width:91mm;height:55mm;border-radius:1.5mm;box-shadow:0 4px 24px rgba(0,0,0,.2);position:relative;display:flex;overflow:hidden}.card-accent{width:3mm;height:100%;background:linear-gradient(180deg,#c9a84c,#7a5f22);flex-shrink:0}.card-body{flex:1;padding:5mm 5mm 5mm 4mm;display:flex;flex-direction:column;justify-content:space-between}.card-top{display:flex;align-items:center;justify-content:space-between}.card-logo{font-size:10pt;font-weight:800;letter-spacing:3px;color:#c9a84c}.card-id{font-size:6pt;color:#aaa;font-family:monospace;border:0.3mm solid #ddd;padding:1mm 2mm;border-radius:.5mm}.card-center{flex:1;display:flex;flex-direction:column;justify-content:center;padding:2mm 0}.card-takken{font-size:6.5pt;color:#c9a84c;font-weight:700;margin-bottom:2mm}.card-name{font-size:16pt;font-weight:700;color:#1a1a1a;margin-bottom:1mm}.card-kana{font-size:7pt;color:#888;letter-spacing:1.5px;font-family:monospace}.card-bottom{font-size:7pt;color:#555;line-height:1.8}.card-co{font-size:6.5pt;color:#999;margin-bottom:.5mm}.divider{width:100%;height:.2mm;background:#eee;margin:1mm 0}.controls{text-align:center;margin:16px}.cb-btn{padding:10px 24px;background:#c9a84c;color:#0a0c10;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;margin-right:8px}@media print{@page{size:91mm 55mm;margin:0}html,body{width:91mm;height:55mm;display:block;background:white}.controls{display:none}.card-wrap{box-shadow:none;border-radius:0}}</style></head><body>
+<div class="controls"><button class="cb-btn" onclick="window.print()">📄 PDFとして保存</button><button onclick="window.close()" style="padding:10px 16px;border:1px solid #ccc;border-radius:8px;font-size:12px;cursor:pointer">閉じる</button></div>
+<div class="card-wrap"><div class="card-accent"></div><div class="card-body">
+<div class="card-top"><div class="card-logo">CORETO</div><div class="card-id">ID: ${d.agentId}</div></div>
+<div class="card-center">${d.hasTakken?'<div class="card-takken">宅地建物取引士</div>':''}<div class="card-name">${d.nameMain}</div><div class="card-kana">${d.nameKana}</div></div>
+<div><div class="divider"></div><div class="card-co">${d.company}</div><div class="card-bottom">📱 ${d.phone}<br>✉ ${d.email}</div>${d.note?'<div style="font-size:6pt;color:#999;margin-top:2mm">'+d.note+'</div>':''}</div>
+</div></div></body></html>`;
+  const w=window.open('','_blank','width=700,height=580');w.document.write(html);w.document.close();
+}
+function sendToSlack(){
+  const d=getBcData();
+  const msg=['━━━━━━━━━━━━━━━━━━━━━━','🪪 *名刺発注リクエスト*','━━━━━━━━━━━━━━━━━━━━━━','👤 *氏名*：'+d.nameMain,'　　カナ：'+d.nameKana,'🪪 *ID*：'+d.agentId,'📱 *電話番号*：'+d.phone,'✉️ *メール*：'+d.email,'🏛 *宅地建物取引士*：'+(d.hasTakken?'✅ あり':'❌ なし'),d.note?'📝 *特記事項*：'+d.note:null,'━━━━━━━━━━━━━━━━━━━━━━','💳 ¥2,000 カード決済完了','🕐 '+new Date().toLocaleString('ja-JP')].filter(Boolean).join('\n');
+  alert('✅ Slackに名刺発注情報を送信しました。\n\n'+msg.replace(/\*/g,'')+'\n\n（本部Slackの #名刺発注 チャンネルに投稿されました）');
+}
+function orderBusinessCard(){
+  const btn=document.getElementById('bc-order-btn');
+  if(!confirm('名刺を発注しますか？\n\n登録カード（Visa ···4242）より ¥2,000 が即時決済されます。\n発注後のキャンセルはできません。'))return;
+  btn.disabled=true;btn.textContent='⏳ 決済中...';
+  setTimeout(()=>{
+    btn.textContent='✅ 発注完了';
+    btn.style.background='rgba(52,211,153,.15)';
+    btn.style.border='1px solid rgba(52,211,153,.3)';
+    btn.style.color='var(--green)';
+    const hist=document.getElementById('bc-history');
+    if(hist){
+      const now=new Date().toLocaleDateString('ja-JP',{year:'numeric',month:'2-digit',day:'2-digit'});
+      const note=(document.getElementById('bc-note')||{}).value||'';
+      const hasTakken=(document.getElementById('bc-takken')||{}).checked||false;
+      const row=document.createElement('div');
+      row.className='bc-hist-item';
+      row.innerHTML='<div><div style="font-weight:700">'+now+' 発注</div><div style="color:var(--muted);font-size:10px">100枚 / '+(note||'通常')+(hasTakken?'・宅建士表記':'')+'</div></div><div style="text-align:right"><div style="font-family:\'DM Mono\',monospace;color:var(--red)">-¥2,000</div><span style="font-size:8px;padding:2px 6px;border-radius:4px;background:rgba(251,146,60,.12);color:var(--orange);font-weight:700">制作中</span></div>';
+      hist.insertBefore(row,hist.firstChild);
+    }
+    sendToSlack();
+  },1400);
+}
+
+// ── Slack設定 ──
+var SLACK_WEBHOOK=window.SLACK_CONFIG?window.SLACK_CONFIG.GENERAL:'YOUR_SLACK_WEBHOOK_URL';
+function notifySlack(msg){if(!SLACK_WEBHOOK||SLACK_WEBHOOK==='YOUR_SLACK_WEBHOOK_URL'){console.log('[Slack未設定]',msg);return;}fetch(SLACK_WEBHOOK,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:msg}),mode:'no-cors'}).catch(e=>console.error('[Slack送信エラー]',e));}
+
+// ローディング表示して起動
+document.getElementById('loading-overlay').classList.add('show');
+window.addEventListener('DOMContentLoaded',function(){setTimeout(init,50);});
+</script>
+</body>
+</html>

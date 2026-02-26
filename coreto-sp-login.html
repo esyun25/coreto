@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://hooks.slack.com https://hooks.zapier.com; frame-src 'none'; object-src 'none'; base-uri 'self';">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#07090f">
+<title>CORETO ログイン</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+input,button,select,textarea{touch-action:manipulation;font-family:inherit}
+:root{
+  --bg:#07090f;--card:#0f1119;--card2:#13161f;--border:#1e2235;--border2:#252a3d;
+  --gold:#c9a84c;--gold-l:#e8c96a;--gold-dim:#7a5f22;
+  --green:#34d399;--red:#f87171;--blue:#4f9cf9;--orange:#fb923c;
+  --muted:#4a5270;--sub:#7a849e;--text:#e2e6f3;
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+html,body{height:100%;min-height:100dvh;background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans-serif;overflow-x:hidden}
+body{background-image:radial-gradient(ellipse 120% 50% at 50% -10%,rgba(201,168,76,.07) 0%,transparent 60%),radial-gradient(ellipse 60% 40% at 100% 100%,rgba(79,156,249,.04) 0%,transparent 60%)}
+.screen{min-height:100dvh;padding:calc(var(--safe-top) + 40px) 0 calc(var(--safe-bottom) + 32px);display:flex;flex-direction:column;align-items:center;justify-content:center}
+.logo-area{text-align:center;margin-bottom:32px;padding:0 24px}
+.logo{font-family:'Syne',sans-serif;font-size:36px;font-weight:800;color:var(--gold);letter-spacing:8px;display:block;text-shadow:0 0 40px rgba(201,168,76,.25)}
+.tagline{font-size:10px;color:var(--muted);letter-spacing:2.5px;margin-top:6px;text-transform:uppercase}
+.card{width:100%;max-width:420px;padding:0 20px}
+.card-inner{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:28px 22px;position:relative;overflow:hidden}
+.card-inner::before{content:'';position:absolute;top:0;left:15%;right:15%;height:1px;background:linear-gradient(90deg,transparent,rgba(201,168,76,.45),transparent)}
+.card-title{font-size:11px;color:var(--sub);text-align:center;margin-bottom:22px;letter-spacing:1.5px;text-transform:uppercase;font-weight:600}
+.fg{margin-bottom:14px}
+.fg label{font-size:11px;color:var(--sub);display:block;margin-bottom:6px;font-weight:600;letter-spacing:.5px}
+.fg input{width:100%;background:#090b13;border:1.5px solid var(--border2);border-radius:12px;padding:14px 16px;color:var(--text);font-family:'DM Mono',monospace;font-size:16px;letter-spacing:2px;transition:border-color .15s,box-shadow .15s;-webkit-appearance:none;appearance:none}
+.fg input::placeholder{font-size:13px;letter-spacing:.5px;color:var(--muted);font-family:'Noto Sans JP',sans-serif}
+.fg input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,168,76,.08)}
+.type-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:8px;font-size:11px;font-weight:700;margin-top:7px;opacity:0;transition:opacity .2s,transform .2s;transform:translateY(3px)}
+.type-badge.visible{opacity:1;transform:translateY(0)}
+.tb-re{background:rgba(79,156,249,.12);color:var(--blue);border:1px solid rgba(79,156,249,.25)}
+.tb-hr{background:rgba(20,184,166,.12);color:#2dd4bf;border:1px solid rgba(20,184,166,.25)}
+.tb-pt{background:rgba(52,211,153,.12);color:var(--green);border:1px solid rgba(52,211,153,.25)}
+.tb-hq{background:rgba(201,168,76,.12);color:var(--gold);border:1px solid rgba(201,168,76,.25)}
+.pw-wrap{position:relative}
+.pw-wrap input{padding-right:60px}
+.pw-toggle{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--muted);cursor:pointer;user-select:none;padding:8px 0}
+.err{background:rgba(248,113,113,.07);border:1px solid rgba(248,113,113,.2);border-radius:10px;padding:11px 14px;font-size:12px;color:var(--red);margin-bottom:14px;display:none;line-height:1.7}
+.err.show{display:block}
+.btn-login{width:100%;padding:15px;border-radius:13px;border:none;cursor:pointer;background:linear-gradient(135deg,var(--gold) 0%,#a8862e 100%);color:#0a0c10;font-size:15px;font-weight:700;letter-spacing:.5px;transition:all .2s;margin-top:6px;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-login:active{transform:scale(.98);opacity:.9}
+.footer{text-align:center;margin-top:20px;font-size:11px;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px 14px;padding:0 20px}
+.footer a{color:var(--sub);text-decoration:none;padding:4px 0}
+.footer a:active{color:var(--gold)}
+.loading-overlay{position:fixed;inset:0;background:rgba(7,9,15,.94);backdrop-filter:blur(10px);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9000;opacity:0;pointer-events:none;transition:opacity .3s}
+.loading-overlay.show{opacity:1;pointer-events:all}
+.spinner{width:48px;height:48px;border:2.5px solid rgba(201,168,76,.2);border-top-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite;margin-bottom:20px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-msg{font-size:12px;color:var(--sub);letter-spacing:2px}
+/* パスワードリセット */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);z-index:500;display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:opacity .25s}
+.overlay.show{opacity:1;pointer-events:all}
+.sheet{width:100%;background:var(--card);border-radius:24px 24px 0 0;border:1px solid var(--border);border-bottom:none;padding-bottom:calc(var(--safe-bottom) + 16px);transform:translateY(100%);transition:transform .3s cubic-bezier(.32,0,.67,0);max-height:90dvh;overflow-y:auto}
+.overlay.show .sheet{transform:translateY(0);transition-timing-function:cubic-bezier(.33,1,.68,1)}
+.sheet-handle{width:40px;height:4px;background:var(--border2);border-radius:2px;margin:12px auto 0}
+.sheet-hdr{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--card);z-index:10}
+.sheet-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:var(--gold)}
+.sheet-close{background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;line-height:1;padding:4px}
+.sheet-body{padding:20px}
+.rst-step{display:none}
+.rst-step.active{display:block}
+.rst-input{width:100%;background:#090b13;border:1.5px solid var(--border2);border-radius:12px;padding:13px 15px;color:var(--text);font-size:16px;font-family:'DM Mono',monospace;outline:none;transition:.15s}
+.rst-input:focus{border-color:var(--blue)}
+.rst-btn{width:100%;padding:13px;border-radius:11px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Noto Sans JP',sans-serif;border:none;transition:.15s}
+.rst-btn.primary{background:linear-gradient(135deg,var(--blue),#3070c0);color:#fff}
+.rst-btn.primary:disabled{opacity:.4;cursor:not-allowed}
+.rst-btn.gold{background:linear-gradient(135deg,var(--gold),#a8742a);color:#0a0c10}
+.otp-wrap{display:flex;gap:8px;justify-content:center;margin:12px 0}
+.otp-box{width:44px;height:52px;background:#090b13;border:2px solid var(--border2);border-radius:10px;font-size:22px;font-weight:700;text-align:center;color:var(--text);font-family:'DM Mono',monospace;outline:none;transition:.15s}
+.otp-box:focus{border-color:var(--blue)}
+.otp-box.ok{border-color:var(--green);background:rgba(52,211,153,.05)}
+.otp-box.ng{border-color:var(--red);animation:shake .3s ease}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+</style>
+</head>
+<body>
+<div class="loading-overlay" id="loading-overlay">
+  <div class="spinner"></div>
+  <div class="loading-msg" id="loading-msg">ログイン中...</div>
+</div>
+<div class="screen">
+  <div class="logo-area">
+    <span class="logo">CORETO</span>
+    <div class="tagline">不動産 ／ 人材 統合プラットフォーム</div>
+  </div>
+  <div class="card">
+    <div class="card-inner">
+      <div class="card-title">エージェント・パートナーログイン</div>
+      <div class="err" id="err"></div>
+      <div class="fg">
+        <label>会員ID</label>
+        <input type="text" id="f-id" inputmode="numeric" maxlength="5"
+               autocomplete="username" placeholder="例：10012"
+               oninput="onIdChange(this)"
+               onkeydown="if(event.key==='Enter')document.getElementById('f-pw').focus()">
+        <div class="type-badge" id="type-badge"></div>
+      </div>
+      <div class="fg">
+        <label>パスワード</label>
+        <div class="pw-wrap">
+          <input type="password" id="f-pw" placeholder="パスワードを入力"
+                 autocomplete="current-password"
+                 onkeydown="if(event.key==='Enter')doLogin()">
+          <span class="pw-toggle" id="pw-toggle" onclick="togglePw()">表示</span>
+        </div>
+      </div>
+      <button class="btn-login" onclick="doLogin()"><span>ログイン</span></button>
+    </div>
+    <div class="footer">
+      <a href="#" onclick="openPasswordReset()" style="color:var(--blue)">パスワードを忘れた方</a>
+      <span style="color:var(--border2)">|</span>
+      <a href="coreto-agent-signup.html">新規登録</a>
+      <span style="color:var(--border2)">|</span>
+      <a href="coreto-login-hq.html" style="color:var(--muted);font-size:10px">本部スタッフの方</a>
+    </div>
+  </div>
+</div>
+<!-- パスワードリセット -->
+<div class="overlay" id="rst-overlay" onclick="if(event.target===this)closePasswordReset()">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-hdr">
+      <div class="sheet-title">パスワード再設定</div>
+      <button class="sheet-close" onclick="closePasswordReset()">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div class="rst-step active" id="rst-s0">
+        <div style="font-size:12px;color:var(--sub);line-height:1.8;margin-bottom:16px;padding:11px 14px;background:rgba(79,156,249,.07);border:1px solid rgba(79,156,249,.2);border-radius:10px">
+          ℹ️ 登録済みのメールアドレスに再設定リンクを送信します。<br>有効期限：<strong style="color:var(--orange)">30分</strong>
+        </div>
+        <div style="margin-bottom:14px">
+          <label style="display:block;font-size:11px;color:var(--sub);margin-bottom:6px;font-weight:600">エージェントID</label>
+          <input type="text" class="rst-input" id="rst-id" placeholder="例：10012" inputmode="numeric" maxlength="5" oninput="lookupResetUser(this.value)">
+        </div>
+        <div id="rst-methods" style="display:none;margin-bottom:16px">
+          <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--card2);border:1px solid var(--border);border-radius:11px">
+            <span style="font-size:20px">📧</span>
+            <div><div style="font-size:12px;font-weight:700">メールで送信</div><div style="font-size:10px;color:var(--muted)" id="rst-email-hint">—</div></div>
+          </div>
+        </div>
+        <button class="rst-btn primary" id="rst-send-btn" disabled onclick="sendResetLink()">📨 リンクを送信</button>
+      </div>
+      <div class="rst-step" id="rst-s1">
+        <div style="text-align:center;margin-bottom:16px">
+          <div style="width:60px;height:60px;border-radius:50%;margin:0 auto 12px;background:rgba(79,156,249,.1);border:2px solid rgba(79,156,249,.3);display:flex;align-items:center;justify-content:center;font-size:26px">💬</div>
+          <div style="font-size:14px;font-weight:700;margin-bottom:6px">認証コードを入力</div>
+          <div style="font-size:11px;color:var(--sub);line-height:1.8" id="rst-otp-desc">メールに6桁のコードを送信しました</div>
+        </div>
+        <div class="otp-wrap">
+          <input class="otp-box" maxlength="1" type="text" inputmode="numeric" oninput="rstOtpIn(this,0)" onkeydown="rstOtpKey(event,0)" id="ro0">
+          <input class="otp-box" maxlength="1" type="text" inputmode="numeric" oninput="rstOtpIn(this,1)" onkeydown="rstOtpKey(event,1)" id="ro1">
+          <input class="otp-box" maxlength="1" type="text" inputmode="numeric" oninput="rstOtpIn(this,2)" onkeydown="rstOtpKey(event,2)" id="ro2">
+          <input class="otp-box" maxlength="1" type="text" inputmode="numeric" oninput="rstOtpIn(this,3)" onkeydown="rstOtpKey(event,3)" id="ro3">
+          <input class="otp-box" maxlength="1" type="text" inputmode="numeric" oninput="rstOtpIn(this,4)" onkeydown="rstOtpKey(event,4)" id="ro4">
+          <input class="otp-box" maxlength="1" type="text" inputmode="numeric" oninput="rstOtpIn(this,5)" onkeydown="rstOtpKey(event,5)" id="ro5">
+        </div>
+        <div style="text-align:center;font-size:11px;color:var(--muted);margin-bottom:6px">有効期限：<span id="rst-timer" style="font-family:'DM Mono',monospace;color:var(--orange);font-weight:700">5:00</span></div>
+        <div style="text-align:center;font-size:10px;color:var(--muted);margin-bottom:16px" id="rst-demo-hint"></div>
+        <button class="rst-btn" onclick="closePasswordReset()" style="background:transparent;border:1px solid var(--border2);color:var(--sub)">キャンセル</button>
+      </div>
+      <div class="rst-step" id="rst-s2">
+        <div style="text-align:center;margin-bottom:16px">
+          <span style="font-size:32px">🔑</span>
+          <div style="font-size:14px;font-weight:700;margin-top:8px">新しいパスワードを設定</div>
+          <div style="font-size:11px;color:var(--green);margin-top:4px">✅ 本人確認完了</div>
+        </div>
+        <div style="margin-bottom:12px">
+          <label style="display:block;font-size:11px;color:var(--sub);margin-bottom:6px;font-weight:600">新しいパスワード</label>
+          <input type="password" class="rst-input" id="rst-pw1" placeholder="8文字以上">
+        </div>
+        <div style="margin-bottom:18px">
+          <label style="display:block;font-size:11px;color:var(--sub);margin-bottom:6px;font-weight:600">確認</label>
+          <input type="password" class="rst-input" id="rst-pw2" placeholder="もう一度入力">
+        </div>
+        <button class="rst-btn gold" onclick="submitNewPw()">🔑 パスワードを設定する</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="db.js"></script>
+<script>
+function escHtml(s){if(s==null)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;')}
+const TYPE_INFO={'0':{type:'hq',label:'🏢 本部HQスタッフ',cls:'tb-hq'},'1':{type:'re',label:'🏠 不動産エージェント',cls:'tb-re'},'2':{type:'hr',label:'👥 人材エージェント',cls:'tb-hr'},'3':{type:'pt',label:'🤝 パートナー',cls:'tb-pt'}};
+function onIdChange(el){el.value=el.value.replace(/\D/g,'').slice(0,5);showErr('');const badge=document.getElementById('type-badge');const info=TYPE_INFO[el.value.charAt(0)];if(el.value.length>=1&&info){badge.textContent=info.label;badge.className='type-badge visible '+info.cls;}else{badge.className='type-badge';}}
+function togglePw(){const el=document.getElementById('f-pw');const tg=document.getElementById('pw-toggle');el.type=el.type==='password'?'text':'password';tg.textContent=el.type==='password'?'表示':'非表示';}
+function showErr(msg){const el=document.getElementById('err');el.textContent=msg;el.className=msg?'err show':'err';}
+const _loginAttempts={count:0,lockedUntil:0};
+const LOGIN_MAX_ATTEMPTS=5,LOGIN_LOCKOUT_MS=300000;
+function checkLoginLock(){if(_loginAttempts.lockedUntil>Date.now()){const remaining=Math.ceil((_loginAttempts.lockedUntil-Date.now())/60000);showErr('ログイン試行回数が上限に達しました。'+remaining+'分後に再試行してください。');return true;}return false;}
+async function verifyPassword(pw,salt,hash){const encoder=new TextEncoder();const data=encoder.encode(salt+':'+pw);const hashBuffer=await crypto.subtle.digest('SHA-256',data);const hashArray=Array.from(new Uint8Array(hashBuffer));const computed=hashArray.map(b=>b.toString(16).padStart(2,'0')).join('');return computed===hash;}
+async function doLogin(){
+  if(checkLoginLock())return;
+  const id=document.getElementById('f-id').value.trim();
+  const pw=document.getElementById('f-pw').value;
+  if(id.length!==5){showErr('会員IDを正しく入力してください（5桁）');return;}
+  if(!TYPE_INFO[id.charAt(0)]){showErr('会員IDの先頭桁が無効です');return;}
+  if(!pw){showErr('パスワードを入力してください');return;}
+  const ac=(typeof USERS!=='undefined')?USERS[id]:null;
+  if(!ac){
+    _loginAttempts.count++;
+    if(_loginAttempts.count>=LOGIN_MAX_ATTEMPTS){_loginAttempts.lockedUntil=Date.now()+LOGIN_LOCKOUT_MS;_loginAttempts.count=0;showErr('ログイン試行回数が上限に達しました。5分後に再試行してください。');}
+    else{showErr('会員IDまたはパスワードが正しくありません（残り'+(LOGIN_MAX_ATTEMPTS-_loginAttempts.count)+'回）');}
+    document.getElementById('f-pw').value='';return;
+  }
+  const ok=await verifyPassword(pw,ac.pwSalt,ac.pwHash);
+  if(!ok){
+    _loginAttempts.count++;
+    if(_loginAttempts.count>=LOGIN_MAX_ATTEMPTS){_loginAttempts.lockedUntil=Date.now()+LOGIN_LOCKOUT_MS;_loginAttempts.count=0;showErr('ログイン試行回数が上限に達しました。5分後に再試行してください。');}
+    else{showErr('会員IDまたはパスワードが正しくありません（残り'+(LOGIN_MAX_ATTEMPTS-_loginAttempts.count)+'回）');}
+    document.getElementById('f-pw').value='';return;
+  }
+  _loginAttempts.count=0;
+  startSession(id,ac);
+}
+async function computeSessionToken(userId,loginAt,pwHash){const encoder=new TextEncoder();const data=encoder.encode(userId+':'+loginAt+':'+pwHash);const buf=await crypto.subtle.digest('SHA-256',data);return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');}
+async function startSession(id,ac){
+  document.getElementById('loading-msg').textContent='ログイン中...';
+  document.getElementById('loading-overlay').classList.add('show');
+  const loginAt=new Date().toISOString();
+  const token=await computeSessionToken(id,loginAt,ac.pwHash);
+  const session={agId:id,userId:id,name:ac.name,rank:ac.rank||'HQ',rankKey:ac.rankKey||'hq',type:ac.type,hqRole:ac.hqRole||null,sennin:ac.sennin||false,loginAt:loginAt,sessionToken:token};
+  sessionStorage.setItem('coreto_session',JSON.stringify(session));
+  let dest;
+  if(ac.type==='pt')dest='coreto-partner.html';
+  else dest='coreto-sp-dashboard.html';
+  setTimeout(()=>{window.location.href=dest;},700);
+}
+// パスワードリセット
+const RESET_USERS={'10012':{email:'yama***@gmail.com',name:'山田 誠'},'10008':{email:'sato***@gmail.com',name:'佐藤 花子'},'10023':{email:'suzu***@gmail.com',name:'鈴木 健太'},'20005':{email:'tana***@gmail.com',name:'田中 美穂'},'30007':{email:'misa***@gmail.com',name:'佐藤 美咲'}};
+let _rstOtp='',_rstTimer=null,_rstCountdown=300;
+function openPasswordReset(){const ov=document.getElementById('rst-overlay');ov.classList.add('show');showRstStep('rst-s0');document.getElementById('rst-id').value='';document.getElementById('rst-methods').style.display='none';const btn=document.getElementById('rst-send-btn');btn.disabled=true;btn.style.opacity='.4';}
+function closePasswordReset(){clearInterval(_rstTimer);document.getElementById('rst-overlay').classList.remove('show');}
+function showRstStep(id){['rst-s0','rst-s1','rst-s2'].forEach(s=>{document.getElementById(s).className='rst-step'+(s===id?' active':'');});}
+function lookupResetUser(val){const user=RESET_USERS[val.trim()];const methods=document.getElementById('rst-methods');const sendBtn=document.getElementById('rst-send-btn');if(user){methods.style.display='block';document.getElementById('rst-email-hint').textContent=user.email;sendBtn.disabled=false;sendBtn.style.opacity='1';}else{methods.style.display='none';sendBtn.disabled=true;sendBtn.style.opacity='.4';}}
+function sendResetLink(){const id=document.getElementById('rst-id').value.trim();const user=RESET_USERS[id];if(!user)return;showRstStep('rst-s1');_rstOtp=String(Math.floor(100000+Math.random()*900000));document.getElementById('rst-otp-desc').textContent='メール（'+user.email+'）に6桁のコードを送信しました（'+user.name+'様）';document.getElementById('rst-demo-hint').textContent='【デモ用コード: '+_rstOtp+'】';document.getElementById('rst-timer').textContent='5:00';document.getElementById('rst-timer').style.color='var(--orange)';for(let i=0;i<6;i++){const c=document.getElementById('ro'+i);c.value='';c.className='otp-box';c.disabled=false;}clearInterval(_rstTimer);_rstCountdown=300;_rstTimer=setInterval(()=>{_rstCountdown--;const m=Math.floor(_rstCountdown/60),s=_rstCountdown%60;const el=document.getElementById('rst-timer');if(el){el.textContent=m+':'+String(s).padStart(2,'0');if(_rstCountdown<60)el.style.color='var(--red)';}if(_rstCountdown<=0){clearInterval(_rstTimer);for(let i=0;i<6;i++){const c=document.getElementById('ro'+i);if(c)c.disabled=true;}}},1000);setTimeout(()=>document.getElementById('ro0').focus(),300);}
+function rstOtpIn(el,idx){const v=el.value.replace(/\D/g,'');el.value=v;el.className='otp-box';if(v&&idx<5)document.getElementById('ro'+(idx+1)).focus();if(idx===5&&v)rstCheckOtp();}
+function rstOtpKey(e,idx){if(e.key==='Backspace'&&!e.target.value&&idx>0)document.getElementById('ro'+(idx-1)).focus();}
+function rstCheckOtp(){const entered=Array.from({length:6},(_,i)=>document.getElementById('ro'+i).value).join('');if(entered===_rstOtp){for(let i=0;i<6;i++)document.getElementById('ro'+i).className='otp-box ok';clearInterval(_rstTimer);setTimeout(()=>showRstStep('rst-s2'),500);}else{for(let i=0;i<6;i++)document.getElementById('ro'+i).className='otp-box ng';setTimeout(()=>{for(let i=0;i<6;i++){const c=document.getElementById('ro'+i);c.value='';c.className='otp-box';}document.getElementById('ro0').focus();},800);}}
+function submitNewPw(){const pw1=document.getElementById('rst-pw1').value;const pw2=document.getElementById('rst-pw2').value;if(!pw1||pw1.length<8){alert('パスワードは8文字以上で入力してください');return;}if(pw1!==pw2){alert('パスワードが一致しません');return;}clearInterval(_rstTimer);closePasswordReset();alert('✅ パスワードを再設定しました。\n新しいパスワードでログインしてください。');}
+</script>
+</body>
+</html>
