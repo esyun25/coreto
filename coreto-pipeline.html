@@ -1207,7 +1207,26 @@ function stepPrekey(c) {
   h += taskRow(setsuOk, 'IT重説・契約',
     "openItSetsuAndConfirm('"+c.id+"')");
   if (!ad) {
-    h += taskRow(paidOk, '入金確認', "paymentCheck('"+c.id+"')");
+    // 入金確認は本部のみ実行可能
+    const _isHQLocal = window._SESSION && window._SESSION.type === 'hq';
+    if (paidOk) {
+      h += '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;'
+        +'background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.2);border-radius:8px;margin-bottom:8px">'
+        +'<span style="font-size:16px">✅</span>'
+        +'<div><div style="font-size:12px;color:var(--green);font-weight:700">入金確認済</div>'
+        +(c.dates.paid ? '<div style="font-size:10px;color:var(--muted)">振込日: '+c.dates.paid+'</div>' : '')
+        +'</div></div>';
+    } else if (_isHQLocal) {
+      h += '<button class="btn btn-green btn-sm" style="width:100%;justify-content:center;margin-bottom:8px" '
+        +'onclick="openPaymentConfirmModal(\''+c.id+'\')">💰 入金確認（本部）</button>';
+    } else {
+      h += '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;'
+        +'background:rgba(79,156,249,.05);border:1px solid rgba(79,156,249,.15);border-radius:8px;margin-bottom:8px">'
+        +'<span style="font-size:16px">⏳</span>'
+        +'<div><div style="font-size:12px;color:var(--sub)">入金待ち</div>'
+        +'<div style="font-size:10px;color:var(--muted)">入金確認は本部が行います</div>'
+        +'</div></div>';
+    }
   } else {
     h += '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;'
       +'background:rgba(251,146,60,.06);border:1px solid rgba(251,146,60,.2);border-radius:8px;margin-bottom:8px">'
@@ -3379,20 +3398,93 @@ function editInvoice(id) {
 }
 
 
-function paymentCheck(id) {
+// ── 入金確認モーダル（本部のみ）──────────────────────────────
+function openPaymentConfirmModal(id) {
   const c = CASES.find(x=>x.id===id); if(!c) return;
+  // HQ権限チェック
+  if (!window._SESSION || window._SESSION.type !== 'hq') {
+    toast('⚠️ 入金確認は本部のみ実行できます'); return;
+  }
+  const inv = c.invoice;
+  const totalAmt = inv ? (inv.grandTotal || (inv.commAmt||0)+(inv.adAmt||0) || inv.totalItems || 0) : 0;
+  const prop = (c.apps&&c.apps.find(a=>a.status==='approved')||{}).prop || c.sub || '—';
+
+  const overlay = document.createElement('div');
+  overlay.id = 'pay-confirm-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;z-index:9999;padding:16px';
+  overlay.innerHTML = `
+    <div style="background:#11141f;border:1px solid #2a3050;border-radius:16px;width:min(440px,100%);font-family:inherit">
+      <div style="padding:16px 20px;border-bottom:1px solid #1e2235">
+        <div style="font-size:14px;font-weight:800;color:#e0e8f0">💰 入金確認（本部処理）</div>
+        <div style="font-size:10px;color:#5a6080;margin-top:2px">${c.name} 様 / ${c.id}</div>
+      </div>
+      <div style="padding:18px 20px">
+        <div style="background:rgba(79,156,249,.06);border:1px solid rgba(79,156,249,.15);border-radius:8px;padding:12px;margin-bottom:16px;font-size:11px">
+          <div style="display:grid;grid-template-columns:auto 1fr;gap:3px 12px;color:#a0a8c0">
+            <span>物件</span><span style="color:#e0e8f0">${prop}</span>
+            <span>請求金額</span><span style="color:#c9a840;font-weight:700;font-family:monospace">${totalAmt ? '¥'+totalAmt.toLocaleString() : '—'}</span>
+          </div>
+        </div>
+        <div style="margin-bottom:14px">
+          <div style="font-size:11px;color:#a0a8c0;margin-bottom:6px">📅 実際の振込日 <span style="color:#ef4444">*</span></div>
+          <input type="date" id="pay-date-input" value="${todayISO()}"
+            style="width:100%;background:#090b13;border:1px solid #2a3050;border-radius:7px;padding:9px 10px;color:#e0e8f0;font-family:inherit;font-size:13px;outline:none;box-sizing:border-box">
+        </div>
+        <div style="margin-bottom:16px">
+          <div style="font-size:11px;color:#a0a8c0;margin-bottom:6px">📝 備考（任意）</div>
+          <input type="text" id="pay-memo-input" placeholder="例: GMO入金通知 ref.1234"
+            style="width:100%;background:#090b13;border:1px solid #2a3050;border-radius:7px;padding:9px 10px;color:#e0e8f0;font-family:inherit;font-size:12px;outline:none;box-sizing:border-box">
+        </div>
+        <div style="display:flex;gap:8px">
+          <button onclick="document.getElementById('pay-confirm-overlay').remove()"
+            style="flex:1;background:transparent;border:1px solid #2a3050;color:#a0a8c0;border-radius:8px;padding:10px;cursor:pointer;font-family:inherit">
+            キャンセル</button>
+          <button onclick="paymentCheck('${id}')"
+            style="flex:2;background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);color:#34d399;border-radius:8px;padding:10px;cursor:pointer;font-family:inherit;font-weight:700">
+            ✅ 入金確認する</button>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+function paymentCheck(id) {
+  // HQ権限チェック
+  if (!window._SESSION || window._SESSION.type !== 'hq') {
+    toast('⚠️ 入金確認は本部のみ実行できます'); return;
+  }
+  const c = CASES.find(x=>x.id===id); if(!c) return;
+  // 実際の振込日を取得（モーダルの入力値 or 今日）
+  const dateInput = document.getElementById('pay-date-input');
+  const memoInput = document.getElementById('pay-memo-input');
+  const paidDate = dateInput ? dateInput.value : todayISO();
+  const memo     = memoInput ? memoInput.value.trim() : '';
+  if (!paidDate) { toast('振込日を入力してください'); return; }
+
   if(!c.taskDone) c.taskDone={};
   c.taskDone.paid = true;
-  c.dates.paid = todayISO();
-  c.hist.unshift(today()+' 入金確認済');
+  c.dates.paid = paidDate;
+  const histLine = paidDate + ' 入金確認済' + (memo ? '（'+memo+'）' : '') + '【本部確認: '+(window._SESSION.name||window._SESSION.userId)+'】';
+  c.hist.unshift(histLine);
+
+  // モーダルを閉じる
+  const ov = document.getElementById('pay-confirm-overlay');
+  if (ov) ov.remove();
+
+  const prop = (c.apps&&c.apps.find(a=>a.status==='approved')||{}).prop || c.sub || '—';
+  const inv = c.invoice;
+  const totalAmt = inv ? (inv.grandTotal || (inv.commAmt||0)+(inv.adAmt||0) || 0) : 0;
   slackSend(SLACK_CH.入金, [
-    ...slackHeader('💰','入金確認'),
+    ...slackHeader('💰','入金確認（本部処理）'),
     ...slackCase(c),
-    '🏠 *物件*：'+((c.apps.find(a=>a.status==='approved')||{}).prop||c.sub||'—'),
-    '📅 *確認日*：'+todayISO(),
+    '🏠 *物件*：' + prop,
+    '📅 *振込日*：' + paidDate,
+    ...(totalAmt ? ['💴 *金額*：¥' + totalAmt.toLocaleString()] : []),
+    ...(memo ? ['📝 *備考*：' + memo] : []),
+    '👤 *確認者*：' + (window._SESSION.name || window._SESSION.userId),
     ...slackFooter(),
   ]);
-  open_case(id); toast('入金確認しました');
+  open_case(id); toast('✅ 入金確認しました（振込日: ' + paidDate + '）');
 }
 function openItSetsuAndConfirm(id) {
   window.open('coreto-it-setsu.html', '_blank');

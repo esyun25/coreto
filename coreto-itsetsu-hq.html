@@ -56,6 +56,7 @@ body{font-family:'DM Sans','Hiragino Kaku Gothic ProN',sans-serif;background:#0b
   <div class="tab active" onclick="showTab('waiting')">⏳ 重説待ち</div>
   <div class="tab" onclick="showTab('booked')">📅 予約確定</div>
   <div class="tab" onclick="showTab('requests')">📨 リクエスト</div>
+  <div class="tab" onclick="showTab('payment')">💰 入金確認</div>
   <div class="tab" onclick="showTab('done')">✅ 完了済み</div>
 </div>
 
@@ -118,10 +119,17 @@ function renderStats(){
   var lateChanges = active.filter(isLateChange);
 
   var html = '';
+  // パイプラインから入金待ち案件を取得（CASES共有）
+  var allCases = [];
+  try { allCases = (window.CASES || []); } catch(e){}
+  var payWait = allCases.filter(function(c){
+    return c.step === 'prekey' && !(c.taskDone && c.taskDone.paid) && !c.adOnly;
+  });
   var stats = [
-    { num: active.length,    label:'予約中',    color:'#4f9cf9' },
-    { num: todayBks.length,  label:'本日の重説', color:'#34d399' },
-    { num: reqs.length,      label:'未対応リクエスト', color:'#a78bfa' },
+    { num: active.length,      label:'予約中',           color:'#4f9cf9' },
+    { num: todayBks.length,    label:'本日の重説',        color:'#34d399' },
+    { num: reqs.length,        label:'未対応リクエスト',   color:'#a78bfa' },
+    { num: payWait.length,     label:'入金待ち',          color:'#fbbf24' },
     { num: lateChanges.length, label:'直前変更（要確認）', color:'#ef4444' },
   ];
   stats.forEach(function(s){
@@ -140,7 +148,7 @@ function renderStats(){
 function showTab(tab){
   activeTab = tab;
   document.querySelectorAll('.tab').forEach(function(t,i){
-    var tabs = ['waiting','booked','requests','done'];
+    var tabs = ['waiting','booked','requests','payment','done'];
     t.classList.toggle('active', tabs[i] === tab);
   });
   renderTab();
@@ -151,6 +159,7 @@ function renderTab(){
   if (activeTab === 'waiting')  renderWaiting(el);
   if (activeTab === 'booked')   renderBooked(el);
   if (activeTab === 'requests') renderRequests(el);
+  if (activeTab === 'payment')  renderPayment(el);
   if (activeTab === 'done')     renderDone(el);
 }
 
@@ -269,6 +278,132 @@ function renderRequests(el){
       + '</div>';
   });
   el.innerHTML = html;
+}
+
+// ── ③.5 入金確認タブ
+function renderPayment(el) {
+  // CASES が pipeline.html から読めない場合はlocalStorage経由
+  // ここでは pipeline.html と同一ブラウザセッションで WINDOW.CASES が共有されない前提で
+  // Slack通知ベースの運用案内＋pipeline.htmlへのリンクを提供
+  var html = '<div style="background:rgba(79,156,249,.06);border:1px solid rgba(79,156,249,.15);'
+    + 'border-radius:10px;padding:16px;margin-bottom:14px;font-size:11px;color:#a0b0c8">'
+    + '<div style="font-size:12px;font-weight:700;color:#4f9cf9;margin-bottom:8px">💰 入金確認について</div>'
+    + '<div style="line-height:1.9">'
+    + '入金確認はパイプライン画面（本部ログイン時）の各案件から実行します。<br>'
+    + 'エージェントには「入金待ち」表示のみ、確認ボタンは本部ログイン時のみ表示されます。<br>'
+    + '<br>'
+    + '• 振込確認後、<strong style="color:#e0e8f0">実際の振込日</strong>を入力して確定してください<br>'
+    + '• GMO入金通知メール等を参照し、振込日・備考を記録することを推奨します<br>'
+    + '• 確認後 Slack #入金確認 に通知が送信され、担当エージェントに連絡が届きます<br>'
+    + '</div>'
+    + '</div>';
+
+  // 入金確認済み履歴（CASES から paid: true のものを表示）
+  // pipeline と同じ localStorage キーがあれば読み込む
+  var cases = [];
+  try {
+    var raw = localStorage.getItem('coreto_cases');
+    if (raw) cases = JSON.parse(raw);
+    else cases = window.CASES || [];
+  } catch(e) { cases = window.CASES || []; }
+
+  var paidCases = cases.filter(function(c){
+    return c.taskDone && c.taskDone.paid;
+  }).sort(function(a,b){
+    return (b.dates&&b.dates.paid||'').localeCompare(a.dates&&a.dates.paid||'');
+  });
+
+  var waitCases = cases.filter(function(c){
+    return c.step === 'prekey' && !(c.taskDone && c.taskDone.paid) && !c.adOnly;
+  });
+
+  if (waitCases.length) {
+    html += '<div style="font-size:10px;font-weight:700;color:#fbbf24;letter-spacing:.08em;margin-bottom:8px;text-transform:uppercase">⏳ 入金待ち（' + waitCases.length + '件）</div>';
+    waitCases.forEach(function(c) {
+      var inv = c.invoice;
+      var totalAmt = inv ? (inv.grandTotal || (inv.commAmt||0)+(inv.adAmt||0) || 0) : 0;
+      var prop = (c.apps&&c.apps.find(function(a){return a.status==='approved';})||{}).prop || c.sub || '—';
+      html += '<div class="card">'
+        + '<div class="card-header">'
+        + '<div><div style="font-size:12px;font-weight:700">'+c.name+' 様</div>'
+        + '<div style="font-size:10px;color:#5a6080;margin-top:2px">'+c.id+' / '+prop+'</div></div>'
+        + '<span class="badge badge-wait">入金待ち</span>'
+        + '</div>'
+        + '<div class="info-grid">'
+        + '<span class="info-label">担当AG</span><span class="info-val">'+c.agent+'</span>'
+        + (totalAmt ? '<span class="info-label">請求金額</span><span class="info-val warn">¥'+totalAmt.toLocaleString()+'</span>' : '')
+        + '</div>'
+        + '<div style="margin-top:10px;display:flex;gap:6px">'
+        + '<input type="date" id="pd-'+c.id+'" value="'+today_()+'" style="flex:1;background:#090b13;border:1px solid #2a3050;border-radius:7px;padding:7px 8px;color:#e0e8f0;font-family:inherit;font-size:11px;outline:none">'
+        + '<button onclick="hqPaymentConfirm(\'' + c.id + '\')" class="action-btn">✅ 入金確認</button>'
+        + '</div>'
+        + '<div style="font-size:9px;color:#3a4060;margin-top:4px">↑ GMO通知等で確認した実際の振込日を入力してください</div>'
+        + '</div>';
+    });
+    html += '<div style="margin-bottom:16px"></div>';
+  }
+
+  if (paidCases.length) {
+    html += '<div style="font-size:10px;font-weight:700;color:#34d399;letter-spacing:.08em;margin-bottom:8px;text-transform:uppercase">✅ 入金確認済み（' + paidCases.length + '件）</div>';
+    paidCases.slice(0,20).forEach(function(c) {
+      var inv = c.invoice;
+      var totalAmt = inv ? (inv.grandTotal || (inv.commAmt||0)+(inv.adAmt||0) || 0) : 0;
+      html += '<div class="card">'
+        + '<div class="card-header">'
+        + '<div><div style="font-size:12px;font-weight:700">'+c.name+' 様</div>'
+        + '<div style="font-size:10px;color:#5a6080;margin-top:2px">'+c.id+'</div></div>'
+        + '<span class="badge badge-done">確認済</span>'
+        + '</div>'
+        + '<div class="info-grid">'
+        + '<span class="info-label">振込日</span><span class="info-val green">'+(c.dates&&c.dates.paid||'—')+'</span>'
+        + (totalAmt ? '<span class="info-label">金額</span><span class="info-val">¥'+totalAmt.toLocaleString()+'</span>' : '')
+        + '</div></div>';
+    });
+  }
+
+  if (!waitCases.length && !paidCases.length) {
+    html += '<div class="empty">入金関連の案件データがありません<br><span style="font-size:10px">パイプライン画面からデータを読み込んでいます</span></div>';
+  }
+
+  el.innerHTML = html;
+}
+
+function hqPaymentConfirm(caseId) {
+  // pipeline.html と同じ CASES を参照できる場合のみ実行
+  var cases = [];
+  try {
+    var raw = localStorage.getItem('coreto_cases');
+    if (raw) cases = JSON.parse(raw);
+    else cases = window.CASES || [];
+  } catch(e) { cases = window.CASES || []; }
+
+  var c = cases.find(function(x){ return x.id === caseId; });
+  if (!c) {
+    alert('案件データが見つかりません。パイプライン画面から入金確認してください。');
+    return;
+  }
+  var inp = document.getElementById('pd-' + caseId);
+  var paidDate = inp ? inp.value : today_();
+  if (!paidDate) { toast('振込日を入力してください'); return; }
+
+  if(!c.taskDone) c.taskDone = {};
+  c.taskDone.paid = true;
+  c.dates.paid = paidDate;
+  c.hist = c.hist || [];
+  c.hist.unshift(paidDate + ' 入金確認済【本部確認: ' + (window._SESSION.name||window._SESSION.userId) + '】');
+
+  // localStorage に保存（CASES配列全体）
+  try {
+    if (localStorage.getItem('coreto_cases')) {
+      localStorage.setItem('coreto_cases', JSON.stringify(cases));
+    }
+  } catch(e) {}
+
+  console.log('[Slack #入金確認] 入金確認 案件:' + caseId + ' 振込日:' + paidDate
+    + ' 確認者:' + (window._SESSION.name||window._SESSION.userId));
+  toast('✅ 入金確認しました（振込日: ' + paidDate + '）');
+  renderTab();
+  renderStats();
 }
 
 // ── ④ 完了済み
