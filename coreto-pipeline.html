@@ -1181,15 +1181,8 @@ function stepPrekey(c) {
         + '<button style="margin-top:8px;width:100%;background:transparent;border:1px solid rgba(45,212,191,.25);border-radius:6px;padding:6px;color:rgba(45,212,191,.8);cursor:pointer;font-size:10px;font-family:inherit" data-cid="' + c.id + '" onclick="copyMeetLink(this.dataset.cid)">📋 Meet URLをコピー</button>'
         + '</div>';
     }
-    // 未予約
-    const app = c.apps.find(a=>a.status==='approved') || {};
-    const prop = app.prop || c.sub || '';
-    const u = window._SESSION || {};
-    const bookingUrl = location.origin + location.pathname.replace('coreto-pipeline.html','')
-      + 'coreto-itsetsu-booking.html?caseId=' + encodeURIComponent(c.id)
-      + (c.name ? '&client=' + encodeURIComponent(c.name) : '')
-      + (prop   ? '&prop='   + encodeURIComponent(prop)   : '')
-      + (u.name ? '&agent='  + encodeURIComponent(u.name) : '');
+    // 未予約 - ⑥ buildBookingUrl()に統一（tel/dedicatedId/trackingNo含む）
+    const bookingUrl = c.bookingUrl || buildBookingUrl(c);
     return '<div style="background:rgba(201,168,76,.05);border:1px solid rgba(201,168,76,.2);border-radius:8px;padding:12px 14px;margin-bottom:12px">'
       + '<div style="font-size:10px;color:var(--gold-dim,#7a5f22);letter-spacing:.08em;margin-bottom:8px">📅 IT重説 日程調整</div>'
       + '<div style="font-size:11px;color:var(--sub);margin-bottom:10px">クライアントに以下のリンクを送付してください。スロット選択後、自動でマッチングされます。</div>'
@@ -1212,7 +1205,7 @@ function stepPrekey(c) {
 
   let h = itScheduleBlock() + '<div class="step-title">📝 重説・入金</div>';
   h += taskRow(setsuOk, 'IT重説・契約',
-    "window.open('coreto-it-setsu.html','_blank');itsetsuCheck('"+c.id+"')");
+    "openItSetsuAndConfirm('"+c.id+"')");
   if (!ad) {
     h += taskRow(paidOk, '入金確認', "paymentCheck('"+c.id+"')");
   } else {
@@ -1949,6 +1942,20 @@ function naikenSkip(id) {
 // ══════════════════════════════════════════
 
 // ── IT重説日程 ヘルパー ──
+function saveTrackingNo(cid) {
+  const c = CASES.find(x=>x.id===cid); if(!c) return;
+  const inp = document.getElementById('trk-'+cid);
+  if (!inp) return;
+  c.trackingNo = inp.value.trim();
+  // URLを再生成して追跡番号を含める
+  if (c.bookingUrl) {
+    const newUrl = buildBookingUrl(c);
+    c.bookingUrl = newUrl;
+  }
+  toast('追跡番号を保存しました');
+  render(); open_case(cid);
+}
+
 function copyBookingUrl(btn) {
   const url = btn.dataset.url;
   navigator.clipboard.writeText(url)
@@ -1968,20 +1975,21 @@ function checkItBooking(cid) {
   const c = CASES.find(x=>x.id===cid);
   if (!c) return;
   // localStorageからスロットを確認
-  let slots = [];
-  try { slots = JSON.parse(localStorage.getItem('coreto_it_slots')||'[]'); } catch(e) {}
-  const booked = slots.find(s => s.booked && s.caseId === cid);
+  // ③ 正しいキー: coreto_itsetsu_bookings（booking.htmlと共有）
+  let bookings = [];
+  try { bookings = JSON.parse(localStorage.getItem('coreto_itsetsu_bookings')||'[]'); } catch(e) {}
+  const booked = bookings.find(function(b){ return b.caseId === cid && b.status === 'active'; });
   if (!booked) { toast('まだ予約が入っていません'); return; }
 
-  // 予約データを案件にセット
+  // 予約データを案件にセット（booking.htmlのフィールド名に合わせる）
   c.itBooking = {
-    slotId:    booked.id,
-    agentId:   booked.agentId,
-    agentName: booked.agentName,
-    agentMobile: booked.agentMobile || '',
+    slotId:    booked.slotId,
+    agentId:   booked.itAgentId,
+    agentName: booked.itAgentName,
+    agentMobile: '',
     date:      booked.date,
-    time:      booked.time,
-    dur:       booked.dur,
+    time:      booked.start,
+    dur:       booked.dur || 60,
     meetUrl:   booked.meetUrl,
     clientName:booked.clientName,
     bookedAt:  booked.bookedAt,
@@ -2325,9 +2333,15 @@ function bookingLinkBlock(c) {
   if (c.bookingUrl) {
     // 発行済み: URLコピー + 再発行
     html += '<div style="background:var(--card2);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;font-size:10px;word-break:break-all;font-family:monospace;color:var(--blue);margin-bottom:8px">' + c.bookingUrl + '</div>';
-    html += '<div style="display:flex;gap:6px">';
+    html += '<div style="display:flex;gap:6px;margin-bottom:6px">';
     html += '<button class="btn btn-ghost btn-sm" style="flex:1;justify-content:center" data-url="'+c.bookingUrl+'" onclick="copyBookingUrl(this)">📋 コピー</button>';
     html += '<button class="btn btn-ghost btn-sm" style="flex:1;justify-content:center" data-cid="'+c.id+'" onclick="launchBookingLink(this.dataset.cid)">🔄 再発行</button>';
+    html += '</div>';
+    // ⑦ 追跡番号後付け
+    const trk = c.trackingNo || '';
+    html += '<div style="display:flex;gap:6px;align-items:center">';
+    html += '<input id="trk-'+c.id+'" type="text" placeholder="追跡番号を追加" value="'+trk+'" style="flex:1;background:var(--card2);border:1px solid var(--border);border-radius:6px;padding:5px 8px;color:var(--t);font-size:10px;font-family:monospace;outline:none">';
+    html += '<button class="btn btn-ghost btn-sm" data-cid="'+c.id+'" onclick="saveTrackingNo(this.dataset.cid)" style="white-space:nowrap">💾 保存</button>';
     html += '</div>';
   } else {
     // 未発行
@@ -3380,17 +3394,45 @@ function paymentCheck(id) {
   ]);
   open_case(id); toast('入金確認しました');
 }
+function openItSetsuAndConfirm(id) {
+  window.open('coreto-it-setsu.html', '_blank');
+  // IT重説実施後に完了ボタンを別途押してもらう（開いただけでは完了にしない）
+  const c = CASES.find(x=>x.id===id); if(!c) return;
+  const bk = c.itBooking;
+  const dateStr = bk ? bk.date : '';
+  const timeStr = bk ? bk.time : '';
+  const overlay = document.createElement('div');
+  overlay.id = 'itsetsu-confirm-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:9999;padding:16px';
+  overlay.innerHTML = `<div style="background:#11141f;border:1px solid #2a3050;border-radius:16px;width:min(420px,100%);padding:24px;font-family:inherit">
+    <div style="font-size:14px;font-weight:800;color:#e0e8f0;margin-bottom:8px">📝 IT重説・契約 完了確認</div>
+    <div style="font-size:11px;color:#5a6080;margin-bottom:18px">重説ページで実施完了後、以下のボタンを押してください。</div>
+    ${bk ? '<div style="background:rgba(45,212,191,.06);border:1px solid rgba(45,212,191,.2);border-radius:8px;padding:10px 12px;margin-bottom:16px;font-size:11px"><div style="color:#2dd4bf;margin-bottom:4px">📅 実施予定日時</div><div style="font-weight:700;color:#e0e8f0">${dateStr}　${timeStr}</div></div>' : ''}
+    <div style="display:flex;gap:8px">
+      <button onclick="document.getElementById('itsetsu-confirm-overlay').remove()"
+        style="flex:1;background:transparent;border:1px solid #2a3050;color:#a0a8c0;border-radius:8px;padding:10px;cursor:pointer;font-family:inherit">
+        まだ実施中</button>
+      <button onclick="itsetsuCheck('${id}');document.getElementById('itsetsu-confirm-overlay').remove()"
+        style="flex:2;background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);color:#34d399;border-radius:8px;padding:10px;cursor:pointer;font-family:inherit;font-weight:700">
+        ✅ 重説・契約 完了</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+}
+
 function itsetsuCheck(id) {
   const c = CASES.find(x=>x.id===id); if(!c) return;
   if(!c.taskDone) c.taskDone={};
   c.taskDone.itsetsu = true;
-  c.dates.itsetsu = todayISO();
+  // ⑤ 実際の重説実施日を使用（booking日付があれば）
+  const bk = c.itBooking;
+  c.dates.itsetsu = bk ? bk.date : todayISO();
   c.hist.unshift(today()+' IT重説完了');
   slackSend(SLACK_CH.重説, [
     ...slackHeader('📝','IT重説・契約完了'),
     ...slackCase(c),
     '🏠 *物件*：'+((c.apps.find(a=>a.status==='approved')||{}).prop||c.sub||'—'),
-    '📅 *重説日*：'+todayISO(),
+    '📅 *重説日*：'+(bk ? bk.date : todayISO()),
     ...slackFooter(),
   ]);
   open_case(id); toast('重説完了しました');

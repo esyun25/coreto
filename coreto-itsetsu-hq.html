@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IT重説 管理パネル | CORETO HQ</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans','Hiragino Kaku Gothic ProN',sans-serif;background:#0b0d12;color:#e4e7f0;min-height:100vh;padding:16px}
+.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid #1e2435}
+.header h1{font-size:16px;font-weight:800;letter-spacing:.05em}
+.header a{font-size:11px;color:#4f9cf9;text-decoration:none}
+.tabs{display:flex;gap:6px;margin-bottom:16px;overflow-x:auto;padding-bottom:4px}
+.tab{padding:7px 14px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #1e2435;background:#141820;color:#7a86a0;white-space:nowrap;transition:.2s}
+.tab.active{background:rgba(79,156,249,.12);border-color:rgba(79,156,249,.3);color:#4f9cf9}
+.card{background:#141820;border:1px solid #1e2435;border-radius:12px;padding:14px;margin-bottom:10px}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.badge{font-size:9px;padding:2px 8px;border-radius:12px;font-weight:700}
+.badge-wait{background:rgba(251,191,36,.12);color:#fbbf24;border:1px solid rgba(251,191,36,.2)}
+.badge-booked{background:rgba(79,156,249,.12);color:#4f9cf9;border:1px solid rgba(79,156,249,.2)}
+.badge-done{background:rgba(52,211,153,.12);color:#34d399;border:1px solid rgba(52,211,153,.2)}
+.badge-cancel{background:rgba(239,68,68,.1);color:#ef4444;border:1px solid rgba(239,68,68,.15)}
+.badge-request{background:rgba(167,139,250,.12);color:#a78bfa;border:1px solid rgba(167,139,250,.2)}
+.info-grid{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:10px}
+.info-label{color:#5a6080}
+.info-val{color:#c8d0e0}
+.info-val.highlight{color:#4f9cf9;font-weight:700}
+.info-val.green{color:#34d399;font-weight:700}
+.info-val.warn{color:#fbbf24}
+.stat-row{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.stat{background:#141820;border:1px solid #1e2435;border-radius:10px;padding:12px 16px;flex:1;min-width:100px;text-align:center}
+.stat-num{font-size:22px;font-weight:900;margin-bottom:2px}
+.stat-label{font-size:9px;color:#5a6080;letter-spacing:.05em}
+.empty{text-align:center;padding:32px;color:#3a4060;font-size:11px}
+.action-btn{background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.25);color:#34d399;border-radius:7px;padding:5px 12px;cursor:pointer;font-size:10px;font-family:inherit;font-weight:700;transition:.2s}
+.action-btn:hover{background:rgba(52,211,153,.18)}
+.warn-btn{background:rgba(251,146,60,.1);border:1px solid rgba(251,146,60,.25);color:#fb923c;border-radius:7px;padding:5px 12px;cursor:pointer;font-size:10px;font-family:inherit}
+.alert-box{background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:11px;color:#ef4444}
+.section-title{font-size:10px;font-weight:700;color:#5a6080;letter-spacing:.08em;margin:16px 0 8px;text-transform:uppercase}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#34d399;color:#000;padding:8px 18px;border-radius:20px;font-size:12px;font-weight:700;pointer-events:none;opacity:0;transition:opacity .3s;z-index:9999}
+.meet-link{font-size:9px;color:#4f9cf9;word-break:break-all;font-family:monospace}
+.change-warn{background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:6px;padding:6px 10px;margin-top:6px;font-size:9px;color:#ef4444}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>📅 IT重説 管理パネル</h1>
+  <a href="coreto-hub.html">← Hub</a>
+</div>
+
+<div id="alert-area"></div>
+
+<div class="stat-row" id="stats"></div>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab('waiting')">⏳ 重説待ち</div>
+  <div class="tab" onclick="showTab('booked')">📅 予約確定</div>
+  <div class="tab" onclick="showTab('requests')">📨 リクエスト</div>
+  <div class="tab" onclick="showTab('done')">✅ 完了済み</div>
+</div>
+
+<div id="tab-content"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  var s = null;
+  try { s = JSON.parse(sessionStorage.getItem('coreto_session')||'null'); } catch(e){}
+  if (!s || s.type !== 'hq') {
+    location.href = 'coreto-login.html';
+    return;
+  }
+  window._SESSION = s;
+})();
+
+var activeTab = 'waiting';
+
+// ── Storage readers (shared with booking/schedule)
+var BOOKINGS_KEY = 'coreto_itsetsu_bookings';
+var SLOTS_KEY    = 'coreto_itsetsu_slots';
+var REQUESTS_KEY = 'coreto_itsetsu_requests';
+
+function loadBookings() { try { return JSON.parse(localStorage.getItem(BOOKINGS_KEY)||'[]'); } catch(e){ return []; } }
+function loadSlots()    { try { return JSON.parse(localStorage.getItem(SLOTS_KEY)||'[]');    } catch(e){ return []; } }
+function loadRequests() { try { return JSON.parse(localStorage.getItem(REQUESTS_KEY)||'[]'); } catch(e){ return []; } }
+function saveBookings(b){ localStorage.setItem(BOOKINGS_KEY, JSON.stringify(b)); }
+
+function today(){ return new Date().toISOString().slice(0,10); }
+function fmtDate(d){
+  if (!d) return '—';
+  var dt = new Date(d+'T00:00:00');
+  var WD = ['日','月','火','水','木','金','土'];
+  return (dt.getMonth()+1)+'月'+dt.getDate()+'日（'+WD[dt.getDay()]+'）';
+}
+function minsUntil(dateStr, timeStr){
+  if (!dateStr || !timeStr) return 9999;
+  var dt = new Date(dateStr+'T'+timeStr+':00');
+  return (dt - new Date()) / 60000;
+}
+
+// ── 直前変更検知（24時間以内）
+function isLateChange(bk){
+  if (!bk.changeHistory || !bk.changeHistory.length) return false;
+  var last = bk.changeHistory[bk.changeHistory.length-1];
+  if (!last || !last.at) return false;
+  var minsSinceChange = (new Date() - new Date(last.at)) / 60000;
+  var minsUntilAppt   = minsUntil(bk.date, bk.start);
+  return minsUntilAppt < 1440 && minsSinceChange < 2880;
+}
+
+function renderStats(){
+  var bks = loadBookings();
+  var active = bks.filter(function(b){ return b.status==='active'; });
+  var cancelled = bks.filter(function(b){ return b.status==='cancelled'; });
+  var reqs = loadRequests().filter(function(r){ return r.status==='open'; });
+  var today_ = today();
+  var todayBks = active.filter(function(b){ return b.date === today_; });
+  var lateChanges = active.filter(isLateChange);
+
+  var html = '';
+  var stats = [
+    { num: active.length,    label:'予約中',    color:'#4f9cf9' },
+    { num: todayBks.length,  label:'本日の重説', color:'#34d399' },
+    { num: reqs.length,      label:'未対応リクエスト', color:'#a78bfa' },
+    { num: lateChanges.length, label:'直前変更（要確認）', color:'#ef4444' },
+  ];
+  stats.forEach(function(s){
+    html += '<div class="stat"><div class="stat-num" style="color:'+s.color+'">'+s.num+'</div><div class="stat-label">'+s.label+'</div></div>';
+  });
+  document.getElementById('stats').innerHTML = html;
+
+  // アラート：直前変更
+  var alertHtml = '';
+  if (lateChanges.length) {
+    alertHtml += '<div class="alert-box">⚠️ 直前変更（24時間以内）が '+lateChanges.length+' 件あります。コミッションから¥3,000が差し引かれます。</div>';
+  }
+  document.getElementById('alert-area').innerHTML = alertHtml;
+}
+
+function showTab(tab){
+  activeTab = tab;
+  document.querySelectorAll('.tab').forEach(function(t,i){
+    var tabs = ['waiting','booked','requests','done'];
+    t.classList.toggle('active', tabs[i] === tab);
+  });
+  renderTab();
+}
+
+function renderTab(){
+  var el = document.getElementById('tab-content');
+  if (activeTab === 'waiting')  renderWaiting(el);
+  if (activeTab === 'booked')   renderBooked(el);
+  if (activeTab === 'requests') renderRequests(el);
+  if (activeTab === 'done')     renderDone(el);
+}
+
+// ── ① 重説待ち: pipeline上でprekey状態だが booking未確定の案件
+//    ※ localStorageのbookingsにない caseId を重説待ちとして扱う
+function renderWaiting(el){
+  var bks = loadBookings();
+  var bookedCases = bks.filter(function(b){ return b.status==='active'; }).map(function(b){ return b.caseId; });
+  // caseIdなしでbookingが未予約のものはrequestsにある
+  var reqs = loadRequests().filter(function(r){ return r.status === 'open'; });
+  if (!reqs.length && !bookedCases.length) {
+    el.innerHTML = '<div class="empty">重説待ちの案件はありません</div>';
+    return;
+  }
+  // 今日以降で空き枠のある担当エージェント情報
+  var slots = loadSlots();
+  var today_ = today();
+  var availSlots = slots.filter(function(s){ return s.status==='open' && s.date >= today_; });
+
+  var html = '';
+  if (reqs.length) {
+    html += '<div class="section-title">リクエスト未マッチング</div>';
+    reqs.forEach(function(r){
+      var matchable = availSlots.some(function(s){
+        return r.wishes.some(function(w){ return s.date===w.date && s.start<=w.start && s.end>=w.end; });
+      });
+      html += '<div class="card">'
+        + '<div class="card-header">'
+        + '<div><div style="font-size:12px;font-weight:700">'+r.clientName+' 様</div>'
+        + '<div style="font-size:10px;color:#5a6080;margin-top:2px">'+r.caseId+' / '+r.propName+'</div></div>'
+        + '<span class="badge badge-request">リクエスト中</span>'
+        + '</div>'
+        + '<div class="info-grid">'
+        + '<span class="info-label">担当AG</span><span class="info-val">'+r.agentName+'</span>'
+        + '<span class="info-label">希望日時</span><span class="info-val">'
+        + r.wishes.map(function(w,i){ return (i+1)+'. '+fmtDate(w.date)+' '+w.start+'〜'+w.end; }).join(' / ')
+        + '</span>'
+        + '<span class="info-label">マッチ可能</span><span class="info-val '+(matchable?'green':'warn')+'">'+(matchable?'✅ 空き枠あり':'⚠️ 空き枠なし')+'</span>'
+        + '</div>'
+        + '<div style="margin-top:10px"><a href="coreto-itsetsu-schedule.html" style="display:block;text-align:center;padding:8px;background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.25);color:#a78bfa;border-radius:8px;font-size:11px;font-weight:700;text-decoration:none">📅 スケジュール管理でマッチング</a></div>'
+        + '</div>';
+    });
+  }
+  el.innerHTML = html || '<div class="empty">未マッチングのリクエストはありません</div>';
+}
+
+// ── ② 予約確定一覧
+function renderBooked(el){
+  var bks = loadBookings().filter(function(b){ return b.status==='active'; });
+  bks.sort(function(a,b){ return a.date.localeCompare(b.date) || a.start.localeCompare(b.start); });
+  if (!bks.length){ el.innerHTML = '<div class="empty">予約確定中の案件はありません</div>'; return; }
+
+  var today_ = today();
+  var html = '';
+  bks.forEach(function(bk){
+    var mins = minsUntil(bk.date, bk.start);
+    var isPast = mins < 0;
+    var isToday = bk.date === today_;
+    var isSoon = mins >= 0 && mins < 1440;
+    var lateChg = isLateChange(bk);
+
+    var statusBadge = isPast
+      ? '<span class="badge badge-wait">実施待ち確認</span>'
+      : isToday
+        ? '<span class="badge badge-done">本日</span>'
+        : isSoon
+          ? '<span class="badge badge-booked">明日以内</span>'
+          : '<span class="badge badge-booked">予約済</span>';
+
+    html += '<div class="card">';
+    if (lateChg) html += '<div class="change-warn">⚠️ 直前変更あり — ¥3,000差し引き対象</div>';
+    html += '<div class="card-header">'
+      + '<div><div style="font-size:12px;font-weight:700">'+bk.clientName+' 様</div>'
+      + '<div style="font-size:10px;color:#5a6080;margin-top:2px">'+bk.caseId+' / '+(bk.propName||'—')+'</div></div>'
+      + statusBadge
+      + '</div>'
+      + '<div class="info-grid">'
+      + '<span class="info-label">日時</span><span class="info-val highlight">'+fmtDate(bk.date)+'　'+bk.start+'〜</span>'
+      + '<span class="info-label">重説担当</span><span class="info-val">'+bk.itAgentName+'</span>'
+      + '<span class="info-label">担当AG</span><span class="info-val">'+bk.agentName+'</span>'
+      + '<span class="info-label">変更回数</span><span class="info-val '+(bk.changeCount>=2?'warn':'')+'">'+bk.changeCount+'回</span>'
+      + '</div>';
+    if (bk.meetUrl) html += '<div class="meet-link" style="margin-top:8px">🎥 '+bk.meetUrl+'</div>';
+    if (isPast) {
+      html += '<button class="action-btn" style="margin-top:10px;width:100%" onclick="forceComplete(\''+bk.id+'\')">✅ 完了確認（過去の予約）</button>';
+    }
+    html += '</div>';
+  });
+  el.innerHTML = html;
+}
+
+// ── ③ リクエスト一覧（全ステータス）
+function renderRequests(el){
+  var reqs = loadRequests();
+  reqs.sort(function(a,b){ return b.submittedAt.localeCompare(a.submittedAt); });
+  if (!reqs.length){ el.innerHTML = '<div class="empty">リクエストはありません</div>'; return; }
+
+  var html = '';
+  reqs.forEach(function(r){
+    var cls = r.status==='open' ? 'badge-request' : r.status==='matched' ? 'badge-done' : 'badge-cancel';
+    var lbl = r.status==='open' ? '受付中' : r.status==='matched' ? 'マッチング済' : 'キャンセル';
+    html += '<div class="card">'
+      + '<div class="card-header">'
+      + '<div><div style="font-size:12px;font-weight:700">'+r.clientName+' 様</div>'
+      + '<div style="font-size:10px;color:#5a6080;margin-top:2px">'+r.caseId+'</div></div>'
+      + '<span class="badge '+cls+'">'+lbl+'</span>'
+      + '</div>'
+      + '<div class="info-grid">'
+      + '<span class="info-label">担当AG</span><span class="info-val">'+r.agentName+'</span>'
+      + '<span class="info-label">受付日時</span><span class="info-val">'+r.submittedAt.slice(0,16).replace('T',' ')+'</span>'
+      + '<span class="info-label">希望日時</span><span class="info-val">'
+      + r.wishes.map(function(w,i){ return (i+1)+'. '+fmtDate(w.date)+' '+w.start+'〜'+w.end; }).join('<br>')
+      + '</span>'
+      + (r.matchedAt ? '<span class="info-label">確定日時</span><span class="info-val green">'+r.matchedAt.slice(0,16).replace('T',' ')+'</span>' : '')
+      + '</div>'
+      + '</div>';
+  });
+  el.innerHTML = html;
+}
+
+// ── ④ 完了済み
+function renderDone(el){
+  var slots = loadSlots().filter(function(s){ return s.itDone; });
+  var cancelled = loadBookings().filter(function(b){ return b.status==='cancelled'; });
+  if (!slots.length && !cancelled.length){ el.innerHTML = '<div class="empty">完了・キャンセル済みはありません</div>'; return; }
+
+  var html = '';
+  if (slots.length) {
+    html += '<div class="section-title">重説完了（担当報告済み）</div>';
+    slots.forEach(function(s){
+      var bk = loadBookings().find(function(b){ return b.slotId===s.id; });
+      html += '<div class="card">'
+        + '<div class="card-header">'
+        + '<div><div style="font-size:12px;font-weight:700">'+(s.bookedClient||'—')+' 様</div>'
+        + '<div style="font-size:10px;color:#5a6080;margin-top:2px">'+(s.bookedCase||'—')+'</div></div>'
+        + '<span class="badge badge-done">完了</span>'
+        + '</div>'
+        + '<div class="info-grid">'
+        + '<span class="info-label">実施日</span><span class="info-val green">'+fmtDate(s.date)+'</span>'
+        + '<span class="info-label">重説担当</span><span class="info-val">'+s.agentName+'</span>'
+        + (bk ? '<span class="info-label">担当AG</span><span class="info-val">'+bk.agentName+'</span>' : '')
+        + '<span class="info-label">報告日時</span><span class="info-val">'+(s.itDoneAt||'').slice(0,16).replace('T',' ')+'</span>'
+        + '</div></div>';
+    });
+  }
+  if (cancelled.length) {
+    html += '<div class="section-title">キャンセル済み</div>';
+    cancelled.sort(function(a,b){ return b.cancelledAt.localeCompare(a.cancelledAt); }).slice(0,20).forEach(function(bk){
+      html += '<div class="card">'
+        + '<div class="card-header">'
+        + '<div><div style="font-size:12px;font-weight:700">'+bk.clientName+' 様</div>'
+        + '<div style="font-size:10px;color:#5a6080;margin-top:2px">'+bk.caseId+'</div></div>'
+        + '<span class="badge badge-cancel">キャンセル</span>'
+        + '</div>'
+        + '<div class="info-grid">'
+        + '<span class="info-label">予定日時</span><span class="info-val">'+fmtDate(bk.date)+'　'+bk.start+'</span>'
+        + '<span class="info-label">キャンセル日</span><span class="info-val">'+(bk.cancelledAt||'').slice(0,16).replace('T',' ')+'</span>'
+        + '<span class="info-label">担当AG</span><span class="info-val">'+bk.agentName+'</span>'
+        + '</div></div>';
+    });
+  }
+  el.innerHTML = html;
+}
+
+// ── HQ権限: 過去予約の完了強制確認
+function forceComplete(bkId){
+  if (!confirm('この予約を「完了」としてマークしますか？\n（重説担当から完了報告がない場合のHQ手動処理）')) return;
+  var bks = loadBookings();
+  var bk = bks.find(function(b){ return b.id===bkId; });
+  if (!bk) return;
+  bk.hqForceCompleted = true;
+  bk.hqCompletedAt = new Date().toISOString();
+  saveBookings(bks);
+  console.log('[Slack #IT重説日程調整] HQ手動完了確認 案件:'+bk.caseId+' クライアント:'+bk.clientName);
+  toast('✅ 完了確認しました。担当AGにSlack通知しました。');
+  renderTab();
+  renderStats();
+}
+
+function toast(msg){
+  var t = document.getElementById('toast');
+  t.textContent = msg; t.style.opacity = 1;
+  setTimeout(function(){ t.style.opacity = 0; }, 2500);
+}
+
+// ── init
+renderStats();
+renderTab();
+setInterval(function(){ renderStats(); }, 30000);
+</script>
+</body>
+</html>

@@ -326,9 +326,38 @@ function matchRequest(reqId) {
   req.matchedAgentId  = target.agentId;
   req.matchedAt    = new Date().toISOString();
   saveRequests(reqs);
-  // Slack
-  console.log('[Slack #IT重説日程調整] マッチング確定 案件:' + req.caseId + ' ' + req.clientName + ' ' + fmtDateReq(target.date) + ' ' + wish.start + ' 重説担当:' + target.agentName + ' Meet:' + meetUrl);
-  toast('✅ マッチング完了 — ' + target.agentName + ' ' + fmtDateReq(target.date) + ' ' + wish.start);
+  // ④ Slack: 担当エージェントへ詳細通知＋LINE転送用テキスト
+  var matchDateStr = fmtDateReq(target.date);
+  var changeUrl = location.origin + location.pathname.replace(/[^/]+$/, '')
+    + 'coreto-itsetsu-booking.html?caseId=' + encodeURIComponent(req.caseId)
+    + '&client='      + encodeURIComponent(req.clientName  || '')
+    + '&prop='        + encodeURIComponent(req.propName    || '')
+    + '&agent='       + encodeURIComponent(req.agentName   || '')
+    + '&agentId='     + encodeURIComponent(req.agentId     || '')
+    + '&dedicatedId=' + encodeURIComponent(req.dedicatedId || '');
+  var matchMsg = '\u2705 *IT\u91cd\u8aac \u30de\u30c3\u30c1\u30f3\u30b0\u78ba\u5b9a*\n'
+    + '\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n'
+    + '\u6848\u4ef6ID: ' + req.caseId + '\n'
+    + '\u30af\u30e9\u30a4\u30a2\u30f3\u30c8: ' + req.clientName + ' \u69d8\n'
+    + '\u62c5\u5f53: ' + req.agentName + '\n'
+    + '\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n'
+    + '\u30de\u30c3\u30c1\u65e5\u6642: *' + matchDateStr + ' ' + wish.start + '\uff5e*\uff0830\uff5e45\u5206\uff09\n'
+    + '\u30e1\u30fc\u30eb\u30a2\u30c9\u30ec\u30b9: ' + meetUrl + '\n'
+    + '\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n'
+    + '\u30af\u30e9\u30a4\u30a2\u30f3\u30c8\u3078\u4ee5\u4e0b\u3092LINE\u7b49\u3067\u3054\u9023\u7d61\u304f\u3060\u3055\u3044\n'
+    + '```\n'
+    + '\u300c\u91cd\u8aac\u306e\u3054\u4e88\u7d04\u304c\u78ba\u5b9a\u3057\u307e\u3057\u305f\u300d\n'
+    + matchDateStr + ' ' + wish.start + '\uff5e\uff0830\uff5e45\u5206\uff09\n'
+    + '\n'
+    + 'Google Meet\n'
+    + meetUrl + '\n'
+    + '\n'
+    + '\u65e5\u7a0b\u5909\u66f4\u30fb\u30ad\u30e3\u30f3\u30bb\u30eb\u306f\u3053\u3061\u3089\n'
+    + changeUrl + '\n'
+    + '\u203224\u6642\u9593\u4ee5\u4e0a\u524d\u307e\u3067\u5909\u66f4\u53ef\u80fd\n'
+    + '```';
+  console.log('[Slack #IT\u91cd\u8aac\u65e5\u7a0b\u8abf\u6574] ' + matchMsg);
+  toast('\u2705 \u30de\u30c3\u30c1\u30f3\u30b0\u5b8c\u4e86 \u2014 ' + target.agentName + ' ' + matchDateStr + ' ' + wish.start);
   renderCalendar();
   renderStats();
   renderRequestBadge();
@@ -713,19 +742,40 @@ function renderPanelSlots() {
   el.innerHTML = slots.map(function(s){
     var canCancel = canCancelSlot(s);
     var reason    = cancelReasonText(s);
-    var bookedInfo = s.bookedClient ? ('<div style="font-size:9px;color:var(--blue);margin-top:1px">'+s.bookedClient+(s.bookedCase?' ('+s.bookedCase+')':'')+'</div>') : '';
-    var hqBadge   = (isHQ && s.status==='booked') ? '<span style="font-size:8px;padding:1px 5px;border-radius:6px;background:rgba(201,168,64,.15);color:var(--gold);margin-left:4px">HQ</span>' : '';
+    // ⑨ 予約済スロット: 案件情報詳細を表示
+    var bookedInfo = '';
+    if (s.status === 'booked') {
+      var bkData = loadBookings().find(function(b){ return b.slotId === s.id && b.status === 'active'; });
+      var propTxt = bkData ? (bkData.propName || '') : '';
+      bookedInfo = '<div style="margin-top:4px;padding:6px 8px;background:rgba(79,156,249,.06);border:1px solid rgba(79,156,249,.15);border-radius:6px">'
+        + '<div style="font-size:9px;color:var(--blue);font-weight:700">' + (s.bookedClient || '—') + ' 様</div>'
+        + (s.bookedCase ? '<div style="font-size:8px;color:var(--muted);margin-top:1px">案件ID: ' + s.bookedCase + '</div>' : '')
+        + (propTxt      ? '<div style="font-size:8px;color:var(--muted)">物件: ' + propTxt + '</div>' : '')
+        + (bkData && bkData.agentName ? '<div style="font-size:8px;color:var(--muted)">担当AG: ' + bkData.agentName + '</div>' : '')
+        + (bkData && bkData.meetUrl   ? '<div style="font-size:8px;color:var(--muted);word-break:break-all">Meet: ' + bkData.meetUrl + '</div>' : '')
+        + '</div>';
+    } else if (s.bookedClient) {
+      bookedInfo = '<div style="font-size:9px;color:var(--blue);margin-top:1px">' + s.bookedClient + (s.bookedCase ? ' (' + s.bookedCase + ')' : '') + '</div>';
+    }
+    var hqBadge = (isHQ && s.status==='booked') ? '<span style="font-size:8px;padding:1px 5px;border-radius:6px;background:rgba(201,168,64,.15);color:var(--gold);margin-left:4px">HQ</span>' : '';
     var cancelBtn = canCancel
       ? '<button class="del-btn" onclick="cancelBookedSlot(\'' + s.id + '\')" style="border-color:rgba(251,146,60,.4);color:var(--orange)">解除</button>'
       : (reason ? '<span style="font-size:8px;color:var(--muted)">' + reason + '</span>' : '');
     var deleteBtn = s.status === 'open'
       ? '<button class="del-btn" onclick="removeSlot(\'' + s.id + '\')">削除</button>'
       : '';
+    // ⑩ 重説担当からの完了報告ボタン
+    var doneBtn = '';
+    if (s.status === 'booked' && s.bookedCase) {
+      doneBtn = s.itDone
+        ? '<div style="margin-top:6px;text-align:center;font-size:9px;color:#34d399;padding:4px;background:rgba(52,211,153,.06);border-radius:6px">✅ 完了報告済み</div>'
+        : '<button onclick="reportItDone(\'' + s.id + '\')" style="margin-top:6px;width:100%;background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.25);color:#34d399;border-radius:6px;padding:6px;cursor:pointer;font-size:10px;font-family:inherit;font-weight:700">✅ 重説・契約 完了を報告する</button>';
+    }
     return '<div class="sitem' + (s.status==='booked'?' booked':'') + '">'
       + '<div style="flex:1">'
       + '<div class="stime">' + s.start + ' 〜 ' + s.end + hqBadge + '</div>'
       + '<div class="sdur">' + fmtDur(s.dur) + '</div>'
-      + bookedInfo + '</div>'
+      + bookedInfo + doneBtn + '</div>'
       + '<span class="spill ' + (s.status==='booked'?'pill-b':'pill-o') + '">'
       + (s.status==='booked'?'予約済':'空き') + '</span>'
       + (s.status==='booked' ? cancelBtn : deleteBtn)
@@ -780,6 +830,30 @@ function removeSlot(id) {
   saveSlots(loadSlots().filter(function(s){ return s.id !== id; }));
   renderPanelSlots();
   renderCalendar();
+}
+
+function reportItDone(slotId) {
+  if (!confirm('重説・契約が完了しましたか？\nHQのパイプラインに完了通知が送られます。')) return;
+  var slots = loadSlots();
+  var slot  = slots.find(function(s){ return s.id === slotId; });
+  if (!slot) return;
+  slot.itDone = true;
+  slot.itDoneAt = new Date().toISOString();
+  saveSlots(slots);
+  // 担当エージェント（booking経由）とHQにSlack通知
+  var bk = loadBookings().find(function(b){ return b.slotId === slotId && b.status === 'active'; });
+  var msg = '\u2705 *IT\u91cd\u8aac \u5b9f\u65bd\u5b8c\u4e86 (\u91cd\u8aac\u62c5\u5f53\u5831\u544a)*\n'
+    + '\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n'
+    + '\u6848\u4ef6ID: ' + slot.bookedCase + '\n'
+    + '\u30af\u30e9\u30a4\u30a2\u30f3\u30c8: ' + (slot.bookedClient || '\u2014') + '\n'
+    + (bk ? '\u62c5\u5f53AG: ' + bk.agentName + '\n' : '')
+    + (bk ? '\u7269\u4ef6: ' + (bk.propName || '\u2014') + '\n' : '')
+    + '\u91cd\u8aac\u5b9f\u65bd\u65e5: ' + (bk ? bk.date : slot.date) + '\n'
+    + '\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n'
+    + '\u30d1\u30a4\u30d7\u30e9\u30a4\u30f3\u3067 itsetsuCheck \u3092\u5b9f\u884c\u3057\u3066\u304f\u3060\u3055\u3044';
+  console.log('[Slack #IT\u91cd\u8aac\u65e5\u7a0b\u8abf\u6574] ' + msg);
+  renderPanelSlots();
+  toast('\u5831\u544a\u3057\u307e\u3057\u305f\u3002\u62c5\u5f53AG\u306bSlack\u901a\u77e5\u304c\u9001\u4fe1\u3055\u308c\u307e\u3057\u305f\u3002');
 }
 
 function cancelBookedSlot(slotId) {
