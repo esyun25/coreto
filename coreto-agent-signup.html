@@ -164,6 +164,27 @@ html,body{min-height:100%;font-family:'Noto Sans JP',sans-serif;background:var(-
 <div class="wrap" id="wrap"></div>
 
 <script>
+  // ── Slack通知設定 ──────────────────────────────────────────────────────
+  // 本番運用前に Slack Incoming Webhook URL を設定してください
+  // Slack管理画面 → アプリ → Incoming Webhooks → Webhook URLをコピー
+  var SLACK_WEBHOOK = window.SLACK_CONFIG
+    ? window.SLACK_CONFIG.GENERAL   // db.jsが読み込まれている場合
+    : 'YOUR_SLACK_WEBHOOK_URL';     // 直接設定する場合はここに貼り付け
+
+  function notifySlack(msg) {
+    if (!SLACK_WEBHOOK || SLACK_WEBHOOK === 'YOUR_SLACK_WEBHOOK_URL') {
+      console.log('[Slack（未設定）]', msg);
+      return;
+    }
+    fetch(SLACK_WEBHOOK, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: msg }),
+      mode: 'no-cors'
+    }).catch(e => console.error('[Slack送信エラー]', e));
+  }
+  // ─────────────────────────────────────────────────────────────────────
+
 var step = 0;
 var form = {
   name:'', nameKana:'', phone:'', email:'', zip:'', addr:'',
@@ -778,20 +799,77 @@ function step6() {
     '</div></div></div>';
 }
 
-function submitSignup() {
+async function submitSignup() {
+  // ── 送信先設定（本番前にURLを設定してください） ──────────────────
+  // ZapierのWebhook URLをここに設定（Zapier → Webhooks by Zapier → Catch Hook）
+  var ZAPIER_WEBHOOK_URL = 'YOUR_ZAPIER_WEBHOOK_URL_HERE';
+  // ────────────────────────────────────────────────────────────────
+
+  var appNo = 'APP-' + String(Date.now()).slice(-8);
+  var submitBtn = document.querySelector('button[onclick*="submitSignup"]') || document.activeElement;
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = '送信中...'; }
+
+  var payload = {
+    appNo:        appNo,
+    submittedAt:  new Date().toISOString(),
+    agentType:    form.agentType === 're' ? '不動産エージェント' : '人材エージェント(HR)',
+    name:         form.name,
+    nameKana:     form.nameKana,
+    phone:        form.phone,
+    email:        form.email,
+    zip:          form.zip,
+    address:      form.addr,
+    referralCode: form.referral || '—',
+    hasTakken:    form.hasTakken ? 'あり' : 'なし',
+    senninSpc:    form.takkenSennin ? '専任宅建士希望' : '一般エージェント',
+    licNo:        form.licNo || '—',
+    licPref:      form.licPref || '—',
+    bankName:     form.bankName,
+    bankBranch:   form.bankBranch,
+    bankType:     form.bankType,
+    bankNum:      form.bankNum,
+    bankHolder:   form.bankHolder,
+    monthlyFee:   form.monthlyFee + '円',
+    meishiWant:   form.meishiWant ? 'はい' : 'いいえ',
+  };
+
+  var sent = false;
+
+  // Zapier Webhook送信
+  if (ZAPIER_WEBHOOK_URL && ZAPIER_WEBHOOK_URL !== 'YOUR_ZAPIER_WEBHOOK_URL_HERE') {
+    try {
+      await fetch(ZAPIER_WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        mode: 'no-cors'  // Zapier webhookはno-corsで送信
+      });
+      sent = true;
+    } catch(e) {
+      console.error('[Signup] Zapier webhook failed:', e);
+    }
+  } else {
+    console.warn('[Signup] ZAPIER_WEBHOOK_URL が未設定です。coreto-agent-signup.html の ZAPIER_WEBHOOK_URL を設定してください。');
+  }
+
+  // 送信完了画面を表示
+  var statusMsg = sent
+    ? '申込データを本部に送信しました。'
+    : '⚠️ 申込データの自動送信に失敗しました。本部（info@coreto.jp）に直接ご連絡ください。';
+
   document.getElementById('wrap').innerHTML =
     '<div style="text-align:center;padding:60px 20px">' +
-    '<div style="font-size:48px;margin-bottom:20px">✅</div>' +
+    '<div style="font-size:48px;margin-bottom:20px">' + (sent ? '✅' : '⚠️') + '</div>' +
     '<div style="font-family:\'Syne\',sans-serif;font-size:24px;font-weight:800;color:var(--green);margin-bottom:10px">申込が完了しました</div>' +
     '<div style="font-size:13px;color:var(--sub);line-height:2;margin-bottom:24px">' +
-    '入会申込を受け付けました。<br>' +
+    statusMsg + '<br>' +
     'LINE WORKSへのご登録ありがとうございます。<br>' +
     (form.takkenSennin
       ? '専任宅建士登録の審査後、本部より連絡いたします。<br>審査完了後にIDとパスワードが発行されます。'
       : '本部でeKYC確認後、IDとパスワードをSMSでお送りします。') +
     '</div>' +
     '<div style="background:var(--card2);border-radius:12px;padding:16px;font-size:12px;color:var(--muted);line-height:2;display:inline-block;text-align:left;min-width:280px">' +
-    '申込番号：<span class="mono" style="color:var(--gold)">APP-' + String(Date.now()).slice(-8) + '</span><br>' +
+    '申込番号：<span class="mono" style="color:var(--gold)">' + appNo + '</span><br>' +
     '氏名：' + form.name + '<br>' +
     '登録種別：' + (form.takkenSennin ? '⭐ 専任宅建士' : '一般エージェント') +
     '</div></div>';

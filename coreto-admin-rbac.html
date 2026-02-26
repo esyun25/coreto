@@ -306,6 +306,27 @@ tr:last-child td{border-bottom:none;}
 </div>
 
 <script>
+  // ── Slack通知設定 ──────────────────────────────────────────────────────
+  // 本番運用前に Slack Incoming Webhook URL を設定してください
+  // Slack管理画面 → アプリ → Incoming Webhooks → Webhook URLをコピー
+  var SLACK_WEBHOOK = window.SLACK_CONFIG
+    ? window.SLACK_CONFIG.GENERAL   // db.jsが読み込まれている場合
+    : 'YOUR_SLACK_WEBHOOK_URL';     // 直接設定する場合はここに貼り付け
+
+  function notifySlack(msg) {
+    if (!SLACK_WEBHOOK || SLACK_WEBHOOK === 'YOUR_SLACK_WEBHOOK_URL') {
+      console.log('[Slack（未設定）]', msg);
+      return;
+    }
+    fetch(SLACK_WEBHOOK, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: msg }),
+      mode: 'no-cors'
+    }).catch(e => console.error('[Slack送信エラー]', e));
+  }
+  // ─────────────────────────────────────────────────────────────────────
+
 // ══ AUTH GUARD (経営陣専用) ════════════════════════════════════
 (function() {
   var s = null;
@@ -1336,7 +1357,7 @@ function execDelete() {
   var reason=document.getElementById('del-reason').value;
   closeDeleteModal();
   // 実行ログをSlackに送信（デモ）
-  console.log('Slack #HQ-admin: アカウント削除実行 '+_delId+' '+_delName+' / 理由: '+reason);
+  notifySlack('Slack #HQ-admin: アカウント削除実行 '+_delId+' '+_delName+' / 理由: '+reason);
   setTimeout(function(){
     alert(
       '✅ アカウントを削除しました。\n\n' +

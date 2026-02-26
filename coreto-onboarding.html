@@ -108,6 +108,7 @@ html,body{height:100%;font-family:'Noto Sans JP',sans-serif;background:var(--bg)
     <div class="sb-item" onclick="openRefModal()" style="color:var(--gold)"><span>🔗</span>紹介リンク発行</div>  </div>
   <div class="main" id="main"></div>
 </div>
+<script src="db.js"></script>
 <script>
 // ══ AUTH GUARD (要ログイン) ════════════════════════════════════
 (function() {
@@ -122,7 +123,8 @@ const s = (() => { try { return JSON.parse(sessionStorage.getItem(SESSION_KEY)||
 const ME = { id: s.id||'10012', name: s.name||'山田 誠', type: s.type||'re' };
 
 // タスクデータ（RE版）
-const TASKS_RE = [
+const // ── タスク定義（done状態はDB.getOnboardingProgress()で上書き） ──
+TASKS_RE = [
   // Phase 1
   {id:1,phase:'フェーズ1：入会手続き（1週目）',title:'業務委託契約書に電子署名',sub:'最新バージョンの契約書を読み、電子署名で締結してください',tags:['必須'],link:'coreto-contract.html',done:true},
   {id:2,phase:'フェーズ1：入会手続き（1週目）',title:'eKYC・本人確認を完了',sub:'身分証明書と自撮り写真をアップロードし、HQ審査を完了してください',tags:['必須'],link:'coreto-kyc.html',done:true},
@@ -150,6 +152,7 @@ function showPage(p) {
 }
 
 function pageMyProgress() {
+  loadUserProgress(); // ユーザーごとの進捗をDBから読み込む
   const done = TASKS_RE.filter(t=>t.done).length;
   const total = TASKS_RE.length;
   const pct = Math.round(done/total*100);
@@ -244,7 +247,45 @@ function toggleTask(id) {
   const t = TASKS_RE.find(t=>t.id===id);
   if (!t) return;
   t.done = !t.done;
+
+  // ── ユーザーごとの進捗を保存 ─────────────────────────────────
+  const session = JSON.parse(sessionStorage.getItem('coreto_session') || 'null');
+  if (session && session.userId) {
+    const progress = {};
+    TASKS_RE.forEach(task => { progress[task.id] = task.done; });
+    if (typeof DB !== 'undefined') {
+      DB.saveOnboardingProgress(session.userId, progress);
+    } else {
+      // db.jsが未ロードの場合のフォールバック
+      const all = JSON.parse(localStorage.getItem('coreto_onboarding') || '{}');
+      all[session.userId] = progress;
+      localStorage.setItem('coreto_onboarding', JSON.stringify(all));
+    }
+  }
+  // ─────────────────────────────────────────────────────────────
+
   pageMyProgress(); // re-render
+}
+
+// ── セッションユーザーの進捗を読み込む ────────────────────────────
+function loadUserProgress() {
+  const session = JSON.parse(sessionStorage.getItem('coreto_session') || 'null');
+  if (!session || !session.userId) return;
+  let progress = {};
+  if (typeof DB !== 'undefined') {
+    progress = DB.getOnboardingProgress(session.userId);
+  } else {
+    const all = JSON.parse(localStorage.getItem('coreto_onboarding') || '{}');
+    progress = all[session.userId] || {};
+  }
+  if (Object.keys(progress).length > 0) {
+    // 保存済み進捗でTASKS_REのdone状態を上書き
+    TASKS_RE.forEach(task => {
+      if (task.id in progress) {
+        task.done = progress[task.id];
+      }
+    });
+  }
 }
 
 // ─── HQ管理ページ ─────────────────────────────────────────────────

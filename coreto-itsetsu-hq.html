@@ -64,6 +64,27 @@ body{font-family:'DM Sans','Hiragino Kaku Gothic ProN',sans-serif;background:#0b
 <div class="toast" id="toast"></div>
 
 <script>
+  // ── Slack通知設定 ──────────────────────────────────────────────────────
+  // 本番運用前に Slack Incoming Webhook URL を設定してください
+  // Slack管理画面 → アプリ → Incoming Webhooks → Webhook URLをコピー
+  var SLACK_WEBHOOK = window.SLACK_CONFIG
+    ? window.SLACK_CONFIG.GENERAL   // db.jsが読み込まれている場合
+    : 'YOUR_SLACK_WEBHOOK_URL';     // 直接設定する場合はここに貼り付け
+
+  function notifySlack(msg) {
+    if (!SLACK_WEBHOOK || SLACK_WEBHOOK === 'YOUR_SLACK_WEBHOOK_URL') {
+      console.log('[Slack（未設定）]', msg);
+      return;
+    }
+    fetch(SLACK_WEBHOOK, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: msg }),
+      mode: 'no-cors'
+    }).catch(e => console.error('[Slack送信エラー]', e));
+  }
+  // ─────────────────────────────────────────────────────────────────────
+
 (function(){
   var s = null;
   try { s = JSON.parse(sessionStorage.getItem('coreto_session')||'null'); } catch(e){}
@@ -399,8 +420,8 @@ function hqPaymentConfirm(caseId) {
     }
   } catch(e) {}
 
-  console.log('[Slack #入金確認] 入金確認 案件:' + caseId + ' 振込日:' + paidDate
-    + ' 確認者:' + (window._SESSION.name||window._SESSION.userId));
+  notifySlack('[Slack #入金確認] 入金確認 案件:' + caseId + ' 振込日:' + paidDate
+    + ' 確認者:' + (window._SESSION.name||window._SESSION.userId)));
   toast('✅ 入金確認しました（振込日: ' + paidDate + '）');
   renderTab();
   renderStats();
@@ -459,7 +480,7 @@ function forceComplete(bkId){
   bk.hqForceCompleted = true;
   bk.hqCompletedAt = new Date().toISOString();
   saveBookings(bks);
-  console.log('[Slack #IT重説日程調整] HQ手動完了確認 案件:'+bk.caseId+' クライアント:'+bk.clientName);
+  notifySlack('[Slack #IT重説日程調整] HQ手動完了確認 案件:'+bk.caseId+' クライアント:'+bk.clientName));
   toast('✅ 完了確認しました。担当AGにSlack通知しました。');
   renderTab();
   renderStats();

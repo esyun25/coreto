@@ -250,6 +250,27 @@ input[type=date]{color-scheme:dark}
 <div class="toast" id="toast"></div>
 
 <script>
+  // ── Slack通知設定 ──────────────────────────────────────────────────────
+  // 本番運用前に Slack Incoming Webhook URL を設定してください
+  // Slack管理画面 → アプリ → Incoming Webhooks → Webhook URLをコピー
+  var SLACK_WEBHOOK = window.SLACK_CONFIG
+    ? window.SLACK_CONFIG.GENERAL   // db.jsが読み込まれている場合
+    : 'YOUR_SLACK_WEBHOOK_URL';     // 直接設定する場合はここに貼り付け
+
+  function notifySlack(msg) {
+    if (!SLACK_WEBHOOK || SLACK_WEBHOOK === 'YOUR_SLACK_WEBHOOK_URL') {
+      console.log('[Slack（未設定）]', msg);
+      return;
+    }
+    fetch(SLACK_WEBHOOK, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: msg }),
+      mode: 'no-cors'
+    }).catch(e => console.error('[Slack送信エラー]', e));
+  }
+  // ─────────────────────────────────────────────────────────────────────
+
 // ══ AUTH GUARD (要ログイン) ════════════════════════════════════
 (function() {
   var s = null;
@@ -322,7 +343,7 @@ const SLACK_CH = {
 // 汎用Slack送信（モック: クリップボードコピー + console.log）
 function slackSend(channel, lines) {
   const text = lines.filter(Boolean).join('\n');
-  console.log(`[Slack #${channel}]\n`, text);
+  notifySlack(`[Slack #${channel}]\n`, text));
   try {
     const ta = document.createElement('textarea');
     ta.value = text; document.body.appendChild(ta); ta.select();
@@ -3376,7 +3397,7 @@ function invSendSlack(c, grandTotal, adAmt, adDesc, dualInv) {
   ].filter(Boolean).join('\n');
 
   // 本番: SLACK_WEBHOOK_URL に fetch POST
-  console.log('[Slack #請求書] ', lines);
+  notifySlack('[Slack #請求書] ', lines));
 
   // クリップボードにコピー
   try {
@@ -3881,7 +3902,7 @@ function sannaiRequestVerify(id) {
     `🕐 ${new Date().toLocaleString('ja-JP')}`,
   ].join('\n');
 
-  console.log('[Slack #三為確認]\n', lines);
+  notifySlack('[Slack #三為確認]\n', lines));
   // Slack webhook 送信（モック: クリップボードにコピー）
   try {
     const ta=document.createElement('textarea');
