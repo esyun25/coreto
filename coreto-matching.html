@@ -678,14 +678,13 @@ function escHtml(s) {
   }
   // ─────────────────────────────────────────────────────────────────────
 
-// ══ AUTH GUARD (HQ専用ページ) ══════════════════════════════════
+// ══ AUTH GUARD (ログイン必須) ══════════════════════════════════
 (function() {
   var s = null;
   try { s = JSON.parse(sessionStorage.getItem('coreto_session') || 'null'); } catch(e) {}
   if (!s || !s.userId || !s.sessionToken || s.sessionToken.length !== 64) { sessionStorage.removeItem('coreto_session'); location.replace('coreto-login.html'); return; }
   var _la = new Date(s.loginAt).getTime();
   if (isNaN(_la) || (Date.now() - _la) > 28800000) { sessionStorage.removeItem('coreto_session'); alert('セッションの有効期限が切れました。'); location.replace('coreto-login.html'); return; }
-  if (s.type !== 'hq') { location.replace('coreto-hub.html'); return; }
   window._SESSION = s;
 })();
 
@@ -776,7 +775,11 @@ function pickClient(event, inputId, idHiddenId, nameHiddenId, dropdownId) {
       const back = document.createElement('div');
       back.style.cssText = 'margin-left:auto;padding:0 16px;display:flex;align-items:center;gap:10px';
       back.innerHTML = '<span style="font-size:10px;color:var(--muted)">👤 '+_S.name+'</span>' +
-        '<button onclick="location.href=\'coreto-hub.html\'" style="font-size:10px;padding:4px 10px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;font-family:sans-serif">← マイページ</button>';
+        (()=>{
+    var _s=JSON.parse(sessionStorage.getItem('coreto_session')||'null');
+    var _dest=(_s&&_s.type==='hq')?'coreto-hub.html':'coreto-agent-mypage.html';
+    return '<button onclick="location.href=\''+_dest+'\'" style="font-size:10px;padding:4px 10px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;font-family:sans-serif">← マイページ</button>';
+  })();
       tabs.appendChild(back);
     }
   });
