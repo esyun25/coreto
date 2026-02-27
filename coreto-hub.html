@@ -701,13 +701,32 @@ function doLogin() {
   }
   document.getElementById('lf-loading').style.display = 'flex';
   const actualId = Object.keys(USERS).find(k => USERS[k] === u) || id;
-  setTimeout(() => {
+
+  // sessionToken生成（SHA-256 / coreto-login.htmlと同形式）
+  async function computeToken(uid, at, pwVal) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(uid + ':' + at + ':' + pwVal);
+    const buf = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  }
+
+  const loginAt = new Date().toISOString();
+  computeToken(actualId, loginAt, pw).then(token => {
     session = {...u, userId: actualId};
-    sessionStorage.setItem('coreto_session', JSON.stringify({ userId: actualId, type: u.type, hqRole: u.hqRole || null }));
+    const sess = {
+      agId: actualId, userId: actualId, name: u.name,
+      rank: u.rank || 'HQ', rankKey: u.rankKey || 'hq',
+      type: u.type, hqRole: u.hqRole || null,
+      sennin: u.sennin || false,
+      lineLinked: false,
+      loginAt: loginAt,
+      sessionToken: token,
+    };
+    sessionStorage.setItem('coreto_session', JSON.stringify(sess));
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('lf-loading').style.display = 'none';
     initShell();
-  }, 800);
+  });
 }
 
 function doLogout() {

@@ -242,7 +242,7 @@ html,body{height:100%;font-family:'Noto Sans JP',sans-serif;background:var(--bg)
 <div class="view-tabs">
   <div class="vt on" onclick="switchView(0,this)">💸 即時払い申請</div>
   <div class="vt" onclick="switchView(1,this)">📋 申請履歴</div>
-  <div class="vt" onclick="switchView(2,this)">🏢 HQ処理ビュー</div>
+  <div class="vt" id="hq-view-tab" onclick="switchView(2,this)">🏢 HQ処理ビュー</div>
 </div>
 
 <!-- ══════════════════════════════════
@@ -739,15 +739,19 @@ html,body{height:100%;font-family:'Noto Sans JP',sans-serif;background:var(--bg)
   window._SESSION = s;
   // HQ処理ビュー タブはHQのみ表示
   window.addEventListener('DOMContentLoaded', function() {
-    var hqTab = document.querySelector('.vt:nth-child(3)');
+    var hqTab = document.getElementById('hq-view-tab');
     if (hqTab && s.type !== 'hq') hqTab.style.display = 'none';
   });
 })();
 
 // ── View switch ──────────────────────────────────────────
 function switchView(i, btn) {
-  document.querySelectorAll('.vt').forEach((t,j)=>t.classList.toggle('on',j===i));
-  [0,1,2].forEach(j=>document.getElementById('view-'+j).style.display=j===i?'block':'none');
+  document.querySelectorAll('.vt').forEach(t => t.classList.remove('on'));
+  if(btn) btn.classList.add('on');
+  [0,1,2].forEach(j=>{
+    var el = document.getElementById('view-'+j);
+    if(el) el.style.display = j===i ? 'block' : 'none';
+  });
 }
 
 // SMS一本化 - method固定
@@ -998,10 +1002,10 @@ function copyRefLink() {
 // ══════════════════════════════════════════════════════════════════
 // SLACK 通知（即時払い）
 // ══════════════════════════════════════════════════════════════════
-const SLACK_WEBHOOK = 'YOUR_SLACK_WEBHOOK_URL'; // 本番時に設定
+var SLACK_WEBHOOK_IP = 'YOUR_SLACK_WEBHOOK_URL'; // 本番時に設定
 
 function slackPost(payload) {
-  // 本番: fetch(SLACK_WEBHOOK, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+  // 本番: fetch(SLACK_WEBHOOK_IP, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
   console.log('[Slack 即時払い通知]', JSON.stringify(payload, null, 2));
 }
 
