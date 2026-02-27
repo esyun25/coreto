@@ -86,6 +86,7 @@ html,body{min-height:100%;font-family:'Noto Sans JP',sans-serif;background:var(-
 /* Grid */
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.inv-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
 /* Fields */
 .field{margin-bottom:12px}
 .field label{display:block;font-size:10px;color:var(--sub);margin-bottom:5px;font-weight:600}
@@ -134,6 +135,7 @@ html,body{min-height:100%;font-family:'Noto Sans JP',sans-serif;background:var(-
   .g2{grid-template-columns:1fr}
   .g3{grid-template-columns:1fr 1fr}
   .kpi-grid{grid-template-columns:1fr 1fr}
+  .inv-grid{grid-template-columns:1fr}
 }
 @media(max-width:480px){
   .g3{grid-template-columns:1fr}
@@ -160,8 +162,6 @@ html,body{min-height:100%;font-family:'Noto Sans JP',sans-serif;background:var(-
   <div class="sb-item on" id="sb-my"   onclick="showPage('my')">  <span>📄</span>領収書ダウンロード</div>
   <div class="sb-item" id="sb-req"  onclick="showPage('req')"> <span>📝</span>請求書発行</div>
   <div class="sb-item" id="sb-fee"  onclick="showPage('fee')"> <span>💰</span>月会費領収書</div>
-  <div class="sb-section" style="margin-top:8px">紹介</div>
-  <div class="sb-item" onclick="openRefModal()" style="color:var(--gold)"> <span>🔗</span>紹介リンク発行</div>
 </div>
 
 <div class="main" id="main"></div>
@@ -309,7 +309,7 @@ function pageReq() {
     <div class="ptitle">請求書発行</div>
     <div class="psub">業務委託報酬の請求書を発行できます（任意）</div>
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start">
+    <div class="inv-grid" style="align-items:start">
       <div>
         <div class="card">
           <div class="ch"><div class="ch-t">請求書情報</div></div>
@@ -534,8 +534,8 @@ function printReceipt(type, month) {
         <div style="font-size:10px;color:#999">No. RC-${month.replace(/[年月]/g,'')}-${ME.id}</div>
       </div>
       <div style="font-size:12px;margin-bottom:20px;border-bottom:1px solid #eee;padding-bottom:16px">
-        <strong>${ME.name}（${ME.nameKana}）</strong> 殿<br>
-        <span style="color:#666">エージェントID: ${ME.id}</span>
+        <strong>${COMPANY.name}</strong> 御中<br>
+        <span style="color:#666">対象エージェント：${ME.name}（ID: ${ME.id}）</span>
       </div>
       <div style="background:#f9f9f9;border-radius:8px;padding:20px;margin-bottom:20px">
         <div style="font-size:28px;font-weight:700;text-align:center;margin-bottom:8px;
@@ -555,11 +555,10 @@ function printReceipt(type, month) {
             <td style="padding:8px;text-align:right;color:#168">¥${p.net.toLocaleString()}</td></tr>
       </table>
       <div style="border-top:2px solid #1a1a1a;padding-top:16px;margin-top:16px;font-size:11px;color:#666">
-        上記の金額を確かに領収いたしました<br><br>
+        上記の金額を確かに受領いたしました<br><br>
         発行日：${new Date().toLocaleDateString('ja-JP')}<br>
-        ${COMPANY.name}<br>
-        ${COMPANY.address}<br>
-        適格請求書発行事業者登録番号：${COMPANY.regNum}
+        受領者：${ME.name}（${ME.nameKana}）/ ID: ${ME.id}<br>
+        ${COMPANY.name} 業務委託エージェント
       </div>
     </div>`;
   openPrintWindow(html, `領収書_${month}_${ME.name}`);
@@ -567,7 +566,65 @@ function printReceipt(type, month) {
 
 function printPayslip(month) {
   const p = PAYSLIPS.find(x=>x.month===month) || PAYSLIPS[0];
-  alert(`📊 ${month}分の支払明細書を印刷ウィンドウで開きます`);
+  if (!p) { alert('データが見つかりません'); return; }
+  const fmt = v => '¥' + v.toLocaleString();
+  const html = `
+    <div style="max-width:600px;margin:0 auto;font-family:'Noto Sans JP',sans-serif;color:#1a1a1a">
+      <div style="text-align:center;margin-bottom:24px">
+        <div style="font-size:22px;font-weight:800;letter-spacing:3px;margin-bottom:4px">支 払 明 細 書</div>
+        <div style="font-size:10px;color:#999">PAYSLIP — ${p.month}</div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:20px">
+        <tr style="background:#f5f5f5">
+          <td style="padding:8px 12px;border:0.5px solid #ddd;font-weight:700;width:50%">受取人</td>
+          <td style="padding:8px 12px;border:0.5px solid #ddd">${ME.name}（${ME.nameKana}）</td>
+        </tr>
+        <tr>
+          <td style="padding:8px 12px;border:0.5px solid #ddd;font-weight:700">エージェントID</td>
+          <td style="padding:8px 12px;border:0.5px solid #ddd;font-family:monospace">${ME.id}</td>
+        </tr>
+        <tr style="background:#f5f5f5">
+          <td style="padding:8px 12px;border:0.5px solid #ddd;font-weight:700">対象月</td>
+          <td style="padding:8px 12px;border:0.5px solid #ddd">${p.month}</td>
+        </tr>
+        <tr>
+          <td style="padding:8px 12px;border:0.5px solid #ddd;font-weight:700">成約件数</td>
+          <td style="padding:8px 12px;border:0.5px solid #ddd">${p.cases} 件</td>
+        </tr>
+        <tr>
+          <td style="padding:8px 12px;border:0.5px solid #ddd;font-weight:700">振込予定日</td>
+          <td style="padding:8px 12px;border:0.5px solid #ddd">${p.date}</td>
+        </tr>
+      </table>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:20px">
+        <tr style="background:#1a1a1a;color:#fff">
+          <th style="padding:10px 14px;text-align:left">項目</th>
+          <th style="padding:10px 14px;text-align:right">金額</th>
+        </tr>
+        <tr>
+          <td style="padding:10px 14px;border-bottom:0.5px solid #eee">業務委託報酬（税引前）</td>
+          <td style="padding:10px 14px;border-bottom:0.5px solid #eee;text-align:right;font-family:monospace">${fmt(p.gross)}</td>
+        </tr>
+        <tr>
+          <td style="padding:10px 14px;border-bottom:0.5px solid #eee;color:#c9a84c">即時払い手数料</td>
+          <td style="padding:10px 14px;border-bottom:0.5px solid #eee;text-align:right;color:#c9a84c;font-family:monospace">-${fmt(p.fee)}</td>
+        </tr>
+        <tr>
+          <td style="padding:10px 14px;border-bottom:0.5px solid #eee;color:#e86">源泉徴収税（10.21%）</td>
+          <td style="padding:10px 14px;border-bottom:0.5px solid #eee;text-align:right;color:#e86;font-family:monospace">-${fmt(p.tax)}</td>
+        </tr>
+        <tr style="font-size:14px;font-weight:800;background:#f0f8f0">
+          <td style="padding:12px 14px">お振込額</td>
+          <td style="padding:12px 14px;text-align:right;color:#168;font-family:monospace">${fmt(p.net)}</td>
+        </tr>
+      </table>
+      <div style="border-top:1px solid #ddd;padding-top:14px;font-size:10px;color:#666;line-height:1.8">
+        発行日：${new Date().toLocaleDateString('ja-JP')}<br>
+        発行者：${COMPANY.name}（${COMPANY.address}）<br>
+        適格請求書発行事業者登録番号：${COMPANY.regNum}
+      </div>
+    </div>`;
+  openPrintWindow(html, `支払明細書_${month}_${ME.name}`);
 }
 
 function printGensen() {
