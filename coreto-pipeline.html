@@ -398,7 +398,7 @@ const SLACK_CH = {
 // 汎用Slack送信（モック: クリップボードコピー + console.log）
 function slackSend(channel, lines) {
   const text = lines.filter(Boolean).join('\n');
-  notifySlack(`[Slack #${channel}]\n`, text));
+  notifySlack(`[Slack #${channel}]\n`, text);
   try {
     const ta = document.createElement('textarea');
     ta.value = text; document.body.appendChild(ta); ta.select();
@@ -588,7 +588,8 @@ function render() {
 
   const tf = document.getElementById('f-type').value;
   // HQロールは全案件表示、エージェントは自分の案件のみ
-  const _s = window._SESSION;
+  // window._SESSIONが未設定の場合はsessionStorageからフォールバック
+  const _s = window._SESSION || (function(){ try { return JSON.parse(sessionStorage.getItem('coreto_session')||'null'); } catch(e){ return null; } })();
   const _isHQ = _s && _s.type === 'hq';
   let cs = _isHQ ? CASES : CASES.filter(c => c.agent === (_s ? _s.userId : '__none__'));
   if (tf) cs = cs.filter(c=>c.type===tf);
@@ -3452,7 +3453,7 @@ function invSendSlack(c, grandTotal, adAmt, adDesc, dualInv) {
   ].filter(Boolean).join('\n');
 
   // 本番: SLACK_WEBHOOK_URL に fetch POST
-  notifySlack('[Slack #請求書] ', lines));
+  notifySlack('[Slack #請求書] ', lines);
 
   // クリップボードにコピー
   try {
@@ -3957,7 +3958,7 @@ function sannaiRequestVerify(id) {
     `🕐 ${new Date().toLocaleString('ja-JP')}`,
   ].join('\n');
 
-  notifySlack('[Slack #三為確認]\n', lines));
+  notifySlack('[Slack #三為確認]\n', lines);
   // Slack webhook 送信（モック: クリップボードにコピー）
   try {
     const ta=document.createElement('textarea');
@@ -4262,7 +4263,11 @@ function toast(msg) {
 // ═══════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════
-render();
+// sessionStorageにセッションがある場合のみ表示（auth guardがリダイレクト中でも空ボードを見せない）
+(function(){
+  const _initS = window._SESSION || (function(){ try { return JSON.parse(sessionStorage.getItem('coreto_session')||'null'); } catch(e){ return null; } })();
+  if (_initS) render();
+})();
 
 // ── 紹介リンクモーダル ──────────────────────────────────────
 var _refCurrentCode = '';
