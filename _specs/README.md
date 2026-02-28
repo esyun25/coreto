@@ -13,6 +13,7 @@
 | [rental-flow.md](./rental-flow.md) | 賃貸仲介フロー（エージェント/パートナー/HQ × 自己持込/マッチング） | 確定 |
 | [commission-rank-mentor.md](./commission-rank-mentor.md) | 報酬分配・ランク制度・メンターコミッション・システム利用料 | 確定 |
 | [payment-infrastructure.md](./payment-infrastructure.md) | 資金フロー・GMOバーチャル口座・Kyash・Stripe・即時払い運用 | 設計確定・一部未実装 |
+| [payment-schedule.md](./payment-schedule.md) | 入出金タイミング・月次スケジュール・即時払い・HR分割払い | 確定（要確認4点あり） |
 
 ---
 
