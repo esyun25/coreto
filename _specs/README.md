@@ -11,6 +11,7 @@
 |---|---|---|
 | [email-provisioning.md](./email-provisioning.md) | メールアドレス自動発行システム（Zoho Mail + Zapier + Kintone） | 設計済み・未実装 |
 | [rental-flow.md](./rental-flow.md) | 賃貸仲介フロー（エージェント/パートナー/HQ × 自己持込/マッチング） | 確定 |
+| [commission-rank-mentor.md](./commission-rank-mentor.md) | 報酬分配・ランク制度・メンターコミッション・システム利用料 | 確定（要確認事項あり） |
 
 ---
 
