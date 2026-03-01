@@ -14,7 +14,8 @@
 | [commission-rank-mentor.md](./commission-rank-mentor.md) | 報酬分配・ランク制度・メンターコミッション・システム利用料 | 確定 |
 | [payment-infrastructure.md](./payment-infrastructure.md) | 資金フロー・GMOバーチャル口座・Kyash・Stripe・即時払い運用 | 設計確定・一部未実装 |
 | [payment-schedule.md](./payment-schedule.md) | 入出金タイミング・月次スケジュール・即時払い・HR分割払い | 確定（要確認4点あり） |
-| [incoming-payments.md](./incoming-payments.md) | 手数料入金フロー・請求書発行・案件種別ごとの入金タイミング | 確定（要確認4点あり） |
+| [incoming-payments.md](./incoming-payments.md) | 手数料入金フロー・請求書発行・案件種別ごとの入金タイミング | 確定 |
+| [onboarding-flow.md](./onboarding-flow.md) | 入会フロー・書類審査・オンボーディング4フェーズ | 確定（研修コンテンツ未実装） |
 
 ---
 
