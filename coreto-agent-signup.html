@@ -172,15 +172,14 @@ html,body{min-height:100%;font-family:'Noto Sans JP',sans-serif;background:var(-
       <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--green);margin-bottom:6px">URLを確認しました</div>
       <div style="font-size:13px;color:var(--sub);margin-bottom:20px" id="gate-welcome"></div>
       <div style="background:var(--card);border:1px solid rgba(201,168,76,.3);border-radius:10px;padding:14px;margin-bottom:20px;text-align:left">
-        <div style="font-size:10px;color:var(--muted);letter-spacing:.5px;margin-bottom:6px">入会手続き概要（全7ステップ・約15分）</div>
+        <div style="font-size:10px;color:var(--muted);letter-spacing:.5px;margin-bottom:6px">入会手続き概要（全6ステップ・約15分）</div>
         <div style="font-size:12px;color:var(--sub);line-height:2">
           ① 基本情報の入力<br>
           ② 宅建士資格の確認<br>
           ③ 身分証（eKYC）提出<br>
-          ④ 口座情報の登録<br>
-          ⑤ 決済情報の登録<br>
-          ⑥ LINE登録・確認コード送信<br>
-          ⑦ 最終確認・送信
+          ④ Kyash連携<br>
+          ⑤ LINE登録・確認コード送信<br>
+          ⑥ 最終確認・送信
         </div>
       </div>
       <button onclick="startOnboarding()" class="btn btn-primary" style="width:100%;justify-content:center">入会手続きを開始する →</button>
@@ -197,10 +196,9 @@ html,body{min-height:100%;font-family:'Noto Sans JP',sans-serif;background:var(-
   <div class="step on"  id="s0"><div class="step-dot">1</div><div class="step-lbl">基本<br>情報</div></div>
   <div class="step"     id="s1"><div class="step-dot">2</div><div class="step-lbl">宅建士<br>確認</div></div>
   <div class="step"     id="s2"><div class="step-dot">3</div><div class="step-lbl">身分証<br>提出</div></div>
-  <div class="step"     id="s3"><div class="step-dot">4</div><div class="step-lbl">口座<br>情報</div></div>
-  <div class="step"     id="s4"><div class="step-dot">5</div><div class="step-lbl">決済<br>情報</div></div>
-  <div class="step"     id="s5"><div class="step-dot">6</div><div class="step-lbl">LINE<br>登録</div></div>
-  <div class="step"     id="s6"><div class="step-dot">7</div><div class="step-lbl">確認<br>送信</div></div>
+  <div class="step"     id="s3"><div class="step-dot">4</div><div class="step-lbl">Kyash<br>連携</div></div>
+  <div class="step"     id="s4"><div class="step-dot">5</div><div class="step-lbl">LINE<br>登録</div></div>
+  <div class="step"     id="s5"><div class="step-dot">6</div><div class="step-lbl">確認<br>送信</div></div>
 </div>
 
 <div class="wrap" id="wrap"></div>
@@ -246,8 +244,8 @@ var form = {
   meishiWant: true,
   // KYC
   kyc_front:'', kyc_back:'',
-  // 口座
-  bankName:'', bankBranch:'', bankBranchCode:'', bankType:'普通', bankNum:'', bankHolder:'',
+  // Kyash
+  kyashId:'',
   // 決済 — カード情報はStripeが管理（COREOTOでは保持しない）
   stripePaymentMethodId: '',  // Stripeが発行するPaymentMethod ID のみ保持
 };
@@ -258,14 +256,14 @@ window._signupOpenedAt = Date.now();
 // ── Step control ─────────────────────────────────────────────
 function goStep(n) {
   step = n;
-  for (var i=0;i<7;i++) {
+  for (var i=0;i<6;i++) {
     var el = document.getElementById('s'+i);
     if(!el) continue;
     el.className = 'step'+(i<n?' done':i===n?' on':'');
     el.querySelector('.step-dot').textContent = i<n ? '✓' : String(i+1);
   }
-  // step2(SMS認証)を削除: 0=基本情報 1=宅建士 2=身分証 3=口座 4=決済 5=LINE 6=確認送信
-  [step0,step1,step3,step4,step5,stepWorks,step6][n]();
+  // 0=基本情報 1=宅建士 2=身分証 3=Kyash連携 4=LINE 5=確認送信
+  [step0,step1,step3,step5,stepWorks,step6][n]();
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
@@ -543,7 +541,7 @@ function step3() {
     ) : '')
     +'<div style="display:flex;gap:10px;margin-top:20px">'
     +'<button class="btn btn-ghost" onclick="goStep(1)" style="width:auto;padding:10px 20px">← 戻る</button>'
-    +'<button class="btn btn-gold" '+(canNext?'':'disabled ')+'onclick="goStep(3)" style="flex:1;justify-content:center">次へ: 口座情報 →</button>'
+    +'<button class="btn btn-gold" '+(canNext?'':'disabled ')+'onclick="goStep(3)" style="flex:1;justify-content:center">次へ: Kyash連携 →</button>'
     +'</div>'
     +'</div></div>';
 }
@@ -592,117 +590,41 @@ function kycUpload(input, side) {
     step3();
   };
   reader.readAsDataURL(file);
-}
-
 // ══════════════════════════════════════
-//  STEP 4: 口座情報
-// ══════════════════════════════════════
-function step4() {
-  var sv = function(id) { return (document.getElementById(id)||{}).value||''; };
-  document.getElementById('wrap').innerHTML =
-    '<div class="card"><div class="ch"><div class="ch-t">口座情報</div><span class="pill pb">5 / 7</span></div><div class="cb">'
-    +'<div style="font-size:11px;color:var(--sub);margin-bottom:14px;line-height:1.8">報酬の振込先口座を登録してください。<strong style="color:var(--text)">本人名義の口座のみ</strong>受け付けます。</div>'
-    +'<div class="field"><label>銀行名 <span class="req">*</span></label>'
-    +'<input id="b-bank" type="text" placeholder="例: GMOあおぞらネット銀行" value="'+(form.bankName||'')+'">'
-    +'</div>'
-    +'<div class="g2">'
-    +'<div class="field"><label>支店名 <span class="req">*</span></label>'
-    +'<input id="b-branch" type="text" placeholder="例: ビジネス営業部" value="'+(form.bankBranch||'')+'">'
-    +'</div>'
-    +'<div class="field"><label>支店コード</label>'
-    +'<input id="b-branchcode" type="text" class="mono" placeholder="例: 010" value="'+(form.bankBranchCode||'')+'">'
-    +'</div>'
-    +'</div>'
-    +'<div class="g2">'
-    +'<div class="field"><label>口座種別 <span class="req">*</span></label>'
-    +'<select id="b-type"><option value="普通" '+(form.bankType==='普通'?'selected':'')+'>普通</option><option value="当座" '+(form.bankType==='当座'?'selected':'')+'>当座</option></select>'
-    +'</div>'
-    +'<div class="field"><label>口座番号 <span class="req">*</span></label>'
-    +'<input id="b-num" type="text" class="mono" placeholder="1234567" maxlength="8" value="'+(form.bankNum||'')+'">'
-    +'</div>'
-    +'</div>'
-    +'<div class="field"><label>口座名義（カタカナ） <span class="req">*</span></label>'
-    +'<input id="b-holder" type="text" class="mono" placeholder="例: ヤマダ マコト" value="'+(form.bankHolder||form.nameKana||'')+'">'
-    +'</div>'
-    +'<div style="margin-top:4px;padding:10px 12px;background:rgba(79,156,249,.06);border:1px solid rgba(79,156,249,.2);border-radius:8px;font-size:11px;color:var(--sub)">💡 振込手数料はCORETO負担です。ご安心ください。</div>'
-    +'<div style="display:flex;gap:10px;margin-top:20px">'
-    +'<button class="btn btn-ghost" onclick="goStep(2)" style="width:auto;padding:10px 20px">← 戻る</button>'
-    +'<button class="btn btn-gold" onclick="saveBank()" style="flex:1;justify-content:center">次へ: 決済情報 →</button>'
-    +'</div>'
-    +'</div></div>';
-}
-
-function saveBank() {
-  var bank  = document.getElementById('b-bank').value.trim();
-  var branch= document.getElementById('b-branch').value.trim();
-  var num   = document.getElementById('b-num').value.trim();
-  var holder= document.getElementById('b-holder').value.trim();
-  if (!bank||!branch||!num||!holder) { alert('必須項目をすべて入力してください'); return; }
-  form.bankName      = bank;
-  form.bankBranch    = branch;
-  form.bankBranchCode= document.getElementById('b-branchcode').value.trim();
-  form.bankType      = document.getElementById('b-type').value;
-  form.bankNum       = num;
-  form.bankHolder    = holder;
-  goStep(4);
-}
-
-// ══════════════════════════════════════
-//  STEP 5: 決済情報
+//  STEP 3: Kyash連携
 // ══════════════════════════════════════
 function step5() {
-  var feeNote = form.takkenSennin
-    ? '<div class="fee-highlight"><div style="font-size:11px;color:var(--muted);margin-bottom:4px">専任宅建士 特典</div><div class="fee-free">¥0</div><div style="font-size:11px;color:var(--green);margin-top:4px">月会費・名刺費用 すべて無料</div></div>'
-    : '<div class="al al-info">💳 <div>月会費 及び名刺代金が登録のカードに請求されます。</div></div>';
-
   document.getElementById('wrap').innerHTML =
-    '<div class="card"><div class="ch"><div class="ch-t">決済情報</div><span class="pill pb">4 / 5</span></div><div class="cb">' +
-    feeNote +
+    '<div class="card"><div class="ch"><div class="ch-t">Kyash連携</div><span class="pill pb">4 / 6</span></div><div class="cb">' +
+    '<div class="al al-info">💳 <div>報酬の受け取りにKyashアカウントが必要です。<br>' +
+    'すでにKyashをお持ちの方はそのままご利用いただけます。</div></div>' +
+    '<div style="background:#191e28;border:1px solid #252c3d;border-radius:12px;padding:18px;margin-bottom:16px">' +
+    '<div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:10px">📋 Kyash連携の手順</div>' +
+    '<div style="font-size:12px;color:var(--sub);line-height:2.2">' +
+    '① <a href="https://kyash.co" target="_blank" style="color:var(--blue)">kyash.co</a> からKyashアプリをインストール<br>' +
+    '② アカウントを作成（本人確認はKyash側で完結）<br>' +
+    '③ Kyash IDをコピーして下に入力' +
+    '</div></div>' +
+    '<div class="field"><label>Kyash ID <span class="req">*</span></label>' +
+    '<input id="f-kyash-id" type="text" class="mono" placeholder="例: yamada.makoto" value="' + (form.kyashId||'') + '">' +
+    '<div class="fhint">KyashアプリのマイページでKyash IDを確認できます</div></div>' +
     (form.takkenSennin ? '' :
-      // ────────────────────────────────────────────────────────────
-      // 🔒 PCI DSS 対応: カード情報はStripe Elements経由で収集
-      //    COREOTOのJSはカード番号・CVV・有効期限に一切アクセスしない
-      //    本番設定: Stripeダッシュボード → API Keys → Publishable key を
-      //    下記 STRIPE_PUBLISHABLE_KEY に設定してください
-      // ────────────────────────────────────────────────────────────
-      '<div class="field"><label>クレジットカード情報<span class="req">*</span></label>' +
-      '<div id="stripe-card-element" style="border:1px solid var(--border);border-radius:8px;padding:12px 14px;background:var(--card2);font-size:15px;min-height:44px;" >' +
-      '<div style="color:var(--muted);font-size:12px;padding:4px 0">🔒 Stripe安全決済 — カード番号・CVVはStripeが直接処理します（COREOTOには届きません）</div>' +
-      '</div></div>' +
-      '<div id="stripe-card-errors" style="color:var(--danger);font-size:12px;margin-top:4px"></div>'
+      '<div class="al al-warn">💳 <div>月会費（Bronze: ¥980/月）はStripeのクレジットカード払いです。<br>' +
+      '次のステップでカード情報を登録してください。</div></div>'
     ) +
-    '<div style="display:flex;gap:10px;margin-top:8px">' +
-    '<button class="btn btn-ghost" onclick="goStep(3)" style="width:auto;padding:10px 20px">← 戻る</button>' +
-    '<button class="btn btn-blue" onclick="validateStep3()">次へ →</button>' +
+    '<div style="display:flex;gap:10px;margin-top:16px">' +
+    '<button class="btn btn-ghost" onclick="goStep(2)" style="width:auto;padding:10px 20px">← 戻る</button>' +
+    '<button class="btn btn-gold" onclick="validateKyash()">次へ →</button>' +
     '</div></div></div>';
 }
 
-function fmtCard(el) {
-  var v = el.value.replace(/\D/g,'').slice(0,16);
-  el.value = v.replace(/(\d{4})(?=\d)/g,'$1 ');
-  form.cardNo = el.value;
-}
-function fmtExp(el) {
-  var v = el.value.replace(/\D/g,'').slice(0,4);
-  el.value = v.length>2 ? v.slice(0,2)+'/'+v.slice(2) : v;
-  form.cardExp = el.value;
-}
-function validateStep3() {
-  if (!form.takkenSennin) {
-    var card = document.getElementById('f-card') ? document.getElementById('f-card').value.trim() : '';
-    var exp  = document.getElementById('f-exp')  ? document.getElementById('f-exp').value.trim()  : '';
-    var cvv  = document.getElementById('f-cvv')  ? document.getElementById('f-cvv').value.trim()  : '';
-    // カード情報はStripe Elementsが管理 (form.cardNo等はCORETO側に存在しない)
-    // StripeのPaymentMethod IDは submitSignup() 時に取得される
-  }
-  goStep(5);
+function validateKyash() {
+  var kyashId = (document.getElementById('f-kyash-id')||{}).value.trim();
+  if (!kyashId) { alert('Kyash IDを入力してください'); return; }
+  form.kyashId = kyashId;
+  goStep(4);
 }
 
-// ══════════════════════════════════════
-//  STEP 6: LINE WORKS 登録
-// ══════════════════════════════════════
-// ══════════════════════════════════════
-//  STEP 6: LINE WORKS 登録
 // ══════════════════════════════════════
 function stepWorks() {
   // ワンタイムコード生成: CRT-{4桁ランダム}-{エージェントID相当}
@@ -770,7 +692,7 @@ function stepWorks() {
     '</div>' + // end LINE WORKS
 
     '<div style="display:flex;gap:10px;margin-top:20px">' +
-    '<button class="btn btn-ghost" onclick="goStep(4)" style="width:auto;padding:10px 20px">← 戻る</button>' +
+    '<button class="btn btn-ghost" onclick="goStep(3)" style="width:auto;padding:10px 20px">← 戻る</button>' +
     '<button class="btn btn-primary" id="works-next-btn" onclick="validateWorksStep()" disabled style="opacity:.4">次へ →</button>' +
     '</div>' +
     '</div></div>';
@@ -828,7 +750,7 @@ function confirmWorksAdded() { markWorksSent(); }
 
 function validateWorksStep() {
   if (!form.worksCode_sent) { alert('確認コードを送信してから次へ進んでください。'); return; }
-  goStep(6);
+  goStep(5);
 }
 
 function showSignupToast(msg) {
@@ -866,7 +788,7 @@ function step6() {
     '<span style="font-size:10px;color:var(--muted)">他社への専任宅建士登録は宅建業法上不可となります。</span></div></div>' : '') +
     rows.map(function(r){ return '<div class="sum-row"><span style="color:var(--sub)">'+r[0]+'</span><span style="font-weight:600">'+r[1]+'</span></div>'; }).join('') +
     '<div style="display:flex;gap:10px;margin-top:20px">' +
-    '<button class="btn btn-ghost" onclick="goStep(5)" style="width:auto;padding:10px 20px">← 戻る</button>' +
+    '<button class="btn btn-ghost" onclick="goStep(4)" style="width:auto;padding:10px 20px">← 戻る</button>' +
     '<button class="btn btn-gold" onclick="submitSignup()">申込を送信する ✓</button>' +
     '</div></div></div>';
 }
@@ -913,11 +835,7 @@ async function submitSignup() {
     senninSpc:    form.takkenSennin ? '専任宅建士希望' : '一般エージェント',
     licNo:        form.licNo || '—',
     licPref:      form.licPref || '—',
-    bankName:     form.bankName,
-    bankBranch:   form.bankBranch,
-    bankType:     form.bankType,
-    bankNum:      form.bankNum,
-    bankHolder:   form.bankHolder,
+    kyashId:      form.kyashId,
     monthlyFee:   form.monthlyFee + '円',
     meishiWant:   form.meishiWant ? 'はい' : 'いいえ',
   };
