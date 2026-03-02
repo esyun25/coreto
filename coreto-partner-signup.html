@@ -127,10 +127,9 @@ html,body{min-height:100%;font-family:'Noto Sans JP',sans-serif;background:var(-
 <!-- ══ ステップバー ══ -->
 <div class="steps" id="stepbar">
   <div class="step on"  id="s0"><div class="step-dot">1</div><div class="step-lbl">基本<br>情報</div></div>
-  <div class="step"     id="s1"><div class="step-dot">2</div><div class="step-lbl">SMS<br>認証</div></div>
-  <div class="step"     id="s2"><div class="step-dot">3</div><div class="step-lbl">身分証<br>提出</div></div>
-  <div class="step"     id="s3"><div class="step-dot">4</div><div class="step-lbl">LINE<br>WORKS</div></div>
-  <div class="step"     id="s4"><div class="step-dot">5</div><div class="step-lbl">確認<br>送信</div></div>
+  <div class="step"     id="s1"><div class="step-dot">2</div><div class="step-lbl">身分証<br>提出</div></div>
+  <div class="step"     id="s2"><div class="step-dot">3</div><div class="step-lbl">LINE<br>WORKS</div></div>
+  <div class="step"     id="s3"><div class="step-dot">4</div><div class="step-lbl">確認<br>送信</div></div>
 </div>
 
 <!-- ══ メインコンテンツ ══ -->
@@ -148,8 +147,6 @@ html,body{min-height:100%;font-family:'Noto Sans JP',sans-serif;background:var(-
 // ── 設定 ──────────────────────────────────────────────────────────────────
 var ZAPIER_WEBHOOK_URL = 'YOUR_ZAPIER_WEBHOOK_URL_HERE';
 var WORKS_ID = 'coreto-hq';
-var OTP_SMS_WEBHOOK = 'YOUR_ZAPIER_SMS_WEBHOOK';
-var OTP_DEV_MODE = true; // 本番前にfalseに変更
 
 // ── 状態 ──────────────────────────────────────────────────────────────────
 var currentStep = 0;
@@ -164,11 +161,6 @@ var form = {
   kycDocType: -1,   // 個人：0=免許証 1=パスポート 2=マイナンバー
   worksCode: '', worksCode_sent: false,
 };
-var demoOtp = '';
-var otpTimer = null;
-var otpSec = 300;
-var _otpAttempts = 0;
-var _otpResends = 0;
 var KYC_FILE_TYPES = ['image/jpeg','image/jpg','image/png','image/webp','image/heic','application/pdf'];
 var KYC_MAX_SIZE = 10 * 1024 * 1024;
 window._signupOpenedAt = Date.now();
@@ -176,7 +168,8 @@ window._signupOpenedAt = Date.now();
 // ── ステップ制御 ──────────────────────────────────────────────────────────
 function goStep(n) {
   currentStep = n;
-  [step0, step1, step2, step3, step4][n]();
+  // SMS認証削除: 0=基本情報 1=身分証 2=LINE WORKS 3=確認送信
+  [step0, step2, step3, step4][n]();
   document.querySelectorAll('.step').forEach(function(el, i) {
     el.className = 'step' + (i < n ? ' done' : i === n ? ' on' : '');
     el.querySelector('.step-dot').textContent = i < n ? '✓' : String(i + 1);
@@ -187,7 +180,7 @@ function goStep(n) {
 // ── STEP 0: 基本情報 ──────────────────────────────────────────────────────
 function step0() {
   document.getElementById('wrap').innerHTML =
-    '<div class="card"><div class="ch"><div class="ch-t">パートナー基本情報</div><span class="pill pb">1 / 5</span></div><div class="cb">' +
+    '<div class="card"><div class="ch"><div class="ch-t">パートナー基本情報</div><span class="pill pb">1 / 4</span></div><div class="cb">' +
 
     '<div class="al al-info">🤝 <div>CORETOパートナーとして、顧客のご紹介をいただける方の登録フォームです。<br>' +
     '個人・法人どちらでも登録できます。入会費・月会費は一切かかりません。</div></div>' +
@@ -263,7 +256,7 @@ function selectCorpType(type, restore) {
     '<div class="fhint">紹介者から受け取ったコードがあれば入力してください</div></div>' +
     '<div class="al al-info">💡 <div><strong>報酬と源泉徴収について</strong><br>' +
     '成約1件ごとに紹介料をお支払いします。<strong>法人パートナー</strong>への支払いは源泉徴収なし（法人は自社で確定申告）。<strong>個人パートナー</strong>は報酬の10.21%を源泉徴収してお支払いします。</div></div>' +
-    '<button class="btn btn-gold" onclick="validateStep0()" style="margin-top:8px">次へ: SMS認証 →</button>';
+    '<button class="btn btn-gold" onclick="validateStep0()" style="margin-top:8px">次へ: 身分証提出 →</button>';
 
   document.getElementById('form-body').innerHTML = html;
 
@@ -318,90 +311,10 @@ function validateStep0() {
   if (err.length) { alert('⚠️ 入力エラー\n\n' + err.join('\n')); return; }
   goStep(1);
 }
-
-// ── STEP 1: SMS認証 ───────────────────────────────────────────────────────
-function step1() {
-  demoOtp = String(Math.floor(100000 + Math.random() * 900000));
-  _otpAttempts = 0;
-  otpSec = 300;
-  sendOtpSms(form.phone, demoOtp);
-
-  document.getElementById('wrap').innerHTML =
-    '<div class="card"><div class="ch"><div class="ch-t">SMS本人確認</div><span class="pill pb">2 / 5</span></div><div class="cb">' +
-    '<div class="al al-info">📱 <div><strong>' + esc(form.phone) + '</strong> にSMSで6桁の認証コードを送信しました。</div></div>' +
-    '<div class="field"><label>認証コード（6桁） <span class="req">*</span></label>' +
-    '<input id="otp-input" type="text" class="mono" maxlength="6" placeholder="123456" autocomplete="one-time-code" style="font-size:20px;letter-spacing:4px;text-align:center">' +
-    '<div id="otp-dev-hint" style="font-size:10px;color:var(--orange);margin-top:4px"></div></div>' +
-    '<div style="font-size:11px;color:var(--muted);margin-bottom:16px">有効期限: <span id="otp-timer">5:00</span> ／ ' +
-    '<button id="resend-btn" onclick="resendOtp()" style="background:none;border:none;color:var(--blue);cursor:pointer;font-size:11px;font-family:inherit" disabled>再送信</button></div>' +
-    '<div style="display:flex;gap:10px">' +
-    '<button class="btn btn-ghost" onclick="goStep(0)" style="width:auto;padding:10px 20px">← 戻る</button>' +
-    '<button class="btn btn-blue" onclick="verifyOtp()" style="flex:1">認証して次へ →</button>' +
-    '</div></div></div>';
-
-  otpTimer = setInterval(function() {
-    otpSec--;
-    var m = Math.floor(otpSec / 60), s = otpSec % 60;
-    var el = document.getElementById('otp-timer');
-    if (el) el.textContent = m + ':' + (s < 10 ? '0' : '') + s;
-    if (otpSec <= 0) {
-      clearInterval(otpTimer);
-      var rb = document.getElementById('resend-btn');
-      if (rb) rb.disabled = false;
-    }
-  }, 1000);
-}
-
-async function sendOtpSms(phone, otp) {
-  if (OTP_DEV_MODE) {
-    console.log('[OTP 開発モード] コード:', otp, '→ 電話:', phone);
-    var devEl = document.getElementById('otp-dev-hint');
-    if (devEl) devEl.textContent = '[開発] コード: ' + otp;
-    return;
-  }
-  try {
-    await fetch(OTP_SMS_WEBHOOK, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ to: phone, code: otp, message: 'COREOTOの認証コードは ' + otp + ' です（5分間有効）' }),
-      mode: 'no-cors'
-    });
-  } catch(e) { console.error('[OTP] SMS送信エラー:', e); }
-}
-
-function verifyOtp() {
-  if (_otpAttempts >= 5) { alert('⚠️ 認証試行回数の上限に達しました。最初からやり直してください。'); goStep(0); return; }
-  var input = (document.getElementById('otp-input') || {}).value;
-  if (!input || input.length !== 6) { alert('6桁の認証コードを入力してください'); return; }
-  _otpAttempts++;
-  if (input !== demoOtp) { alert('⚠️ 認証コードが正しくありません（残り' + (5 - _otpAttempts) + '回）'); return; }
-  clearInterval(otpTimer);
-  showToast('✅ 電話番号の確認が完了しました');
-  goStep(2);
-}
-
-function resendOtp() {
-  if (_otpResends >= 3) { alert('⚠️ 再送信の上限（3回）に達しました。最初からやり直してください。'); goStep(0); return; }
-  _otpResends++;
-  demoOtp = String(Math.floor(100000 + Math.random() * 900000));
-  _otpAttempts = 0;
-  otpSec = 300;
-  sendOtpSms(form.phone, demoOtp);
-  document.getElementById('resend-btn').disabled = true;
-  clearInterval(otpTimer);
-  otpTimer = setInterval(function() {
-    otpSec--;
-    var m = Math.floor(otpSec / 60), s = otpSec % 60;
-    var el = document.getElementById('otp-timer');
-    if (el) el.textContent = m + ':' + (s < 10 ? '0' : '') + s;
-    if (otpSec <= 0) { clearInterval(otpTimer); var rb = document.getElementById('resend-btn'); if (rb) rb.disabled = false; }
-  }, 1000);
-  showToast('SMSを再送しました');
-}
-
 // ── STEP 2: 身分証アップロード ────────────────────────────────────────────
 function step2() {
   document.getElementById('wrap').innerHTML =
-    '<div class="card"><div class="ch"><div class="ch-t">身分証明書</div><span class="pill pb">3 / 5</span></div><div class="cb">' +
+    '<div class="card"><div class="ch"><div class="ch-t">身分証明書</div><span class="pill pb">2 / 4</span></div><div class="cb">' +
     '<div style="font-size:11px;color:var(--sub);margin-bottom:14px;line-height:1.8">' +
     (form.corpType === 'corp'
       ? '法人の場合は登記事項証明書（履歴事項全部証明書）と代表者の身分証明書が必要です。'
@@ -487,7 +400,7 @@ function validateKyc() {
     if (!form.kyc.corpDoc) { alert('登記事項証明書をアップロードしてください'); return; }
     if (!form.kyc.front) { alert('代表者の身分証をアップロードしてください'); return; }
   }
-  goStep(3);
+  goStep(2);
 }
 
 // ── STEP 3: LINE WORKS ────────────────────────────────────────────────────
@@ -496,7 +409,7 @@ function step3() {
   form.worksCode = 'PT-' + String(Math.floor(100000 + Math.random() * 900000));
 
   document.getElementById('wrap').innerHTML =
-    '<div class="card"><div class="ch"><div class="ch-t">LINE WORKS登録</div><span class="pill pb">4 / 5</span></div><div class="cb">' +
+    '<div class="card"><div class="ch"><div class="ch-t">LINE WORKS登録</div><span class="pill pb">3 / 4</span></div><div class="cb">' +
     '<div style="background:rgba(201,168,76,.06);border:1px solid rgba(201,168,76,.3);border-radius:10px;padding:14px;margin-bottom:12px">' +
     '<div style="font-size:11px;color:var(--gold);font-weight:700;margin-bottom:6px">⚠️ 案件通知・連絡に必須です</div>' +
     '<div style="font-size:12px;color:var(--sub);line-height:1.8">CORETO WORKS（ID: <strong style="color:var(--gold)">' + WORKS_ID + '</strong>）を友達登録後、<br>' +
@@ -576,7 +489,7 @@ function step4() {
   ].filter(Boolean);
 
   document.getElementById('wrap').innerHTML =
-    '<div class="card"><div class="ch"><div class="ch-t">申込内容の確認</div><span class="pill pb">5 / 5</span></div><div class="cb">' +
+    '<div class="card"><div class="ch"><div class="ch-t">申込内容の確認</div><span class="pill pb">4 / 4</span></div><div class="cb">' +
     '<div class="al al-ok">✅ <div>以下の内容でパートナー登録を申請します。<br>' +
     '本部でeKYC確認後、1〜2営業日以内にLINE WORKSにてご連絡いたします。</div></div>' +
     rows.map(function(r) {

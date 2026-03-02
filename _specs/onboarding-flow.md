@@ -45,7 +45,7 @@
       ↓
 ⑤ 面接合格 → 入会URL（招待トークン）発行・SMSで送付
       ↓
-⑥ 入会手続き（全8ステップ）
+⑥ 入会手続き（全7ステップ）
    coreto-agent-signup.html / coreto-partner-signup.html
       ↓
 ⑦ HQがeKYC確認（書類の目視確認・DB照合）
@@ -55,7 +55,7 @@
 ⑨ オンボーディング（coreto-onboarding.html）
 ```
 
-### 入会申請8ステップ（面接合格後・招待URLアクセス時）
+### 入会申請7ステップ（面接合格後・招待URLアクセス時）
 
 ```
 STEP 1: 基本情報入力
@@ -198,9 +198,9 @@ manager以上
 ```
 面接合格
   ↓
-入会招待URL（?token=xxx）をSMSで送付（coreto-id-manager.html）
+入会招待URL（?token=xxx）をメールで送付（coreto-id-manager.html）
   ↓
-申請者が入会手続き（全8ステップ）を実施
+申請者が入会手続き（全7ステップ）を実施
 coreto-agent-signup.html / coreto-partner-signup.html
   ↓
 業務委託契約書の電子署名（coreto-contract.html）

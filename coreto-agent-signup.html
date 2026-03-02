@@ -172,16 +172,15 @@ html,body{min-height:100%;font-family:'Noto Sans JP',sans-serif;background:var(-
       <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--green);margin-bottom:6px">URLを確認しました</div>
       <div style="font-size:13px;color:var(--sub);margin-bottom:20px" id="gate-welcome"></div>
       <div style="background:var(--card);border:1px solid rgba(201,168,76,.3);border-radius:10px;padding:14px;margin-bottom:20px;text-align:left">
-        <div style="font-size:10px;color:var(--muted);letter-spacing:.5px;margin-bottom:6px">入会手続き概要</div>
+        <div style="font-size:10px;color:var(--muted);letter-spacing:.5px;margin-bottom:6px">入会手続き概要（全7ステップ・約15分）</div>
         <div style="font-size:12px;color:var(--sub);line-height:2">
           ① 基本情報の入力<br>
           ② 宅建士資格の確認<br>
-          ③ SMS本人認証<br>
-          ④ 身分証（eKYC）提出<br>
-          ⑤ 口座情報の登録<br>
-          ⑥ 決済情報の登録<br>
-          ⑦ LINE登録・確認コード送信<br>
-          ⑧ 最終確認・送信
+          ③ 身分証（eKYC）提出<br>
+          ④ 口座情報の登録<br>
+          ⑤ 決済情報の登録<br>
+          ⑥ LINE登録・確認コード送信<br>
+          ⑦ 最終確認・送信
         </div>
       </div>
       <button onclick="startOnboarding()" class="btn btn-primary" style="width:100%;justify-content:center">入会手続きを開始する →</button>
@@ -197,12 +196,11 @@ html,body{min-height:100%;font-family:'Noto Sans JP',sans-serif;background:var(-
 <div class="steps" id="stepbar">
   <div class="step on"  id="s0"><div class="step-dot">1</div><div class="step-lbl">基本<br>情報</div></div>
   <div class="step"     id="s1"><div class="step-dot">2</div><div class="step-lbl">宅建士<br>確認</div></div>
-  <div class="step"     id="s2"><div class="step-dot">3</div><div class="step-lbl">SMS<br>認証</div></div>
-  <div class="step"     id="s3"><div class="step-dot">4</div><div class="step-lbl">身分証<br>提出</div></div>
-  <div class="step"     id="s4"><div class="step-dot">5</div><div class="step-lbl">口座<br>情報</div></div>
-  <div class="step"     id="s5"><div class="step-dot">6</div><div class="step-lbl">決済<br>情報</div></div>
-  <div class="step"     id="s6"><div class="step-dot">7</div><div class="step-lbl">LINE<br>登録</div></div>
-  <div class="step"     id="s7"><div class="step-dot">8</div><div class="step-lbl">確認<br>送信</div></div>
+  <div class="step"     id="s2"><div class="step-dot">3</div><div class="step-lbl">身分証<br>提出</div></div>
+  <div class="step"     id="s3"><div class="step-dot">4</div><div class="step-lbl">口座<br>情報</div></div>
+  <div class="step"     id="s4"><div class="step-dot">5</div><div class="step-lbl">決済<br>情報</div></div>
+  <div class="step"     id="s5"><div class="step-dot">6</div><div class="step-lbl">LINE<br>登録</div></div>
+  <div class="step"     id="s6"><div class="step-dot">7</div><div class="step-lbl">確認<br>送信</div></div>
 </div>
 
 <div class="wrap" id="wrap"></div>
@@ -256,20 +254,18 @@ var form = {
 
 // ── スパム対策: フォーム表示タイムスタンプ ──────────────────────────
 window._signupOpenedAt = Date.now();
-var demoOtp = '';
-var otpTimer = null;
-var otpSec = 300;
 
 // ── Step control ─────────────────────────────────────────────
 function goStep(n) {
   step = n;
-  for (var i=0;i<8;i++) {
+  for (var i=0;i<7;i++) {
     var el = document.getElementById('s'+i);
     if(!el) continue;
     el.className = 'step'+(i<n?' done':i===n?' on':'');
     el.querySelector('.step-dot').textContent = i<n ? '✓' : String(i+1);
   }
-  [step0,step1,step2,step3,step4,step5,stepWorks,step6][n]();
+  // step2(SMS認証)を削除: 0=基本情報 1=宅建士 2=身分証 3=口座 4=決済 5=LINE 6=確認送信
+  [step0,step1,step3,step4,step5,stepWorks,step6][n]();
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
@@ -508,134 +504,6 @@ function validateStep1() {
 }
 
 // ══════════════════════════════════════
-//  STEP 2: SMS認証
-// ══════════════════════════════════════
-// ── SMS OTP 設定 ─────────────────────────────────────────────────────────
-// Twilio または Zapier 経由でSMSを送信します。
-// Zapier設定: Webhooks → Catch Hook → Twilio SMS送信 アクション
-// ZAPIER_CONFIG.ENABLED = true に設定後、ZAPIER_CONFIG.SMS_WEBHOOK にURLを追加
-var OTP_CONFIG = {
-  SMS_WEBHOOK: 'YOUR_ZAPIER_SMS_WEBHOOK',  // ← Zapier SMS Webhook URLをここに設定
-  // 開発環境: console.log で表示（SMS未送信）
-  DEV_MODE: true,   // 本番前に false に変更
-};
-
-// OTPブルートフォース制限
-var _otpAttempts = 0;
-var _otpResends  = 0;
-var OTP_MAX_ATTEMPTS = 5;
-var OTP_MAX_RESENDS  = 3;
-
-async function sendOtpSms(phone, otp) {
-  if (OTP_CONFIG.DEV_MODE || !OTP_CONFIG.SMS_WEBHOOK || OTP_CONFIG.SMS_WEBHOOK === 'YOUR_ZAPIER_SMS_WEBHOOK') {
-    console.log('[OTP 開発モード] コード:', otp, '→ 電話:', phone);
-    // 開発中は画面に表示（本番では絶対に表示しない）
-    var devEl = document.getElementById('otp-dev-hint');
-    if (devEl) devEl.textContent = '[開発] コード: ' + otp;
-    return;
-  }
-  try {
-    await fetch(OTP_CONFIG.SMS_WEBHOOK, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ to: phone, code: otp, message: 'COREOTOの認証コードは ' + otp + ' です（5分間有効）' }),
-      mode: 'no-cors'
-    });
-  } catch(e) {
-    console.error('[OTP] SMS送信エラー:', e);
-  }
-}
-
-function step2() {
-  demoOtp = String(Math.floor(100000+Math.random()*900000));
-  _otpAttempts = 0;
-  otpSec = 300;
-
-  // SMS送信（非同期）
-  sendOtpSms(form.phone, demoOtp);
-
-  document.getElementById('wrap').innerHTML =
-    '<div class="card"><div class="ch"><div class="ch-t">SMS本人確認</div><span class="pill pb">3 / 5</span></div><div class="cb">' +
-    '<div class="al al-info">📱 <div><strong>' + form.phone + '</strong> にSMSで6桁の認証コードを送信しました。<br>' +
-    '<span id="otp-dev-hint" style="font-size:10px;color:var(--amber)"></span></div></div>' +
-    '<div class="otp-wrap">' +
-    [0,1,2,3,4,5].map(function(i){ return '<input class="otp-cell" maxlength="1" type="text" inputmode="numeric" id="oc-'+i+'" oninput="otpIn(this,'+i+')" onkeydown="otpKey(event,'+i+')">'; }).join('') +
-    '</div>' +
-    '<div style="text-align:center;font-size:11px;color:var(--muted);margin-bottom:16px">有効期限：<span id="otp-timer">5:00</span></div>' +
-    '<button class="btn btn-ghost" onclick="resendOtp()" id="resend-btn" style="margin-bottom:10px" disabled>📱 再送信する</button>' +
-    '<div style="display:flex;gap:10px">' +
-    '<button class="btn btn-ghost" onclick="goStep(1)" style="width:auto;padding:10px 20px">← 戻る</button>' +
-    '</div></div></div>';
-
-  clearInterval(otpTimer);
-  otpTimer = setInterval(function() {
-    otpSec--;
-    var m = Math.floor(otpSec/60), s = otpSec%60;
-    var el = document.getElementById('otp-timer');
-    if (el) el.textContent = m+':'+(s<10?'0':'')+s;
-    if (otpSec <= 0) {
-      clearInterval(otpTimer);
-      var rb = document.getElementById('resend-btn');
-      if (rb) rb.disabled = false;
-    }
-  }, 1000);
-}
-
-function otpIn(el, i) {
-  el.value = el.value.replace(/\D/g,'');
-  if (el.value && i<5) document.getElementById('oc-'+(i+1)).focus();
-  if (i===5 && el.value) checkOtp();
-}
-function otpKey(e, i) {
-  if (e.key==='Backspace' && !e.target.value && i>0) document.getElementById('oc-'+(i-1)).focus();
-}
-function checkOtp() {
-  var entered = [0,1,2,3,4,5].map(function(i){ return document.getElementById('oc-'+i).value; }).join('');
-  // ブルートフォース制限
-  _otpAttempts++;
-  if (_otpAttempts > OTP_MAX_ATTEMPTS) {
-    clearInterval(otpTimer);
-    alert('認証コードの試行回数が上限に達しました。最初からやり直してください。');
-    goStep(0);
-    return;
-  }
-
-  if (entered === demoOtp) {
-    _otpAttempts = 0;
-    [0,1,2,3,4,5].forEach(function(i){ document.getElementById('oc-'+i).className='otp-cell success'; });
-    clearInterval(otpTimer);
-    setTimeout(function(){ goStep(3); }, 600);
-  } else {
-    [0,1,2,3,4,5].forEach(function(i){ document.getElementById('oc-'+i).className='otp-cell error'; });
-    setTimeout(function(){
-      [0,1,2,3,4,5].forEach(function(i){ document.getElementById('oc-'+i).className='otp-cell'; document.getElementById('oc-'+i).value=''; });
-      document.getElementById('oc-0').focus();
-    }, 800);
-  }
-}
-function resendOtp() {
-  _otpResends++;
-  if (_otpResends > OTP_MAX_RESENDS) {
-    alert('再送信回数の上限に達しました。最初からやり直してください。');
-    goStep(0);
-    return;
-  }
-  demoOtp = String(Math.floor(100000+Math.random()*900000));
-  _otpAttempts = 0;
-  sendOtpSms(form.phone, demoOtp);  // 新しいコードを送信
-  otpSec = 300;
-  document.getElementById('resend-btn').disabled = true;
-  clearInterval(otpTimer);
-  otpTimer = setInterval(function() {
-    otpSec--;
-    var m=Math.floor(otpSec/60),s=otpSec%60;
-    var el=document.getElementById('otp-timer');
-    if(el) el.textContent=m+':'+(s<10?'0':'')+s;
-    if(otpSec<=0){clearInterval(otpTimer);var rb=document.getElementById('resend-btn');if(rb)rb.disabled=false;}
-  },1000);
-}
-
-// ══════════════════════════════════════
 //  STEP 3: 身分証明書アップロード
 // ══════════════════════════════════════
 var kycDocType = -1;  // 0=免許証 1=パスポート 2=マイナンバー
@@ -674,8 +542,8 @@ function step3() {
       +'</div>'
     ) : '')
     +'<div style="display:flex;gap:10px;margin-top:20px">'
-    +'<button class="btn btn-ghost" onclick="goStep(2)" style="width:auto;padding:10px 20px">← 戻る</button>'
-    +'<button class="btn btn-gold" '+(canNext?'':'disabled ')+'onclick="goStep(4)" style="flex:1;justify-content:center">次へ: 口座情報 →</button>'
+    +'<button class="btn btn-ghost" onclick="goStep(1)" style="width:auto;padding:10px 20px">← 戻る</button>'
+    +'<button class="btn btn-gold" '+(canNext?'':'disabled ')+'onclick="goStep(3)" style="flex:1;justify-content:center">次へ: 口座情報 →</button>'
     +'</div>'
     +'</div></div>';
 }
@@ -758,7 +626,7 @@ function step4() {
     +'</div>'
     +'<div style="margin-top:4px;padding:10px 12px;background:rgba(79,156,249,.06);border:1px solid rgba(79,156,249,.2);border-radius:8px;font-size:11px;color:var(--sub)">💡 振込手数料はCORETO負担です。ご安心ください。</div>'
     +'<div style="display:flex;gap:10px;margin-top:20px">'
-    +'<button class="btn btn-ghost" onclick="goStep(3)" style="width:auto;padding:10px 20px">← 戻る</button>'
+    +'<button class="btn btn-ghost" onclick="goStep(2)" style="width:auto;padding:10px 20px">← 戻る</button>'
     +'<button class="btn btn-gold" onclick="saveBank()" style="flex:1;justify-content:center">次へ: 決済情報 →</button>'
     +'</div>'
     +'</div></div>';
@@ -776,7 +644,7 @@ function saveBank() {
   form.bankType      = document.getElementById('b-type').value;
   form.bankNum       = num;
   form.bankHolder    = holder;
-  goStep(5);
+  goStep(4);
 }
 
 // ══════════════════════════════════════
@@ -804,7 +672,7 @@ function step5() {
       '<div id="stripe-card-errors" style="color:var(--danger);font-size:12px;margin-top:4px"></div>'
     ) +
     '<div style="display:flex;gap:10px;margin-top:8px">' +
-    '<button class="btn btn-ghost" onclick="goStep(4)" style="width:auto;padding:10px 20px">← 戻る</button>' +
+    '<button class="btn btn-ghost" onclick="goStep(3)" style="width:auto;padding:10px 20px">← 戻る</button>' +
     '<button class="btn btn-blue" onclick="validateStep3()">次へ →</button>' +
     '</div></div></div>';
 }
@@ -827,7 +695,7 @@ function validateStep3() {
     // カード情報はStripe Elementsが管理 (form.cardNo等はCORETO側に存在しない)
     // StripeのPaymentMethod IDは submitSignup() 時に取得される
   }
-  goStep(6);
+  goStep(5);
 }
 
 // ══════════════════════════════════════
@@ -902,7 +770,7 @@ function stepWorks() {
     '</div>' + // end LINE WORKS
 
     '<div style="display:flex;gap:10px;margin-top:20px">' +
-    '<button class="btn btn-ghost" onclick="goStep(5)" style="width:auto;padding:10px 20px">← 戻る</button>' +
+    '<button class="btn btn-ghost" onclick="goStep(4)" style="width:auto;padding:10px 20px">← 戻る</button>' +
     '<button class="btn btn-primary" id="works-next-btn" onclick="validateWorksStep()" disabled style="opacity:.4">次へ →</button>' +
     '</div>' +
     '</div></div>';
@@ -960,7 +828,7 @@ function confirmWorksAdded() { markWorksSent(); }
 
 function validateWorksStep() {
   if (!form.worksCode_sent) { alert('確認コードを送信してから次へ進んでください。'); return; }
-  goStep(7);
+  goStep(6);
 }
 
 function showSignupToast(msg) {
@@ -998,7 +866,7 @@ function step6() {
     '<span style="font-size:10px;color:var(--muted)">他社への専任宅建士登録は宅建業法上不可となります。</span></div></div>' : '') +
     rows.map(function(r){ return '<div class="sum-row"><span style="color:var(--sub)">'+r[0]+'</span><span style="font-weight:600">'+r[1]+'</span></div>'; }).join('') +
     '<div style="display:flex;gap:10px;margin-top:20px">' +
-    '<button class="btn btn-ghost" onclick="goStep(6)" style="width:auto;padding:10px 20px">← 戻る</button>' +
+    '<button class="btn btn-ghost" onclick="goStep(5)" style="width:auto;padding:10px 20px">← 戻る</button>' +
     '<button class="btn btn-gold" onclick="submitSignup()">申込を送信する ✓</button>' +
     '</div></div></div>';
 }
