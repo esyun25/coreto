@@ -41,3 +41,4 @@ hub.html内のコメントより転載：
 7. ⑨ パートナー向けポータル
 8. onboarding.html 研修内容・ルール（コンテンツ未実装）
 9. **メールアドレス自動発行システム** → [詳細](./email-provisioning.md)
+- [matching-flow.md](matching-flow.md) — エージェント・パートナー案件マッチング仕様

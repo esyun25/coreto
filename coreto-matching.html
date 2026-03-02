@@ -1252,6 +1252,12 @@ function notifyMatchToSlack({ c, agName, agId }) {
   const today = new Date();
   const dateStr = today.getFullYear()+'/'+(today.getMonth()+1).toString().padStart(2,'0')+'/'+today.getDate().toString().padStart(2,'0');
   const roomName = `【案件】${c.title.slice(0,12)}_${dateStr.slice(5).replace('/','')}_${agId}`;
+  // LINE WORKS検索用: 本名+ID形式で登録されているため一発検索可能
+  const agSearch = `${agName} ${agId}`;
+  const ptSearch = `${c.ptName||'パートナー'} ${c.ptId||''}`.trim();
+  const firstMsg = `${agName}さん、${c.ptName||'パートナー'}さん
+CORETO本部です。案件「${c.title}」のマッチングが確定しました。
+こちらのルームで連絡を取り合ってください。よろしくお願いします。`;
   const payload = {
     text: '🔔 案件マッチング確定 — LINE WORKSトークルームを作成してください',
     attachments: [{
@@ -1260,17 +1266,29 @@ function notifyMatchToSlack({ c, agName, agId }) {
         { type:'section', text:{ type:'mrkdwn',
           text:`*🔔 案件マッチング確定 — トークルーム作成をお願いします*` }},
         { type:'section', fields:[
-          { type:'mrkdwn', text:`*案件*\n${c.title}` },
-          { type:'mrkdwn', text:`*案件ID*\n\`${c.id}\`` },
-          { type:'mrkdwn', text:`*エージェント*\n${agName}（${agId}）` },
-          { type:'mrkdwn', text:`*パートナー*\n${c.ptName||'—'}（${c.ptId||'—'}）` },
-          { type:'mrkdwn', text:`*種別*\n${c.bizLabel} / ${c.srcLabel}` },
-          { type:'mrkdwn', text:`*エリア*\n${c.area||'—'}` },
+          { type:'mrkdwn', text:`*案件*
+${c.title}` },
+          { type:'mrkdwn', text:`*案件ID*
+\`${c.id}\`` },
+          { type:'mrkdwn', text:`*AG（LINE検索用）*
+\`${agSearch}\`` },
+          { type:'mrkdwn', text:`*PT（LINE検索用）*
+\`${ptSearch}\`` },
+          { type:'mrkdwn', text:`*種別*
+${c.bizLabel} / ${c.srcLabel}` },
+          { type:'mrkdwn', text:`*エリア*
+${c.area||'—'}` },
         ]},
         { type:'section', text:{ type:'mrkdwn',
-          text:`*📱 LINE WORKSトークルーム作成手順*\n1. LINE WORKSを開く\n2. *${agName}* と *${c.ptName||'パートナー'}* をトークルームに追加\n3. トークルーム名：\`${roomName}\`\n4. 最初のメッセージを送信（下記テンプレートをコピー）` }},
+          text:`*📱 LINE WORKSトークルーム作成手順*
+1. LINE WORKSを開く
+2. 新規トーク → \`${agSearch}\` を検索して選択
+3. \`${ptSearch}\` を追加
+4. ルーム名：\`${roomName}\`
+5. 下記メッセージを送信` }},
         { type:'section', text:{ type:'mrkdwn',
-          text:`*💬 最初のメッセージ（コピー用）*\n\`\`\`${agName}さん、${c.ptName||'パートナー'}さん\nCORETO本部です。案件「${c.title}」のマッチングが確定しました。\nこちらのルームで連絡を取り合ってください。よろしくお願いします。\`\`\`` }},
+          text:`*💬 最初のメッセージ（コピー用）*
+\`\`\`${firstMsg}\`\`\`` }},
       ]
     }]
   };
@@ -1283,7 +1301,9 @@ function showWorksModal({ c, agName, agId }) {
   const today = new Date();
   const dateStr = today.getFullYear()+'/'+(today.getMonth()+1).toString().padStart(2,'0')+'/'+today.getDate().toString().padStart(2,'0');
   const roomName = `【案件】${c.title.slice(0,12)}_${dateStr.slice(5).replace('/','')}_${agId}`;
-  const firstMsg = `${agName}さん、${c.ptName||'パートナー'}さん\nCORETO本部です。案件「${c.title}」のマッチングが確定しました。\nこちらのルームで連絡を取り合ってください。よろしくお願いします。`;
+  const agSearch  = `${agName} ${agId}`;
+  const ptSearch  = `${c.ptName||'パートナー'} ${c.ptId||''}`.trim();
+  const firstMsg  = `${agName}さん、${c.ptName||'パートナー'}さん\nCORETO本部です。案件「${c.title}」のマッチングが確定しました。\nこちらのルームで連絡を取り合ってください。よろしくお願いします。`;
 
   let modal = document.getElementById('works-modal');
   if (!modal) {
@@ -1340,27 +1360,16 @@ function showWorksModal({ c, agName, agId }) {
   document.getElementById('wm-room-name').textContent = roomName;
   document.getElementById('wm-msg').textContent = firstMsg.replace(/\n/g, '\n');
   document.getElementById('wm-members').innerHTML = `
-    <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:#141820;border-radius:6px">
-      <span style="font-size:14px">🏢</span>
-      <div><div style="font-weight:700;color:#e4e7f0">CORETO本部</div><div style="color:#4a4f68;font-size:10px">LINE WORKSアカウント（自分）</div></div>
+    <div style="background:#141820;border-radius:6px;padding:8px 12px;margin-bottom:4px">
+      <div style="font-size:10px;color:#4a4f68;margin-bottom:4px">① AGをLINE WORKSで検索</div>
+      <div style="font-family:'DM Mono',monospace;font-size:13px;color:#c9a840;font-weight:700">${agSearch}</div>
+      <div style="font-size:10px;color:#4a4f68;margin-top:2px">↑ この名前でLINE WORKSの検索窓に入力</div>
     </div>
-    <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:#141820;border-radius:6px">
-      <span style="font-size:14px">🧑‍💼</span>
-      <div><div style="font-weight:700;color:#e4e7f0">${agName} <span style="font-size:10px;color:#4a4f68">${agId}</span></div><div style="color:#4a4f68;font-size:10px">エージェント — LINE WORKSまたはLINEで招待</div></div>
-    </div>
-    <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:#141820;border-radius:6px">
-      <span style="font-size:14px">🤝</span>
-      <div><div style="font-weight:700;color:#e4e7f0">${c.ptName||'パートナー'} <span style="font-size:10px;color:#4a4f68">${c.ptId||'—'}</span></div><div style="color:#4a4f68;font-size:10px">パートナー — LINEで招待</div></div>
-    </div>`;
-}
-
-function copyWM(id) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  const ta = document.createElement('textarea');
-  ta.value = el.textContent; document.body.appendChild(ta); ta.select();
-  document.execCommand('copy'); document.body.removeChild(ta);
-  showMatchToast('コピーしました ✅');
+    <div style="background:#141820;border-radius:6px;padding:8px 12px">
+      <div style="font-size:10px;color:#4a4f68;margin-bottom:4px">② PTをLINE WORKSで検索して追加</div>
+      <div style="font-family:'DM Mono',monospace;font-size:13px;color:#c9a840;font-weight:700">${ptSearch}</div>
+      <div style="font-size:10px;color:#4a4f68;margin-top:2px">↑ この名前でLINE WORKSの検索窓に入力</div>
+    </div>`Toast('コピーしました ✅');
 }
 
 function showMatchToast(msg) {
