@@ -172,14 +172,15 @@ html,body{min-height:100%;font-family:'Noto Sans JP',sans-serif;background:var(-
       <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--green);margin-bottom:6px">URLを確認しました</div>
       <div style="font-size:13px;color:var(--sub);margin-bottom:20px" id="gate-welcome"></div>
       <div style="background:var(--card);border:1px solid rgba(201,168,76,.3);border-radius:10px;padding:14px;margin-bottom:20px;text-align:left">
-        <div style="font-size:10px;color:var(--muted);letter-spacing:.5px;margin-bottom:6px">入会手続き概要（全6ステップ・約15分）</div>
+        <div style="font-size:10px;color:var(--muted);letter-spacing:.5px;margin-bottom:6px">入会手続き概要（全7ステップ・約15分）</div>
         <div style="font-size:12px;color:var(--sub);line-height:2">
           ① 基本情報の入力<br>
           ② 宅建士資格の確認<br>
           ③ 身分証（eKYC）提出<br>
           ④ Kyash連携<br>
-          ⑤ LINE登録・確認コード送信<br>
-          ⑥ 最終確認・送信
+          ⑤ 決済情報の登録<br>
+          ⑥ LINE登録・確認コード送信<br>
+          ⑦ 最終確認・送信
         </div>
       </div>
       <button onclick="startOnboarding()" class="btn btn-primary" style="width:100%;justify-content:center">入会手続きを開始する →</button>
@@ -197,8 +198,9 @@ html,body{min-height:100%;font-family:'Noto Sans JP',sans-serif;background:var(-
   <div class="step"     id="s1"><div class="step-dot">2</div><div class="step-lbl">宅建士<br>確認</div></div>
   <div class="step"     id="s2"><div class="step-dot">3</div><div class="step-lbl">身分証<br>提出</div></div>
   <div class="step"     id="s3"><div class="step-dot">4</div><div class="step-lbl">Kyash<br>連携</div></div>
-  <div class="step"     id="s4"><div class="step-dot">5</div><div class="step-lbl">LINE<br>登録</div></div>
-  <div class="step"     id="s5"><div class="step-dot">6</div><div class="step-lbl">確認<br>送信</div></div>
+  <div class="step"     id="s4"><div class="step-dot">5</div><div class="step-lbl">決済<br>情報</div></div>
+  <div class="step"     id="s5"><div class="step-dot">6</div><div class="step-lbl">LINE<br>登録</div></div>
+  <div class="step"     id="s6"><div class="step-dot">7</div><div class="step-lbl">確認<br>送信</div></div>
 </div>
 
 <div class="wrap" id="wrap"></div>
@@ -256,14 +258,14 @@ window._signupOpenedAt = Date.now();
 // ── Step control ─────────────────────────────────────────────
 function goStep(n) {
   step = n;
-  for (var i=0;i<6;i++) {
+  for (var i=0;i<7;i++) {
     var el = document.getElementById('s'+i);
     if(!el) continue;
     el.className = 'step'+(i<n?' done':i===n?' on':'');
     el.querySelector('.step-dot').textContent = i<n ? '✓' : String(i+1);
   }
-  // 0=基本情報 1=宅建士 2=身分証 3=Kyash連携 4=LINE 5=確認送信
-  [step0,step1,step3,step5,stepWorks,step6][n]();
+  // 0=基本情報 1=宅建士 2=身分証 3=Kyash 4=決済 5=LINE 6=確認送信
+  [step0,step1,step3,step5,step5b,stepWorks,step6][n]();
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
@@ -595,7 +597,7 @@ function kycUpload(input, side) {
 // ══════════════════════════════════════
 function step5() {
   document.getElementById('wrap').innerHTML =
-    '<div class="card"><div class="ch"><div class="ch-t">Kyash連携</div><span class="pill pb">4 / 6</span></div><div class="cb">' +
+    '<div class="card"><div class="ch"><div class="ch-t">Kyash連携</div><span class="pill pb">4 / 7</span></div><div class="cb">' +
     '<div class="al al-info">💳 <div>報酬の受け取りにKyashアカウントが必要です。<br>' +
     'すでにKyashをお持ちの方はそのままご利用いただけます。</div></div>' +
     '<div style="background:#191e28;border:1px solid #252c3d;border-radius:12px;padding:18px;margin-bottom:16px">' +
@@ -626,7 +628,57 @@ function validateKyash() {
 }
 
 // ══════════════════════════════════════
-function stepWorks() {
+//  STEP 4: 決済情報（Stripe・月会費）
+// ══════════════════════════════════════
+function step5b() {
+  var feeNote = form.takkenSennin
+    ? '<div class="al al-ok">✅ <div>専任宅建士は月会費・名刺費用ともに<strong>無料</strong>です。カード登録は不要です。</div></div>'
+    : '<div class="al al-info">💳 <div>月会費（Bronze: ¥980/月）および名刺費（¥2,000）がご登録のカードに請求されます。</div></div>';
+
+  document.getElementById('wrap').innerHTML =
+    '<div class="card"><div class="ch"><div class="ch-t">決済情報</div><span class="pill pb">5 / 7</span></div><div class="cb">' +
+    feeNote +
+    (form.takkenSennin ? '' :
+      '<div class="field"><label>カード番号 <span class="req">*</span></label>' +
+      '<input id="f-card" type="text" class="mono" maxlength="19" placeholder="0000 0000 0000 0000" oninput="fmtCard(this)" value="' + (form.cardNo||'') + '"></div>' +
+      '<div class="g2">' +
+      '<div class="field"><label>有効期限 <span class="req">*</span></label>' +
+      '<input id="f-exp" type="text" class="mono" maxlength="5" placeholder="MM/YY" oninput="fmtExp(this)" value="' + (form.cardExp||'') + '"></div>' +
+      '<div class="field"><label>セキュリティコード <span class="req">*</span></label>' +
+      '<input id="f-cvv" type="text" class="mono" maxlength="4" placeholder="123" value="' + (form.cardCvv||'') + '"></div>' +
+      '</div>' +
+      '<div class="fhint">🔒 カード情報はStripe（PCI DSS準拠）で安全に処理されます。COREBLDGのサーバーには保存されません。</div>'
+    ) +
+    '<div style="display:flex;gap:10px;margin-top:16px">' +
+    '<button class="btn btn-ghost" onclick="goStep(3)" style="width:auto;padding:10px 20px">← 戻る</button>' +
+    '<button class="btn btn-gold" onclick="validateStripe()">次へ →</button>' +
+    '</div></div></div>';
+}
+
+function fmtCard(el) {
+  var v = el.value.replace(/\D/g,'').slice(0,16);
+  el.value = v.replace(/(\d{4})(?=\d)/g,'$1 ');
+  form.cardNo = el.value;
+}
+function fmtExp(el) {
+  var v = el.value.replace(/\D/g,'').slice(0,4);
+  el.value = v.length>2 ? v.slice(0,2)+'/'+v.slice(2) : v;
+  form.cardExp = el.value;
+}
+function validateStripe() {
+  if (!form.takkenSennin) {
+    var card = (document.getElementById('f-card')||{}).value.replace(/\s/g,'');
+    var exp  = (document.getElementById('f-exp')||{}).value;
+    var cvv  = (document.getElementById('f-cvv')||{}).value;
+    if (!card || card.length < 16) { alert('カード番号を正しく入力してください'); return; }
+    if (!exp || exp.length < 5)    { alert('有効期限を入力してください'); return; }
+    if (!cvv || cvv.length < 3)    { alert('セキュリティコードを入力してください'); return; }
+    form.cardCvv = cvv;
+  }
+  goStep(5);
+}
+
+
   // ワンタイムコード生成: CRT-{4桁ランダム}-{エージェントID相当}
   if (!form.worksCode) {
     var rand = Math.random().toString(36).substr(2,4).toUpperCase();
@@ -692,7 +744,7 @@ function stepWorks() {
     '</div>' + // end LINE WORKS
 
     '<div style="display:flex;gap:10px;margin-top:20px">' +
-    '<button class="btn btn-ghost" onclick="goStep(3)" style="width:auto;padding:10px 20px">← 戻る</button>' +
+    '<button class="btn btn-ghost" onclick="goStep(4)" style="width:auto;padding:10px 20px">← 戻る</button>' +
     '<button class="btn btn-primary" id="works-next-btn" onclick="validateWorksStep()" disabled style="opacity:.4">次へ →</button>' +
     '</div>' +
     '</div></div>';
@@ -750,7 +802,7 @@ function confirmWorksAdded() { markWorksSent(); }
 
 function validateWorksStep() {
   if (!form.worksCode_sent) { alert('確認コードを送信してから次へ進んでください。'); return; }
-  goStep(5);
+  goStep(6);
 }
 
 function showSignupToast(msg) {
@@ -788,7 +840,7 @@ function step6() {
     '<span style="font-size:10px;color:var(--muted)">他社への専任宅建士登録は宅建業法上不可となります。</span></div></div>' : '') +
     rows.map(function(r){ return '<div class="sum-row"><span style="color:var(--sub)">'+r[0]+'</span><span style="font-weight:600">'+r[1]+'</span></div>'; }).join('') +
     '<div style="display:flex;gap:10px;margin-top:20px">' +
-    '<button class="btn btn-ghost" onclick="goStep(4)" style="width:auto;padding:10px 20px">← 戻る</button>' +
+    '<button class="btn btn-ghost" onclick="goStep(5)" style="width:auto;padding:10px 20px">← 戻る</button>' +
     '<button class="btn btn-gold" onclick="submitSignup()">申込を送信する ✓</button>' +
     '</div></div></div>';
 }
