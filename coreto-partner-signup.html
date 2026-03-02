@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com;
+    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+    font-src 'self' https://fonts.gstatic.com;
+    img-src 'self' data: blob:;
+    connect-src 'self'
+      https://hooks.slack.com
+      https://hooks.zapier.com
+      https://www.houjin-bangou.nta.go.jp;
+    frame-src 'none';
+    object-src 'none';
+    base-uri 'self';
+  ">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>CORETO — パートナー入会申込</title>
+  <style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090f;--card:#0f1119;--card2:#141720;--border:#1e2235;--border2:#252a3d;
+  --gold:#c9a84c;--blue:#4f9cf9;--green:#34d399;--red:#f87171;--orange:#fb923c;
+  --muted:#4a5270;--sub:#7a849e;--text:#e2e6f3;
+}
+html,body{min-height:100%;font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text)}
+.hdr{height:54px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 26px;border-bottom:1px solid var(--border);background:rgba(7,9,15,.96)}
+.logo{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:var(--gold);letter-spacing:3px}
+.badge{font-size:9px;color:var(--sub);border:1px solid var(--border2);border-radius:6px;padding:3px 8px}
+/* Steps */
+.steps{display:flex;justify-content:center;gap:0;padding:20px 24px;background:var(--card);
+  border-bottom:1px solid var(--border);overflow-x:auto}
+.step{flex:1;max-width:110px;text-align:center;position:relative;padding-bottom:4px}
+.step:not(:last-child)::after{content:'';position:absolute;top:16px;left:60%;width:80%;height:2px;
+  background:var(--border);z-index:0}
+.step.done:not(:last-child)::after{background:var(--green)}
+.step-dot{width:32px;height:32px;border-radius:50%;margin:0 auto 6px;display:flex;align-items:center;
+  justify-content:center;font-size:13px;border:2px solid var(--border2);background:var(--bg);
+  position:relative;z-index:1;font-family:'DM Mono',monospace;font-weight:700}
+.step.on .step-dot{background:var(--blue);border-color:var(--blue);color:#fff}
+.step.done .step-dot{background:var(--green);border-color:var(--green);color:#fff}
+.step-lbl{font-size:9px;color:var(--muted);line-height:1.4}
+.step.on .step-lbl{color:var(--blue)}
+.step.done .step-lbl{color:var(--green)}
+/* Layout */
+.wrap{max-width:640px;margin:0 auto;padding:28px 24px 80px}
+/* Card */
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;margin-bottom:16px}
+.ch{padding:13px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.ch-t{font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+.ch-t::before{content:'';width:3px;height:11px;border-radius:2px;background:var(--blue)}
+.cb{padding:18px 20px}
+.pill{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:6px;font-size:9px;font-weight:700}
+.pb{background:rgba(79,156,249,.12);color:var(--blue);border:1px solid rgba(79,156,249,.25)}
+.pg{background:rgba(52,211,153,.12);color:var(--green);border:1px solid rgba(52,211,153,.25)}
+/* Fields */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:10px;color:var(--sub);margin-bottom:5px;font-weight:600}
+.req{color:var(--red);margin-left:2px}
+.field input,.field select,.field textarea{width:100%;background:#090b13;border:1px solid var(--border2);
+  border-radius:9px;padding:10px 13px;color:var(--text);font-size:13px;
+  font-family:'Noto Sans JP',sans-serif;outline:none;transition:.15s}
+.field textarea{resize:vertical;min-height:90px;line-height:1.7}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--blue)}
+.fhint{font-size:10px;color:var(--muted);margin-top:4px}
+/* Buttons */
+.btn{width:100%;padding:13px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;
+  border:none;font-family:'Noto Sans JP',sans-serif;transition:.15s;
+  display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-blue{background:linear-gradient(135deg,var(--blue),#3070c0);color:#fff}
+.btn-blue:hover{filter:brightness(1.08)}
+.btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--sub);padding:10px}
+.btn-ghost:hover{border-color:var(--sub);color:var(--text)}
+.btn-gold{background:linear-gradient(135deg,var(--gold),#a07830);color:#000}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+/* Alert */
+.al{display:flex;align-items:flex-start;gap:10px;padding:12px 16px;border-radius:10px;
+  margin-bottom:14px;font-size:12px;line-height:1.7}
+.al-info{background:rgba(79,156,249,.07);border:1px solid rgba(79,156,249,.2)}
+.al-warn{background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.25)}
+.al-ok{background:rgba(52,211,153,.07);border:1px solid rgba(52,211,153,.2)}
+/* 個人/法人選択カード */
+.type-choice{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}
+.tc-card{border:1px solid var(--border2);border-radius:12px;padding:18px 16px;text-align:center;
+  cursor:pointer;transition:.2s;background:var(--card2)}
+.tc-card:hover{border-color:var(--sub)}
+.tc-card.selected{border-color:var(--blue);background:rgba(79,156,249,.08)}
+.tc-icon{font-size:28px;margin-bottom:8px}
+.tc-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px}
+.tc-sub{font-size:10px;color:var(--sub);line-height:1.6}
+/* 確認サマリー */
+.sum-row{display:flex;justify-content:space-between;align-items:flex-start;padding:10px 0;
+  border-bottom:1px solid var(--border);font-size:12px;gap:12px}
+.sum-row:last-child{border-bottom:none}
+/* ハニーポット */
+#hp-field{position:absolute;left:-9999px;opacity:0;height:0;width:0}
+/* Toast */
+#pt-toast{position:fixed;bottom:24px;right:24px;background:#1e2a1e;border:1px solid #34d399;
+  color:#34d399;padding:10px 18px;border-radius:8px;font-size:12px;font-weight:600;
+  z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none}
+/* Token gate */
+#token-gate{max-width:440px;margin:80px auto;padding:0 24px;text-align:center}
+  </style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="logo">CORETO</div>
+  <div class="badge">パートナー入会申込</div>
+</div>
+
+<!-- ══ トークンゲート ══ -->
+<div id="token-gate" style="display:none">
+  <div style="font-size:40px;margin-bottom:20px">🔒</div>
+  <div style="font-size:15px;font-weight:700;margin-bottom:10px">招待URLが必要です</div>
+  <div style="font-size:12px;color:var(--sub);line-height:1.8">
+    このページはCORETO担当者から発行された招待URLからのみアクセスできます。<br>
+    ご不明な点はCORETO本部までお問い合わせください。
+  </div>
+</div>
+
+<!-- ══ ステップバー ══ -->
+<div class="steps" id="stepbar">
+  <div class="step on"  id="s0"><div class="step-dot">1</div><div class="step-lbl">基本<br>情報</div></div>
+  <div class="step"     id="s1"><div class="step-dot">2</div><div class="step-lbl">SMS<br>認証</div></div>
+  <div class="step"     id="s2"><div class="step-dot">3</div><div class="step-lbl">身分証<br>提出</div></div>
+  <div class="step"     id="s3"><div class="step-dot">4</div><div class="step-lbl">LINE<br>WORKS</div></div>
+  <div class="step"     id="s4"><div class="step-dot">5</div><div class="step-lbl">確認<br>送信</div></div>
+</div>
+
+<!-- ══ メインコンテンツ ══ -->
+<div class="wrap">
+  <div id="wrap"></div>
+  <!-- ハニーポット -->
+  <input type="text" id="hp-field" name="website" autocomplete="off" tabindex="-1">
+</div>
+
+<div id="pt-toast"></div>
+
+<script>
+'use strict';
+
+// ── 設定 ──────────────────────────────────────────────────────────────────
+var ZAPIER_WEBHOOK_URL = 'YOUR_ZAPIER_WEBHOOK_URL_HERE';
+var WORKS_ID = 'coreto-hq';
+var OTP_SMS_WEBHOOK = 'YOUR_ZAPIER_SMS_WEBHOOK';
+var OTP_DEV_MODE = true; // 本番前にfalseに変更
+
+// ── 状態 ──────────────────────────────────────────────────────────────────
+var currentStep = 0;
+var form = {
+  corpType: null,   // 'individual' | 'corp'
+  name: '', nameKana: '', corpName: '', repName: '', repKana: '',
+  corpNo: '',       // 法人番号
+  phone: '', email: '', zip: '', addr: '',
+  motivation: '',
+  referral: '',
+  kyc: { front: null, back: null, corpDoc: null },
+  kycDocType: -1,   // 個人：0=免許証 1=パスポート 2=マイナンバー
+  worksCode: '', worksCode_sent: false,
+};
+var demoOtp = '';
+var otpTimer = null;
+var otpSec = 300;
+var _otpAttempts = 0;
+var _otpResends = 0;
+var KYC_FILE_TYPES = ['image/jpeg','image/jpg','image/png','image/webp','image/heic','application/pdf'];
+var KYC_MAX_SIZE = 10 * 1024 * 1024;
+window._signupOpenedAt = Date.now();
+
+// ── ステップ制御 ──────────────────────────────────────────────────────────
+function goStep(n) {
+  currentStep = n;
+  [step0, step1, step2, step3, step4][n]();
+  document.querySelectorAll('.step').forEach(function(el, i) {
+    el.className = 'step' + (i < n ? ' done' : i === n ? ' on' : '');
+    el.querySelector('.step-dot').textContent = i < n ? '✓' : String(i + 1);
+  });
+  window.scrollTo(0, 0);
+}
+
+// ── STEP 0: 基本情報 ──────────────────────────────────────────────────────
+function step0() {
+  document.getElementById('wrap').innerHTML =
+    '<div class="card"><div class="ch"><div class="ch-t">パートナー基本情報</div><span class="pill pb">1 / 5</span></div><div class="cb">' +
+
+    '<div class="al al-info">🤝 <div>CORETOパートナーとして、顧客のご紹介をいただける方の登録フォームです。<br>' +
+    '個人・法人どちらでも登録できます。入会費・月会費は一切かかりません。</div></div>' +
+
+    // 個人 / 法人選択
+    '<div class="field"><label>登録種別 <span class="req">*</span></label></div>' +
+    '<div class="type-choice">' +
+    '<div class="tc-card' + (form.corpType === 'individual' ? ' selected' : '') + '" id="tc-ind" onclick="selectCorpType(\'individual\')">' +
+    '<div class="tc-icon">👤</div><div class="tc-title">個人</div>' +
+    '<div class="tc-sub">個人として紹介活動を行う方</div></div>' +
+    '<div class="tc-card' + (form.corpType === 'corp' ? ' selected' : '') + '" id="tc-corp" onclick="selectCorpType(\'corp\')">' +
+    '<div class="tc-icon">🏢</div><div class="tc-title">法人</div>' +
+    '<div class="tc-sub">会社・団体として紹介活動を行う方</div></div>' +
+    '</div>' +
+
+    '<div id="form-body"></div>' +
+    '</div></div>';
+
+  if (form.corpType) selectCorpType(form.corpType, true);
+}
+
+function selectCorpType(type, restore) {
+  form.corpType = type;
+  ['individual','corp'].forEach(function(t) {
+    var el = document.getElementById('tc-' + t);
+    if (el) el.className = 'tc-card' + (t === type ? ' selected' : '');
+  });
+
+  var html = '';
+  if (type === 'individual') {
+    html =
+      '<div class="g2">' +
+      '<div class="field"><label>氏名（漢字） <span class="req">*</span></label>' +
+      '<input id="f-name" type="text" placeholder="例: 山田 誠" value="' + esc(form.name) + '"></div>' +
+      '<div class="field"><label>フリガナ <span class="req">*</span></label>' +
+      '<input id="f-kana" type="text" placeholder="例: ヤマダ マコト" value="' + esc(form.nameKana) + '"></div>' +
+      '</div>' +
+      '<div class="field"><label>生年月日 <span class="req">*</span></label>' +
+      '<input id="f-dob" type="date" value="' + esc(form.dob || '') + '"></div>';
+  } else {
+    html =
+      '<div class="field"><label>法人名 <span class="req">*</span></label>' +
+      '<input id="f-corp" type="text" placeholder="例: 株式会社〇〇" value="' + esc(form.corpName) + '"></div>' +
+      '<div class="field"><label>法人番号（13桁） <span class="req">*</span></label>' +
+      '<input id="f-corpno" type="text" class="mono" maxlength="13" placeholder="例: 1234567890123" value="' + esc(form.corpNo) + '">' +
+      '<div class="fhint">国税庁 法人番号公表サイトで確認できます</div></div>' +
+      '<div class="g2">' +
+      '<div class="field"><label>代表者氏名 <span class="req">*</span></label>' +
+      '<input id="f-rep" type="text" placeholder="例: 山田 誠" value="' + esc(form.repName) + '"></div>' +
+      '<div class="field"><label>代表者フリガナ <span class="req">*</span></label>' +
+      '<input id="f-repkana" type="text" placeholder="例: ヤマダ マコト" value="' + esc(form.repKana) + '"></div>' +
+      '</div>';
+  }
+
+  html +=
+    '<div class="g2">' +
+    '<div class="field"><label>電話番号 <span class="req">*</span></label>' +
+    '<input id="f-phone" type="tel" class="mono" placeholder="09012345678" value="' + esc(form.phone) + '"></div>' +
+    '<div class="field"><label>メールアドレス <span class="req">*</span></label>' +
+    '<input id="f-email" type="email" placeholder="you@example.com" value="' + esc(form.email) + '"></div>' +
+    '</div>' +
+    '<div class="g2">' +
+    '<div class="field"><label>郵便番号</label>' +
+    '<input id="f-zip" type="text" class="mono" maxlength="8" placeholder="123-4567" value="' + esc(form.zip) + '"></div>' +
+    '<div class="field"><label>住所</label>' +
+    '<input id="f-addr" type="text" placeholder="東京都渋谷区〇〇" value="' + esc(form.addr) + '"></div>' +
+    '</div>' +
+    '<div class="field"><label>職業・立場・紹介できる顧客ネットワーク <span class="req">*</span></label>' +
+    '<textarea id="f-motivation" placeholder="例: 不動産投資家のコミュニティを運営しており、毎月5〜10名の買い手候補者をご紹介できます。" style="min-height:100px">' + esc(form.motivation) + '</textarea>' +
+    '<div class="fhint">50文字以上でご記載ください（現在: <span id="mot-count">' + form.motivation.length + '</span>文字）</div></div>' +
+    '<div class="field"><label>紹介コード（任意）</label>' +
+    '<input id="f-ref" type="text" class="mono" placeholder="例: AG-10012" value="' + esc(form.referral) + '">' +
+    '<div class="fhint">紹介者から受け取ったコードがあれば入力してください</div></div>' +
+    '<div class="al al-info">💡 <div><strong>報酬と源泉徴収について</strong><br>' +
+    '成約1件ごとに紹介料をお支払いします。<strong>法人パートナー</strong>への支払いは源泉徴収なし（法人は自社で確定申告）。<strong>個人パートナー</strong>は報酬の10.21%を源泉徴収してお支払いします。</div></div>' +
+    '<button class="btn btn-gold" onclick="validateStep0()" style="margin-top:8px">次へ: SMS認証 →</button>';
+
+  document.getElementById('form-body').innerHTML = html;
+
+  // 文字数カウント
+  var motEl = document.getElementById('f-motivation');
+  if (motEl) motEl.addEventListener('input', function() {
+    var c = document.getElementById('mot-count');
+    if (c) c.textContent = this.value.length;
+  });
+
+  if (!restore) return;
+}
+
+function validateStep0() {
+  var get = function(id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; };
+  var err = [];
+
+  if (!form.corpType) { err.push('登録種別（個人/法人）を選択してください'); }
+  else if (form.corpType === 'individual') {
+    form.name = get('f-name');
+    form.nameKana = get('f-kana');
+    form.dob = get('f-dob');
+    if (!form.name) err.push('氏名を入力してください');
+    if (!form.nameKana) err.push('フリガナを入力してください');
+    if (!form.dob) err.push('生年月日を入力してください');
+    else {
+      var age = Math.floor((Date.now() - new Date(form.dob)) / (365.25 * 24 * 3600 * 1000));
+      if (age < 18) err.push('18歳未満の方はご登録いただけません');
+    }
+  } else {
+    form.corpName = get('f-corp');
+    form.corpNo = get('f-corpno');
+    form.repName = get('f-rep');
+    form.repKana = get('f-repkana');
+    if (!form.corpName) err.push('法人名を入力してください');
+    if (!/^\d{13}$/.test(form.corpNo.replace(/-/g, ''))) err.push('法人番号は13桁の数字で入力してください');
+    if (!form.repName) err.push('代表者氏名を入力してください');
+    if (!form.repKana) err.push('代表者フリガナを入力してください');
+  }
+
+  form.phone = get('f-phone');
+  form.email = get('f-email');
+  form.zip = get('f-zip');
+  form.addr = get('f-addr');
+  form.motivation = get('f-motivation');
+  form.referral = get('f-ref');
+
+  if (!form.phone || !/^\d{10,11}$/.test(form.phone.replace(/-/g, ''))) err.push('有効な電話番号を入力してください');
+  if (!form.email || !form.email.includes('@')) err.push('有効なメールアドレスを入力してください');
+  if (form.motivation.length < 50) err.push('職業・ネットワーク紹介は50文字以上でご記載ください（現在: ' + form.motivation.length + '文字）');
+
+  if (err.length) { alert('⚠️ 入力エラー\n\n' + err.join('\n')); return; }
+  goStep(1);
+}
+
+// ── STEP 1: SMS認証 ───────────────────────────────────────────────────────
+function step1() {
+  demoOtp = String(Math.floor(100000 + Math.random() * 900000));
+  _otpAttempts = 0;
+  otpSec = 300;
+  sendOtpSms(form.phone, demoOtp);
+
+  document.getElementById('wrap').innerHTML =
+    '<div class="card"><div class="ch"><div class="ch-t">SMS本人確認</div><span class="pill pb">2 / 5</span></div><div class="cb">' +
+    '<div class="al al-info">📱 <div><strong>' + esc(form.phone) + '</strong> にSMSで6桁の認証コードを送信しました。</div></div>' +
+    '<div class="field"><label>認証コード（6桁） <span class="req">*</span></label>' +
+    '<input id="otp-input" type="text" class="mono" maxlength="6" placeholder="123456" autocomplete="one-time-code" style="font-size:20px;letter-spacing:4px;text-align:center">' +
+    '<div id="otp-dev-hint" style="font-size:10px;color:var(--orange);margin-top:4px"></div></div>' +
+    '<div style="font-size:11px;color:var(--muted);margin-bottom:16px">有効期限: <span id="otp-timer">5:00</span> ／ ' +
+    '<button id="resend-btn" onclick="resendOtp()" style="background:none;border:none;color:var(--blue);cursor:pointer;font-size:11px;font-family:inherit" disabled>再送信</button></div>' +
+    '<div style="display:flex;gap:10px">' +
+    '<button class="btn btn-ghost" onclick="goStep(0)" style="width:auto;padding:10px 20px">← 戻る</button>' +
+    '<button class="btn btn-blue" onclick="verifyOtp()" style="flex:1">認証して次へ →</button>' +
+    '</div></div></div>';
+
+  otpTimer = setInterval(function() {
+    otpSec--;
+    var m = Math.floor(otpSec / 60), s = otpSec % 60;
+    var el = document.getElementById('otp-timer');
+    if (el) el.textContent = m + ':' + (s < 10 ? '0' : '') + s;
+    if (otpSec <= 0) {
+      clearInterval(otpTimer);
+      var rb = document.getElementById('resend-btn');
+      if (rb) rb.disabled = false;
+    }
+  }, 1000);
+}
+
+async function sendOtpSms(phone, otp) {
+  if (OTP_DEV_MODE) {
+    console.log('[OTP 開発モード] コード:', otp, '→ 電話:', phone);
+    var devEl = document.getElementById('otp-dev-hint');
+    if (devEl) devEl.textContent = '[開発] コード: ' + otp;
+    return;
+  }
+  try {
+    await fetch(OTP_SMS_WEBHOOK, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to: phone, code: otp, message: 'COREOTOの認証コードは ' + otp + ' です（5分間有効）' }),
+      mode: 'no-cors'
+    });
+  } catch(e) { console.error('[OTP] SMS送信エラー:', e); }
+}
+
+function verifyOtp() {
+  if (_otpAttempts >= 5) { alert('⚠️ 認証試行回数の上限に達しました。最初からやり直してください。'); goStep(0); return; }
+  var input = (document.getElementById('otp-input') || {}).value;
+  if (!input || input.length !== 6) { alert('6桁の認証コードを入力してください'); return; }
+  _otpAttempts++;
+  if (input !== demoOtp) { alert('⚠️ 認証コードが正しくありません（残り' + (5 - _otpAttempts) + '回）'); return; }
+  clearInterval(otpTimer);
+  showToast('✅ 電話番号の確認が完了しました');
+  goStep(2);
+}
+
+function resendOtp() {
+  if (_otpResends >= 3) { alert('⚠️ 再送信の上限（3回）に達しました。最初からやり直してください。'); goStep(0); return; }
+  _otpResends++;
+  demoOtp = String(Math.floor(100000 + Math.random() * 900000));
+  _otpAttempts = 0;
+  otpSec = 300;
+  sendOtpSms(form.phone, demoOtp);
+  document.getElementById('resend-btn').disabled = true;
+  clearInterval(otpTimer);
+  otpTimer = setInterval(function() {
+    otpSec--;
+    var m = Math.floor(otpSec / 60), s = otpSec % 60;
+    var el = document.getElementById('otp-timer');
+    if (el) el.textContent = m + ':' + (s < 10 ? '0' : '') + s;
+    if (otpSec <= 0) { clearInterval(otpTimer); var rb = document.getElementById('resend-btn'); if (rb) rb.disabled = false; }
+  }, 1000);
+  showToast('SMSを再送しました');
+}
+
+// ── STEP 2: 身分証アップロード ────────────────────────────────────────────
+function step2() {
+  document.getElementById('wrap').innerHTML =
+    '<div class="card"><div class="ch"><div class="ch-t">身分証明書</div><span class="pill pb">3 / 5</span></div><div class="cb">' +
+    '<div style="font-size:11px;color:var(--sub);margin-bottom:14px;line-height:1.8">' +
+    (form.corpType === 'corp'
+      ? '法人の場合は登記事項証明書（履歴事項全部証明書）と代表者の身分証明書が必要です。'
+      : '本人確認のため身分証明書をアップロードしてください。書類は本部スタッフが目視確認します（1〜2営業日）。') +
+    '</div>' +
+    (form.corpType === 'corp' ? renderCorpKyc() : renderIndividualKyc()) +
+    '<div style="display:flex;gap:10px;margin-top:20px">' +
+    '<button class="btn btn-ghost" onclick="goStep(1)" style="width:auto;padding:10px 20px">← 戻る</button>' +
+    '<button class="btn btn-gold" id="kyc-next" onclick="validateKyc()" style="flex:1">次へ: LINE →</button>' +
+    '</div></div></div>';
+}
+
+function renderIndividualKyc() {
+  var docBtns = ['🪪 運転免許証', '🛂 パスポート', '💳 マイナンバーカード'].map(function(label, i) {
+    var on = form.kycDocType === i;
+    return '<button onclick="selDoc(' + i + ')" style="flex:1;padding:10px 8px;border:1px solid ' + (on ? 'var(--blue)' : 'var(--border2)') + ';border-radius:8px;cursor:pointer;background:' + (on ? 'rgba(79,156,249,.12)' : 'var(--card2)') + ';color:' + (on ? 'var(--blue)' : 'var(--sub)') + ';font-size:11px;font-weight:600;font-family:inherit">' + label + '</button>';
+  }).join('');
+
+  var needBack = form.kycDocType !== 1;
+  var frontDone = !!form.kyc.front;
+  var backDone = !needBack || !!form.kyc.back;
+
+  return '<div class="field"><label>書類の種類 <span class="req">*</span></label>' +
+    '<div style="display:flex;gap:8px">' + docBtns + '</div></div>' +
+    (form.kycDocType >= 0 ? (
+      '<div style="display:grid;grid-template-columns:' + (needBack ? '1fr 1fr' : '1fr') + ';gap:10px;margin-top:12px">' +
+      uploadZone('front', needBack ? '表面' : '証明書', frontDone) +
+      (needBack ? uploadZone('back', '裏面', backDone) : '') +
+      '</div>'
+    ) : '');
+}
+
+function renderCorpKyc() {
+  var corpDone = !!form.kyc.corpDoc;
+  var frontDone = !!form.kyc.front;
+  return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+    uploadZoneCorp('corpDoc', '登記事項証明書', corpDone) +
+    uploadZoneCorp('front', '代表者 身分証（表面）', frontDone) +
+    '</div>';
+}
+
+function uploadZone(side, label, done) {
+  return '<div onclick="document.getElementById(\'kyc-' + side + '\').click()" style="border:2px dashed ' + (done ? 'var(--green)' : 'var(--border2)') + ';border-radius:10px;padding:20px;text-align:center;cursor:pointer;background:' + (done ? 'rgba(52,211,153,.04)' : 'var(--card2)') + '">' +
+    '<div style="font-size:28px;margin-bottom:6px">' + (done ? '✅' : '📷') + '</div>' +
+    '<div style="font-size:11px;font-weight:600;color:' + (done ? 'var(--green)' : 'var(--sub)') + '">' + label + '</div>' +
+    '<div style="font-size:10px;color:var(--muted);margin-top:4px">' + (done ? '✓ アップロード済み — クリックで変更' : 'JPG・PNG・PDF対応') + '</div>' +
+    '<input type="file" id="kyc-' + side + '" accept="image/*,.pdf" style="display:none" onchange="kycUpload(this,\'' + side + '\')"></div>';
+}
+
+function uploadZoneCorp(side, label, done) {
+  return '<div onclick="document.getElementById(\'kyc-' + side + '\').click()" style="border:2px dashed ' + (done ? 'var(--green)' : 'var(--border2)') + ';border-radius:10px;padding:20px;text-align:center;cursor:pointer;background:' + (done ? 'rgba(52,211,153,.04)' : 'var(--card2)') + '">' +
+    '<div style="font-size:28px;margin-bottom:6px">' + (done ? '✅' : '📄') + '</div>' +
+    '<div style="font-size:11px;font-weight:600;color:' + (done ? 'var(--green)' : 'var(--sub)') + '">' + label + '</div>' +
+    '<div style="font-size:10px;color:var(--muted);margin-top:4px">' + (done ? '✓ アップロード済み' : 'JPG・PNG・PDF対応') + '</div>' +
+    '<input type="file" id="kyc-' + side + '" accept="image/*,.pdf" style="display:none" onchange="kycUpload(this,\'' + side + '\')"></div>';
+}
+
+function selDoc(n) {
+  form.kycDocType = n;
+  step2();
+}
+
+function kycUpload(input, side) {
+  if (!input.files[0]) return;
+  var file = input.files[0];
+  if (!KYC_FILE_TYPES.includes(file.type)) { alert('⚠️ 対応形式はJPEG・PNG・WebP・HEIC・PDFのみです'); input.value = ''; return; }
+  if (file.size > KYC_MAX_SIZE) { alert('⚠️ ファイルサイズが大きすぎます（最大10MB）'); input.value = ''; return; }
+  if (file.size === 0) { alert('⚠️ ファイルが空です'); input.value = ''; return; }
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    form.kyc[side] = { name: file.name, data: e.target.result };
+    step2();
+  };
+  reader.readAsDataURL(file);
+}
+
+function validateKyc() {
+  if (form.corpType === 'individual') {
+    if (form.kycDocType < 0) { alert('書類の種類を選択してください'); return; }
+    if (!form.kyc.front) { alert('身分証（表面）をアップロードしてください'); return; }
+    if (form.kycDocType !== 1 && !form.kyc.back) { alert('身分証（裏面）をアップロードしてください'); return; }
+  } else {
+    if (!form.kyc.corpDoc) { alert('登記事項証明書をアップロードしてください'); return; }
+    if (!form.kyc.front) { alert('代表者の身分証をアップロードしてください'); return; }
+  }
+  goStep(3);
+}
+
+// ── STEP 3: LINE ────────────────────────────────────────────────────
+function step3() {
+  var displayName = form.corpType === 'corp' ? form.corpName : form.name;
+  form.worksCode = 'PT-' + String(Math.floor(100000 + Math.random() * 900000));
+
+  document.getElementById('wrap').innerHTML =
+    '<div class="card"><div class="ch"><div class="ch-t">LINE登録</div><span class="pill pb">4 / 5</span></div><div class="cb">' +
+    '<div style="background:rgba(201,168,76,.06);border:1px solid rgba(201,168,76,.3);border-radius:10px;padding:14px;margin-bottom:12px">' +
+    '<div style="font-size:11px;color:var(--gold);font-weight:700;margin-bottom:6px">⚠️ 案件通知・連絡に必須です</div>' +
+    '<div style="font-size:12px;color:var(--sub);line-height:1.8">CORETO WORKS（ID: <strong style="color:var(--gold)">' + WORKS_ID + '</strong>）を友達登録後、<br>' +
+    '下記の<strong style="color:var(--text)">確認コード</strong>をトークに送信してください。</div></div>' +
+
+    '<div style="background:#191e28;border:1px solid #252c3d;border-radius:10px;padding:16px;margin-bottom:12px">' +
+    '<div style="font-size:10px;color:var(--muted);font-weight:600;margin-bottom:8px">あなたの確認コード</div>' +
+    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">' +
+    '<div style="font-size:28px;font-weight:900;color:var(--gold);letter-spacing:3px">' + form.worksCode + '</div>' +
+    '<button onclick="copyCode()" style="padding:6px 12px;border:1px solid rgba(201,168,76,.4);border-radius:6px;background:rgba(201,168,76,.1);color:var(--gold);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">コピー</button>' +
+    '</div>' +
+    '<div style="background:#141820;border-radius:6px;padding:10px 12px;font-size:11px;color:var(--sub);line-height:1.8">' +
+    '📋 <strong style="color:var(--text)">WORKSに送るメッセージ</strong><br>' +
+    '<span id="works-msg" style="color:var(--gold)">【CORETO登録】' + displayName + ' / ' + form.worksCode + '</span>' +
+    '<button onclick="copyMsg()" style="margin-left:10px;padding:3px 8px;border:1px solid #252c3d;border-radius:4px;background:transparent;color:var(--muted);font-size:10px;cursor:pointer;font-family:inherit">コピー</button>' +
+    '</div></div>' +
+
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">' +
+    '<a href="https://line.me/R/" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#00b900;color:#fff;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none">💬 LINE公式を開く</a>' +
+    '<button onclick="copyWorksId()" style="padding:8px 14px;border:1px solid rgba(201,168,76,.3);border-radius:8px;background:transparent;color:var(--gold);font-size:12px;cursor:pointer;font-family:inherit">WORKS ID: ' + WORKS_ID + ' をコピー</button>' +
+    '</div>' +
+
+    '<div id="works-sent-area">' +
+    '<button onclick="markSent()" style="width:100%;padding:11px;border:1px solid rgba(201,168,76,.35);border-radius:8px;background:rgba(201,168,76,.08);color:var(--gold);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">✅ 確認コードを送信しました</button>' +
+    '</div>' +
+
+    '<div style="display:flex;gap:10px;margin-top:20px">' +
+    '<button class="btn btn-ghost" onclick="goStep(2)" style="width:auto;padding:10px 20px">← 戻る</button>' +
+    '<button class="btn btn-blue" id="works-next-btn" onclick="goStep(4)" disabled style="opacity:.4;flex:1">次へ: 内容確認 →</button>' +
+    '</div></div></div>';
+}
+
+function copyCode() { copyText(form.worksCode, '確認コードをコピーしました'); }
+function copyMsg() {
+  var el = document.getElementById('works-msg');
+  copyText(el ? el.textContent : form.worksCode, 'メッセージをコピーしました');
+}
+function copyWorksId() { copyText(WORKS_ID, 'WORKS IDをコピーしました'); }
+function copyText(text, msg) {
+  var ta = document.createElement('textarea');
+  ta.value = text; document.body.appendChild(ta); ta.select();
+  document.execCommand('copy'); document.body.removeChild(ta);
+  showToast(msg);
+}
+function markSent() {
+  form.worksCode_sent = true;
+  document.getElementById('works-sent-area').innerHTML =
+    '<div style="background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.3);border-radius:8px;padding:12px;display:flex;align-items:center;gap:10px">' +
+    '<div style="font-size:20px">✅</div>' +
+    '<div style="font-size:12px;color:var(--gold);font-weight:700">確認コードを送信済み<br>' +
+    '<span style="color:var(--sub);font-weight:400;font-size:11px">本部が紐付けを完了後、登録完了のご連絡をいたします</span></div></div>';
+  var btn = document.getElementById('works-next-btn');
+  if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+  showToast('確認コードの送信を記録しました ✅');
+}
+
+// ── STEP 4: 確認・送信 ────────────────────────────────────────────────────
+function step4() {
+  var displayName = form.corpType === 'corp'
+    ? form.corpName + '（代表: ' + form.repName + '）'
+    : form.name + '（' + form.nameKana + '）';
+  var rows = [
+    ['登録種別', form.corpType === 'corp' ? '法人パートナー' : '個人パートナー'],
+    ['氏名 / 法人名', displayName],
+    form.corpType === 'corp' ? ['法人番号', form.corpNo] : null,
+    ['電話番号', form.phone],
+    ['メールアドレス', form.email],
+    form.addr ? ['住所', form.addr] : null,
+    ['職業・ネットワーク', form.motivation.slice(0, 60) + (form.motivation.length > 60 ? '…' : '')],
+    form.referral ? ['紹介コード', form.referral] : null,
+  ].filter(Boolean);
+
+  document.getElementById('wrap').innerHTML =
+    '<div class="card"><div class="ch"><div class="ch-t">申込内容の確認</div><span class="pill pb">5 / 5</span></div><div class="cb">' +
+    '<div class="al al-ok">✅ <div>以下の内容でパートナー登録を申請します。<br>' +
+    '本部でeKYC確認後、1〜2営業日以内にLINEにてご連絡いたします。</div></div>' +
+    rows.map(function(r) {
+      return '<div class="sum-row"><span style="color:var(--sub)">' + r[0] + '</span><span style="font-weight:600">' + esc(r[1]) + '</span></div>';
+    }).join('') +
+    '<div style="display:flex;gap:10px;margin-top:20px">' +
+    '<button class="btn btn-ghost" onclick="goStep(3)" style="width:auto;padding:10px 20px">← 戻る</button>' +
+    '<button class="btn btn-gold" onclick="submitSignup()">申込を送信する ✓</button>' +
+    '</div></div></div>';
+}
+
+async function submitSignup() {
+  // ── ハニーポット ──────────────────────────────────────────────────
+  var hp = document.getElementById('hp-field');
+  if (hp && hp.value !== '') { console.warn('[Signup] bot検知'); return; }
+  // ── タイミング攻撃対策 ─────────────────────────────────────────────
+  if ((Date.now() - window._signupOpenedAt) < 5000) { console.warn('[Signup] 送信が速すぎます'); return; }
+
+  var appNo = 'PT-APP-' + String(Date.now()).slice(-8);
+  var btn = document.querySelector('button[onclick*="submitSignup"]');
+  if (btn) { btn.disabled = true; btn.textContent = '送信中...'; }
+
+  var payload = {
+    appNo: appNo,
+    submittedAt: new Date().toISOString(),
+    partnerType: form.corpType === 'corp' ? '法人パートナー' : '個人パートナー',
+    name: form.corpType === 'corp' ? form.corpName : form.name,
+    nameKana: form.corpType === 'corp' ? form.repKana : form.nameKana,
+    corpNo: form.corpNo || '—',
+    repName: form.repName || '—',
+    phone: form.phone,
+    email: form.email,
+    address: form.addr || '—',
+    motivation: form.motivation,
+    referralCode: form.referral || '—',
+    worksCode: form.worksCode,
+  };
+
+  var sent = false;
+  if (ZAPIER_WEBHOOK_URL && ZAPIER_WEBHOOK_URL !== 'YOUR_ZAPIER_WEBHOOK_URL_HERE') {
+    try {
+      await fetch(ZAPIER_WEBHOOK_URL, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload), mode: 'no-cors'
+      });
+      sent = true;
+    } catch(e) { console.error('[Signup] Zapier webhook failed:', e); }
+  }
+
+  var statusNote = sent ? '' : '<div style="font-size:11px;color:var(--orange);margin-top:8px">⚠️ 自動送信に失敗しました。本部（info@coreto.co.jp）に直接ご連絡ください。</div>';
+
+  document.getElementById('stepbar').style.display = 'none';
+  document.getElementById('wrap').innerHTML =
+    '<div class="card"><div class="cb" style="text-align:center;padding:40px 20px">' +
+    '<div style="font-size:52px;margin-bottom:16px">🎉</div>' +
+    '<div style="font-size:18px;font-weight:700;margin-bottom:12px">申込が完了しました</div>' +
+    '<div style="font-size:12px;color:var(--sub);line-height:1.9">' +
+    '申込番号：<strong style="color:var(--gold)">' + appNo + '</strong><br>' +
+    '本部でeKYC確認後、<strong style="color:var(--text)">1〜2営業日以内</strong>にLINEにてご連絡いたします。<br>' +
+    'LINE認証コードの送信がまだの場合はお忘れなく。' +
+    '</div>' + statusNote + '</div></div>';
+}
+
+// ── ユーティリティ ─────────────────────────────────────────────────────────
+function esc(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function showToast(msg) {
+  var t = document.getElementById('pt-toast');
+  t.textContent = msg; t.style.opacity = '1';
+  setTimeout(function() { t.style.opacity = '0'; }, 2500);
+}
+
+// ── トークンゲート ─────────────────────────────────────────────────────────
+(function() {
+  var params = new URLSearchParams(location.search);
+  var token = params.get('token');
+  var VALID_TOKENS = {
+    'DEMO-PT30001': true,
+    'DEMO-PT30002': true,
+  };
+  var gate = document.getElementById('token-gate');
+  var stepbar = document.getElementById('stepbar');
+  var wrap = document.getElementById('wrap').parentElement;
+
+  if (!token) {
+    gate.style.display = 'block';
+    stepbar.style.display = 'none';
+    wrap.style.display = 'none';
+    return;
+  }
+  if (!VALID_TOKENS[token.toUpperCase()]) {
+    gate.innerHTML = gate.innerHTML.replace('招待URLが必要です', '無効な招待URLです');
+    gate.style.display = 'block';
+    stepbar.style.display = 'none';
+    wrap.style.display = 'none';
+    return;
+  }
+  // 有効トークン → 通常通り表示
+  gate.style.display = 'none';
+  step0();
+})();
+</script>
+</body>
+</html>
