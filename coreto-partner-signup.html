@@ -128,8 +128,9 @@ html,body{min-height:100%;font-family:'Noto Sans JP',sans-serif;background:var(-
 <div class="steps" id="stepbar">
   <div class="step on"  id="s0"><div class="step-dot">1</div><div class="step-lbl">基本<br>情報</div></div>
   <div class="step"     id="s1"><div class="step-dot">2</div><div class="step-lbl">身分証<br>提出</div></div>
-  <div class="step"     id="s2"><div class="step-dot">3</div><div class="step-lbl">LINE<br>WORKS</div></div>
-  <div class="step"     id="s3"><div class="step-dot">4</div><div class="step-lbl">確認<br>送信</div></div>
+  <div class="step"     id="s2"><div class="step-dot">3</div><div class="step-lbl">Kyash<br>連携</div></div>
+  <div class="step"     id="s3"><div class="step-dot">4</div><div class="step-lbl">LINE<br>WORKS</div></div>
+  <div class="step"     id="s4"><div class="step-dot">5</div><div class="step-lbl">確認<br>送信</div></div>
 </div>
 
 <!-- ══ メインコンテンツ ══ -->
@@ -160,6 +161,7 @@ var form = {
   kyc: { front: null, back: null, corpDoc: null },
   kycDocType: -1,   // 個人：0=免許証 1=パスポート 2=マイナンバー
   worksCode: '', worksCode_sent: false,
+  kyashId: '',
 };
 var KYC_FILE_TYPES = ['image/jpeg','image/jpg','image/png','image/webp','image/heic','application/pdf'];
 var KYC_MAX_SIZE = 10 * 1024 * 1024;
@@ -168,8 +170,8 @@ window._signupOpenedAt = Date.now();
 // ── ステップ制御 ──────────────────────────────────────────────────────────
 function goStep(n) {
   currentStep = n;
-  // SMS認証削除: 0=基本情報 1=身分証 2=LINE WORKS 3=確認送信
-  [step0, step2, step3, step4][n]();
+  // 0=基本情報 1=身分証 2=Kyash連携 3=LINE WORKS 4=確認送信
+  [step0, step2, stepKyash, step3, step4][n]();
   document.querySelectorAll('.step').forEach(function(el, i) {
     el.className = 'step' + (i < n ? ' done' : i === n ? ' on' : '');
     el.querySelector('.step-dot').textContent = i < n ? '✓' : String(i + 1);
@@ -180,7 +182,7 @@ function goStep(n) {
 // ── STEP 0: 基本情報 ──────────────────────────────────────────────────────
 function step0() {
   document.getElementById('wrap').innerHTML =
-    '<div class="card"><div class="ch"><div class="ch-t">パートナー基本情報</div><span class="pill pb">1 / 4</span></div><div class="cb">' +
+    '<div class="card"><div class="ch"><div class="ch-t">パートナー基本情報</div><span class="pill pb">1 / 5</span></div><div class="cb">' +
 
     '<div class="al al-info">🤝 <div>CORETOパートナーとして、顧客のご紹介をいただける方の登録フォームです。<br>' +
     '個人・法人どちらでも登録できます。入会費・月会費は一切かかりません。</div></div>' +
@@ -314,7 +316,7 @@ function validateStep0() {
 // ── STEP 2: 身分証アップロード ────────────────────────────────────────────
 function step2() {
   document.getElementById('wrap').innerHTML =
-    '<div class="card"><div class="ch"><div class="ch-t">身分証明書</div><span class="pill pb">2 / 4</span></div><div class="cb">' +
+    '<div class="card"><div class="ch"><div class="ch-t">身分証明書</div><span class="pill pb">2 / 5</span></div><div class="cb">' +
     '<div style="font-size:11px;color:var(--sub);margin-bottom:14px;line-height:1.8">' +
     (form.corpType === 'corp'
       ? '法人の場合は登記事項証明書（履歴事項全部証明書）と代表者の身分証明書が必要です。'
@@ -403,13 +405,41 @@ function validateKyc() {
   goStep(2);
 }
 
+// ── Kyash連携 ─────────────────────────────────────────────────────────────
+function stepKyash() {
+  document.getElementById('wrap').innerHTML =
+    '<div class="card"><div class="ch"><div class="ch-t">Kyash連携</div><span class="pill pb">3 / 5</span></div><div class="cb">' +
+    '<div class="al al-info">💳 <div>紹介料の受け取りにKyashアカウントが必要です。<br>すでにお持ちの方はそのままご利用いただけます。</div></div>' +
+    '<div style="background:#191e28;border:1px solid #252c3d;border-radius:12px;padding:18px;margin-bottom:16px">' +
+    '<div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:10px">📋 Kyash連携の手順</div>' +
+    '<div style="font-size:12px;color:var(--sub);line-height:2.2">' +
+    '① <a href="https://kyash.co" target="_blank" style="color:var(--blue)">kyash.co</a> からKyashアプリをインストール<br>' +
+    '② アカウントを作成（本人確認はKyash側で完結）<br>' +
+    '③ Kyash IDをコピーして下に入力' +
+    '</div></div>' +
+    '<div class="field"><label>Kyash ID <span class="req">*</span></label>' +
+    '<input id="f-kyash-id" type="text" class="mono" placeholder="例: yamada.taro" value="' + esc(form.kyashId || '') + '">' +
+    '<div class="fhint">KyashアプリのマイページでKyash IDを確認できます</div></div>' +
+    '<div style="display:flex;gap:10px;margin-top:16px">' +
+    '<button class="btn btn-ghost" onclick="goStep(1)" style="width:auto;padding:10px 20px">← 戻る</button>' +
+    '<button class="btn btn-gold" onclick="validateKyash()">次へ →</button>' +
+    '</div></div></div>';
+}
+
+function validateKyash() {
+  var kyashId = (document.getElementById('f-kyash-id') || {}).value.trim();
+  if (!kyashId) { alert('Kyash IDを入力してください'); return; }
+  form.kyashId = kyashId;
+  goStep(3);
+}
+
 // ── STEP 3: LINE WORKS ────────────────────────────────────────────────────
 function step3() {
   var displayName = form.corpType === 'corp' ? form.corpName : form.name;
   form.worksCode = 'PT-' + String(Math.floor(100000 + Math.random() * 900000));
 
   document.getElementById('wrap').innerHTML =
-    '<div class="card"><div class="ch"><div class="ch-t">LINE WORKS登録</div><span class="pill pb">3 / 4</span></div><div class="cb">' +
+    '<div class="card"><div class="ch"><div class="ch-t">LINE WORKS登録</div><span class="pill pb">4 / 5</span></div><div class="cb">' +
     '<div style="background:rgba(201,168,76,.06);border:1px solid rgba(201,168,76,.3);border-radius:10px;padding:14px;margin-bottom:12px">' +
     '<div style="font-size:11px;color:var(--gold);font-weight:700;margin-bottom:6px">⚠️ 案件通知・連絡に必須です</div>' +
     '<div style="font-size:12px;color:var(--sub);line-height:1.8">CORETO WORKS（ID: <strong style="color:var(--gold)">' + WORKS_ID + '</strong>）を友達登録後、<br>' +
@@ -486,10 +516,11 @@ function step4() {
     form.addr ? ['住所', form.addr] : null,
     ['職業・ネットワーク', form.motivation.slice(0, 60) + (form.motivation.length > 60 ? '…' : '')],
     form.referral ? ['紹介コード', form.referral] : null,
+    ['Kyash ID', form.kyashId],
   ].filter(Boolean);
 
   document.getElementById('wrap').innerHTML =
-    '<div class="card"><div class="ch"><div class="ch-t">申込内容の確認</div><span class="pill pb">4 / 4</span></div><div class="cb">' +
+    '<div class="card"><div class="ch"><div class="ch-t">申込内容の確認</div><span class="pill pb">5 / 5</span></div><div class="cb">' +
     '<div class="al al-ok">✅ <div>以下の内容でパートナー登録を申請します。<br>' +
     '本部でeKYC確認後、1〜2営業日以内にLINE WORKSにてご連絡いたします。</div></div>' +
     rows.map(function(r) {
@@ -525,6 +556,7 @@ async function submitSignup() {
     address: form.addr || '—',
     motivation: form.motivation,
     referralCode: form.referral || '—',
+    kyashId:   form.kyashId,
     worksCode: form.worksCode,
   };
 
