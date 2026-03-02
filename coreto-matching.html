@@ -821,7 +821,7 @@ const CASES = [
    title:'池袋エリア 1K〜1LDK 賃貸',
    area:'池袋駅徒歩10分以内',rent:'¥80,000〜100,000',madori:'1K〜1LDK',
    date:'3月中',note:'条件は柔軟です。急ぎで動いています。内見すぐ対応できる方歓迎。',
-   minRank:'none',posted:'14:29',deadline:'23h32m',
+   minRank:'none',posted:'14:29',deadline:'23h32m',deadlineIso:'2026-03-03T14:29:00',
    applyCount:3,status:'pending_approval',
    ptName:'佐藤 美咲',ptId:'PT-007',
    // 顧客情報はマッチング確定後のみ開示
@@ -885,7 +885,7 @@ const CASES = [
    area:'—',rent:'—',
    industry:'金融・保険',job:'営業職',exp:'金融営業経験1年以上',salary:'400〜600万円',timing:'半年以内',
    note:'大手銀行・証券会社の紹介実績がある方歓迎。',
-   minRank:'silver',posted:'2/16',deadline:'期限切れ',
+   minRank:'silver',posted:'2/16',deadline:'期限切れ',deadlineIso:'2026-02-17T09:00:00',
    applyCount:0,status:'expired',ptName:'—',ptId:'—',
    customerName:'【確定後に開示】',customerPhone:'【確定後に開示】',customerEmail:'【確定後に開示】'},
 ];
@@ -1394,6 +1394,59 @@ function viewCaseDetail(caseId) {
 function changeAgent(caseId) {
   alert('担当者変更：他の応募者から選択、または新たにボードに戻すことができます。\n\n（本実装ではモーダルで選択UI）');
 }
+
+// ── 期限切れ検知・通知 ──────────────────────────────────────
+function checkExpiredCases() {
+  const now = Date.now();
+  CASES.forEach(c => {
+    if (c.status !== 'open') return;
+    // deadlineが時間形式（例: "23h32m"）の場合はデモ用にスキップ
+    // 本番はISO日時で比較
+    if (!c.deadlineIso) return;
+    const dl = new Date(c.deadlineIso).getTime();
+    if (now < dl) return;
+
+    // 期限切れ処理
+    c.status = 'expired';
+    notifyExpiredToSlack(c);
+    notifyExpiredToPt(c);
+  });
+  renderCases();
+}
+
+function notifyExpiredToSlack(c) {
+  const payload = {
+    text: `⚠️ 案件ボード 期限切れ — HQ対応が必要です`,
+    attachments: [{
+      color: '#f87171',
+      blocks: [
+        { type:'section', text:{ type:'mrkdwn',
+          text:`*⚠️ 案件「${c.title}」（${c.id}）が期限切れになりました*\n応募者ゼロのままタイムアウトしました。HQが直接エージェントを指定するか、Slackで呼びかけてください。` }},
+        { type:'section', fields:[
+          { type:'mrkdwn', text:`*パートナー*\n${c.ptName||'—'}（${c.ptId||'—'}）` },
+          { type:'mrkdwn', text:`*種別*\n${c.bizLabel} / ${c.srcLabel}` },
+          { type:'mrkdwn', text:`*エリア*\n${c.area||'—'}` },
+          { type:'mrkdwn', text:`*掲載日時*\n${c.posted}` },
+        ]},
+        { type:'section', text:{ type:'mrkdwn',
+          text:`*対応方法*\n1. マッチング管理ページ → 「HQ対応要」から対象案件を確認\n2. 「Slackで呼びかけ」または「HQが直接指定」を選択` }},
+      ]
+    }]
+  };
+  // 本番: fetch(SLACK_WEBHOOK, {method:'POST', body:JSON.stringify(payload)});
+  console.log('[Slack 期限切れ通知]', JSON.stringify(payload, null, 2));
+}
+
+function notifyExpiredToPt(c) {
+  // 本番: Zapier → パートナーのLINEに通知
+  // 通知内容: 案件タイトル・期限切れの旨・ボード再掲載またはHQ相談の案内
+  const msg = `【CORETO】案件「${c.title}」のマッチング期限が切れました。\n担当エージェントが見つかりませんでした。\n本部が対応します。しばらくお待ちください。`;
+  console.log('[PT LINE通知]', msg);
+}
+
+// ページロード時・5分ごとに期限チェック（本番はZapier/Kintoneで管理）
+checkExpiredCases();
+setInterval(checkExpiredCases, 5 * 60 * 1000);
 
 // ── 案件起票 ──
 function submitCase() {

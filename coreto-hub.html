@@ -1337,6 +1337,12 @@ function reDashPage() {
     <button class="btn btn-sm" style="margin-left:auto;background:rgba(251,146,60,.12);border:1px solid rgba(251,146,60,.3);color:var(--orange)" onclick="location.href='coreto-it-setsu.html'">対応 ↗</button>
   </div>
 
+  <!-- 指名通知バナー（パートナーから指名された場合に表示） -->
+  <div id="nomination-banner" style="background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.35);border-radius:10px;padding:14px 16px;margin-bottom:16px">
+    <div style="font-size:11px;font-weight:700;color:#c9a840;margin-bottom:10px">👤 パートナーからの指名が届いています</div>
+    <div id="nomination-list"></div>
+  </div>
+
   <div class="stats-grid sg-4">
     <div class="stat" style="cursor:pointer" onclick="location.href='coreto-pipeline.html'"><div class="stat-ico">📋</div><div class="stat-val text-blue">6</div><div class="stat-label">進行中案件</div><div class="stat-sub text-green">↗ 案件管理を開く</div></div>
     <div class="stat"><div class="stat-ico">✅</div><div class="stat-val text-green">4</div><div class="stat-label">今月の成約</div><div class="stat-sub text-green">目標達成中</div></div>
@@ -2313,6 +2319,87 @@ function copyRefLink() {
     document.execCommand('copy'); document.body.removeChild(ta);
   });
 }
+</script>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+//  指名承認システム
+// ══════════════════════════════════════════════════════════════
+
+// デモ用指名データ（本番はKintone/Zapier経由で取得）
+const NOMINATIONS = [
+  {
+    id: 'NOM-001',
+    caseId: '0238',
+    caseTitle: '新宿区西新宿 賃貸 2LDK',
+    ptName: '鈴木 誠司',
+    ptId: 'PT-30004',
+    msg: '以前お世話になりました。ぜひお願いしたいです。',
+    postedAt: '2026-03-02 09:15',
+    deadline: '2026-03-04 09:15', // 48時間有効
+    status: 'pending', // pending / accepted / declined
+  },
+];
+
+function renderNominations() {
+  const banner = document.getElementById('nomination-banner');
+  const list   = document.getElementById('nomination-list');
+  if (!banner || !list) return;
+
+  const pending = NOMINATIONS.filter(n => n.status === 'pending');
+  banner.style.display = pending.length ? '' : 'none';
+
+  list.innerHTML = pending.map(n => `
+    <div style="background:#141820;border:1px solid #252c3d;border-radius:8px;padding:12px 14px;margin-bottom:8px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:700;color:#e4e7f0;margin-bottom:4px">${n.caseTitle}</div>
+          <div style="font-size:11px;color:var(--muted)">
+            紹介パートナー：<span style="color:var(--sub);font-weight:600">${n.ptName}（${n.ptId}）</span>
+            &nbsp;·&nbsp; 指名日時：${n.postedAt}
+          </div>
+          ${n.msg ? `<div style="font-size:11px;color:var(--sub);margin-top:6px;padding:6px 10px;background:rgba(255,255,255,.03);border-radius:6px;border-left:2px solid rgba(201,168,76,.4)">「${n.msg}」</div>` : ''}
+          <div style="font-size:10px;color:var(--orange);margin-top:6px">⏰ 有効期限：${n.deadline} まで</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-shrink:0;align-items:center">
+          <button onclick="declineNomination('${n.id}')"
+            style="padding:7px 14px;border-radius:7px;border:1px solid rgba(248,113,113,.35);background:rgba(248,113,113,.08);color:#f87171;font-size:11px;font-weight:600;cursor:pointer">
+            辞退
+          </button>
+          <button onclick="acceptNomination('${n.id}')"
+            style="padding:7px 16px;border-radius:7px;border:1px solid rgba(201,168,76,.5);background:rgba(201,168,76,.12);color:#c9a840;font-size:11px;font-weight:700;cursor:pointer">
+            ✅ 承認する
+          </button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function acceptNomination(nomId) {
+  const n = NOMINATIONS.find(x => x.id === nomId);
+  if (!n) return;
+  if (!confirm(`「${n.caseTitle}」の担当を承認しますか？\n\nパートナー ${n.ptName}さんに通知され、マッチングが確定します。`)) return;
+  n.status = 'accepted';
+  // 本番: Zapier webhook → Kintone更新 → パートナーLINE通知 → HQ Slack通知
+  alert(`✅ マッチングが確定しました。\n\nHQがLINE WORKSトークルームを作成します。\n案件の詳細は案件管理からご確認ください。`);
+  renderNominations();
+}
+
+function declineNomination(nomId) {
+  const n = NOMINATIONS.find(x => x.id === nomId);
+  if (!n) return;
+  if (!confirm(`「${n.caseTitle}」の指名を辞退しますか？\n\nパートナー ${n.ptName}さんに辞退が通知されます。`)) return;
+  n.status = 'declined';
+  // 本番: Zapier webhook → パートナーLINE通知 → ボード掲載切替を提案
+  alert(`辞退しました。\nパートナーに通知されます。`);
+  renderNominations();
+}
+
+// ページロード時に指名バナーを描画
+document.addEventListener('DOMContentLoaded', function() {
+  setTimeout(renderNominations, 300);
+});
 </script>
 
 <div id="ref-modal-overlay" onclick="if(event.target===this)closeRefModal()">
