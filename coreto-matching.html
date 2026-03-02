@@ -296,7 +296,7 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
   <!-- 統計 -->
   <div class="stats-row">
     <div class="stat-card"><div class="stat-num" style="color:var(--blue)">8</div><div class="stat-label">📋 募集中</div></div>
-    <div class="stat-card"><div class="stat-num" style="color:var(--orange)">2</div><div class="stat-label">⏳ 承認待ち（仮マッチ）</div></div>
+    
     <div class="stat-card"><div class="stat-num" style="color:var(--green)">15</div><div class="stat-label">✅ 今月マッチング済み</div></div>
     <div class="stat-card"><div class="stat-num" style="color:var(--gold)">3</div><div class="stat-label">🎉 今月成約</div></div>
   </div>
@@ -368,10 +368,38 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
       </div>
     </div>
 
-    <!-- PT起票の場合：パートナー情報 -->
-    <div id="sec-pt-info" class="row2">
-      <div class="fg"><label>パートナー名</label><input type="text" id="pt-name" placeholder="佐藤 美咲"></div>
-      <div class="fg"><label>パートナーID</label><input type="text" id="pt-id" class="mono" placeholder="PT-007"></div>
+    <!-- PT起票の場合：パートナー情報 + マッチング方法選択 -->
+    <div id="sec-pt-info">
+      <div class="row2">
+        <div class="fg"><label>パートナー名</label><input type="text" id="pt-name" placeholder="佐藤 美咲"></div>
+        <div class="fg"><label>パートナーID</label><input type="text" id="pt-id" class="mono" placeholder="PT-30001"></div>
+      </div>
+      <div class="fg" style="margin-top:10px">
+        <label>エージェントのアサイン方法</label>
+        <div class="tg-group" id="g-pt-assign">
+          <button class="tg on blue" data-v="board" onclick="tog('g-pt-assign',this);togglePtAssign()">🎯 マッチング（ボード掲載）</button>
+          <button class="tg" data-v="nominate" onclick="tog('g-pt-assign',this);togglePtAssign()">👤 指名する</button>
+        </div>
+      </div>
+      <!-- ボード掲載の説明 -->
+      <div id="sec-pt-board" class="alert ag" style="margin-top:8px;font-size:11px">
+        📋 案件ボードに掲載され、エージェントが先着で対応を申請します。<br>
+        顧客の個人情報はマッチング確定後に担当エージェントへ開示されます。
+      </div>
+      <!-- 指名の場合：AG ID入力 -->
+      <div id="sec-pt-nominate" class="hidden" style="margin-top:8px">
+        <div class="row2">
+          <div class="fg">
+            <label>指名するエージェントID <span class="req">*</span></label>
+            <input type="text" id="pt-nominate-id" class="mono" placeholder="例: 10023">
+            <div class="fhint">エージェントが承認するとマッチング成立。顧客情報が開示されます。</div>
+          </div>
+          <div class="fg">
+            <label>指名メッセージ（任意）</label>
+            <input type="text" id="pt-nominate-msg" placeholder="例：以前お世話になりました。ぜひお願いしたいです。">
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="s-label">事業種別</div>
@@ -457,7 +485,7 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
       </div>
     </div>
 
-    <button class="btn btn-gold btn-full" onclick="submitCase()">案件をボードに掲載する</button>
+    <button class="btn btn-gold btn-full" id="submit-case-btn" onclick="submitCase()">案件をボードに掲載する</button>
   </div>
 </div>
 </div>
@@ -864,7 +892,7 @@ const CASES = [
 
 const RANK_ORDER = {none:0,bronze:1,silver:2,gold:3,platinum:4,founding:5};
 const RANK_LABEL = {none:'指定なし',bronze:'Bronze以上',silver:'Silver以上',gold:'Gold以上',platinum:'Platinum以上'};
-const STATUS_LABEL = {open:'募集中',pending_approval:'承認待ち',matched:'マッチング済み',self:'自己開拓',expired:'期限切れ'};
+const STATUS_LABEL = {open:'募集中',matched:'マッチング済み',nominated:'指名中',self:'自己開拓',expired:'期限切れ'};
 const STATUS_BADGE = {
   open:'bdg-open',pending_approval:'bdg-wait',matched:'bdg-matched',
   self:'bdg-pt',expired:'bdg-closed'
@@ -889,14 +917,18 @@ function updateTabsForRole() {
   const postTab = document.getElementById('tab-post');
   if(currentRole==='hq'){
     mgmtTab.style.display='';postTab.style.display='';
-    document.getElementById('post-mode-note').textContent='HQモード：直接アサイン または ボード掲載を選択できます';
+    document.getElementById('post-mode-note').textContent='HQモード：マッチング不成立時の直接アサイン または ボード掲載ができます';
     document.getElementById('post-mode-note').className='alert ab';
   } else if(currentRole==='pt'){
     mgmtTab.style.display='none';
     postTab.style.display='';
-    document.getElementById('post-mode-note').textContent='パートナーモード：案件情報を入力してボードに投稿してください。顧客の個人情報はマッチング確定後に担当エージェントへ開示されます。';
+    document.getElementById('post-mode-note').textContent='パートナーモード：ボード掲載（先着マッチング）または知り合いのエージェントを指名できます。顧客の個人情報はマッチング確定後に開示されます。';
     document.getElementById('post-mode-note').className='alert ag';
     document.getElementById('sec-hq-assign').classList.add('hidden');
+  } else {
+    mgmtTab.style.display='none';postTab.style.display='none';
+  }
+}
   } else {
     mgmtTab.style.display='none';postTab.style.display='none';
   }
@@ -914,6 +946,25 @@ function updatePostMode() {
   const src = gv('g-source');
   document.getElementById('sec-pt-info').classList.toggle('hidden', src!=='pt');
   document.getElementById('sec-hq-assign').classList.toggle('hidden', src!=='hq');
+  // パートナーモード時は指名/ボードの初期状態をリセット
+  if(src==='pt') togglePtAssign();
+  updateSubmitBtn();
+}
+function togglePtAssign() {
+  const mode = gv('g-pt-assign');
+  document.getElementById('sec-pt-board').classList.toggle('hidden', mode!=='board');
+  document.getElementById('sec-pt-nominate').classList.toggle('hidden', mode!=='nominate');
+  updateSubmitBtn();
+}
+function updateSubmitBtn() {
+  const src = gv('g-source');
+  const btn = document.getElementById('submit-case-btn');
+  if(!btn) return;
+  if(src==='pt' && gv('g-pt-assign')==='nominate'){
+    btn.textContent = '👤 指名してエージェントに送る';
+  } else {
+    btn.textContent = '案件をボードに掲載する';
+  }
 }
 function toggleDirectAssign() {
   const mode = gv('g-assign-mode');
@@ -1002,7 +1053,7 @@ function renderCases() {
         footerHtml = `<button class="btn btn-green btn-sm" onclick="applyCase(event,'${c.id}')">✋ 対応する</button>`;
       }
     } else if(c.status==='pending_approval'){
-      footerHtml = `<span class="badge bdg-wait">⏳ 本部承認待ち</span>`;
+      footerHtml = `<span class="badge bdg-wait">⏳ マッチング中</span>`;
     } else if(c.status==='expired'){
       footerHtml = `<span class="badge bdg-closed">期限切れ</span>`;
     } else {
@@ -1152,15 +1203,21 @@ function selectCase(id) {
   </div>`;
 }
 
-// ── 案件応募 ──
+// ── 案件応募（ボード先着）──
 function applyCase(e, id) {
   e.stopPropagation();
   const c = CASES.find(x=>x.id===id);
   if(!c) return;
   c.applyCount++;
   if(c.status==='open'){
-    c.status='pending_approval';
-    alert(`✋ 案件「${c.title}」に対応申請しました。\n\n先着1番として仮マッチングされました。\n本部の承認後に顧客情報が開示されます。\n\nSlackにも通知が届きます。`);
+    c.status = 'matched';
+    c.assignedAg = 'あなた（現在のユーザー）';
+    c.customerName = '（顧客情報が開示されました）';
+    c.customerPhone = '（顧客情報が開示されました）';
+    c.customerEmail = '（顧客情報が開示されました）';
+    alert(`✋ 案件「${c.title}」の対応を申請しました。\n\n✅ 先着のためマッチング成立です。\n顧客情報が開示されました。\n\nHQがLINE WORKSグループを作成します。`);
+    // Slack通知
+    notifyMatchToSlack({ c, agName:'あなた', agId:'現在のユーザー' });
   }
   renderCases();
 }
@@ -1333,19 +1390,38 @@ function changeAgent(caseId) {
 function submitCase() {
   const src = gv('g-source');
   const biz = gv('g-biz');
-  const assignMode = src==='hq' ? gv('g-assign-mode') : 'board';
 
-  let msg = '案件を掲載しました！\n\n';
-  if(src==='hq' && assignMode==='direct'){
-    const ag = document.getElementById('direct-agent').value;
-    msg += ag ? `✅ 担当エージェント「${ag}」に直接アサインされました。\nSlack DMで通知されます。` : '担当エージェントを選択してください。';
+  if(src==='pt'){
+    const ptAssign = gv('g-pt-assign');
+    if(ptAssign==='nominate'){
+      // パートナー指名モード
+      const nomineeId = document.getElementById('pt-nominate-id')?.value.trim();
+      const nomineeMsg = document.getElementById('pt-nominate-msg')?.value.trim();
+      if(!nomineeId){ alert('指名するエージェントIDを入力してください'); return; }
+      alert(
+        `👤 AG-${nomineeId} に指名を送りました。\n\n` +
+        `エージェントが承認するとマッチング成立です。\n` +
+        (nomineeMsg ? `メッセージ：「${nomineeMsg}」\n` : '') +
+        `\nエージェントがhub.htmlの通知から承認・辞退できます。`
+      );
+    } else {
+      // パートナー ボード掲載
+      alert(`📋 案件ボードに掲載されました。\nエージェントが先着で「対応する」を押すとマッチング成立です。\n顧客の個人情報はマッチング確定後に開示されます。`);
+    }
+  } else if(src==='hq'){
+    const assignMode = gv('g-assign-mode');
+    if(assignMode==='direct'){
+      const ag = document.getElementById('direct-agent').value;
+      if(!ag){ alert('担当エージェントを選択してください'); return; }
+      alert(`✅ 担当エージェント「${ag}」に直接アサインしました。\nSlack DMで通知されます。`);
+    } else {
+      alert(`📋 案件ボードに掲載されました（HQ起票）。\nエージェントが先着で対応するとマッチング成立です。`);
+    }
   } else {
-    msg += '📋 案件ボードに掲載されました。\nエージェントからの応募を待ちます。\n先着1名が仮マッチングされ、本部の承認後に顧客情報が開示されます。';
+    // AG自己開拓
+    alert(`✅ 自己開拓案件を登録しました。`);
   }
-  if(document.getElementById('direct-agent')?.value || src!=='hq' || assignMode!=='direct'){
-    alert(msg);
-    switchTab('board');
-  }
+  switchTab('board');
 }
 
 // ── 初期描画 ──
