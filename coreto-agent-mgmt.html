@@ -649,6 +649,20 @@ function showDetail(id) {
         ${a.hqAccess?'🔓 HQアクセス解除（月会費再開）':'🏢 HQアクセス付与（月会費停止）'}
       </button>
     </div>
+
+    ${a.type !== 'pt' ? `
+    <div class="det-sec">AI育成フィードバック</div>
+    <div id="ai-fb-area-${a.id}">
+      <button onclick="aiAgentFeedback('${a.id}')" id="ai-fb-btn-${a.id}"
+        style="width:100%;padding:10px 14px;background:rgba(167,139,250,.1);
+        border:1px solid rgba(167,139,250,.3);color:#a78bfa;border-radius:9px;
+        font-size:11px;font-weight:700;cursor:pointer;font-family:'Noto Sans JP',sans-serif;
+        display:flex;align-items:center;justify-content:center;gap:8px">
+        ✨ AIが個別育成フィードバックを生成する（Sonnet）
+      </button>
+      <div id="ai-fb-result-${a.id}" style="display:none;margin-top:10px"></div>
+    </div>
+    ` : ''}
   `;
 }
 
@@ -657,6 +671,168 @@ function closeDetail() {
   document.getElementById('detail-panel').classList.add('hidden');
   renderTable();
 }
+
+// ════════════════════════════════════════════════════════════════
+// ⑪ AI育成フィードバック（Sonnet）
+// ════════════════════════════════════════════════════════════════
+
+async function aiAgentFeedback(agentId) {
+  var a = byId[agentId];
+  if (!a) return;
+
+  var btn = document.getElementById('ai-fb-btn-' + agentId);
+  var resultEl = document.getElementById('ai-fb-result-' + agentId);
+
+  btn.disabled = true;
+  btn.innerHTML = '<span style="animation:spin .8s linear infinite;display:inline-block">✨</span> Sonnetが分析中...';
+
+  // メンターのデータも収集
+  var mentor = a.referredBy ? byId[a.referredBy] : null;
+  var mentees = Object.values(byId).filter(function(x) { return x.referredBy === a.id; });
+
+  // 同ランク帯の平均データ（デモ用）
+  var sameRankAgents = Object.values(byId).filter(function(x) {
+    return x.rank === a.rank && x.type === a.type && x.id !== a.id;
+  });
+  var avgCases = sameRankAgents.length
+    ? Math.round(sameRankAgents.reduce(function(s,x) { return s+x.cases; }, 0) / sameRankAgents.length)
+    : a.cases;
+  var avgMonthRev = sameRankAgents.length
+    ? Math.round(sameRankAgents.reduce(function(s,x) { return s+x.monthRev; }, 0) / sameRankAgents.length)
+    : a.monthRev;
+
+  // 在籍日数
+  var joinedDays = Math.floor((Date.now() - new Date(a.joined).getTime()) / 86400000);
+
+  try {
+    var res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 800,
+        system: 'あなたは不動産・人材紹介会社の育成マネージャーAIです。エージェントのデータを分析し、具体的で実践的な育成フィードバックを生成します。数値比較と具体的なアクションプランを必ず含めてください。JSONのみで回答。前置き不要。',
+        messages: [{
+          role: 'user',
+          content: '以下のエージェントデータを分析し、育成フィードバックを生成してください。\n\n' +
+            JSON.stringify({
+              エージェント: {
+                名前: a.name, ID: a.id,
+                種別: a.type === 're' ? '不動産' : '人材紹介',
+                ランク: a.rank,
+                在籍日数: joinedDays + '日',
+                累計売上: a.totalRev,
+                今月売上: a.monthRev,
+                成約件数: a.cases,
+                傘下人数: a.network,
+                得意エリア: a.area,
+                宅建士: a.sennin ? '専任登録済み' : a.takken ? '保有・未登録' : 'なし',
+                備考: a.note,
+              },
+              同ランク帯比較: {
+                平均成約件数: avgCases,
+                平均今月売上: avgMonthRev,
+                本人成約件数: a.cases,
+                本人今月売上: a.monthRev,
+              },
+              ネットワーク: {
+                紹介者: mentor ? mentor.name + '(' + mentor.rank + ')' : '外部応募',
+                傘下メンティー数: mentees.length,
+              }
+            }, null, 2) +
+            '\n\n以下のJSON形式で回答：\n' +
+            '{"overall_score":0-100,' +
+            '"strengths":[{"point":"強み（2-3件）","detail":"根拠（50字以内）"}],' +
+            '"improvements":[{"point":"改善点（2-3件）","detail":"課題の根拠（50字以内）","action":"具体的なアクション（60字以内）","period":"目安期間（例:1ヶ月以内）"}],' +
+            '"next_rank_advice":"次のランクに上がるための最重要アドバイス（100字以内）",' +
+            '"hq_action":"HQが今すぐ取るべきサポートアクション（80字以内）"}'
+        }]
+      })
+    });
+
+    var data = await res.json();
+    var text = (data.content || []).filter(function(b) { return b.type === 'text'; }).map(function(b) { return b.text; }).join('');
+    var parsed = JSON.parse(text.replace(/```json|```/g, '').trim());
+
+    var score = parsed.overall_score || 0;
+    var scoreColor = score >= 80 ? 'var(--green)' : score >= 60 ? 'var(--gold)' : score >= 40 ? 'var(--orange)' : 'var(--red)';
+
+    resultEl.style.display = 'block';
+    resultEl.innerHTML =
+      '<div style="background:rgba(167,139,250,.07);border:1px solid rgba(167,139,250,.25);border-radius:10px;padding:14px 16px">' +
+
+      // スコアバー
+      '<div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">' +
+        '<div style="flex:1">' +
+          '<div style="display:flex;justify-content:space-between;margin-bottom:5px">' +
+            '<div style="font-size:11px;font-weight:700;color:#a78bfa">✨ AI育成スコア</div>' +
+            '<div style="font-size:18px;font-weight:800;color:' + scoreColor + '">' + score + '<span style="font-size:11px;color:var(--muted)">/100</span></div>' +
+          '</div>' +
+          '<div style="height:6px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden">' +
+            '<div style="height:100%;width:' + score + '%;background:' + scoreColor + ';border-radius:3px;transition:width .6s"></div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+
+      // 強み
+      '<div style="font-size:9px;color:var(--green);letter-spacing:1.5px;font-weight:700;margin-bottom:8px">STRENGTHS</div>' +
+      (parsed.strengths || []).map(function(s) {
+        return '<div style="display:flex;gap:8px;padding:7px 0;border-bottom:1px solid rgba(52,211,153,.08)">' +
+          '<div style="color:var(--green);flex-shrink:0">✅</div>' +
+          '<div><div style="font-size:11px;font-weight:700;color:var(--text)">' + escHtml(s.point) + '</div>' +
+          '<div style="font-size:10px;color:var(--sub);margin-top:1px">' + escHtml(s.detail) + '</div></div>' +
+        '</div>';
+      }).join('') +
+
+      // 改善点
+      '<div style="font-size:9px;color:var(--orange);letter-spacing:1.5px;font-weight:700;margin:12px 0 8px">IMPROVEMENTS</div>' +
+      (parsed.improvements || []).map(function(imp) {
+        return '<div style="padding:10px;background:rgba(255,255,255,.03);border-radius:8px;margin-bottom:6px;border:1px solid var(--border2)">' +
+          '<div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:3px">' + escHtml(imp.point) + '</div>' +
+          '<div style="font-size:10px;color:var(--sub);margin-bottom:6px">' + escHtml(imp.detail) + '</div>' +
+          '<div style="display:flex;align-items:center;gap:6px">' +
+            '<div style="font-size:10px;color:var(--gold);background:rgba(201,168,76,.1);padding:3px 10px;border-radius:4px;flex:1">→ ' + escHtml(imp.action) + '</div>' +
+            '<div style="font-size:9px;color:var(--muted);white-space:nowrap">' + escHtml(imp.period) + '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('') +
+
+      // 次ランクへのアドバイス
+      (parsed.next_rank_advice ? '<div style="margin-top:10px;padding:10px 12px;background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.2);border-radius:8px">' +
+        '<div style="font-size:9px;color:var(--gold);font-weight:700;margin-bottom:5px">NEXT RANK ADVICE</div>' +
+        '<div style="font-size:11px;color:var(--text)">' + escHtml(parsed.next_rank_advice) + '</div>' +
+      '</div>' : '') +
+
+      // HQアクション
+      (parsed.hq_action ? '<div style="margin-top:8px;padding:10px 12px;background:rgba(79,156,249,.07);border:1px solid rgba(79,156,249,.2);border-radius:8px">' +
+        '<div style="font-size:9px;color:var(--blue);font-weight:700;margin-bottom:5px">HQ ACTION</div>' +
+        '<div style="font-size:11px;color:var(--text)">' + escHtml(parsed.hq_action) + '</div>' +
+      '</div>' : '') +
+
+      '<div style="font-size:9px;color:var(--muted);margin-top:10px;text-align:right">生成: ' + new Date().toLocaleString('ja-JP') + '</div>' +
+
+      '</div>';
+
+    btn.innerHTML = '✨ AIが個別育成フィードバックを生成する（Sonnet）';
+    btn.disabled = false;
+
+  } catch(e) {
+    resultEl.style.display = 'block';
+    resultEl.innerHTML = '<div style="font-size:10px;color:var(--muted);padding:8px">フィードバック取得に失敗しました。しばらく待って再試行してください。</div>';
+    btn.innerHTML = '✨ AIが個別育成フィードバックを生成する（Sonnet）';
+    btn.disabled = false;
+    console.error('AI育成フィードバック失敗:', e);
+  }
+}
+
+// spin CSS
+(function() {
+  var s = document.createElement('style');
+  s.textContent = '@keyframes spin{to{transform:rotate(360deg)}}';
+  document.head.appendChild(s);
+})();
+
+// ════════════════════════════════════════════════════════════════
 
 // ─ Actions ─
 let pendingAction = null;

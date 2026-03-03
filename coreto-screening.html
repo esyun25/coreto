@@ -358,6 +358,46 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
       </div>
     </div>
 
+    <!-- ② AI書類解析パネル -->
+    <div id="ai-doc-panel" style="display:none;margin:0 28px 16px;padding:16px 18px;
+         background:rgba(201,168,76,.07);border:1px solid rgba(201,168,76,.3);border-radius:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div style="font-size:12px;font-weight:700;color:var(--gold);display:flex;align-items:center;gap:8px">
+          ✨ AI書類解析
+          <span style="font-size:9px;font-weight:400;color:var(--muted);background:rgba(255,255,255,.05);
+                padding:2px 8px;border-radius:4px">Powered by Claude Haiku</span>
+        </div>
+        <div id="ai-doc-result-badge" style="font-size:10px;color:var(--muted)">書類をアップロードすると自動解析します</div>
+      </div>
+      <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+        <!-- 身分証アップロード -->
+        <label style="flex:1;min-width:160px;cursor:pointer">
+          <input type="file" id="ai-id-file" accept="image/*,.pdf" style="display:none"
+                 onchange="aiAnalyzeDoc('id', this.files[0])">
+          <div id="ai-id-btn" style="padding:10px 14px;background:rgba(255,255,255,.04);
+               border:1px dashed var(--border2);border-radius:9px;text-align:center;
+               font-size:11px;color:var(--sub);transition:.15s;cursor:pointer"
+               onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--border2)'">
+            <div style="font-size:18px;margin-bottom:4px">🪪</div>
+            身分証をアップロード
+          </div>
+        </label>
+        <!-- 宅建士証アップロード（RE/HRのみ表示） -->
+        <label style="flex:1;min-width:160px;cursor:pointer" id="ai-takken-area">
+          <input type="file" id="ai-takken-file" accept="image/*,.pdf" style="display:none"
+                 onchange="aiAnalyzeDoc('takken', this.files[0])">
+          <div id="ai-takken-btn" style="padding:10px 14px;background:rgba(255,255,255,.04);
+               border:1px dashed var(--border2);border-radius:9px;text-align:center;
+               font-size:11px;color:var(--sub);transition:.15s;cursor:pointer"
+               onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--border2)'">
+            <div style="font-size:18px;margin-bottom:4px">📜</div>
+            宅建士証をアップロード
+          </div>
+        </label>
+      </div>
+      <div id="ai-doc-extracted" style="display:none"></div>
+    </div>
+
     <!-- Checklist -->
     <div class="checklist-body" id="checklist-body"></div>
 
@@ -401,6 +441,176 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
 
 <script>
 // ── XSS対策: ユーザー入力値のエスケープ ──────────────────────────────
+// ════════════════════════════════════════════════════════════════
+// ② AI書類解析 — 身分証・宅建士証の自動チェックリスト入力
+// ════════════════════════════════════════════════════════════════
+
+var aiDocResults = {}; // { id: {...}, takken: {...} }
+
+async function aiAnalyzeDoc(type, file) {
+  if (!file) return;
+  var btnEl = document.getElementById('ai-' + type + '-btn');
+  btnEl.innerHTML = '<div style="font-size:18px;margin-bottom:4px;animation:spin .8s linear infinite;display:inline-block">⏳</div><div>解析中...</div>';
+
+  // ファイルをbase64に変換
+  var base64 = await new Promise(function(resolve, reject) {
+    var reader = new FileReader();
+    reader.onload = function(e) { resolve(e.result.split(',')[1]); };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+
+  var isImage = file.type.startsWith('image/');
+  var mediaType = isImage ? file.type : 'application/pdf';
+  var docLabel = type === 'id' ? '身分証（運転免許証・マイナンバーカード等）' : '宅地建物取引士証';
+
+  try {
+    var contentParts = [];
+    if (isImage) {
+      contentParts.push({ type:'image', source:{ type:'base64', media_type:mediaType, data:base64 }});
+    } else {
+      contentParts.push({ type:'document', source:{ type:'base64', media_type:'application/pdf', data:base64 }});
+    }
+    contentParts.push({ type:'text', text:
+      '上記の画像は「' + docLabel + '」です。以下の情報を抽出し、JSONのみで回答してください（前置き不要）。\n' +
+      (type === 'id'
+        ? '{"name":"氏名","furigana":"フリガナ（不明な場合はnull）","birthdate":"生年月日（YYYY-MM-DD）","address":"住所","expiry":"有効期限（YYYY-MM-DD、ない場合はnull）","doc_type":"書類種別（運転免許証/マイナンバーカード/パスポート等）","is_valid":true/false,"issues":["問題点（鮮明でない・有効期限切れ等。なければ空配列）"]}'
+        : '{"name":"氏名","registration_no":"登録番号（例:東京(3)第12345号）","expiry":"有効期限（YYYY-MM-DD）","prefecture":"登録都道府県","is_valid":true/false,"issues":["問題点（なければ空配列）"]}')
+    });
+
+    var response = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 600,
+        messages: [{ role:'user', content: contentParts }]
+      })
+    });
+    var data = await response.json();
+    var text = (data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
+    var clean = text.replace(/```json|```/g,'').trim();
+    var parsed = JSON.parse(clean);
+    aiDocResults[type] = parsed;
+
+    // ボタン表示を更新
+    var icon = parsed.is_valid ? '✅' : '⚠️';
+    var nameDisp = parsed.name || '—';
+    btnEl.innerHTML = '<div style="font-size:16px;margin-bottom:2px">' + icon + '</div><div style="font-size:10px;font-weight:700;color:var(--text)">' + escHtml(nameDisp) + '</div><div style="font-size:9px;color:var(--muted)">解析完了 · 再選択</div>';
+    btnEl.style.borderColor = parsed.is_valid ? 'rgba(52,211,153,.4)' : 'rgba(251,146,60,.4)';
+    btnEl.style.background  = parsed.is_valid ? 'rgba(52,211,153,.06)' : 'rgba(251,146,60,.06)';
+
+    renderAiDocExtracted();
+    autoFillFromAi();
+
+  } catch(e) {
+    btnEl.innerHTML = '<div style="font-size:18px;margin-bottom:4px">⚠️</div><div style="font-size:10px;color:var(--red)">解析失敗 · 再試行</div>';
+    console.error('AI書類解析エラー:', e);
+  }
+}
+
+function renderAiDocExtracted() {
+  var el = document.getElementById('ai-doc-extracted');
+  var badge = document.getElementById('ai-doc-result-badge');
+  if (!el) return;
+
+  var parts = [];
+  if (aiDocResults.id) {
+    var d = aiDocResults.id;
+    parts.push('<div style="margin-bottom:10px">');
+    parts.push('<div style="font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:6px">🪪 身分証から抽出</div>');
+    parts.push('<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">');
+    parts.push(aiInfoCell('氏名', d.name));
+    parts.push(aiInfoCell('生年月日', d.birthdate));
+    parts.push(aiInfoCell('書類種別', d.doc_type));
+    parts.push(aiInfoCell('有効期限', d.expiry || '—'));
+    parts.push(aiInfoCell('住所', d.address, 2));
+    parts.push('</div>');
+    if (d.issues && d.issues.length) {
+      parts.push('<div style="margin-top:8px;padding:6px 10px;background:rgba(251,146,60,.1);border:1px solid rgba(251,146,60,.3);border-radius:6px;font-size:10px;color:var(--orange)">⚠️ ' + d.issues.join(' / ') + '</div>');
+    }
+    parts.push('</div>');
+  }
+  if (aiDocResults.takken) {
+    var t = aiDocResults.takken;
+    parts.push('<div style="margin-bottom:4px">');
+    parts.push('<div style="font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:6px">📜 宅建士証から抽出</div>');
+    parts.push('<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">');
+    parts.push(aiInfoCell('氏名', t.name));
+    parts.push(aiInfoCell('登録番号', t.registration_no));
+    parts.push(aiInfoCell('登録都道府県', t.prefecture));
+    parts.push(aiInfoCell('有効期限', t.expiry));
+    parts.push('</div>');
+    if (t.issues && t.issues.length) {
+      parts.push('<div style="margin-top:8px;padding:6px 10px;background:rgba(251,146,60,.1);border:1px solid rgba(251,146,60,.3);border-radius:6px;font-size:10px;color:var(--orange)">⚠️ ' + t.issues.join(' / ') + '</div>');
+    }
+    parts.push('</div>');
+  }
+
+  if (parts.length) {
+    el.style.display = 'block';
+    el.innerHTML = parts.join('');
+    if (badge) badge.textContent = '✅ 解析完了 — チェックリストに反映済み';
+  }
+}
+
+function aiInfoCell(label, val, span) {
+  return '<div style="' + (span ? 'grid-column:span ' + span + ';' : '') +
+    'padding:6px 10px;background:rgba(255,255,255,.03);border-radius:6px;border:1px solid var(--border2)">' +
+    '<div style="font-size:9px;color:var(--muted);margin-bottom:2px">' + escHtml(label) + '</div>' +
+    '<div style="font-size:11px;font-weight:600;color:var(--text)">' + escHtml(val || '—') + '</div>' +
+    '</div>';
+}
+
+function autoFillFromAi() {
+  // チェックリストのOK/NGを自動設定
+  var idRes = aiDocResults.id;
+  var tkRes = aiDocResults.takken;
+
+  if (idRes) {
+    // 氏名確認
+    autoSetItem('name', idRes.is_valid ? 'ok' : null, idRes.name ? '【AI抽出】氏名: ' + idRes.name : '');
+    // 身分証有効期限
+    if (idRes.expiry) {
+      var exp = new Date(idRes.expiry);
+      autoSetItem('addr', exp > new Date() ? 'ok' : 'ng', '【AI抽出】有効期限: ' + idRes.expiry);
+    }
+  }
+  if (tkRes) {
+    // 宅建士証の有効期限
+    if (tkRes.expiry) {
+      var tkExp = new Date(tkRes.expiry);
+      var isValid = tkExp > new Date();
+      autoSetItem('tk-exp', isValid ? 'ok' : 'ng', '【AI抽出】有効期限: ' + tkRes.expiry + (isValid ? '' : ' → 期限切れ'));
+    }
+    // 登録番号の形式
+    if (tkRes.registration_no) {
+      var fmtOk = /[都道府県]\(.+\)/.test(tkRes.registration_no) || /[^\s]+\(\d+\)/.test(tkRes.registration_no);
+      autoSetItem('tk-fmt', fmtOk ? 'ok' : 'ng', '【AI抽出】登録番号: ' + tkRes.registration_no);
+    }
+    // 宅建士証真正性
+    autoSetItem('tk-img', tkRes.is_valid ? 'ok' : 'ng',
+      tkRes.issues && tkRes.issues.length ? '【AI】懸念: ' + tkRes.issues.join(', ') : '【AI】画像に問題なし');
+  }
+  updateRing();
+}
+
+function autoSetItem(itemId, status, memo) {
+  // setStatus関数が存在する場合に呼び出し
+  if (typeof setStatus === 'function') {
+    setStatus(itemId, status);
+    if (memo) {
+      var inp = document.getElementById('memo-' + itemId);
+      if (inp && !inp.value) inp.value = memo;
+    }
+  }
+}
+
+// 申請者選択時にAIパネルを表示
+var _origSelectApp = null;
+
+// ════════════════════════════════════════════════════════════════
+
 function escHtml(s) {
   if (s == null) return '';
   return String(s)
@@ -731,6 +941,24 @@ function selectApp(id) {
   currentApp = app;
   checkState = {};
   currentVerdict = null;
+  // AI解析リセット
+  aiDocResults = {};
+  var aiPanel = document.getElementById('ai-doc-panel');
+  if (aiPanel) {
+    aiPanel.style.display = 'block';
+    document.getElementById('ai-doc-extracted').style.display = 'none';
+    document.getElementById('ai-doc-result-badge').textContent = '書類をアップロードすると自動解析します';
+    document.getElementById('ai-id-btn').innerHTML = '<div style="font-size:18px;margin-bottom:4px">🪪</div>身分証をアップロード';
+    document.getElementById('ai-id-btn').style.borderColor = '';
+    document.getElementById('ai-id-btn').style.background = '';
+    var tkBtn = document.getElementById('ai-takken-btn');
+    tkBtn.innerHTML = '<div style="font-size:18px;margin-bottom:4px">📜</div>宅建士証をアップロード';
+    tkBtn.style.borderColor = '';
+    tkBtn.style.background  = '';
+    // PTは宅建士証エリアを非表示
+    var tkArea = document.getElementById('ai-takken-area');
+    if (tkArea) tkArea.style.display = app.type === 'pt' ? 'none' : '';
+  }
 
   // Timer reset
   clearInterval(timerInterval);

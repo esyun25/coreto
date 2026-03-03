@@ -196,6 +196,12 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(circle
   </div>
   <div style="font-size:11px;color:var(--sub)">収益ダッシュボード — P&amp;L</div>
   <div class="hdr-right">
+    <button id="ai-report-btn" onclick="aiGenerateMonthlyReport()"
+      style="padding:7px 16px;background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.35);
+      color:var(--gold);border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;
+      font-family:'Noto Sans JP',sans-serif;margin-right:8px;display:flex;align-items:center;gap:6px">
+      ✨ AI月次レポート生成
+    </button>
     <button class="hdr-btn" onclick="location.href='coreto-hub.html'">← ホームに戻る</button>
   </div>
 </div>
@@ -564,6 +570,213 @@ function updateRefLink() {
   var url = base + '?ref=' + encodeURIComponent(_refCurrentCode);
   document.getElementById('ref-url-display').textContent = url;
 }
+
+// ════════════════════════════════════════════════════════════════
+// ⑩ AI月次レポート自動生成（Sonnet）
+// ════════════════════════════════════════════════════════════════
+
+// 画面上のKPIデータを収集
+function collectDashboardData() {
+  var get = function(id) {
+    var el = document.getElementById(id);
+    return el ? el.textContent.trim() : '—';
+  };
+  return {
+    期間: '2026年2月',
+    総収入: get('kpi-income'),
+    収入前月比: get('kpi-income-d'),
+    エージェント支払総額: get('kpi-cost'),
+    純利益: get('kpi-profit'),
+    利益前月比: get('kpi-profit-d'),
+    月会費収入: get('kpi-fee'),
+    成約件数: get('kpi-cases'),
+    成約前月比: get('kpi-cases-d'),
+    稼働エージェント: get('kpi-agents'),
+    即時払い手数料: get('kpi-instant'),
+    返金リスク: get('kpi-refund'),
+  };
+}
+
+async function aiGenerateMonthlyReport() {
+  var btn = document.getElementById('ai-report-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span style="animation:spin .8s linear infinite;display:inline-block">✨</span> 生成中...';
+
+  var kpis = collectDashboardData();
+
+  try {
+    var res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1200,
+        system: 'あなたは不動産・人材紹介会社のCFO補佐AIです。月次KPIデータをもとに、経営者向けの月次レポートを生成します。数値の背景にある課題・機会・推奨アクションを含めて分析してください。JSONのみで回答。前置き不要。',
+        messages: [{
+          role: 'user',
+          content: '以下のKPIデータから月次経営レポートを生成してください。\n\n' +
+            JSON.stringify(kpis, null, 2) +
+            '\n\n以下のJSON形式で回答：\n' +
+            '{"executive_summary":"経営サマリー（200字以内）",' +
+            '"highlights":[{"title":"ポジティブな点（3件）","detail":"詳細（80字以内）"}],' +
+            '"concerns":[{"title":"課題・リスク（2件）","detail":"詳細（80字以内）","action":"推奨アクション（60字以内）"}],' +
+            '"next_month_targets":{"revenue":"来月収入目標","cases":"来月成約件数目標","comment":"コメント（60字以内）"}}'
+        }]
+      })
+    });
+
+    var data = await res.json();
+    var text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+    var parsed = JSON.parse(text.replace(/```json|```/g, '').trim());
+
+    showMonthlyReportModal(parsed, kpis);
+
+  } catch(e) {
+    alert('レポート生成に失敗しました。しばらく待って再試行してください。');
+    console.error('AI月次レポート失敗:', e);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '✨ AI月次レポート生成';
+  }
+}
+
+function showMonthlyReportModal(report, kpis) {
+  var existing = document.getElementById('ai-report-modal-overlay');
+  if (existing) existing.remove();
+
+  var highlights = (report.highlights || []).map(function(h) {
+    return '<div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid rgba(52,211,153,.1)">' +
+      '<div style="color:var(--green);font-size:16px;flex-shrink:0">✅</div>' +
+      '<div><div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:2px">' + escHtml(h.title) + '</div>' +
+      '<div style="font-size:11px;color:var(--sub)">' + escHtml(h.detail) + '</div></div>' +
+    '</div>';
+  }).join('');
+
+  var concerns = (report.concerns || []).map(function(c) {
+    return '<div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid rgba(248,113,113,.1)">' +
+      '<div style="color:var(--orange);font-size:16px;flex-shrink:0">⚠️</div>' +
+      '<div><div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:2px">' + escHtml(c.title) + '</div>' +
+      '<div style="font-size:11px;color:var(--sub);margin-bottom:4px">' + escHtml(c.detail) + '</div>' +
+      '<div style="font-size:10px;color:var(--gold);background:rgba(201,168,76,.08);padding:4px 10px;border-radius:5px;display:inline-block">→ ' + escHtml(c.action) + '</div>' +
+      '</div></div>';
+  }).join('');
+
+  var nt = report.next_month_targets || {};
+
+  var overlay = document.createElement('div');
+  overlay.id = 'ai-report-modal-overlay';
+  overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:99999;' +
+    'display:flex;align-items:center;justify-content:center;padding:20px';
+
+  overlay.innerHTML =
+    '<div style="width:100%;max-width:680px;max-height:85vh;overflow-y:auto;background:#111520;' +
+    'border:1px solid rgba(201,168,76,.3);border-radius:16px;font-family:\'Noto Sans JP\',sans-serif">' +
+
+    // ヘッダー
+    '<div style="padding:20px 24px 16px;border-bottom:1px solid var(--border);' +
+    'display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#111520;z-index:1">' +
+      '<div>' +
+        '<div style="font-size:9px;color:var(--gold);letter-spacing:2px;font-weight:700;margin-bottom:4px">✨ AI GENERATED</div>' +
+        '<div style="font-size:18px;font-weight:800">月次経営レポート</div>' +
+        '<div style="font-size:11px;color:var(--muted);margin-top:2px">' + escHtml(kpis['期間']) + ' — Powered by Claude Sonnet</div>' +
+      '</div>' +
+      '<button onclick="document.getElementById(\'ai-report-modal-overlay\').remove()" ' +
+        'style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:20px;line-height:1">✕</button>' +
+    '</div>' +
+
+    // エグゼクティブサマリー
+    '<div style="padding:20px 24px;background:rgba(201,168,76,.05);border-bottom:1px solid var(--border)">' +
+      '<div style="font-size:9px;color:var(--gold);letter-spacing:2px;font-weight:700;margin-bottom:8px">EXECUTIVE SUMMARY</div>' +
+      '<div style="font-size:13px;line-height:1.9;color:var(--text)">' + escHtml(report.executive_summary || '') + '</div>' +
+    '</div>' +
+
+    // ハイライト
+    '<div style="padding:20px 24px;border-bottom:1px solid var(--border)">' +
+      '<div style="font-size:9px;color:var(--green);letter-spacing:2px;font-weight:700;margin-bottom:12px">HIGHLIGHTS</div>' +
+      highlights +
+    '</div>' +
+
+    // 課題・リスク
+    '<div style="padding:20px 24px;border-bottom:1px solid var(--border)">' +
+      '<div style="font-size:9px;color:var(--orange);letter-spacing:2px;font-weight:700;margin-bottom:12px">CONCERNS & ACTIONS</div>' +
+      concerns +
+    '</div>' +
+
+    // 来月目標
+    '<div style="padding:20px 24px">' +
+      '<div style="font-size:9px;color:var(--blue);letter-spacing:2px;font-weight:700;margin-bottom:12px">NEXT MONTH TARGETS</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">' +
+        '<div style="padding:12px 16px;background:rgba(79,156,249,.07);border:1px solid rgba(79,156,249,.2);border-radius:10px">' +
+          '<div style="font-size:9px;color:var(--muted);margin-bottom:4px">収入目標</div>' +
+          '<div style="font-size:18px;font-weight:800;color:var(--blue)">' + escHtml(nt.revenue || '—') + '</div>' +
+        '</div>' +
+        '<div style="padding:12px 16px;background:rgba(79,156,249,.07);border:1px solid rgba(79,156,249,.2);border-radius:10px">' +
+          '<div style="font-size:9px;color:var(--muted);margin-bottom:4px">成約目標</div>' +
+          '<div style="font-size:18px;font-weight:800;color:var(--blue)">' + escHtml(nt.cases || '—') + '</div>' +
+        '</div>' +
+      '</div>' +
+      (nt.comment ? '<div style="font-size:11px;color:var(--sub);padding:8px 12px;background:rgba(255,255,255,.03);border-radius:7px">' + escHtml(nt.comment) + '</div>' : '') +
+    '</div>' +
+
+    // フッター
+    '<div style="padding:14px 24px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">' +
+      '<div style="font-size:10px;color:var(--muted)">生成日時: ' + new Date().toLocaleString('ja-JP') + '</div>' +
+      '<button onclick="copyReportAsText()" ' +
+        'style="padding:8px 18px;background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.3);' +
+        'color:var(--gold);border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">📋 テキストをコピー</button>' +
+    '</div>' +
+
+    '</div>';
+
+  overlay._reportData = { report, kpis };
+  document.body.appendChild(overlay);
+}
+
+function copyReportAsText() {
+  var overlay = document.getElementById('ai-report-modal-overlay');
+  if (!overlay || !overlay._reportData) return;
+  var r = overlay._reportData.report;
+  var k = overlay._reportData.kpis;
+  var lines = [
+    '【月次経営レポート】' + k['期間'],
+    '',
+    '■ エグゼクティブサマリー',
+    r.executive_summary || '',
+    '',
+    '■ ハイライト',
+    ...(r.highlights || []).map(function(h) { return '✅ ' + h.title + '\n   ' + h.detail; }),
+    '',
+    '■ 課題・アクション',
+    ...(r.concerns || []).map(function(c) { return '⚠️ ' + c.title + '\n   ' + c.detail + '\n   → ' + c.action; }),
+    '',
+    '■ 来月目標',
+    '収入目標: ' + (r.next_month_targets?.revenue || '—'),
+    '成約目標: ' + (r.next_month_targets?.cases || '—'),
+    r.next_month_targets?.comment || '',
+  ];
+  var ta = document.createElement('textarea');
+  ta.value = lines.join('\n');
+  document.body.appendChild(ta); ta.select();
+  document.execCommand('copy'); document.body.removeChild(ta);
+  var btn = event.target;
+  btn.textContent = '✅ コピーしました';
+  setTimeout(function() { btn.textContent = '📋 テキストをコピー'; }, 2000);
+}
+
+function escHtml(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// spin CSS
+(function() {
+  var s = document.createElement('style');
+  s.textContent = '@keyframes spin{to{transform:rotate(360deg)}} #ai-report-modal-overlay *{box-sizing:border-box}';
+  document.head.appendChild(s);
+})();
+
+// ════════════════════════════════════════════════════════════════
 function closeRefModal() {
   document.getElementById('ref-modal-overlay').classList.remove('open');
 }

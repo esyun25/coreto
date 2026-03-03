@@ -366,6 +366,17 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
           <input type="text" placeholder="例：急ぎでお願いします">
         </div>
       </div>
+      <!-- ⑨ AIマッチング推薦ボタン -->
+      <div style="margin-top:10px">
+        <button onclick="aiRecommendAgent()" id="ai-match-btn"
+          style="width:100%;padding:10px 14px;background:rgba(167,139,250,.1);
+          border:1px solid rgba(167,139,250,.3);color:#a78bfa;border-radius:9px;
+          font-size:11px;font-weight:700;cursor:pointer;font-family:'Noto Sans JP',sans-serif;
+          display:flex;align-items:center;justify-content:center;gap:8px;transition:.15s">
+          ✨ AIがこの案件に最適なエージェントを推薦する（Sonnet）
+        </button>
+        <div id="ai-match-result" style="display:none;margin-top:10px"></div>
+      </div>
     </div>
 
     <!-- PT起票の場合：パートナー情報 + マッチング方法選択 -->
@@ -1447,6 +1458,106 @@ function notifyExpiredToPt(c) {
 // ページロード時・5分ごとに期限チェック（本番はZapier/Kintoneで管理）
 checkExpiredCases();
 setInterval(checkExpiredCases, 5 * 60 * 1000);
+
+// ════════════════════════════════════════════════════════════════
+// ⑨ AIマッチング推薦（Sonnet）
+// ════════════════════════════════════════════════════════════════
+
+// デモ用AGデータ（本番はKintoneから取得）
+const AGENTS_DEMO = [
+  { id:'AG-012', name:'山田 誠',   rank:'Gold',     type:'re', area:'池袋・豊島区',  monthly:3, mentees:2 },
+  { id:'AG-008', name:'佐藤 花子', rank:'Platinum', type:'re', area:'渋谷・世田谷区',monthly:5, mentees:4 },
+  { id:'AG-023', name:'鈴木 健太', rank:'Silver',   type:'re', area:'品川・港区',    monthly:2, mentees:0 },
+  { id:'HR-005', name:'田中 美穂', rank:'Gold',     type:'hr', area:'東京全域',      monthly:2, mentees:1 },
+];
+
+async function aiRecommendAgent() {
+  var btn = document.getElementById('ai-match-btn');
+  var resultEl = document.getElementById('ai-match-result');
+
+  // フォームから案件情報を収集
+  var biz  = gv('g-biz') || '不明';
+  var area = document.getElementById('mc-client-search')?.value || document.getElementById('g-area')?.value || '—';
+  var budget = document.getElementById('g-budget')?.value || '—';
+  var title  = document.getElementById('g-title')?.value || biz;
+
+  btn.disabled = true;
+  btn.innerHTML = '<span style="animation:spin .8s linear infinite;display:inline-block">✨</span> AIが最適なAGを分析中...（Sonnet）';
+
+  try {
+    var res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 600,
+        system: 'あなたは不動産・人材紹介会社のマネージャーAIです。案件情報とエージェント一覧から最適なエージェントを選び、推薦理由を説明してください。JSONのみで回答。',
+        messages:[{role:'user', content:
+          '以下の案件に最適なエージェントを推薦してください。\n\n' +
+          '【案件情報】\n' + JSON.stringify({種別:biz, エリア:area, 予算:budget, タイトル:title}) +
+          '\n\n【エージェント一覧】\n' + JSON.stringify(AGENTS_DEMO) +
+          '\n\n{"recommendations":[{"agent_id":"AG-XXX","name":"名前","rank":"ランク","reason":"推薦理由（60字以内）","match_score":0-100},...],"notes":"全体的なコメント（50字以内）"}'
+        }]
+      })
+    });
+    var data = await res.json();
+    var text = (data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
+    var parsed = JSON.parse(text.replace(/```json|```/g,'').trim());
+    var recs = (parsed.recommendations || []).slice(0, 3);
+
+    resultEl.style.display = 'block';
+    resultEl.innerHTML =
+      '<div style="background:rgba(167,139,250,.07);border:1px solid rgba(167,139,250,.25);' +
+      'border-radius:10px;padding:14px 16px">' +
+        '<div style="font-size:11px;font-weight:700;color:#a78bfa;margin-bottom:10px">✨ AI推薦結果</div>' +
+        recs.map(function(r, i) {
+          var scoreColor = r.match_score >= 80 ? 'var(--green)' : r.match_score >= 60 ? 'var(--orange)' : 'var(--sub)';
+          return '<div style="display:flex;align-items:flex-start;gap:10px;padding:10px;' +
+            'background:rgba(255,255,255,.03);border-radius:8px;margin-bottom:6px;' +
+            'border:1px solid ' + (i===0 ? 'rgba(167,139,250,.3)' : 'var(--border2)') + ';cursor:pointer" ' +
+            'onclick="selectRecommendedAgent(\'' + r.agent_id + '\', \'' + r.name + '\')">' +
+            '<div style="font-size:18px;flex-shrink:0">' + (i===0?'🥇':i===1?'🥈':'🥉') + '</div>' +
+            '<div style="flex:1">' +
+              '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">' +
+                '<span style="font-size:12px;font-weight:700">' + r.name + '</span>' +
+                '<span style="font-size:10px;color:var(--muted)">' + r.agent_id + '</span>' +
+                '<span style="font-size:10px;color:var(--gold);font-weight:700">' + r.rank + '</span>' +
+              '</div>' +
+              '<div style="font-size:10px;color:var(--sub);margin-bottom:4px">' + r.reason + '</div>' +
+              '<div style="font-size:10px;color:' + scoreColor + ';font-weight:700">適合度 ' + r.match_score + '%</div>' +
+            '</div>' +
+            '<div style="font-size:10px;color:#a78bfa;font-weight:700;flex-shrink:0">選択 →</div>' +
+          '</div>';
+        }).join('') +
+        (parsed.notes ? '<div style="font-size:10px;color:var(--sub);margin-top:6px;padding:6px 8px;' +
+          'background:rgba(255,255,255,.03);border-radius:6px">💡 ' + parsed.notes + '</div>' : '') +
+      '</div>';
+
+    btn.disabled = false;
+    btn.innerHTML = '✨ AIがこの案件に最適なエージェントを推薦する（Sonnet）';
+  } catch(e) {
+    resultEl.style.display = 'block';
+    resultEl.innerHTML = '<div style="font-size:10px;color:var(--muted);padding:8px">推薦の取得に失敗しました</div>';
+    btn.disabled = false;
+    btn.innerHTML = '✨ AIがこの案件に最適なエージェントを推薦する（Sonnet）';
+    console.error('AIマッチング推薦失敗:', e);
+  }
+}
+
+function selectRecommendedAgent(agentId, agentName) {
+  var sel = document.getElementById('direct-agent');
+  if (!sel) return;
+  // セレクトボックスに一致するオプションを選択
+  for (var i = 0; i < sel.options.length; i++) {
+    if (sel.options[i].text.includes(agentId) || sel.options[i].text.includes(agentName)) {
+      sel.selectedIndex = i;
+      toast('✅ ' + agentName + ' を選択しました');
+      return;
+    }
+  }
+  toast('リストに候補がいません — 手動で選択してください');
+}
+
+// ════════════════════════════════════════════════════════════════
 
 // ── 案件起票 ──
 function submitCase() {

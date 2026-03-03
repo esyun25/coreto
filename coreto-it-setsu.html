@@ -729,6 +729,160 @@ function simulateUpload(file) {
   }, 120);
 }
 
+// ════════════════════════════════════════════════════════════════
+// ① AI：署名・捺印箇所抽出
+// ════════════════════════════════════════════════════════════════
+
+// 抽出済みチェックリストを案件ごとに保持
+var aiSigChecklists = {}; // { caseId: { docIdx: [{page,label,checked}] } }
+
+async function aiExtractSignatures(docIdx, event) {
+  var btn = document.getElementById('ai-sig-btn-' + docIdx);
+  var resultEl = document.getElementById('ai-sig-result-' + docIdx);
+  var caseId = currentCase.id;
+  var docs = getDriveDocs(caseId);
+  var doc = docs[docIdx];
+  if (!doc) return;
+
+  btn.disabled = true;
+  btn.innerHTML = '<span style="animation:spin .8s linear infinite;display:inline-block">⏳</span> AI解析中...';
+
+  // デモ用: 実際はfile objectを保持してbase64変換して送る
+  // 本番ではdoc.fileObjectをbase64に変換してAPIに渡す
+  var docType = doc.key === 'keiyaku' ? '賃貸借契約書' : '重要事項説明書';
+
+  try {
+    var response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 1000,
+        system: 'あなたは宅建業務の専門家AIです。賃貸借契約書や重要事項説明書の署名・捺印が必要な箇所を特定します。JSONのみで回答し、前置きや説明は不要です。',
+        messages: [{
+          role: 'user',
+          content: `以下は「${docType}」のファイル名です：「${doc.fileName}」\n\n一般的な${docType}に存在する署名・捺印が必要な箇所を全て列挙してください。\n\n以下のJSON形式のみで回答してください（前置き不要）：\n{"items":[{"page":"ページ番号（例:3ページ）","label":"箇所名（例:借主署名欄）","type":"署名|捺印|署名+捺印|日付記入"}]}`
+        }]
+      })
+    });
+    var data = await response.json();
+    var text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+    var clean = text.replace(/```json|```/g, '').trim();
+    var parsed = JSON.parse(clean);
+    var items = parsed.items || [];
+
+    // チェックリスト状態を保存
+    if (!aiSigChecklists[caseId]) aiSigChecklists[caseId] = {};
+    aiSigChecklists[caseId][docIdx] = items.map(function(item) {
+      return { page: item.page, label: item.label, type: item.type, checked: false };
+    });
+
+    renderSigChecklist(docIdx, caseId);
+    btn.innerHTML = '✨ AI：署名・捺印箇所を再抽出する';
+    btn.disabled = false;
+
+  } catch(e) {
+    btn.innerHTML = '⚠️ 抽出失敗 — 再試行';
+    btn.disabled = false;
+    console.error('AI署名抽出エラー:', e);
+  }
+}
+
+function renderSigChecklist(docIdx, caseId) {
+  var resultEl = document.getElementById('ai-sig-result-' + docIdx);
+  if (!resultEl) return;
+  var list = (aiSigChecklists[caseId] || {})[docIdx] || [];
+  if (!list.length) { resultEl.style.display = 'none'; return; }
+
+  var allChecked = list.every(function(i) { return i.checked; });
+  var checkedCount = list.filter(function(i) { return i.checked; }).length;
+
+  resultEl.style.display = 'block';
+  resultEl.innerHTML =
+    '<div style="background:rgba(201,168,76,.07);border:1px solid rgba(201,168,76,.25);' +
+    'border-radius:10px;padding:14px 16px">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">' +
+        '<div style="font-size:11px;font-weight:700;color:var(--gold)">✨ AI抽出 — 署名・捺印チェックリスト</div>' +
+        '<div style="font-size:10px;color:' + (allChecked ? 'var(--green)' : 'var(--orange)') + ';font-weight:700">' +
+          checkedCount + ' / ' + list.length + ' 完了' +
+        '</div>' +
+      '</div>' +
+      list.map(function(item, i) {
+        return '<div onclick="toggleSigCheck(' + docIdx + ',' + i + ')" ' +
+          'style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;' +
+          'cursor:pointer;margin-bottom:4px;transition:.15s;' +
+          'background:' + (item.checked ? 'rgba(52,211,153,.1)' : 'rgba(255,255,255,.03)') + ';' +
+          'border:1px solid ' + (item.checked ? 'rgba(52,211,153,.3)' : 'var(--border2)') + '">' +
+            '<div style="width:18px;height:18px;border-radius:5px;border:2px solid ' +
+              (item.checked ? 'var(--green)' : 'var(--border2)') + ';' +
+              'background:' + (item.checked ? 'var(--green)' : 'transparent') + ';' +
+              'display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px">' +
+              (item.checked ? '✓' : '') +
+            '</div>' +
+            '<div style="flex:1">' +
+              '<div style="font-size:12px;font-weight:600;color:' + (item.checked ? 'var(--sub)' : 'var(--text)') + ';' +
+                (item.checked ? 'text-decoration:line-through;' : '') + '">' +
+                item.label +
+              '</div>' +
+              '<div style="font-size:10px;color:var(--muted);margin-top:1px">' +
+                item.page + '　' + item.type +
+              '</div>' +
+            '</div>' +
+        '</div>';
+      }).join('') +
+      '<div style="margin-top:10px;padding:8px 10px;border-radius:7px;font-size:11px;' +
+        'background:rgba(79,156,249,.07);border:1px solid rgba(79,156,249,.15);color:var(--sub)">' +
+        '💡 宅建士がクライアントと一緒に確認しながら、完了した箇所をチェックしてください' +
+      '</div>' +
+    '</div>';
+
+  // 完了ボタンのロック状態を更新
+  updateCompleteBtn();
+}
+
+function toggleSigCheck(docIdx, itemIdx) {
+  var caseId = currentCase ? currentCase.id : null;
+  if (!caseId || !aiSigChecklists[caseId] || !aiSigChecklists[caseId][docIdx]) return;
+  aiSigChecklists[caseId][docIdx][itemIdx].checked = !aiSigChecklists[caseId][docIdx][itemIdx].checked;
+  renderSigChecklist(docIdx, caseId);
+}
+
+function getSigCheckStatus() {
+  var caseId = currentCase ? currentCase.id : null;
+  if (!caseId || !aiSigChecklists[caseId]) return { total: 0, checked: 0, hasChecklist: false };
+  var allItems = [];
+  Object.values(aiSigChecklists[caseId]).forEach(function(items) { allItems = allItems.concat(items); });
+  if (!allItems.length) return { total: 0, checked: 0, hasChecklist: false };
+  return {
+    total: allItems.length,
+    checked: allItems.filter(function(i) { return i.checked; }).length,
+    hasChecklist: true
+  };
+}
+
+function updateCompleteBtn() {
+  var btn = document.getElementById('ab-complete-btn');
+  var prog = document.getElementById('ab-progress');
+  if (!btn) return;
+  var sig = getSigCheckStatus();
+  if (!sig.hasChecklist) return; // チェックリストなければ従来通り
+  var allOk = sig.checked === sig.total;
+  btn.disabled = !allOk;
+  btn.style.opacity = allOk ? '1' : '0.45';
+  btn.style.cursor  = allOk ? 'pointer' : 'not-allowed';
+  btn.title = allOk ? '' : '全ての署名・捺印箇所を確認してからチェックしてください';
+  if (prog) prog.textContent = '署名確認 ' + sig.checked + '/' + sig.total;
+}
+
+// CSS追加（spin アニメーション）
+(function() {
+  var s = document.createElement('style');
+  s.textContent = '@keyframes spin{to{transform:rotate(360deg)}}';
+  document.head.appendChild(s);
+})();
+
+// ════════════════════════════════════════════════════════════════
+
 function autoMatchDoc(fileName, docs) {
   var fn = fileName.toLowerCase();
   var keywords = [
@@ -811,6 +965,19 @@ function renderDriveDocs() {
           '📢 共有' +
         '</button>' +
       '</div>' +
+      // AI署名抽出ボタン（アップロード済みかつ契約書・重説書のみ）
+      (hasUrl && (doc.key === 'keiyaku' || doc.key === 'jyusetsu') ?
+        '<button onclick="aiExtractSignatures(' + idx + ', event)" ' +
+          'id="ai-sig-btn-' + idx + '" ' +
+          'style="width:100%;margin-top:8px;padding:8px 14px;' +
+          'background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.3);' +
+          'color:var(--gold);border-radius:8px;font-size:11px;font-weight:700;' +
+          'cursor:pointer;font-family:\'Noto Sans JP\',sans-serif;' +
+          'display:flex;align-items:center;justify-content:center;gap:8px;transition:.15s">' +
+          '✨ AI：署名・捺印箇所を抽出する' +
+        '</button>' +
+        '<div id="ai-sig-result-' + idx + '" style="display:none;margin-top:10px"></div>'
+      : '') +
     '</div>';
   }).join('');
 

@@ -711,8 +711,92 @@ function open_case(id) {
     + buildStepBar(c);
 
   buildStepContent(c);
+
+  // ⑧ 停滞案件の場合にAIアドバイスを表示
+  if (c.stale) {
+    showStaleAdvice(c);
+  } else {
+    var existing = document.getElementById('ai-advice-banner');
+    if (existing) existing.remove();
+  }
+
   render();
   } catch(e) { console.error('open_case error:', e); toast('表示エラー: '+e.message); }
+}
+
+// ⑧ AI停滞案件アドバイス
+async function showStaleAdvice(c) {
+  // 既存バナーを削除
+  var prev = document.getElementById('ai-advice-banner');
+  if (prev) prev.remove();
+
+  var panel = document.getElementById('panel');
+  if (!panel) return;
+
+  // ローディングバナーを挿入（panel-topの後）
+  var panelTop = document.getElementById('panel-top');
+  var banner = document.createElement('div');
+  banner.id = 'ai-advice-banner';
+  banner.style.cssText = 'margin:12px 0 0;padding:12px 14px;background:rgba(201,168,76,.07);' +
+    'border:1px solid rgba(201,168,76,.25);border-radius:10px;font-size:11px';
+  banner.innerHTML = '<div style="color:var(--gold);font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:6px">' +
+    '⚠️ 停滞中 — <span style="animation:spin .8s linear infinite;display:inline-block">✨</span> AIがアドバイスを生成中...</div>';
+  panelTop.parentNode.insertBefore(banner, panelTop.nextSibling);
+
+  const typeLabel = c.type==='sannai'?'三為':c.type==='reSale'?'売買':c.type==='hr'?'人材紹介':'賃貸';
+  const stepLabels = {naiken:'内見',screening:'審査',offer:'買付',invoice:'請求書',contract:'契約',
+    settlement:'決済',apply:'面接調整',payment:'在籍確認',verify:'業者確認'};
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 400,
+        system: 'あなたは不動産・人材紹介の営業支援AIです。停滞している案件に対して、担当エージェントが取るべき具体的な次のアクションを3つ提案してください。JSONのみで回答。',
+        messages:[{role:'user', content:
+          '以下の停滞案件について、具体的な次のアクションを3つ提案してください。\n' +
+          JSON.stringify({
+            案件種別: typeLabel,
+            現在のステップ: stepLabels[c.step] || c.step,
+            停滞日数: c.age + '日',
+            クライアント: c.corp ? '法人' : '個人',
+            物件概要: c.sub,
+            活動履歴: (c.hist||[]).slice(0,3)
+          }) +
+          '\n\n{"actions":[{"title":"アクション名（15字以内）","detail":"具体的な内容（50字以内）","priority":"high|medium|low"}],"reason":"停滞している可能性のある理由（50字以内）"}'
+        }]
+      })
+    });
+    const data = await res.json();
+    const text = (data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
+    const parsed = JSON.parse(text.replace(/```json|```/g,'').trim());
+    const actions = parsed.actions || [];
+    const priorityColor = {high:'var(--red)', medium:'var(--orange)', low:'var(--sub)'};
+
+    banner.innerHTML =
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">' +
+        '<div style="color:var(--gold);font-weight:700;font-size:11px">✨ AI停滞アドバイス</div>' +
+        '<button onclick="this.closest(\'[id=ai-advice-banner]\').remove()" ' +
+          'style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px">✕</button>' +
+      '</div>' +
+      (parsed.reason ? '<div style="font-size:10px;color:var(--sub);margin-bottom:10px;padding:6px 10px;' +
+        'background:rgba(255,255,255,.03);border-radius:6px">💡 ' + escHtml(parsed.reason) + '</div>' : '') +
+      actions.map(function(a, i) {
+        return '<div style="display:flex;align-items:flex-start;gap:8px;padding:7px 0;' +
+          (i < actions.length-1 ? 'border-bottom:1px solid rgba(255,255,255,.05);' : '') + '">' +
+          '<div style="width:18px;height:18px;border-radius:50%;background:' + (priorityColor[a.priority]||'var(--sub)') +
+            ';display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;' +
+            'color:#0a0c10;flex-shrink:0;margin-top:1px">' + (i+1) + '</div>' +
+          '<div><div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:1px">' + escHtml(a.title) + '</div>' +
+          '<div style="font-size:10px;color:var(--sub)">' + escHtml(a.detail) + '</div></div>' +
+        '</div>';
+      }).join('');
+
+  } catch(e) {
+    banner.innerHTML = '<div style="color:var(--muted);font-size:10px">✨ AIアドバイスを取得できませんでした</div>';
+    console.log('AI停滞アドバイス失敗:', e.message);
+  }
 }
 
 function close_panel() {
@@ -4095,17 +4179,90 @@ function settlementDone(id) {
   const c = CASES.find(x=>x.id===id); if(!c) return;
   const d = document.getElementById('s-settlement')?.value||todayISO();
   const inv = c.invoice||{};
-  const sn  = c.sannai||{};
-  slackSend(SLACK_CH.決済, [
-    ...slackHeader('💴','決済完了 → 成約'),
-    ...slackCase(c),
-    '🏠 *物件*：'+(inv.prop||c.dates?.naikenProp||c.sub||'—'),
-    '📅 *決済日*：'+d,
-    sn.sellPrice ? '💴 *販売価格*：¥'+sn.sellPrice.toLocaleString() : (inv.salePrice ? '💴 *売買価格*：¥'+parseInt(inv.salePrice).toLocaleString() : null),
-    inv.grandTotal ? '💰 *請求合計*：¥'+parseInt(inv.grandTotal).toLocaleString() : null,
-    ...slackFooter(),
-  ]);
+  const sn  = c.sannai||{}; 
+
+  // ③ AI通知文生成（非同期・バックグラウンドで実行）
+  aiGenerateSlackMsg(c, d, inv, sn);
+
   advance(id,'done','settlement',d,'決済完了 (決済日: '+d+') → 成約');
+}
+
+async function aiGenerateSlackMsg(c, settlementDate, inv, sn) {
+  const typeLabel = c.type==='sannai'?'三為':c.type==='reSale'?'売買':'賃貸';
+  const prop = inv.prop||c.dates?.naikenProp||c.sub||'—';
+  const price = sn.sellPrice ? '¥'+sn.sellPrice.toLocaleString()
+    : inv.salePrice ? '¥'+parseInt(inv.salePrice).toLocaleString() : '—';
+  const fee = inv.grandTotal ? '¥'+parseInt(inv.grandTotal).toLocaleString() : '—';
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model:'claude-haiku-4-5-20251001',
+        max_tokens:400,
+        system:'不動産仲介会社のSlack通知文を作成します。絵文字を適度に使い、簡潔で読みやすい日本語の通知文を生成してください。JSONのみで回答。前置き不要。',
+        messages:[{role:'user', content:
+          '以下の成約情報からSlack通知文を生成してください。\n' +
+          JSON.stringify({
+            案件種別: typeLabel,
+            物件名: prop,
+            クライアント名: c.name,
+            担当AG: c.agent,
+            決済日: settlementDate,
+            売買価格: price,
+            手数料: fee,
+            案件ID: c.id
+          }) +
+          '\n\n{"text":"Slack投稿テキスト（200字以内）","summary":"1行サマリー（50字以内）"}'
+        }]
+      })
+    });
+    const data = await res.json();
+    const text = (data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
+    const parsed = JSON.parse(text.replace(/```json|```/g,'').trim());
+
+    // トーストでAI生成文を表示 + クリップボードコピー
+    showAiSlackToast(parsed.text, parsed.summary);
+  } catch(e) {
+    console.log('AI通知文生成スキップ:', e.message);
+    // 失敗しても通常フローは継続
+  }
+}
+
+function showAiSlackToast(slackText, summary) {
+  var existing = document.getElementById('ai-slack-toast');
+  if (existing) existing.remove();
+  var t = document.createElement('div');
+  t.id = 'ai-slack-toast';
+  t.style.cssText = 'position:fixed;bottom:80px;right:20px;width:340px;background:#111520;' +
+    'border:1px solid rgba(201,168,76,.4);border-radius:12px;padding:16px;z-index:99999;' +
+    'box-shadow:0 8px 32px rgba(0,0,0,.5);font-family:\'Noto Sans JP\',sans-serif';
+  t.innerHTML =
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">' +
+      '<div style="font-size:11px;font-weight:700;color:var(--gold)">✨ AI Slack通知文</div>' +
+      '<button onclick="this.closest(\'#ai-slack-toast\').remove()" ' +
+        'style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px">✕</button>' +
+    '</div>' +
+    '<div style="font-size:11px;color:var(--sub);line-height:1.7;white-space:pre-wrap;' +
+      'background:rgba(255,255,255,.03);border-radius:7px;padding:10px;margin-bottom:10px">' +
+      escHtml(slackText) +
+    '</div>' +
+    '<button onclick="copyAiSlackText(this)" data-text="' + slackText.replace(/"/g,'&quot;') + '" ' +
+      'style="width:100%;padding:8px;background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.3);' +
+      'color:var(--gold);border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;' +
+      'font-family:\'Noto Sans JP\',sans-serif">📋 コピーして貼り付け</button>';
+  document.body.appendChild(t);
+  setTimeout(function(){ if(t.parentNode) t.remove(); }, 30000);
+}
+
+function copyAiSlackText(btn) {
+  var text = btn.getAttribute('data-text');
+  var ta = document.createElement('textarea');
+  ta.value = text; document.body.appendChild(ta); ta.select();
+  document.execCommand('copy'); document.body.removeChild(ta);
+  btn.textContent = '✅ コピーしました';
+  setTimeout(function(){ btn.textContent = '📋 コピーして貼り付け'; }, 2000);
 }
 
 function offerDone(id) {
