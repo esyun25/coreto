@@ -88,6 +88,8 @@ html,body{height:100%;font-family:'Noto Sans JP',sans-serif;background:var(--bg)
 .task-tags{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
 .task-tag{font-size:9px;padding:2px 8px;border-radius:5px;font-weight:700;
   background:rgba(74,82,112,.15);color:var(--muted);border:1px solid var(--border2)}
+.tag-req{background:rgba(248,113,113,.1);color:var(--red);border-color:rgba(248,113,113,.3)}
+.tag-ms{background:rgba(201,168,76,.1);color:var(--gold);border-color:rgba(201,168,76,.3)}
 /* Phase headers */
 .phase-hdr{display:flex;align-items:center;gap:10px;padding:10px 0;margin-bottom:4px}
 .phase-line{flex:1;height:1px;background:var(--border)}
@@ -137,7 +139,7 @@ html,body{height:100%;font-family:'Noto Sans JP',sans-serif;background:var(--bg)
 @media(max-width:480px){
   .g3,.step-grid,.kpi-row{grid-template-columns:1fr !important}
 }
-</style>.ref-copy-btn:hover{opacity:.9}
+.ref-copy-btn:hover{opacity:.9}
 </style>
 </head>
 <body>
@@ -191,28 +193,208 @@ const SESSION_KEY = 'coreto_session';
 const s = (() => { try { return JSON.parse(sessionStorage.getItem(SESSION_KEY)||'{}'); } catch(e){return {};} })();
 const ME = { id: s.id||'10012', name: s.name||'山田 誠', type: s.type||'re' };
 
-// タスクデータ（RE版）
-const // ── タスク定義（done状態はDB.getOnboardingProgress()で上書き） ──
-TASKS_RE = [
-  // Phase 1
-  {id:1,phase:'フェーズ1：入会手続き（1週目）',title:'業務委託契約書に電子署名',sub:'最新バージョンの契約書を読み、電子署名で締結してください',tags:['必須'],link:'coreto-contract.html',done:true},
-  {id:2,phase:'フェーズ1：入会手続き（1週目）',title:'eKYC・本人確認を完了',sub:'身分証明書と自撮り写真をアップロードし、HQ審査を完了してください',tags:['必須'],link:'coreto-kyc.html',done:true},
-  {id:3,phase:'フェーズ1：入会手続き（1週目）',title:'口座情報を登録',sub:'報酬振込用の銀行口座を登録してください',tags:['必須'],link:'coreto-kyc.html',done:true},
-  {id:4,phase:'フェーズ1：入会手続き（1週目）',title:'LINEへの認証コード受信を確認',sub:'CORETO公式LINEを友達追加し、認証コードが届くことを確認してください',tags:['必須'],done:true},
-  // Phase 2
-  {id:5,phase:'フェーズ2：システム習得（2週目）',title:'マイページを確認',sub:'ダッシュボード・ツール一覧・支払明細の確認方法を把握してください',tags:['推奨'],link:'coreto-agent-mypage.html',done:true},
-  {id:6,phase:'フェーズ2：システム習得（2週目）',title:'案件ボードの操作を習得',sub:'案件パイプラインで案件の登録・ステータス変更・メモ追加を試してください',tags:['推奨'],link:'coreto-pipeline.html',done:false},
-  {id:7,phase:'フェーズ2：システム習得（2週目）',title:'顧客DBの登録を試す',sub:'顧客情報の登録・検索・履歴管理の方法を確認してください',tags:['推奨'],link:'coreto-client-id.html',done:false},
-  {id:8,phase:'フェーズ2：システム習得（2週目）',title:'報酬規程を読む',sub:'成約報酬・ランク制度・ポイント計算を理解してください。FAQも参照',tags:['必須'],link:'coreto-faq.html',done:false},
-  // Phase 3
-  {id:9,phase:'フェーズ3：業務習得（3〜4週目）',title:'内見依頼書を作成してみる',sub:'物件を選び内見依頼書を作成する流れを練習してください',tags:['実務'],link:'coreto-naiken.html',done:false},
-  {id:10,phase:'フェーズ3：業務習得（3〜4週目）',title:'IT重説チェックリストを確認',sub:'IT重説の実施手順と必要書類を理解してください',tags:['実務'],link:'coreto-it-setsu.html',done:false},
-  {id:11,phase:'フェーズ3：業務習得（3〜4週目）',title:'成約報告の流れを確認',sub:'成約時の報告手順・必要書類を確認してください',tags:['実務'],link:'coreto-batch-close.html',done:false},
-  {id:12,phase:'フェーズ3：業務習得（3〜4週目）',title:'ランクダッシュボードで目標設定',sub:'現在のランクと次のランクまでの目標ポイントを確認してください',tags:['推奨'],link:'coreto-rank.html',done:false},
-  // Phase 4
-  {id:13,phase:'フェーズ4：初案件（1ヶ月目）',title:'初案件を案件ボードに登録',sub:'最初の問い合わせをパイプラインに登録してください',tags:['マイルストーン'],done:false},
-  {id:14,phase:'フェーズ4：初案件（1ヶ月目）',title:'名刺を発注',sub:'マイページから名刺を発注してください（¥2,000）',tags:['推奨'],link:'coreto-agent-mypage.html',done:false},
+// ══════════════════════════════════════════════════════════════════
+//  タスク定義（ロール別）
+// ══════════════════════════════════════════════════════════════════
+
+// ── 不動産エージェント（RE）──────────────────────────────────────
+const TASKS_RE = [
+  // Phase 1：入会手続き
+  {id:1, phase:'フェーズ1：入会手続き（1週目）',
+   title:'業務委託契約書に電子署名',
+   sub:'最新バージョンの契約書を読み、電子署名で締結してください。署名後はマイページから確認できます。',
+   detail:'契約書は毎年改定される場合があります。変更点はHQよりSlack通知されます。\n\n【確認ポイント】\n・報酬率（ランク別）\n・守秘義務の範囲\n・競業避止条件（退会後6ヶ月）\n・返金・違約金条項',
+   tags:['必須'], link:'coreto-contract.html', done:false},
+  {id:2, phase:'フェーズ1：入会手続き（1週目）',
+   title:'eKYC・本人確認を完了',
+   sub:'身分証明書（運転免許証または在留カード）と自撮り写真をアップロードし、HQ審査を完了してください。',
+   detail:'審査期間：通常1〜3営業日。否認された場合はSlackで理由が通知されます。\n\n【必要書類】\n・本人確認書類（顔写真付き）\n・宅地建物取引士証（RE限定）\n・在留カード（外国籍の場合）',
+   tags:['必須'], link:'coreto-kyc.html', done:false},
+  {id:3, phase:'フェーズ1：入会手続き（1週目）',
+   title:'口座情報を登録',
+   sub:'報酬振込用の銀行口座を登録してください。毎月25日に振込処理が行われます。',
+   detail:'【振込スケジュール】\n・毎月25日（前営業日）に前月分を振込\n・初回振込は入会翌月分から\n\n【注意事項】\n・名義はエージェント本人名義のみ（法人口座不可）\n・変更は毎月10日までに届け出が必要',
+   tags:['必須'], link:'coreto-kyc.html', done:false},
+  {id:4, phase:'フェーズ1：入会手続き（1週目）',
+   title:'LINE WORKS でHQと繋がる',
+   sub:'CORETO公式のLINE WORKSグループに参加してください。案件通知・重要連絡はすべてこちらで行います。',
+   detail:'LINE WORKSはCORETO内部の業務連絡ツールです。\n\n【参加方法】\n1. LINE WORKSアプリをダウンロード\n2. 招待メールのURLをタップ\n3. CORETO組織へ参加\n\n【主なグループ】\n・CORETO全体（必須）\n・RE エージェント（必須）\n・案件別（都度招待）',
+   tags:['必須'], done:false},
+
+  // Phase 2：システム習得
+  {id:5, phase:'フェーズ2：システム習得（2週目）',
+   title:'マイページと支払明細の確認',
+   sub:'ダッシュボード・ツール一覧・支払明細の確認方法を把握してください。',
+   detail:'【マイページでできること】\n・今月の成約件数・報酬額の確認\n・支払明細書の閲覧・印刷\n・口座情報の変更\n・名刺発注\n・紹介リンクの発行',
+   tags:['推奨'], link:'coreto-agent-mypage.html', done:false},
+  {id:6, phase:'フェーズ2：システム習得（2週目）',
+   title:'案件パイプラインの操作習得',
+   sub:'案件の登録・ステータス変更・メモ追加・成約報告の流れを理解してください。',
+   detail:'【パイプラインのステータス】\n問い合わせ → 内見調整 → 内見済み → 審査中 → 申込 → 重説 → 契約 → 成約\n\n【重要ルール】\n・成約報告は成約日から5営業日以内に必須\n・物件情報は正確に入力（後で支払明細に反映）\n・三為取引は必ずチェックボックスをON',
+   tags:['推奨'], link:'coreto-pipeline.html', done:false},
+  {id:7, phase:'フェーズ2：システム習得（2週目）',
+   title:'顧客DB（クライアントID）の登録',
+   sub:'クライアント情報の登録・検索・履歴管理の方法を確認してください。',
+   detail:'【クライアントIDについて】\n・CL-XXXXXX形式のユニークIDで管理\n・同一クライアントの重複登録を防止\n・HQ全員でクライアント情報を共有\n\n【入力必須項目】\n・氏名・電話番号・メールアドレス\n・希望エリア・予算\n・在留資格（外国籍の場合）',
+   tags:['推奨'], link:'coreto-client-id.html', done:false},
+  {id:8, phase:'フェーズ2：システム習得（2週目）',
+   title:'報酬規程・ランク制度を理解',
+   sub:'成約報酬率・ランクアップ条件・ポイント計算・メンター制度を理解してください。',
+   detail:'【報酬率（不動産）】\n・Bronze：65%　Silver：67.5%\n・Gold：70%　Platinum：75%\n・創業メンバー：90%（固定）\n\n【ランクアップ条件】\n月次ポイント（手数料10万/件1件/メンター報酬5千=各1pt）で判定\nSilver：10pt／Gold：20pt／Platinum：30pt\n\n【メンターフィー】\n自分の紹介で入会したエージェントの成約から最大10%を受け取れます',
+   tags:['必須'], link:'coreto-faq.html', done:false},
+
+  // Phase 3：業務習得
+  {id:9, phase:'フェーズ3：業務習得（3〜4週目）',
+   title:'内見依頼書・現地案内の流れ',
+   sub:'内見依頼書の作成から当日の案内、写真撮影、フィードバック記録までの流れを練習してください。',
+   detail:'【内見前の準備】\n・クライアントへ前日リマインド連絡\n・物件の鍵・アクセス方法の確認\n・内見依頼書の事前作成\n\n【内見当日】\n・5〜10分前に現地着\n・クライアントの要望を都度メモ\n・写真撮影（管理会社許可済みの場合）\n\n【内見後】\n・感触をパイプラインにメモ\n・次アクションを明確に設定',
+   tags:['実務'], link:'coreto-naiken.html', done:false},
+  {id:10, phase:'フェーズ3：業務習得（3〜4週目）',
+   title:'IT重説チェックリストの確認',
+   sub:'IT重説（重要事項説明のオンライン実施）の手順と必要書類、署名箇所の確認方法を理解してください。',
+   detail:'【IT重説の法的要件】\n・宅建士証を画面越しにクライアントへ提示\n・クライアントの承諾を口頭+記録で確認\n・書類の送付は事前に完了\n\n【CORETO IT重説ツールの流れ】\n1. 案件選択 → 書類アップロード\n2. AIが署名・捺印箇所を自動抽出\n3. オンライン会議開始\n4. チェックリストを確認しながら説明\n5. 全チェック完了で「重説完了」ボタン解放\n\n【注意】重説は宅建士のみ実施可能',
+   tags:['実務'], link:'coreto-it-setsu.html', done:false},
+  {id:11, phase:'フェーズ3：業務習得（3〜4週目）',
+   title:'書類審査・入居審査の流れ',
+   sub:'入居申込書・審査書類の収集から保証会社審査結果の確認までの流れを把握してください。',
+   detail:'【審査書類の種類】\n・収入証明（源泉徴収票・確定申告書・在職証明）\n・身分証（運転免許・在留カード等）\n・外国籍の場合：在留資格証明書\n\n【よくある審査落ちの原因】\n・収入基準（家賃の約36倍の年収）未達\n・勤務先の事業継続性（外国企業・自営）\n・クレジットスコアの問題\n・前科・滞納履歴\n\n【突破策】\n・連帯保証人の追加\n・敷金増額交渉\n・代替保証会社への変更',
+   tags:['実務'], link:'coreto-screening.html', done:false},
+  {id:12, phase:'フェーズ3：業務習得（3〜4週目）',
+   title:'成約報告と支払明細の確認',
+   sub:'成約報告の入力方法と、翌月の支払明細書の見方を確認してください。',
+   detail:'【成約報告の入力項目】\n・物件名・成約日・仲介手数料\n・クライアント名・担当者\n・三為・PT紹介等の特記事項\n\n【支払明細書の見方】\n・報酬額 = 手数料 × 報酬率（ランク別）\n・源泉徴収 = 報酬額の10.21%（100万超は20.42%）\n・振込額 = 報酬合計 − 源泉 − 月会費\n\n【月会費】\nBronze：¥980／Silver：¥1,980／Gold以上：無料',
+   tags:['実務'], link:'coreto-batch-close.html', done:false},
+
+  // Phase 4：初案件
+  {id:13, phase:'フェーズ4：初案件・独り立ち（1ヶ月目）',
+   title:'初案件をパイプラインに登録',
+   sub:'最初の問い合わせが来たらすぐにパイプラインに登録してください。分からない点はメンターに相談できます。',
+   detail:'初案件おめでとうございます！\n\n【入力のポイント】\n・クライアントIDを先に作成\n・希望条件は詳しく記録\n・担当者（自分）のIDを紐付け\n\n【困ったときは】\nLINE WORKSの「REエージェント」グループで質問OK。24時間以内にメンターまたはHQから返信します。',
+   tags:['マイルストーン'], link:'coreto-pipeline.html', done:false},
+  {id:14, phase:'フェーズ4：初案件・独り立ち（1ヶ月目）',
+   title:'ランクダッシュボードで目標設定',
+   sub:'現在のランクと次のランクまでの目標ポイントを確認し、月次目標を立てましょう。',
+   detail:'【ランクアップの実収入インパクト】\nBronze→Silver：報酬率＋2.5pp\nSilver→Gold：報酬率＋2.5pp\nGold→Platinum：報酬率＋5pp\n\n例）手数料100万円の案件の場合：\n・Bronze：¥650,000\n・Silver：¥675,000\n・Gold：¥700,000\n・Platinum：¥750,000\n\n月2〜3件成約すれば初月からGold到達も十分可能です。',
+   tags:['推奨'], link:'coreto-rank.html', done:false},
 ];
+
+// ── 人材エージェント（HR）──────────────────────────────────────
+const TASKS_HR = [
+  // Phase 1
+  {id:1, phase:'フェーズ1：入会手続き（1週目）',
+   title:'業務委託契約書に電子署名',
+   sub:'人材紹介版の業務委託契約書を読み、電子署名で締結してください。',
+   detail:'【HR版契約書の特記事項】\n・報酬の分割払い（入社時50%・3ヶ月後50%）\n・返金保証条件の登録義務\n・守秘義務（クライアント企業情報）\n・競業避止（退会後6ヶ月）',
+   tags:['必須'], link:'coreto-contract.html', done:false},
+  {id:2, phase:'フェーズ1：入会手続き（1週目）',
+   title:'eKYC・本人確認を完了',
+   sub:'身分証明書と自撮り写真をアップロードし、HQ審査を完了してください。',
+   detail:'HR担当エージェントに宅建士証は不要です。\n\n【必要書類】\n・本人確認書類（運転免許・マイナンバーカード等）\n・職務経歴書（任意・ポートフォリオとして保存）',
+   tags:['必須'], link:'coreto-kyc.html', done:false},
+  {id:3, phase:'フェーズ1：入会手続き（1週目）',
+   title:'口座情報を登録',
+   sub:'報酬振込用の銀行口座を登録してください。HR案件は報酬が2回に分割されます。',
+   detail:'【HR報酬の分割払い】\n・第1回：入社確認後 → 翌月25日振込\n・第2回：入社3ヶ月後の在籍確認後 → 翌月25日振込\n\n在籍確認が取れない場合は第2回振込が保留されます。',
+   tags:['必須'], link:'coreto-kyc.html', done:false},
+  {id:4, phase:'フェーズ1：入会手続き（1週目）',
+   title:'LINE WORKS でHQと繋がる',
+   sub:'CORETO公式のLINE WORKSグループに参加してください。',
+   detail:'HRエージェントは以下のグループに参加します：\n・CORETO全体（必須）\n・HR エージェント（必須）\n・企業担当別（都度招待）',
+   tags:['必須'], done:false},
+
+  // Phase 2
+  {id:5, phase:'フェーズ2：システム習得（2週目）',
+   title:'マイページと支払明細の確認',
+   sub:'HR特有の分割払いスケジュールと支払明細の見方を把握してください。',
+   detail:'HR案件の支払明細には第1回・第2回の区別が表示されます。\n未回収の第2回報酬は「第2回支払予定一覧」で追跡できます。',
+   tags:['推奨'], link:'coreto-agent-mypage.html', done:false},
+  {id:6, phase:'フェーズ2：システム習得（2週目）',
+   title:'HR案件パイプラインの操作習得',
+   sub:'人材紹介特有のステータス（書類選考・面接・内定・入社）の流れを理解してください。',
+   detail:'【HRパイプラインのステータス】\n問い合わせ → 書類選考 → 1次面接 → 2次面接 → 最終面接 → 内定 → 承諾 → 入社\n\n【重要】内定承諾後に辞退が発生しても報酬は発生しません。入社確認後が第1回振込のトリガーです。',
+   tags:['推奨'], link:'coreto-pipeline.html', done:false},
+  {id:7, phase:'フェーズ2：システム習得（2週目）',
+   title:'早期退職・返金保証の登録方法',
+   sub:'成約後に企業との返金保証条件を登録してください。登録を忘れると返金時に問題が生じます。',
+   detail:'【返金保証の登録タイミング】\n成約（入社承諾）と同時に登録が必要です。\n\n【登録する内容】\n・保証期間（通常1〜3ヶ月）\n・返金率（期間に応じて段階的に設定）\n\n例）3ヶ月保証の場合：\n・1ヶ月以内退職：100%返金\n・1〜2ヶ月退職：50%返金\n・2〜3ヶ月退職：25%返金\n・3ヶ月以上：返金なし',
+   tags:['必須'], link:'coreto-early-quit.html', done:false},
+  {id:8, phase:'フェーズ2：システム習得（2週目）',
+   title:'報酬規程・ランク制度を理解',
+   sub:'HR案件の成功報酬率・ランクアップ条件を理解してください。',
+   detail:'【報酬率（人材紹介）】\n・Bronze：45%　Silver：47.5%\n・Gold：50%　Platinum：55%\n\n【手数料の計算基準】\n内定者の想定年収 × 紹介手数料率（通常30〜35%）\n例）年収500万 × 30% = 150万円 → エージェント報酬75万円（Gold）',
+   tags:['必須'], link:'coreto-faq.html', done:false},
+
+  // Phase 3
+  {id:9, phase:'フェーズ3：業務習得（3〜4週目）',
+   title:'クライアント企業との信頼関係構築',
+   sub:'企業クライアントとの定期連絡・求人情報の正確な把握・選考フィードバックの収集方法を習得してください。',
+   detail:'【企業クライアントとの関係で重要なこと】\n・選考基準を事前に詳しく確認\n・不採用理由を毎回フィードバック\n・求人票に書かれていない「暗黙の要件」を把握\n\n【よくある失敗】\n・スキルだけ見て文化適合を無視\n・給与交渉で候補者サイドに立ちすぎる\n・内定後のフォローが手薄で辞退される',
+   tags:['実務'], done:false},
+  {id:10, phase:'フェーズ3：業務習得（3〜4週目）',
+   title:'求職者の面接対策・サポート',
+   sub:'書類添削・面接対策・内定後フォローまでのサポートフローを把握してください。',
+   detail:'【面接対策チェックリスト】\n□ 企業研究・競合分析の資料提供\n□ 想定質問と回答例の共有\n□ 服装・マナー指導（必要に応じて）\n□ 面接直前のリマインド連絡\n□ 面接後の感触ヒアリング（当日中）\n\n【内定後のフォロー】\n・退職交渉のサポート\n・入社日調整\n・入社前の不安解消面談',
+   tags:['実務'], done:false},
+  {id:11, phase:'フェーズ3：業務習得（3〜4週目）',
+   title:'在籍確認と第2回振込の流れ',
+   sub:'入社3ヶ月後の在籍確認の方法と、確認できない場合の対処法を理解してください。',
+   detail:'【在籍確認の手順】\n1. 入社日から90日後にシステムがアラート\n2. 企業担当者またはエージェントが在籍を確認\n3. CORETO管理画面で「在籍OK」をクリック\n4. 翌月25日に第2回振込が処理される\n\n【在籍確認が取れない場合】\n・企業に直接確認（メール記録を残す）\n・3週間以内に確認できない場合はHQに報告\n・退職が判明した場合は返金保証の計算処理へ',
+   tags:['実務'], link:'coreto-early-quit.html', done:false},
+
+  // Phase 4
+  {id:12, phase:'フェーズ4：初案件・独り立ち（1ヶ月目）',
+   title:'初案件をパイプラインに登録',
+   sub:'最初の求職者が来たらすぐにパイプラインに登録し、企業へのエントリーを開始してください。',
+   detail:'初案件おめでとうございます！\n\n【初回登録のポイント】\n・求職者の希望条件は詳しく（給与・業種・働き方・転職時期）\n・非公開求人のマッチングはHQに相談\n・複数社同時応募の管理は案件ボードで一元管理',
+   tags:['マイルストーン'], link:'coreto-pipeline.html', done:false},
+  {id:13, phase:'フェーズ4：初案件・独り立ち（1ヶ月目）',
+   title:'ランクダッシュボードで目標設定',
+   sub:'現在のランクと次のランクまでの目標ポイントを確認してください。',
+   detail:'【HR報酬の特性】\nHR案件は1件当たりの報酬が大きい分、成約まで時間がかかります。\n\n目標：月1〜2件の成約でSilver到達、月3〜4件でGold到達が目安。\n\n在籍確認まで最終報酬が確定しないため、進行中案件の追跡が重要です。',
+   tags:['推奨'], link:'coreto-rank.html', done:false},
+];
+
+// ── パートナー（PT）──────────────────────────────────────────
+const TASKS_PT = [
+  {id:1, phase:'フェーズ1：登録手続き',
+   title:'パートナー契約書に電子署名',
+   sub:'CORETO公式パートナー契約書を確認し、電子署名してください。',
+   detail:'【パートナー特有の条件】\n・紹介手数料：成約手数料の25%（固定）\n・源泉徴収：個人の場合10.21%（法人は免除）\n・守秘義務：紹介したクライアント情報\n\n【パートナーでないこと】\n・案件を直接担当することはできません\n・宅建士証は不要です',
+   tags:['必須'], link:'coreto-contract.html', done:false},
+  {id:2, phase:'フェーズ1：登録手続き',
+   title:'本人確認・口座登録を完了',
+   sub:'身分証明書のアップロードと振込先口座の登録を完了してください。',
+   detail:'【パートナーの報酬スケジュール】\n・成約確認後、翌月25日に振込\n・確定申告が必要な場合あり（年20万超）',
+   tags:['必須'], link:'coreto-kyc.html', done:false},
+  {id:3, phase:'フェーズ1：登録手続き',
+   title:'パートナーポータルの操作確認',
+   sub:'紹介案件の登録・進捗確認・報酬履歴の確認方法を把握してください。',
+   detail:'【パートナーポータルでできること】\n・紹介案件の登録（クライアント名・希望条件）\n・案件進捗のリアルタイム確認\n・報酬履歴の閲覧\n・紹介リンク・QRコードの発行\n・担当エージェントへのメッセージ',
+   tags:['推奨'], link:'coreto-partner.html', done:false},
+
+  {id:4, phase:'フェーズ2：紹介業務の開始',
+   title:'紹介リンク・QRコードを発行',
+   sub:'自分専用の紹介リンクを発行し、SNSや名刺に活用してください。',
+   detail:'【紹介コード活用方法】\n・自分のパートナーIDが紐付いたURLを発行\n・LINEで直接シェア\n・QRコード印刷で名刺・チラシに掲載\n\n【自分が紹介した案件のみ】報酬が発生します。他の担当者経由の案件は対象外です。',
+   tags:['実務'], link:'coreto-partner.html', done:false},
+  {id:5, phase:'フェーズ2：紹介業務の開始',
+   title:'報酬規程・計算方法を理解',
+   sub:'成約手数料の25%が紹介料です。報酬シミュレーターで実際の金額を確認してください。',
+   detail:'【報酬計算例（賃貸）】\n仲介手数料：¥200,000\nパートナー報酬：¥200,000 × 25% = ¥50,000\n源泉徴収（個人）：¥50,000 × 10.21% = ¥5,105\n振込額：¥44,895\n\n【法人パートナーの場合】\n源泉徴収なし → ¥50,000がそのまま振込',
+   tags:['必須'], link:'coreto-partner.html', done:false},
+  {id:6, phase:'フェーズ2：紹介業務の開始',
+   title:'初回紹介を登録',
+   sub:'最初のクライアントをパートナーポータルから紹介登録してください。',
+   detail:'初紹介おめでとうございます！\n\n登録後、HQがSlackで通知を受け取り、担当エージェントがクライアントに連絡します。\n\n案件の進捗はポータルのダッシュボードでリアルタイムに確認できます。成約すると翌月25日に報酬が振り込まれます。',
+   tags:['マイルストーン'], link:'coreto-partner.html', done:false},
+];
+
+// ── ロール別タスク選択 ──────────────────────────────────────────
+function getMyTasks() {
+  if (ME.type === 'hr') return TASKS_HR;
+  if (ME.type === 'pt') return TASKS_PT;
+  return TASKS_RE; // デフォルト：RE
+}
 
 function showPage(p) {
   ['my','hq'].forEach(id=>document.getElementById('sb-'+id).classList.toggle('on',id===p));
@@ -222,10 +404,13 @@ function showPage(p) {
 
 function pageMyProgress() {
   loadUserProgress(); // ユーザーごとの進捗をDBから読み込む
-  const done = TASKS_RE.filter(t=>t.done).length;
-  const total = TASKS_RE.length;
+  const TASKS = getMyTasks();
+  const done = TASKS.filter(t=>t.done).length;
+  const total = TASKS.length;
   const pct = Math.round(done/total*100);
   const radius = 36, circ = 2*Math.PI*radius;
+  const typeLabel = ME.type==='hr' ? '人材エージェント' : ME.type==='pt' ? 'パートナー' : '不動産エージェント';
+  const typeColor = ME.type==='hr' ? 'var(--green)' : ME.type==='pt' ? 'var(--gold)' : 'var(--blue)';
 
   document.getElementById('main').innerHTML = `
     <div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:800;margin-bottom:4px">研修・オンボーディング</div>
@@ -241,7 +426,7 @@ function pageMyProgress() {
             <circle cx="45" cy="45" r="${radius}" fill="none" stroke="url(#rg)" stroke-width="8"
               stroke-dasharray="${circ}" stroke-dashoffset="${circ*(1-pct/100)}" stroke-linecap="round"/>
             <defs><linearGradient id="rg" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stop-color="var(--blue)"/><stop offset="100%" stop-color="var(--green)"/>
+              <stop offset="0%" stop-color="${typeColor}"/><stop offset="100%" stop-color="var(--green)"/>
             </linearGradient></defs>
           </svg>
           <div class="ring-label">
@@ -250,26 +435,28 @@ function pageMyProgress() {
           </div>
         </div>
         <div style="flex:1">
-          <div style="font-size:13px;font-weight:700;margin-bottom:6px">${done}/${total} タスク完了</div>
+          <div style="font-size:13px;font-weight:700;margin-bottom:2px">${done}/${total} タスク完了</div>
+          <div style="font-size:10px;color:${typeColor};margin-bottom:8px">${typeLabel}</div>
           <div style="display:flex;flex-direction:column;gap:6px">
             ${['フェーズ1','フェーズ2','フェーズ3','フェーズ4'].map((ph,i)=>{
-              const phTasks = TASKS_RE.filter(t=>t.phase.startsWith(ph));
+              const phTasks = TASKS.filter(t=>t.phase.startsWith(ph));
+              if (!phTasks.length) return '';
               const phDone  = phTasks.filter(t=>t.done).length;
               const phPct   = phTasks.length ? Math.round(phDone/phTasks.length*100) : 0;
               return `<div>
                 <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--sub);margin-bottom:3px">
                   <span>${ph}</span><span>${phDone}/${phTasks.length}</span>
                 </div>
-                <div class="pbar"><div class="pfill" style="width:${phPct}%"></div></div>
+                <div class="pbar"><div class="pfill" style="width:${phPct}%;background:${typeColor}"></div></div>
               </div>`;
             }).join('')}
           </div>
         </div>
         <div style="text-align:right">
-          <div style="font-size:11px;color:var(--muted)">入会日</div>
-          <div style="font-family:'DM Mono';font-size:12px;margin-bottom:8px">2026/01/15</div>
-          <div style="font-size:11px;color:var(--muted)">経過日数</div>
-          <div style="font-family:'DM Mono';font-size:18px;color:var(--gold);font-weight:700">37日</div>
+          <div style="font-size:11px;color:var(--muted)">ID</div>
+          <div style="font-family:'DM Mono';font-size:12px;margin-bottom:8px">${ME.id}</div>
+          <div style="font-size:11px;color:var(--muted)">達成率</div>
+          <div style="font-family:'DM Mono';font-size:18px;color:${typeColor};font-weight:700">${pct}%</div>
         </div>
       </div>
     </div>
@@ -286,9 +473,10 @@ function pageMyProgress() {
 }
 
 function renderTasks() {
-  let phases = [...new Set(TASKS_RE.map(t=>t.phase))];
+  const TASKS = getMyTasks();
+  let phases = [...new Set(TASKS.map(t=>t.phase))];
   return phases.map(ph=>{
-    const tasks = TASKS_RE.filter(t=>t.phase===ph);
+    const tasks = TASKS.filter(t=>t.phase===ph);
     const allDone = tasks.every(t=>t.done);
     return `
       <div class="phase-hdr">
@@ -303,8 +491,9 @@ function renderTasks() {
             <div class="task-title ${t.done?'done':''}">${t.title}</div>
             <div class="task-sub">${t.sub}</div>
             <div class="task-tags">
-              ${t.tags.map(tag=>`<span class="task-tag">${tag}</span>`).join('')}
+              ${t.tags.map(tag=>`<span class="task-tag ${tag==='必須'?'tag-req':tag==='マイルストーン'?'tag-ms':''}">${tag}</span>`).join('')}
               ${t.link ? `<a href="${t.link}" style="font-size:9px;color:var(--blue);margin-left:4px">→ 開く</a>` : ''}
+              ${t.detail ? `<span class="task-detail-btn" onclick="openDetail(${t.id})" style="font-size:9px;color:var(--sub);margin-left:6px;cursor:pointer">📖 詳細</span>` : ''}
             </div>
           </div>
         </div>`).join('')}
@@ -313,7 +502,8 @@ function renderTasks() {
 }
 
 function toggleTask(id) {
-  const t = TASKS_RE.find(t=>t.id===id);
+  const TASKS = getMyTasks();
+  const t = TASKS.find(t=>t.id===id);
   if (!t) return;
   t.done = !t.done;
 
@@ -321,14 +511,14 @@ function toggleTask(id) {
   const session = JSON.parse(sessionStorage.getItem('coreto_session') || 'null');
   if (session && session.userId) {
     const progress = {};
-    TASKS_RE.forEach(task => { progress[task.id] = task.done; });
+    TASKS.forEach(task => { progress[task.id] = task.done; });
     if (typeof DB !== 'undefined') {
       DB.saveOnboardingProgress(session.userId, progress);
     } else {
-      // db.jsが未ロードの場合のフォールバック
-      const all = JSON.parse(localStorage.getItem('coreto_onboarding') || '{}');
+      const storageKey = 'coreto_onboarding_' + (ME.type||'re');
+      const all = JSON.parse(localStorage.getItem(storageKey) || '{}');
       all[session.userId] = progress;
-      localStorage.setItem('coreto_onboarding', JSON.stringify(all));
+      localStorage.setItem(storageKey, JSON.stringify(all));
     }
   }
   // ─────────────────────────────────────────────────────────────
@@ -336,23 +526,53 @@ function toggleTask(id) {
   pageMyProgress(); // re-render
 }
 
+// ── タスク詳細モーダル ────────────────────────────────────────────
+function openDetail(id) {
+  const TASKS = getMyTasks();
+  const t = TASKS.find(t=>t.id===id);
+  if (!t || !t.detail) return;
+  const existing = document.getElementById('task-detail-modal');
+  if (existing) existing.remove();
+  const modal = document.createElement('div');
+  modal.id = 'task-detail-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.innerHTML = `
+    <div style="background:var(--card);border:1px solid var(--border2);border-radius:16px;max-width:520px;width:100%;max-height:80vh;overflow-y:auto">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)">
+        <div style="font-weight:700;font-size:13px">${t.title}</div>
+        <button onclick="document.getElementById('task-detail-modal').remove()"
+          style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1">×</button>
+      </div>
+      <div style="padding:20px">
+        <div style="font-size:12px;color:var(--sub);line-height:1.8;margin-bottom:16px">${t.sub}</div>
+        <div style="font-size:11px;color:var(--text);line-height:1.9;white-space:pre-line;background:var(--card2);padding:14px 16px;border-radius:10px;border:1px solid var(--border)">${t.detail}</div>
+        <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">
+          ${t.link ? `<a href="${t.link}" style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:rgba(79,156,249,.12);border:1px solid rgba(79,156,249,.3);border-radius:8px;color:var(--blue);font-size:11px;font-weight:700;text-decoration:none">→ 開く</a>` : ''}
+          <button onclick="document.getElementById('task-detail-modal').remove()"
+            class="btn btn-ghost btn-sm">閉じる</button>
+        </div>
+      </div>
+    </div>`;
+  modal.addEventListener('click', e=>{ if(e.target===modal) modal.remove(); });
+  document.body.appendChild(modal);
+}
+
 // ── セッションユーザーの進捗を読み込む ────────────────────────────
 function loadUserProgress() {
   const session = JSON.parse(sessionStorage.getItem('coreto_session') || 'null');
   if (!session || !session.userId) return;
+  const TASKS = getMyTasks();
   let progress = {};
   if (typeof DB !== 'undefined') {
     progress = DB.getOnboardingProgress(session.userId);
   } else {
-    const all = JSON.parse(localStorage.getItem('coreto_onboarding') || '{}');
+    const storageKey = 'coreto_onboarding_' + (ME.type||'re');
+    const all = JSON.parse(localStorage.getItem(storageKey) || '{}');
     progress = all[session.userId] || {};
   }
   if (Object.keys(progress).length > 0) {
-    // 保存済み進捗でTASKS_REのdone状態を上書き
-    TASKS_RE.forEach(task => {
-      if (task.id in progress) {
-        task.done = progress[task.id];
-      }
+    TASKS.forEach(task => {
+      if (task.id in progress) task.done = progress[task.id];
     });
   }
 }
