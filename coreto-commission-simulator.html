@@ -317,12 +317,6 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
       <div class="fg"><label>パートナー名</label><input type="text" id="pt-name" placeholder="佐藤 美咲"></div>
       <div class="fg"><label>ID</label><input type="text" id="pt-id" class="mono" placeholder="PT-007"></div>
     </div>
-    <div class="fg"><label>種別</label>
-      <div class="tg-group" id="g-pt">
-        <button class="tg on" data-v="ind" onclick="tog('g-pt',this)">個人</button>
-        <button class="tg" data-v="corp" onclick="tog('g-pt',this)">法人</button>
-      </div>
-    </div>
     <div class="fg"><label>メンター</label>
       <div class="tg-group" id="g-mt">
         <button class="tg on" data-v="no" onclick="tog('g-mt',this);showMt()">なし</button>
@@ -557,7 +551,7 @@ function calc(){
   const fee=parseFloat(document.getElementById('fee').value)||0;
   if(fee<=0){document.getElementById('result').innerHTML='<div class="panel"><div class="empty">手数料を入力してください</div></div>';return;}
   const biz=gv('g-biz'),deal=gv('g-deal'),rnk=gv('g-rank'),ct=gv('g-ct');
-  const ptCorp=gv('g-pt')==='corp',mentorOn=gv('g-mt')==='yes';
+  const mentorOn=gv('g-mt')==='yes';
   const ref=parseInt(gv('g-ref')||'3');
   const instOn=gv('g-inst')==='yes';
   const instInput=parseFloat(document.getElementById('inst-amt').value)||0;
@@ -611,7 +605,7 @@ function calc(){
   else if(ct==='partner'){
     const aR=.25,pR=.25,mR=mentorOn?.05:0,hR=1-aR-pR-mR;
     const aRew=Math.floor(fee*aR),pRew=Math.floor(fee*pR),mRew=Math.floor(fee*mR),hRew=Math.floor(fee*hR);
-    const aTax=wh(aRew),pTax=ptCorp?0:wh(pRew),mTax=mentorOn?wh(mRew):0;
+    const aTax=wh(aRew),pTax=wh(pRew),mTax=mentorOn?wh(mRew):0;
     const aNet=aRew-aTax-mf,pNet=pRew-pTax,mNet=mentorOn?mRew-mTax:0;
     const inst=mkInst(instOn,instInput,aNet);
     html=`<div class="panel">
@@ -620,7 +614,7 @@ function calc(){
       ${schedTl(fullpayD,pay25D)}
       <div class="sec">配分</div>
       ${splitCard(agName,agId,'エージェント',aR,aNet,'var(--blue)',`源泉控除後${mf>0?'・月会費'+yen(mf)+'控除':''}`)}
-      ${splitCard(ptName,ptId,`パートナー（${ptCorp?'法人':'個人'}）`,pR,pNet,'var(--green)',ptCorp?'源泉免除（法人）':'源泉控除後')}
+      ${splitCard(ptName,ptId,'パートナー（個人）',pR,pNet,'var(--green)','源泉控除後')}
       ${mentorOn?splitCard(mtName,mtId,'メンター',mR,mNet,'var(--orange)','源泉控除後'):''}
       <div class="sc"><div><div style="font-size:11px;font-weight:600;color:var(--muted)">CORETO 本部</div></div><div style="text-align:right"><div style="font-size:10px;color:var(--muted)">${pct(hR)}</div><div style="font-family:'DM Mono',monospace;font-size:14px;color:var(--muted)">${yen(hRew)}</div></div></div>
       ${taxNote(aRew)}
