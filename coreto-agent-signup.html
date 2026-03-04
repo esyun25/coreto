@@ -175,12 +175,10 @@ html,body{min-height:100%;font-family:'Noto Sans JP',sans-serif;background:var(-
         <div style="font-size:10px;color:var(--muted);letter-spacing:.5px;margin-bottom:6px">入会手続き概要（全7ステップ・約15分）</div>
         <div style="font-size:12px;color:var(--sub);line-height:2">
           ① 基本情報の入力<br>
-          ② 宅建士資格の確認<br>
-          ③ 身分証（eKYC）提出<br>
-          ④ Kyash連携<br>
-          ⑤ 決済情報の登録<br>
-          ⑥ LINE登録・確認コード送信<br>
-          ⑦ 最終確認・送信
+          ② LINE登録・確認コード送信<br>
+          ③ 宅建士資格の確認<br>
+          ④ 身分証（eKYC）提出<br>
+          ⑤ 最終確認・送信
         </div>
       </div>
       <button onclick="startOnboarding()" class="btn btn-primary" style="width:100%;justify-content:center">入会手続きを開始する →</button>
@@ -195,12 +193,10 @@ html,body{min-height:100%;font-family:'Noto Sans JP',sans-serif;background:var(-
 
 <div class="steps" id="stepbar">
   <div class="step on"  id="s0"><div class="step-dot">1</div><div class="step-lbl">基本<br>情報</div></div>
-  <div class="step"     id="s1"><div class="step-dot">2</div><div class="step-lbl">宅建士<br>確認</div></div>
-  <div class="step"     id="s2"><div class="step-dot">3</div><div class="step-lbl">身分証<br>提出</div></div>
-  <div class="step"     id="s3"><div class="step-dot">4</div><div class="step-lbl">Kyash<br>連携</div></div>
-  <div class="step"     id="s4"><div class="step-dot">5</div><div class="step-lbl">決済<br>情報</div></div>
-  <div class="step"     id="s5"><div class="step-dot">6</div><div class="step-lbl">LINE<br>登録</div></div>
-  <div class="step"     id="s6"><div class="step-dot">7</div><div class="step-lbl">確認<br>送信</div></div>
+  <div class="step"     id="s1"><div class="step-dot">2</div><div class="step-lbl">LINE<br>登録</div></div>
+  <div class="step"     id="s2"><div class="step-dot">3</div><div class="step-lbl">宅建士<br>確認</div></div>
+  <div class="step"     id="s3"><div class="step-dot">4</div><div class="step-lbl">身分証<br>提出</div></div>
+  <div class="step"     id="s4"><div class="step-dot">5</div><div class="step-lbl">確認<br>送信</div></div>
 </div>
 
 <div class="wrap" id="wrap"></div>
@@ -258,14 +254,14 @@ window._signupOpenedAt = Date.now();
 // ── Step control ─────────────────────────────────────────────
 function goStep(n) {
   step = n;
-  for (var i=0;i<7;i++) {
+  for (var i=0;i<5;i++) {
     var el = document.getElementById('s'+i);
     if(!el) continue;
     el.className = 'step'+(i<n?' done':i===n?' on':'');
     el.querySelector('.step-dot').textContent = i<n ? '✓' : String(i+1);
   }
-  // 0=基本情報 1=宅建士 2=身分証 3=Kyash 4=決済 5=LINE 6=確認送信
-  [step0,step1,step3,step5,step5b,stepWorks,step6][n]();
+  // 0=基本情報 1=LINE登録 2=宅建士確認 3=身分証 4=確認送信
+  [step0,stepLine,step1,step3,step6][n]();
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
@@ -379,12 +375,118 @@ async function validateStep0() {
   goStep(1);
 }
 
+
+// ══════════════════════════════════════
+//  STEP 1: LINE 登録（公式LINE ＋ LINE WORKS確認コード）
+// ══════════════════════════════════════
+function stepLine() {
+  var LINE_OA_ID = '@coreto';
+  var WORKS_ID   = 'coreto-hq'; // 本番時に実際のIDに変更
+  // 確認コード生成（初回のみ）
+  if (!form.worksCode) {
+    var rand = Math.random().toString(36).substr(2,4).toUpperCase();
+    var suffix = form.phone ? form.phone.slice(-4) : Math.floor(Math.random()*9000+1000);
+    form.worksCode = 'CRT-' + rand + '-' + suffix;
+  }
+  var code = form.worksCode;
+
+  document.getElementById('wrap').innerHTML =
+    '<div class="card"><div class="ch"><div class="ch-t">LINE 登録</div><span class="pill pb">2 / 5</span></div><div class="cb">' +
+
+    // ── 公式LINE ──
+    '<div style="margin-bottom:20px">' +
+    '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">① CORETO 公式LINEを友達追加</div>' +
+    '<div style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;gap:14px;align-items:center">' +
+    '<div style="font-size:32px">📢</div>' +
+    '<div style="flex:1">' +
+    '<div style="font-size:12px;color:var(--sub);line-height:1.8;margin-bottom:10px">お知らせ・キャンペーン情報を受け取れます。<br>個人識別は不要です。友達追加だけでOKです。</div>' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+    '<a href="https://line.me/R/ti/p/' + LINE_OA_ID + '" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#06c755;color:#fff;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none">📲 公式LINEを追加</a>' +
+    '</div></div></div></div>' +
+
+    '<div style="border-top:1px solid var(--border);margin-bottom:20px"></div>' +
+
+    // ── LINE WORKS ──
+    '<div style="margin-bottom:20px">' +
+    '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">② CORETO LINE WORKSを友達追加 ＋ 確認コード送信</div>' +
+    '<div style="background:rgba(201,168,64,.06);border:1px solid rgba(201,168,64,.3);border-radius:10px;padding:14px;margin-bottom:12px">' +
+    '<div style="font-size:11px;color:var(--gold);font-weight:700;margin-bottom:6px">⚠️ 問い合わせ・案件グループへの参加に必須です</div>' +
+    '<div style="font-size:12px;color:var(--sub);line-height:1.8">CORETO LINE WORKS（ID: <strong style="color:var(--gold)">' + WORKS_ID + '</strong>）を友達追加後、<br>' +
+    '下記の<strong>確認コード</strong>をトークに送信してください。本部があなたのアカウントを紐付けます。</div>' +
+    '</div>' +
+
+    // 確認コード表示
+    '<div style="background:var(--card2);border:1px solid var(--border2);border-radius:10px;padding:16px;margin-bottom:12px">' +
+    '<div style="font-size:10px;color:var(--muted);letter-spacing:.5px;font-weight:600;margin-bottom:8px">あなたの確認コード</div>' +
+    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">' +
+    '<div style="font-size:28px;font-weight:900;color:var(--gold);letter-spacing:3px;font-family:monospace">' + code + '</div>' +
+    '<button onclick="copyLineCode()" style="padding:6px 12px;border:1px solid rgba(201,168,64,.4);border-radius:6px;background:rgba(201,168,64,.1);color:var(--gold);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">コピー</button>' +
+    '</div>' +
+    '<div style="background:rgba(0,0,0,.2);border-radius:6px;padding:10px 12px;font-size:11px;color:var(--muted);line-height:1.8">' +
+    '📋 <strong style="color:var(--sub)">WORKSに送るメッセージ（そのままコピーして貼り付け）</strong><br>' +
+    '<span id="works-copy-msg" style="color:var(--gold)">【CORETO登録】' + form.name + ' / ' + code + '</span>' +
+    '<button onclick="copyWorksMsg()" style="margin-left:8px;padding:3px 8px;border:1px solid var(--border2);border-radius:4px;background:transparent;color:var(--muted);font-size:10px;cursor:pointer;font-family:inherit">コピー</button>' +
+    '</div></div>' +
+
+    // WORKS追加ボタン
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">' +
+    '<a href="https://line.me/R/ti/p/@' + WORKS_ID + '" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#00b900;color:#fff;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none">💬 LINE WORKSを友達追加</a>' +
+    '</div>' +
+
+    // 送信済みチェック
+    '<div id="works-sent-area">' +
+    '<button onclick="markLineDone()" style="width:100%;padding:11px;border:1px solid rgba(201,168,64,.35);border-radius:8px;background:rgba(201,168,64,.08);color:var(--gold);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">' +
+    '✅ 確認コードを送信しました</button>' +
+    '</div></div>' +
+
+    '<div style="display:flex;gap:10px;margin-top:20px">' +
+    '<button class="btn btn-ghost" onclick="goStep(0)" style="width:auto;padding:10px 20px">← 戻る</button>' +
+    '<button class="btn btn-blue" id="line-next-btn" onclick="validateLineStep()" ' + (form.worksCode_sent ? '' : 'disabled ') + 'style="flex:1;justify-content:center' + (form.worksCode_sent ? '' : ';opacity:.4') + '">次へ →</button>' +
+    '</div>' +
+    '</div></div>';
+}
+
+function copyLineCode() {
+  var ta = document.createElement('textarea');
+  ta.value = form.worksCode;
+  document.body.appendChild(ta); ta.select();
+  document.execCommand('copy'); document.body.removeChild(ta);
+  showSignupToast('確認コードをコピーしました');
+}
+
+function copyWorksMsg() {
+  var el = document.getElementById('works-copy-msg');
+  var ta = document.createElement('textarea');
+  ta.value = el ? el.textContent : form.worksCode;
+  document.body.appendChild(ta); ta.select();
+  document.execCommand('copy'); document.body.removeChild(ta);
+  showSignupToast('メッセージをコピーしました');
+}
+
+function markLineDone() {
+  form.worksCode_sent = true;
+  document.getElementById('works-sent-area').innerHTML =
+    '<div style="background:rgba(201,168,64,.08);border:1px solid rgba(201,168,64,.3);border-radius:8px;padding:12px;display:flex;align-items:center;gap:10px">' +
+    '<div style="font-size:20px">✅</div>' +
+    '<div style="font-size:12px;color:var(--gold);font-weight:700">確認コードを送信済み<br>' +
+    '<span style="color:var(--muted);font-weight:400;font-size:11px">本部がアカウントを紐付け後、登録完了メールをお送りします</span></div>' +
+    '</div>';
+  var btn = document.getElementById('line-next-btn');
+  if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+  showSignupToast('確認コードの送信を記録しました ✅');
+}
+
+function validateLineStep() {
+  if (!form.worksCode_sent) { alert('確認コードをWORKSに送信してから次へ進んでください。'); return; }
+  goStep(2);
+}
+
 // ══════════════════════════════════════
 //  STEP 1: 宅建士確認（分岐ステップ）
 // ══════════════════════════════════════
 function step1() {
   document.getElementById('wrap').innerHTML =
-    '<div class="card"><div class="ch"><div class="ch-t">宅地建物取引士 資格確認</div><span class="pill pb">2 / 5</span></div><div class="cb">' +
+    '<div class="card"><div class="ch"><div class="ch-t">宅地建物取引士 資格確認</div><span class="pill pb">3 / 5</span></div><div class="cb">' +
     '<div class="al al-info">ℹ️ <div>宅建士資格をお持ちの方は、COREBLDGの専任宅建士として登録できます。<br>' +
     '専任登録を選択いただくと <strong style="color:var(--green)">月会費・名刺費用が無料</strong> になります。</div></div>' +
     '<div style="font-size:13px;font-weight:700;margin-bottom:16px">宅地建物取引士の資格をお持ちですか？</div>' +
@@ -401,7 +503,7 @@ function step1() {
     '</div></div>' +
     '<div id="takken-detail" style="display:none"></div>' +
     '<div style="display:flex;gap:10px;margin-top:16px">' +
-    '<button class="btn btn-ghost" onclick="goStep(0)" style="width:auto;padding:10px 20px">← 戻る</button>' +
+    '<button class="btn btn-ghost" onclick="goStep(1)" style="width:auto;padding:10px 20px">← 戻る</button>' +
     '<button class="btn btn-blue" id="step1-next" onclick="validateStep1()" disabled>次へ →</button>' +
     '</div></div></div>';
 
@@ -531,7 +633,7 @@ function step3() {
   var canNext = kycDocType >= 0 && frontDone && backDone;
 
   document.getElementById('wrap').innerHTML =
-    '<div class="card"><div class="ch"><div class="ch-t">身分証明書</div><span class="pill pb">4 / 7</span></div><div class="cb">'
+    '<div class="card"><div class="ch"><div class="ch-t">身分証明書</div><span class="pill pb">4 / 5</span></div><div class="cb">'
     +'<div style="font-size:11px;color:var(--sub);margin-bottom:14px;line-height:1.8">入会審査のため身分証明書をアップロードしてください。書類は本部スタッフが目視確認します（1〜2営業日）。</div>'
     +'<div class="field"><label>書類の種類 <span class="req">*</span></label>'
     +'<div style="display:flex;gap:8px">'+docBtns+'</div></div>'
@@ -542,8 +644,8 @@ function step3() {
       +'</div>'
     ) : '')
     +'<div style="display:flex;gap:10px;margin-top:20px">'
-    +'<button class="btn btn-ghost" onclick="goStep(1)" style="width:auto;padding:10px 20px">← 戻る</button>'
-    +'<button class="btn btn-gold" '+(canNext?'':'disabled ')+'onclick="goStep(3)" style="flex:1;justify-content:center">次へ: Kyash連携 →</button>'
+    +'<button class="btn btn-ghost" onclick="goStep(2)" style="width:auto;padding:10px 20px">← 戻る</button>'
+    +'<button class="btn btn-gold" '+(canNext?'':'disabled ')+'onclick="goStep(4)" style="flex:1;justify-content:center">次へ: 確認・送信 →</button>'
     +'</div>'
     +'</div></div>';
 }
@@ -828,19 +930,18 @@ function step6() {
     ['エージェント種別', form.agentType==='re'?'不動産エージェント（RE）':'人材エージェント（HR）'],
     ['宅建士', form.hasTakken ? (form.takkenSennin ? '⭐ 専任宅建士として登録' : '一般（宅建士資格あり）') : 'なし'],
     form.hasTakken && form.takkenSennin ? ['宅建士証番号', form.licNo + '（' + form.licPref + '）'] : null,
-    ['月会費', form.monthlyFee===0 ? '¥0（専任特典・無料）' : '¥980 / 月（ブロンズ。ランク昇格で割引）'],
-    ['名刺', form.meishiFee===0 ? '¥0（専任特典・無料）' : '¥2,000（初回）'],
+    ['LINE WORKS確認コード', form.worksCode || '—'],
     ['紹介コード', form.referral || '—'],
   ].filter(Boolean);
 
   document.getElementById('wrap').innerHTML =
-    '<div class="card"><div class="ch"><div class="ch-t">申込内容の確認</div><span class="pill pb">7 / 7</span></div><div class="cb">' +
+    '<div class="card"><div class="ch"><div class="ch-t">申込内容の確認</div><span class="pill pb">5 / 5</span></div><div class="cb">' +
     (form.takkenSennin ? '<div class="al al-ok">⭐ <div><strong style="color:var(--green)">専任宅建士として登録されます</strong><br>' +
     '月会費・名刺費用が無料になります。IT重説の報酬は本部が設定します。<br>' +
     '<span style="font-size:10px;color:var(--muted)">他社への専任宅建士登録は宅建業法上不可となります。</span></div></div>' : '') +
     rows.map(function(r){ return '<div class="sum-row"><span style="color:var(--sub)">'+r[0]+'</span><span style="font-weight:600">'+r[1]+'</span></div>'; }).join('') +
     '<div style="display:flex;gap:10px;margin-top:20px">' +
-    '<button class="btn btn-ghost" onclick="goStep(5)" style="width:auto;padding:10px 20px">← 戻る</button>' +
+    '<button class="btn btn-ghost" onclick="goStep(3)" style="width:auto;padding:10px 20px">← 戻る</button>' +
     '<button class="btn btn-gold" onclick="submitSignup()">申込を送信する ✓</button>' +
     '</div></div></div>';
 }
@@ -887,9 +988,8 @@ async function submitSignup() {
     senninSpc:    form.takkenSennin ? '専任宅建士希望' : '一般エージェント',
     licNo:        form.licNo || '—',
     licPref:      form.licPref || '—',
-    kyashId:      form.kyashId,
-    monthlyFee:   form.monthlyFee + '円',
-    meishiWant:   form.meishiWant ? 'はい' : 'いいえ',
+    worksCode:    form.worksCode || '—',
+    monthlyFee:   '（オンボーディング時に設定）',
   };
 
   var sent = false;
@@ -922,7 +1022,7 @@ async function submitSignup() {
     '<div style="font-family:\'Syne\',sans-serif;font-size:24px;font-weight:800;color:var(--green);margin-bottom:10px">申込が完了しました</div>' +
     '<div style="font-size:13px;color:var(--sub);line-height:2;margin-bottom:24px">' +
     statusMsg + '<br>' +
-    'LINE WORKSへのご登録ありがとうございます。<br>' +
+    'LINEおよびLINE WORKSへのご登録ありがとうございます。<br>' +
     (form.takkenSennin
       ? '専任宅建士登録の審査後、本部より連絡いたします。<br>審査完了後にIDとパスワードをメールでお送りします。'
       : '本部でeKYC確認後、IDとパスワードをメールでお送りします。') +
