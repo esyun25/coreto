@@ -239,6 +239,8 @@ html,body{height:100%;font-family:'Noto Sans JP',sans-serif;background:var(--bg)
 
     <div class="sb-section" style="margin-top:8px">氏名・表示</div>
     <div class="sb-item" id="sb-name"    onclick="showPage('name')"><span class="sb-icon">👤</span>氏名・旧姓設定</div>
+    <div class="sb-section" style="margin-top:8px">報酬・Kyash</div>
+    <div class="sb-item" id="sb-kyash"   onclick="showPage('kyash')"><span class="sb-icon">💳</span>Kyash ID登録</div>
     <div class="sb-section" style="margin-top:8px">紹介</div>
     <div class="sb-item" onclick="openRefModal()" style="color:var(--gold)"><span class="sb-icon">🔗</span>紹介リンク発行</div>
   </div>
@@ -397,6 +399,15 @@ document.getElementById('user-pill').textContent = `${ME.name} / ${ME.id}`;
 // ─── Page routing ────────────────────────────────────────────────
 function showPage(page) {
   document.querySelectorAll('.sb-item').forEach(el => el.classList.remove('on'));
+  // Kyashページの動的生成
+  if(p === 'kyash' && !document.getElementById('page-kyash')) {
+    const div = document.createElement('div');
+    div.id = 'page-kyash';
+    div.className = 'page';
+    div.style.display = 'none';
+    div.innerHTML = pageKyash();
+    document.querySelector('.main').appendChild(div);
+  }
   document.getElementById('sb-'+page).classList.add('on');
   const m = document.getElementById('main');
   const pages = { pw: pagePw, '2fa': page2fa, contact: pageContact, line: pageLine, name: pageName };
@@ -1050,6 +1061,52 @@ function hqChangeName() {
   ME.nameKana = newKana;
   alert(`✅ 氏名を「${newName}」に変更しました。\nエージェントにSlackで通知されます。`);
   pageName();
+}
+
+
+// PAGE: Kyash ID登録
+function pageKyash() {
+  const saved = localStorage.getItem('coreto_kyash_id') || '';
+  return `
+    <div class="page-title">💳 Kyash ID 登録</div>
+    <div class="page-sub">報酬受取用のKyash IDを登録してください。保存後、HQに自動通知されます。</div>
+    <div class="card" style="margin-top:20px;padding:24px">
+      <div style="margin-bottom:20px">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:6px">現在登録中のKyash ID</div>
+        <div style="font-size:18px;font-weight:700;color:var(--gold);font-family:monospace">\${saved || '未登録'}</div>
+      </div>
+      <div class="al al-info" style="margin-bottom:20px;font-size:12px">
+        ℹ️ KyashアプリのホームでユーザーID（@から始まるID）をご確認ください。<br>
+        99万円以下の報酬はKyash経由で受け取ります。100万円超の場合はHQより別途ご連絡します。
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Kyash ID（@から始まる）</div>
+          <input id="kyash-id-input" type="text" placeholder="@your-kyash-id"
+            style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:8px;padding:10px 14px;color:var(--text);font-size:14px;font-family:monospace"
+            value="\${saved}">
+        </div>
+        <button class="btn btn-blue" onclick="saveKyashId()" style="align-self:flex-start">
+          ✅ 保存してHQに通知する
+        </button>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px;padding:20px;font-size:12px;color:var(--muted)">
+      <strong style="color:var(--sub);display:block;margin-bottom:8px">Kyash IDの確認方法</strong>
+      1. Kyashアプリを開く<br>
+      2. ホーム画面の上部にある「@ユーザーID」を確認<br>
+      3. タップするとコピーできます
+    </div>
+  `;
+}
+
+function saveKyashId() {
+  const id = document.getElementById('kyash-id-input').value.trim();
+  if (!id) { alert('Kyash IDを入力してください'); return; }
+  if (!id.startsWith('@')) { alert('Kyash IDは@から始まります（例：@yourname）'); return; }
+  localStorage.setItem('coreto_kyash_id', id);
+  alert('✅ Kyash ID「' + id + '」を保存しました。\nHQに通知されます。');
+  showPage('kyash');
 }
 
 // ─── Init ────────────────────────────────────────────────────────
