@@ -135,22 +135,111 @@ body{background:var(--bg);color:var(--text);font-family:'Shippori Mincho',serif;
   <div class="card" style="margin-top:20px">
     <div style="font-size:28px;margin-bottom:12px">💬</div>
     <div class="title">CORETO LINE WORKSを友達追加</div>
-    <div class="sub" style="margin-bottom:20px">個人LINEからCORETOのLINE WORKSを友達追加してください。<br>HQからの個別連絡・案件グループに使用します。</div>
-    <a class="line-btn" href="https://line.me/R/ti/p/@coreto-works" target="_blank" style="background:#00B900">
+    <div class="sub" style="margin-bottom:20px">友達追加後、下記の<strong>確認コード</strong>をトークに送ってください。<br>HQがあなたのアカウントを紐付けします。</div>
+
+    <!-- 友達追加ボタン -->
+    <a class="line-btn" href="https://line.me/R/ti/p/@coreto-works" target="_blank" style="background:#00B900;margin-bottom:20px">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.48 2 2 6.03 2 11c0 3.13 1.68 5.9 4.28 7.72L5.5 22l3.45-1.8A10.6 10.6 0 0 0 12 20.5c5.52 0 10-4.03 10-9S17.52 2 12 2z"/></svg>
       LINE WORKSを友達追加する
     </a>
-    <div class="info-box">
+
+    <!-- 確認コード表示 -->
+    <div style="background:var(--bg);border:1px solid var(--border2);border-radius:12px;padding:18px;margin-bottom:16px;text-align:left">
+      <div style="font-size:10px;color:var(--muted);letter-spacing:1px;font-weight:700;margin-bottom:10px">あなたの確認コード（友達追加後にトークへ送信）</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <div id="works-code" style="font-size:26px;font-weight:900;color:var(--gold);letter-spacing:3px;font-family:monospace">---</div>
+        <button onclick="copyWorksCode()" style="padding:6px 12px;border:1px solid rgba(201,168,64,.4);border-radius:6px;background:rgba(201,168,64,.1);color:var(--gold);font-size:11px;font-weight:700;cursor:pointer">コピー</button>
+      </div>
+      <div style="background:rgba(0,0,0,.2);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--muted);line-height:1.8">
+        📋 <strong style="color:var(--sub)">WORKSに送るメッセージ（そのままコピーして貼り付け）</strong><br>
+        <span id="works-msg" style="color:var(--gold)">読み込み中...</span>
+        <button onclick="copyWorksMsg()" style="margin-left:8px;padding:3px 8px;border:1px solid var(--border2);border-radius:4px;background:transparent;color:var(--muted);font-size:10px;cursor:pointer">コピー</button>
+      </div>
+    </div>
+
+    <!-- 送信済みボタン -->
+    <div id="works-sent-area">
+      <button onclick="markWorksDone()" style="width:100%;padding:12px;border:1px solid rgba(201,168,64,.35);border-radius:8px;background:rgba(201,168,64,.08);color:var(--gold);font-size:13px;font-weight:700;cursor:pointer">
+        ✅ 確認コードを送信しました
+      </button>
+    </div>
+
+    <div class="info-box" style="margin-top:16px;text-align:left">
       <strong>LINE WORKSについて</strong><br>
       ・アカウント作成は不要です<br>
       ・個人LINEから友達追加するだけでOK<br>
-      ・HQからの個別連絡・案件グループ作成に使用<br>
-      ・パートナーとのやり取りもこちら経由<br>
+      ・確認コード送信後、本部がアカウントを紐付けします<br>
       <br>
       <strong>LINE WORKS ID：</strong>@coreto-works（本番登録後に更新）
     </div>
   </div>
 </div>
 
+
+<script>
+// ── LINE WORKS 確認コード生成 ──────────────────────────────────────
+(function initWorksCode() {
+  var s = window._SESSION || {};
+  var userId = s.userId || s.id || 'GUEST';
+  var name   = s.name   || 'エージェント';
+
+  // 入会フォームと同じロジック: localStorage に保存済みなら再利用
+  var stored = localStorage.getItem('coreto_works_code');
+  if (!stored) {
+    var rand = Math.random().toString(36).substr(2,4).toUpperCase();
+    var suffix = userId.slice(-4);
+    stored = 'CRT-' + rand + '-' + suffix;
+    localStorage.setItem('coreto_works_code', stored);
+  }
+
+  var el = document.getElementById('works-code');
+  var msgEl = document.getElementById('works-msg');
+  if (el)    el.textContent = stored;
+  if (msgEl) msgEl.textContent = '【CORETO登録】' + name + ' / ' + stored;
+})();
+
+function copyWorksCode() {
+  var code = document.getElementById('works-code').textContent;
+  navigator.clipboard.writeText(code).then(function() {
+    alert('確認コードをコピーしました: ' + code);
+  }).catch(function() {
+    prompt('コードをコピーしてください:', code);
+  });
+}
+
+function copyWorksMsg() {
+  var msg = document.getElementById('works-msg').textContent;
+  navigator.clipboard.writeText(msg).then(function() {
+    alert('メッセージをコピーしました');
+  }).catch(function() {
+    prompt('メッセージをコピーしてください:', msg);
+  });
+}
+
+function markWorksDone() {
+  document.getElementById('works-sent-area').innerHTML =
+    '<div style="background:rgba(201,168,64,.08);border:1px solid rgba(201,168,64,.3);border-radius:8px;padding:12px;display:flex;align-items:center;gap:10px">' +
+    '<div style="font-size:20px">✅</div>' +
+    '<div style="font-size:12px;color:var(--gold);font-weight:700">確認コードを送信済み<br>' +
+    '<span style="color:var(--muted);font-weight:400;font-size:11px">本部がアカウントを紐付け後、Slackでお知らせします</span></div>' +
+    '</div>';
+  localStorage.setItem('coreto_works_sent', '1');
+}
+
+// 送信済みの場合は状態を復元
+if (localStorage.getItem('coreto_works_sent') === '1') {
+  window.addEventListener('DOMContentLoaded', function() {
+    var area = document.getElementById('works-sent-area');
+    if (area) {
+      area.innerHTML =
+        '<div style="background:rgba(201,168,64,.08);border:1px solid rgba(201,168,64,.3);border-radius:8px;padding:12px;display:flex;align-items:center;gap:10px">' +
+        '<div style="font-size:20px">✅</div>' +
+        '<div style="font-size:12px;color:var(--gold);font-weight:700">確認コードを送信済み<br>' +
+        '<span style="color:var(--muted);font-weight:400;font-size:11px">本部がアカウントを紐付け後、Slackでお知らせします</span></div>' +
+        '</div>';
+    }
+  });
+}
+</script>
 </body>
 </html>
