@@ -172,7 +172,7 @@ html,body{min-height:100%;font-family:'Noto Sans JP',sans-serif;background:var(-
       <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--green);margin-bottom:6px">URLを確認しました</div>
       <div style="font-size:13px;color:var(--sub);margin-bottom:20px" id="gate-welcome"></div>
       <div style="background:var(--card);border:1px solid rgba(201,168,76,.3);border-radius:10px;padding:14px;margin-bottom:20px;text-align:left">
-        <div style="font-size:10px;color:var(--muted);letter-spacing:.5px;margin-bottom:6px">入会手続き概要（全7ステップ・約15分）</div>
+        <div style="font-size:10px;color:var(--muted);letter-spacing:.5px;margin-bottom:6px">入会手続き概要（全5ステップ・約10分）</div>
         <div style="font-size:12px;color:var(--sub);line-height:2">
           ① 基本情報の入力<br>
           ② LINE登録・確認コード送信<br>
@@ -1038,58 +1038,76 @@ async function submitSignup() {
 //  TOKEN GATE
 // ══════════════════════════════════════
 
-// デモ用トークンテーブル（本番はKintone APIで検証）
-var VALID_TOKENS = {
-  'DEMO-AG10012': { name: '山田 誠',   agId: '10012', type: 're', label: '不動産エージェント' },
-  'DEMO-AG20005': { name: '田中 美穂', agId: '20005', type: 'hr', label: '人材エージェント' },
-  'DEMO-PT30001': { name: '佐藤 商事', agId: '30001', type: 'pt', label: 'パートナー' },
-};
-
 var tokenInfo = null; // 認証済みトークン情報
 
 function checkToken() {
   var params = new URLSearchParams(window.location.search);
-  var token = params.get('token');
-  var gate = document.getElementById('token-gate');
+  var token  = params.get('token');
+  var gate   = document.getElementById('token-gate');
 
-  if (!token) {
-    // トークンなし = アクセス不可
-    gate.style.display = 'flex';
-    document.getElementById('gate-invalid').style.display = 'block';
-    // メインコンテンツを隠す
-    document.getElementById('stepbar').style.display = 'none';
-    document.getElementById('wrap').style.display = 'none';
-    return;
-  }
-
-  var info = VALID_TOKENS[token.toUpperCase()];
-  if (!info) {
-    // 無効トークン
-    gate.style.display = 'flex';
-    document.getElementById('gate-invalid').style.display = 'block';
-    document.getElementById('stepbar').style.display = 'none';
-    document.getElementById('wrap').style.display = 'none';
-    return;
-  }
-
-  // 有効トークン
-  tokenInfo = info;
-  form.agentType = info.type;
-  gate.style.display = 'flex';
-  document.getElementById('gate-valid').style.display = 'block';
-  document.getElementById('gate-welcome').textContent =
-    info.name + ' さんの入会手続きページです。（' + info.label + ' / ID: ' + info.agId + '）';
   document.getElementById('stepbar').style.display = 'none';
   document.getElementById('wrap').style.display = 'none';
+  gate.style.display = 'flex';
+
+  if (!token) {
+    document.getElementById('gate-invalid').style.display = 'block'; return;
+  }
+
+  // ── Base64トークン（id-managerで発行）──
+  try {
+    var decoded = JSON.parse(decodeURIComponent(escape(atob(token))));
+
+    // 有効期限チェック
+    if (decoded.exp && Date.now() > decoded.exp) {
+      document.getElementById('gate-invalid').style.display = 'block';
+      document.getElementById('gate-invalid').querySelector('div:nth-child(2)').textContent =
+        'このURLは期限切れです（7日間有効）。HQに再発行を依頼してください。';
+      return;
+    }
+
+    // 有効トークン — データを格納
+    tokenInfo = decoded;
+    var typeLabel = { re:'不動産エージェント（RE）', hr:'人材エージェント（HR）', pt:'パートナー（PT）' };
+    document.getElementById('gate-valid').style.display = 'block';
+    document.getElementById('gate-welcome').textContent =
+      decoded.name + ' さんの入会手続きページです。（' + (typeLabel[decoded.type] || decoded.type) + '）';
+    return;
+  } catch(e) {}
+
+  // ── レガシーデモトークン（後方互換）──
+  var DEMO = {
+    'DEMO-AG10012': { name:'山田 誠',   type:'re' },
+    'DEMO-AG20005': { name:'田中 美穂', type:'hr' },
+    'DEMO-PT30001': { name:'佐藤 商事', type:'pt' },
+  };
+  var demo = DEMO[token.toUpperCase()];
+  if (demo) {
+    tokenInfo = demo;
+    var typeLabel = { re:'不動産エージェント（RE）', hr:'人材エージェント（HR）', pt:'パートナー（PT）' };
+    document.getElementById('gate-valid').style.display = 'block';
+    document.getElementById('gate-welcome').textContent =
+      demo.name + ' さんの入会手続きページです。（' + typeLabel[demo.type] + '）';
+    return;
+  }
+
+  document.getElementById('gate-invalid').style.display = 'block';
 }
 
 function startOnboarding() {
   document.getElementById('token-gate').style.display = 'none';
   document.getElementById('stepbar').style.display = 'flex';
   document.getElementById('wrap').style.display = 'block';
-  // 氏名が既知の場合はstep0のフィールドに事前入力（本番）
-  if (tokenInfo && tokenInfo.name) {
-    // form.name = tokenInfo.name; // 本番: Kintoneから取得した名前を事前入力
+
+  // トークンデータをformに事前入力
+  if (tokenInfo) {
+    form.name      = tokenInfo.name  || '';
+    form.nameKana  = tokenInfo.kana  || '';
+    form.phone     = tokenInfo.phone || '';
+    form.email     = tokenInfo.email || '';
+    form.agentType = tokenInfo.type  || '';
+    form.referral  = tokenInfo.ref   || '';
+    if (tokenInfo.takken === 'sennin')  { form.hasTakken = true; form.takkenSennin = true; }
+    if (tokenInfo.takken === 'general') { form.hasTakken = true; form.takkenSennin = false; }
   }
   step0();
 }
