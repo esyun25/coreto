@@ -144,12 +144,7 @@ html,body{height:100%;font-family:'Noto Sans JP',sans-serif;background:var(--bg)
 </div>
 
 <div class="layout">
-  <div class="sidebar">
-    <div class="sb-sec">メニュー</div>
-    <div class="sb-item on" id="sb-sign"    onclick="showPage('sign')"><span>✍️</span>契約締結</div>
-    <div class="sb-item"    id="sb-history" onclick="showPage('history')"><span>📋</span>締結済み一覧</div>
-    <div class="sb-item"    id="sb-hq"      onclick="showPage('hq')"><span>🏢</span>HQ管理</div>
-  </div>
+  <div class="sidebar" id="sidebar"></div>
   <div class="main" id="main"></div>
 </div>
 
@@ -573,6 +568,32 @@ function remindAgent(id) {
 }
 
 // Init
+// ── サイドバー生成（ロール別）──
+(function buildSidebar() {
+  const isHQ = ME.type === 'hq' || ME.id.startsWith('0');
+  const sb = document.getElementById('sidebar');
+  const sec = document.createElement('div');
+  sec.className = 'sb-sec';
+  sec.textContent = 'メニュー';
+  sb.appendChild(sec);
+
+  const items = [
+    { id:'sign',    icon:'✍️', label:'契約締結',      show: true },
+    { id:'history', icon:'📋', label:'締結済み一覧',  show: isHQ },
+    { id:'hq',      icon:'🏢', label:'HQ管理',        show: isHQ },
+  ];
+
+  items.forEach(item => {
+    if (!item.show) return;
+    const el = document.createElement('div');
+    el.className = 'sb-item' + (item.id === 'sign' ? ' on' : '');
+    el.id = 'sb-' + item.id;
+    el.innerHTML = '<span>' + item.icon + '</span>' + item.label;
+    el.onclick = () => showPage(item.id);
+    sb.appendChild(el);
+  });
+})();
+
 showPage('sign');
 </script>
 </body>
