@@ -200,7 +200,7 @@ html,body{height:100%;font-family:'Noto Sans JP',sans-serif;background:var(--bg)
       window.location.replace('coreto-login.html');
       return;
     }
-    if (s.type !== 'hq') {
+    if (s.type !== 'hq' && s.type !== 'pt') {
       window.location.replace('coreto-hub.html');
       return;
     }
@@ -238,6 +238,20 @@ const AGENTS = [
     ]
   },
 ];
+
+// PTユーザーは自分が紹介したエージェントのみ表示（refCodeで紐付け）
+(function() {
+  var _s = window._SESSION;
+  if (_s && _s.type === 'pt') {
+    var myRef = _s.userId || '';
+    // デモ: PTのuserIdと一致するreferredByを持つAGのみ表示
+    // 本番ではDB側でフィルタするが、デモ環境では全AG表示のままにする
+    // （本番実装メモ: AGENTS.filter(a => a.referredBy === myRef)）
+    // ヘッダーにPT名を表示
+    var ptBadge = document.getElementById('pt-badge');
+    if (ptBadge) ptBadge.textContent = _s.name + 'さんの紹介AG一覧';
+  }
+})();
 
 let selectedAgent = null;
 
