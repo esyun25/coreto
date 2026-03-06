@@ -961,9 +961,10 @@ function getSidebarNav() {
         { id:'dashboard',   icon:'📊', label:'ダッシュボード' },
         { id:'onboarding',  icon:'🎓', label:'オンボーディング研修', url:'coreto-onboarding.html', ext:true },
         { id:'pt-cases',    icon:'📋', label:'紹介案件' },
-        { id:'pt-code',   icon:'🔗', label:'紹介コード・リンク' },
-        { id:'pt-rewards',icon:'💰', label:'報酬・振込明細' },
-        { id:'pt-register',icon:'➕', label:'新規紹介を登録' },
+        { id:'pt-code',     icon:'🔗', label:'紹介コード・リンク' },
+        { id:'pt-rewards',  icon:'💰', label:'報酬・振込明細' },
+        { id:'pt-rank',     icon:'⭐', label:'ランク・ポイント' },
+        { id:'pt-register', icon:'➕', label:'新規紹介を登録' },
       ]},
       { section:'アカウント', items:[
         { id:'line-link',  icon:'💬', label:'LINE連携', url:'coreto-line-link.html', ext:true },
@@ -1115,7 +1116,7 @@ function buildContent() {
   } else if(t === 'hr') {
     cnt.innerHTML = hrDashPage() + hrCasesPage() + rankPage() + paymentPage();
   } else if(t === 'pt') {
-    cnt.innerHTML = ptDashPage() + ptCasesPage() + ptCodePage() + ptRewardsPage() + ptRegisterPage();
+    cnt.innerHTML = ptDashPage() + ptCasesPage() + ptCodePage() + ptRewardsPage() + ptRankPage() + ptRegisterPage();
   }
 
   goPage('dashboard');
@@ -1918,6 +1919,28 @@ function ptDashPage() {
           <div style="font-size:10px;color:var(--muted);margin-top:4px">2月分 1件 / 源泉後手取り</div>
         </div>
       </div>
+      <div class="card" style="margin-top:14px">
+        <div class="card-hdr"><div class="ch-title">ランク状況</div><button class="btn btn-sm btn-ghost" onclick="goPage('pt-rank')">詳細</button></div>
+        <div class="card-body">
+          ${(()=>{
+            const rk = session.rankKey||'bronze';
+            const rc = {platinum:'var(--purple)',gold:'var(--gold)',silver:'var(--green)',bronze:'var(--orange)'}[rk];
+            const ri = {platinum:'💎',gold:'🥇',silver:'🥈',bronze:'🥉'}[rk];
+            const cp = {platinum:33,gold:22,silver:12,bronze:5}[rk]||5;
+            const nxt = [{pts:10,label:'Silver',col:'var(--green)'},{pts:20,label:'Gold',col:'var(--gold)'},{pts:30,label:'Platinum',col:'var(--purple)'}].find(t=>t.pts>cp);
+            const pct = Math.min(100,Math.round(cp/(nxt?nxt.pts:30)*100));
+            return '<div style="display:flex;align-items:center;gap:14px;margin-bottom:12px">'
+              +'<div style="font-size:34px">'+ri+'</div>'
+              +'<div>'
+              +'<div style="font-size:17px;font-weight:800;color:'+rc+'">'+session.rank+'</div>'
+              +'<div style="font-size:11px;color:var(--sub);margin-top:2px">'+cp+' pt / 累計</div>'
+              +(nxt?'<div style="font-size:10px;color:var(--muted);margin-top:4px">次：'+nxt.label+'（あと'+(nxt.pts-cp)+'pt）</div>':'<div style="font-size:10px;color:var(--purple);margin-top:4px">💎 最高ランク到達済み</div>')
+              +'<div style="height:4px;background:#0a0c14;border-radius:2px;margin-top:8px;width:120px"><div style="height:100%;width:'+pct+'%;background:'+rc+';border-radius:2px"></div></div>'
+              +'</div>'
+              +'</div>';
+          })()}
+        </div>
+      </div>
     </div>
   </div>
 </div>`;
@@ -2093,6 +2116,179 @@ function ptMsgsPage() {
     <div class="msg-list" id="pt-contact-list"></div>
     <div class="msg-main" id="pt-msg-main">
       <div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:12px">← 左のリストから相手を選択</div>
+    </div>
+  </div>
+</div>`;
+}
+
+function ptRankPage() {
+  const u = session;
+  const rankColors = {platinum:'var(--purple)',gold:'var(--gold)',silver:'var(--green)',bronze:'var(--orange)'};
+  const rankCol = rankColors[u.rankKey] || 'var(--orange)';
+
+  // PTランク一覧（月会費なし・紹介報酬25%固定・ランクでメンターフィー率が変動）
+  const RANKS_PT = [
+    { icon:'💎', label:'Platinum', col:'var(--purple)', mentor:'8%',  pts:'30pt 以上' },
+    { icon:'🥇', label:'Gold',     col:'var(--gold)',   mentor:'7%',  pts:'20〜29pt' },
+    { icon:'🥈', label:'Silver',   col:'var(--green)',  mentor:'6%',  pts:'10〜19pt' },
+    { icon:'🥉', label:'Bronze',   col:'var(--orange)', mentor:'5%',  pts:'0〜9pt'   },
+  ];
+
+  // ── 進捗バー ──
+  const curPtsMap = {platinum:33, gold:22, silver:12, bronze:5};
+  const curPts = curPtsMap[u.rankKey] || 5;
+  const thresholds = [
+    {pts:0,  label:'Bronze',   icon:'🥉', col:'var(--orange)'},
+    {pts:10, label:'Silver',   icon:'🥈', col:'var(--green)'},
+    {pts:20, label:'Gold',     icon:'🥇', col:'var(--gold)'},
+    {pts:30, label:'Platinum', icon:'💎', col:'var(--purple)'},
+  ];
+  const MAX = 34;
+  const pct = v => Math.min(97, Math.round(v / MAX * 100));
+  const next = thresholds.find(t => t.pts > curPts);
+  const needed = next ? next.pts - curPts : 0;
+
+  const nextLabel = next
+    ? '<div style="font-size:12px;color:var(--muted)">次のランク <strong style="color:' + next.col + '">' + next.icon + ' ' + next.label + '</strong> まで <strong style="color:var(--text)">' + needed + ' pt</strong></div>'
+    : '<div style="font-size:12px;color:var(--purple)">💎 最高ランク到達済み</div>';
+
+  const markers = thresholds.map(t => {
+    const active = curPts >= t.pts;
+    return '<div style="position:absolute;top:0;bottom:0;left:' + pct(t.pts) + '%;transform:translateX(-50%);z-index:2">'
+      + '<div style="width:2px;height:100%;background:' + (active ? 'rgba(255,255,255,.5)' : 'var(--border2)') + ';border-radius:1px"></div>'
+      + '</div>';
+  }).join('');
+
+  const labels = thresholds.map(t => {
+    const active = curPts >= t.pts;
+    return '<div style="position:absolute;left:' + pct(t.pts) + '%;transform:translateX(-50%);text-align:center">'
+      + '<div style="font-size:16px">' + t.icon + '</div>'
+      + '<div style="font-size:9px;font-weight:700;color:' + (active ? t.col : 'var(--muted)') + ';' + (active ? '' : 'opacity:.5') + '">' + t.pts + 'pt</div>'
+      + '</div>';
+  }).join('');
+
+  const progressHTML =
+    '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px">'
+    + '<div><span style="font-size:32px;font-weight:800;color:' + rankCol + '">' + curPts + '</span><span style="font-size:13px;color:var(--sub);margin-left:5px">pt</span></div>'
+    + nextLabel
+    + '</div>'
+    + '<div style="position:relative;height:20px;margin-bottom:10px">'
+    +   '<div style="position:absolute;inset:0;background:#0a0c14;border-radius:10px;overflow:hidden">'
+    +     '<div style="height:100%;width:' + pct(curPts) + '%;background:linear-gradient(90deg,var(--orange),' + rankCol + ');border-radius:10px">'
+    +       '<div style="position:absolute;right:0;top:0;bottom:0;width:3px;background:rgba(255,255,255,.35);border-radius:0 2px 2px 0"></div>'
+    +     '</div>'
+    +   '</div>'
+    +   markers
+    + '</div>'
+    + '<div style="position:relative;height:42px">' + labels + '</div>';
+
+  const rankTableRows = RANKS_PT.map(r => {
+    const isCur = r.label === u.rank;
+    return '<tr style="' + (isCur ? 'background:var(--card2)' : '') + '">'
+      + '<td><span style="font-weight:800;color:' + r.col + '">' + r.icon + ' ' + r.label + '</span>'
+      + (isCur ? ' <span style="font-size:9px;color:var(--sub)">← 現在</span>' : '') + '</td>'
+      + '<td class="mono fw-700" style="color:' + r.col + '">' + r.pts + '</td>'
+      + '<td class="mono" style="color:' + r.col + ';font-weight:700">' + r.mentor + '</td>'
+      + '</tr>';
+  }).join('');
+
+  return `<div class="page" id="page-pt-rank">
+  <div class="page-hdr"><div class="page-title">ランク・ポイント</div><div class="page-sub">ランク昇格条件（毎月1日 自動判定）</div></div>
+
+  <div class="grid-2" style="margin-bottom:16px">
+    <div class="card">
+      <div class="card-hdr"><div class="ch-title">現在のランク</div></div>
+      <div class="card-body" style="text-align:center;padding:20px 0">
+        <div style="font-size:52px;margin-bottom:10px">${u.rank==='Platinum'?'💎':u.rank==='Gold'?'🥇':u.rank==='Silver'?'🥈':'🥉'}</div>
+        <div style="font-size:24px;font-weight:800;color:${rankCol}">${u.rank}</div>
+        <div style="font-size:12px;color:var(--sub);margin-top:8px">月会費：なし</div>
+        <div style="font-size:12px;color:var(--sub);margin-top:2px">紹介報酬率：25%（固定）</div>
+        <div style="font-size:12px;color:var(--sub);margin-top:2px">メンターフィー率：${{platinum:'8%',gold:'7%',silver:'6%',bronze:'5%'}[u.rankKey]||'5%'}</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-hdr"><div class="ch-title">ポイント付与ルール</div></div>
+      <div style="overflow-x:auto">
+        <table class="tbl">
+          <thead><tr><th>条件</th><th style="text-align:right">付与</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>紹介案件：手数料 10万円ごと<br><span style="font-size:10px;color:var(--muted)">担当AGにも同じく 0.5pt 付与</span></td>
+              <td class="mono fw-700" style="text-align:right;color:var(--blue)">0.5 pt</td>
+            </tr>
+            <tr>
+              <td>紹介案件：完了ボーナス（成約1件ごと）<br><span style="font-size:10px;color:var(--muted)">担当AGにも同じく 0.5pt 付与</span></td>
+              <td class="mono fw-700" style="text-align:right;color:var(--blue)">0.5 pt</td>
+            </tr>
+            <tr>
+              <td>メンターコミッション 5,000円ごと<br><span style="font-size:10px;color:var(--muted)">あなたの紹介で入会したAG・PTが成約するたびに発生</span></td>
+              <td class="mono fw-700" style="text-align:right;color:var(--purple)">0.2 pt</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="padding:10px 14px;font-size:11px;color:var(--muted);border-top:1px solid var(--border)">
+        ランクは <strong style="color:var(--gold)">毎月1日</strong> に Kintone で自動集計・判定。昇降格は Slack 通知。
+      </div>
+    </div>
+  </div>
+
+  <!-- ランク進捗バー -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-hdr"><div class="ch-title">ランク進捗バー</div></div>
+    <div class="card-body" style="padding-bottom:4px">
+      ${progressHTML}
+    </div>
+  </div>
+
+  <!-- ランク昇格条件一覧 -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-hdr"><div class="ch-title">ランク昇格条件一覧</div></div>
+    <div style="overflow-x:auto">
+      <table class="tbl">
+        <thead>
+          <tr><th>ランク</th><th>累計ポイント</th><th>メンターフィー率</th></tr>
+        </thead>
+        <tbody>${rankTableRows}</tbody>
+      </table>
+    </div>
+    <div style="padding:10px 14px;font-size:11px;color:var(--muted);border-top:1px solid var(--border)">
+      ※ 紹介報酬率（25%）と月会費（なし）はランクにかかわらず一定です。メンターフィー率のみランクにより変動します。
+    </div>
+  </div>
+
+  <!-- PT専用ポイント計算例 -->
+  <div class="card">
+    <div class="card-hdr"><div class="ch-title">ポイント計算例</div></div>
+    <div style="overflow-x:auto">
+      <table class="tbl">
+        <thead><tr><th>案件例</th><th>手数料</th><th>獲得ポイント</th><th>内訳</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>賃貸 1件成約</td>
+            <td class="mono">¥100,000</td>
+            <td class="mono fw-700 text-blue">1.0 pt</td>
+            <td style="font-size:11px;color:var(--sub)">売上 0.5pt + 完了 0.5pt</td>
+          </tr>
+          <tr>
+            <td>賃貸 1件成約</td>
+            <td class="mono">¥200,000</td>
+            <td class="mono fw-700 text-blue">1.5 pt</td>
+            <td style="font-size:11px;color:var(--sub)">売上 1.0pt + 完了 0.5pt</td>
+          </tr>
+          <tr>
+            <td>賃貸 1件成約</td>
+            <td class="mono">¥300,000</td>
+            <td class="mono fw-700 text-blue">2.0 pt</td>
+            <td style="font-size:11px;color:var(--sub)">売上 1.5pt + 完了 0.5pt</td>
+          </tr>
+          <tr style="background:var(--card2)">
+            <td colspan="4" style="font-size:11px;color:var(--muted);padding:8px 14px">
+              💡 Silver（10pt）到達例：¥100,000案件を <strong style="color:var(--text)">10件</strong> 成約 / ¥200,000案件を <strong style="color:var(--text)">7件</strong> 成約
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </div>
 </div>`;
