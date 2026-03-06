@@ -484,7 +484,10 @@ let CASES = [
     attendance:'quit', quitDate:'2026-01-15', quitStatus:'done', memo:'2026-02-05 \u8fd4\u91d1\u56de\u53ce\u6e08' },
 ];
 
-const AGENT = { id:'10012', name:'\u5c71\u7530 \u8aa0' };
+const AGENT = (function(){
+  const s = window._SESSION || {};
+  return { id: s.userId || '10012', name: s.name || '' };
+})();
 let alertFilter = 'all';
 let currentView = 0;
 let tiers = [{months:3,pct:100},{months:6,pct:50}];
@@ -758,7 +761,27 @@ function submitQuit() {
 }
 
 function renderAll() { renderHQStats(); render2nd(); renderAlerts(); if(currentView===1) renderAgView(); }
-window.addEventListener('DOMContentLoaded', renderAll);
+window.addEventListener('DOMContentLoaded', function() {
+  // AGユーザーはHQビューを非表示にしてAGビューのみ表示
+  const _s = window._SESSION || {};
+  const _isHQ = _s.type === 'hq';
+  if (!_isHQ) {
+    // HQビュータブ・HQビューを非表示
+    const hqView = document.getElementById('view-hq');
+    const hqTab  = document.querySelector('.vt:nth-child(1)'); // HQタブ
+    if (hqView) hqView.style.display = 'none';
+    if (hqTab)  hqTab.style.display  = 'none';
+    // AGビューを初期表示
+    currentView = 1;
+    const agView = document.getElementById('view-ag');
+    const agTab  = document.querySelector('.vt:nth-child(2)');
+    if (agView) agView.style.display = 'block';
+    if (agTab)  agTab.classList.add('on');
+    renderAgView();
+  } else {
+    renderAll();
+  }
+});
 
 // ── 紹介リンクモーダル ──────────────────────────────────────
 var _refCurrentCode = '';

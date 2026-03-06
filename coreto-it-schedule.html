@@ -8,6 +8,28 @@
 </head>
 <body>
 <script>
+// ── 認証ガード (要ログイン) ────────────────────────────────
+(function() {
+  var s = null;
+  try { s = JSON.parse(sessionStorage.getItem('coreto_session') || 'null'); } catch(e) {}
+  if (!s || !s.userId || !s.type) {
+    sessionStorage.setItem('coreto_redirect', window.location.href);
+    location.replace('coreto-login.html'); return;
+  }
+  if (!s.sessionToken || s.sessionToken.length !== 64) {
+    sessionStorage.removeItem('coreto_session');
+    location.replace('coreto-login.html'); return;
+  }
+  var _la = new Date(s.loginAt).getTime();
+  if (isNaN(_la) || (Date.now() - _la) > 28800000) {
+    sessionStorage.removeItem('coreto_session');
+    location.replace('coreto-login.html'); return;
+  }
+  window._SESSION = s;
+})();
+</script>
+
+<script>
   // このページは廃止されました。coreto-itsetsu-schedule.html に統合されています。
   window.location.replace('coreto-itsetsu-schedule.html');
 </script>
