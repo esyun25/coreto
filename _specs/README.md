@@ -7,8 +7,12 @@
 
 ## 仕様書一覧
 
+> **最終更新: 2026-03-06** — セキュリティ監査完了・PTポータルhub一本化決定
+
 | ファイル | 内容 | ステータス |
 |---|---|---|
+| [security-audit-2026-03.md](./security-audit-2026-03.md) | セキュリティ監査（AGページ10件・PTページ5件の脆弱性修正、新規ページ追加時チェックリスト） | **実装済み** |
+| [pt-portal-design.md](./pt-portal-design.md) | PTポータル設計方針・hub一本化の決定経緯・残課題一覧（優先度・工数付き） | **実装中** |
 | [email-provisioning.md](./email-provisioning.md) | メールアドレス自動発行システム（Zoho Mail + Zapier + Kintone） | 設計済み・未実装 |
 | [rental-flow.md](./rental-flow.md) | 賃貸仲介フロー（エージェント/パートナー/HQ × 自己持込/マッチング） | 確定 |
 - [itsetsu-flow.md](itsetsu-flow.md) — IT重説 日程調整・マッチング仕様
@@ -40,7 +44,7 @@
 
 ## 未実装タスク一覧（CORETO全体）
 
-hub.html内のコメントより転載：
+hub.html内のコメントより転載（更新: 2026-03-06）：
 
 1. ③ 書類審査チェックシート
 2. ④ エージェントランクダッシュボード
@@ -48,7 +52,17 @@ hub.html内のコメントより転載：
 4. ⑥ 支払明細書ジェネレーター
 5. ⑦ 特別紹介コード管理
 6. ⑧ 早期退職アラート一覧
-7. ⑨ パートナー向けポータル
+7. ~~⑨ パートナー向けポータル~~ → **hub一本化により実質完了（2026-03-06）**
 8. onboarding.html 研修内容・ルール（コンテンツ未実装）
 9. **メールアドレス自動発行システム** → [詳細](./email-provisioning.md)
-- [matching-flow.md](matching-flow.md) — エージェント・パートナー案件マッチング仕様
+
+**PTポータル残課題（詳細は [pt-portal-design.md](./pt-portal-design.md) 参照）:**
+- A: 紹介コードのセッション動的化（ハードコード解消）
+- B/C: SP対応（partner-signup.html / partner-feed.html）
+- D: ヘッダーラベル修正
+- E: 新規紹介登録のZapier送信実装
+- F: commission-simulator.html PTタブ非表示
+- G: 案件詳細モーダル
+- H: FAQ PTカテゴリ追加
+- I: PTランク制度の定義（**Tim判断必要**）
+- J: partner.html の廃止 or 転用（**Tim判断必要**）
