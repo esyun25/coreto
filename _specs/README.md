@@ -13,6 +13,7 @@
 |---|---|---|
 | [security-audit-2026-03.md](./security-audit-2026-03.md) | セキュリティ監査（AGページ10件・PTページ5件の脆弱性修正、新規ページ追加時チェックリスト） | **実装済み** |
 | [pt-portal-design.md](./pt-portal-design.md) | PTポータル設計方針・hub一本化の決定経緯・残課題一覧（優先度・工数付き） | **実装中** |
+| [implementation-roadmap.md](./implementation-roadmap.md) | 実装ロードマップ（タイムライン・マイルストーン・デモ→本番化の切替方針） | **確定** |
 | [email-provisioning.md](./email-provisioning.md) | メールアドレス自動発行システム（Zoho Mail + Zapier + Kintone） | 設計済み・未実装 |
 | [rental-flow.md](./rental-flow.md) | 賃貸仲介フロー（エージェント/パートナー/HQ × 自己持込/マッチング） | 確定 |
 - [itsetsu-flow.md](itsetsu-flow.md) — IT重説 日程調整・マッチング仕様
@@ -65,4 +66,9 @@ hub.html内のコメントより転載（更新: 2026-03-06）：
 - G: 案件詳細モーダル
 - H: FAQ PTカテゴリ追加
 - I: PTランク制度の定義（**Tim判断必要**）
-- J: partner.html の廃止 or 転用（**Tim判断必要**）
+- ~~J: partner.html の廃止 or 転用~~ → **廃止確定（2026-03-06）**
+
+**実装ロードマップ（詳細は [implementation-roadmap.md](./implementation-roadmap.md) 参照）:**
+- システム完成期限：2026年5月11日（宅建業免許取得3週間前）
+- エージェント募集開始：2026年4月1日〜（入会・審査フローが稼働必須）
+- 登記完了：2026年3月31日（それ以前は外部サービス契約不可）
