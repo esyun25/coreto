@@ -79,7 +79,7 @@ html,body{height:100%;font-family:'Noto Sans JP',sans-serif;background:var(--bg)
 .cat-op{background:rgba(79,156,249,.12);color:var(--blue);border:1px solid rgba(79,156,249,.25)}
 .cat-re{background:rgba(52,211,153,.12);color:var(--green);border:1px solid rgba(52,211,153,.25)}
 .cat-hr{background:rgba(167,139,250,.12);color:var(--purple);border:1px solid rgba(167,139,250,.25)}
-.cat-sys{background:rgba(74,82,112,.15);color:var(--sub);border:1px solid var(--border2)}
+.cat-sys{background:rgba(74,82,112,.15);color:var(--sub);border:1px solid var(--border2)} .cat-pt{background:rgba(45,212,191,.12);color:var(--teal);border-radius:4px}
 /* HQ editor */
 .btn{padding:7px 14px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;
   font-family:'Noto Sans JP',sans-serif;transition:.15s;border:none;display:inline-flex;align-items:center;gap:6px}
@@ -135,6 +135,7 @@ html,body{height:100%;font-family:'Noto Sans JP',sans-serif;background:var(--bg)
     <div class="sb-item" onclick="filterCat('re',this)"><span>🏠</span>不動産業務<span class="sb-count" id="cnt-re">—</span></div>
     <div class="sb-item" onclick="filterCat('hr',this)"><span>👥</span>HR・人材業務<span class="sb-count" id="cnt-hr">—</span></div>
     <div class="sb-item" onclick="filterCat('sys',this)"><span>💻</span>システム<span class="sb-count" id="cnt-sys">—</span></div>
+<div class="sb-item" onclick="filterCat('pt',this)"><span>🤝</span>パートナー<span class="sb-count" id="cnt-pt">—</span></div>
     <div class="sb-sec" style="margin-top:8px">ランク別</div>
     <div class="sb-item" onclick="filterCat('rank',this)"><span>⭐</span>ランク・ポイント<span class="sb-count">5</span></div>
   </div>
@@ -233,6 +234,21 @@ const FAQS = [
    a:'HQ審査（目視確認）には通常1〜2営業日かかります。以下の点を確認してください：<br>・書類の文字が鮮明か<br>・光の反射・手ぶれがないか<br>・有効期限内か<br>・自撮り写真に顔と書類が両方写っているか<br>不承認の場合はLINEで理由が通知されます。'},
   {id:19,cat:'sys',q:'2段階認証（認証コード）のコードが届きません。',
    a:'以下をご確認ください：<br><strong>①</strong> COREBLDGのLINE公式アカウントを友達追加しているか<br><strong>②</strong> LINEの通知がオンになっているか<br><strong>③</strong> 登録されているLINE IDが正しいか<br>解決しない場合はHQにSlackでご連絡ください。'},
+  // ─── パートナー ──────────────────────────────────────────────────
+  {id:20,cat:'pt',q:'紹介報酬はいくらですか？',
+   a:'成約した仲介手数料の<strong>25%</strong>が紹介報酬です。<br>例：仲介手数料 ¥200,000 → 紹介報酬 ¥50,000。<br>個人パートナーの場合は源泉徴収（10.21%）が差し引かれた金額が振り込まれます。法人パートナーは源泉徴収なしで全額振込です。'},
+  {id:21,cat:'pt',q:'報酬はいつ振り込まれますか？',
+   a:'成約確認後の<strong>翌月25日</strong>にKyashへ送金されます。<br>例：3月に成約確認 → 4月25日送金。<br>100万円を超える案件のみ、別途ご登録いただいた銀行口座への振込になります。'},
+  {id:22,cat:'pt',q:'紹介コードはどこで確認できますか？',
+   a:'COREBLDGにログイン後、ダッシュボードまたは「紹介コード・リンク」ページで確認できます。コードをコピーしてSNSや名刺に活用してください。専用の紹介リンクとQRコードも発行できます。'},
+  {id:23,cat:'pt',q:'紹介した案件の進捗はどこで確認できますか？',
+   a:'ログイン後の「紹介案件」ページで、紹介したすべての案件のリアルタイム進捗（AG対応中・内見・申込・成約）を確認できます。各行をクリックすると担当エージェントの情報も表示されます。'},
+  {id:24,cat:'pt',q:'紹介できる案件の種類は何ですか？',
+   a:'<strong>①賃貸</strong>（部屋探しをしている方）、<strong>②売買</strong>（物件の購入を検討している方）、<strong>③人材紹介</strong>（転職を考えている方）の3種類です。紹介登録フォームで種別を選択してご登録ください。'},
+  {id:25,cat:'pt',q:'紹介したクライアントが成約に至らなかった場合は？',
+   a:'残念ながら不成約の場合、紹介報酬は発生しません。ただし、案件の進捗はポータルで随時確認でき、担当AGへメッセージで状況確認もできます。'},
+  {id:26,cat:'pt',q:'確定申告は必要ですか？',
+   a:'年間の紹介報酬合計が<strong>20万円を超える場合</strong>、確定申告が必要です。<br>個人パートナーの場合、CORETOが源泉徴収を行い支払調書を発行します。詳細は税理士にご相談ください。法人パートナーの場合は源泉徴収なし・支払調書なしで報酬が支払われます。'},
 ];
 
 let activeCat = 'all';
@@ -247,7 +263,7 @@ function renderFaqs() {
     items = items.filter(f=>f.q.toLowerCase().includes(t)||f.a.toLowerCase().includes(t));
   }
   // update counts
-  ['pay','op','re','hr','sys'].forEach(c=>{
+  ['pay','op','re','hr','sys','pt'].forEach(c=>{
     const el = document.getElementById('cnt-'+c);
     if (el) el.textContent = FAQS.filter(f=>f.cat===c).length;
   });
@@ -260,8 +276,8 @@ function renderFaqs() {
     return;
   }
 
-  const catMap = {pay:'cat-pay',op:'cat-op',re:'cat-re',hr:'cat-hr',sys:'cat-sys'};
-  const catLabel = {pay:'報酬・支払い',op:'業務運営',re:'不動産',hr:'HR人材',sys:'システム'};
+  const catMap = {pay:'cat-pay',op:'cat-op',re:'cat-re',hr:'cat-hr',sys:'cat-sys',pt:'cat-pt'};
+  const catLabel = {pay:'報酬・支払い',op:'業務運営',re:'不動産',hr:'HR人材',sys:'システム',pt:'パートナー'};
   list.innerHTML = items.map(f=>`
     <div class="faq-item" id="faq-${f.id}">
       <div class="faq-q" onclick="toggleFaq(${f.id})">
