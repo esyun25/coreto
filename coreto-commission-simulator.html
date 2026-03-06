@@ -539,7 +539,9 @@ document.querySelectorAll('#g-rf-paid .tg').forEach(b=>b.addEventListener('click
 document.getElementById('ip-today').value = new Date().toISOString().split('T')[0];
 
 // ── 計算ユーティリティ ──
-function wh(n){if(n<=0)return 0;const M=1e6;return n<=M?Math.floor(n*.1021):Math.floor(M*.1021+(n-M)*.2042);}
+function wh(n){if(n<=120000)return 0;const base=n-120000;const M=1e6;return n<=M?Math.floor(base*.1021):Math.floor((M-120000)*.1021+(n-M)*.2042);}
+// 源泉徴収計算式：（課税対象額 − 120,000円）× 10.21%
+// 課税対象額が12万円以下の場合は源泉徴収なし（所得税法第205条準拠）
 function incentive(fee,rate){
   const T1=5e6,T2=1e7;
   if(fee<=T1)return{r:Math.floor(fee*rate),tiers:[{l:'全額',a:fee,r:rate,v:fee*rate}]};
@@ -925,10 +927,11 @@ function schedTl(fpD,p25D){
   </div>`;
 }
 function taxNote(r){
+  if(r<=120000)return`<div class="tax-note">源泉徴収：<strong>課税対象額 ${yen(r)} ≤ ¥120,000 → 源泉なし</strong></div>`;
   const M=1e6;
-  if(r<=M)return`<div class="tax-note">源泉徴収：<strong>${yen(r)} × 10.21% = ${yen(Math.floor(r*.1021))}</strong>（100万円以下）</div>`;
-  const t1=Math.floor(M*.1021),t2=Math.floor((r-M)*.2042);
-  return`<div class="tax-note">源泉徴収（累進）：<strong>100万円以下 ${yen(t1)}</strong> ＋ <strong>超過分 ${yen(r-M)} × 20.42% = ${yen(t2)}</strong>　合計：<strong>${yen(t1+t2)}</strong></div>`;
+  if(r<=M){const t=Math.floor((r-120000)*.1021);return`<div class="tax-note">源泉徴収：<strong>（${yen(r)} − ¥120,000）× 10.21% = ${yen(t)}</strong>（課税対象額12万円超）</div>`;}
+  const t1=Math.floor((M-120000)*.1021),t2=Math.floor((r-M)*.2042);
+  return`<div class="tax-note">源泉徴収（累進）：<strong>（¥1,000,000 − ¥120,000）× 10.21% = ${yen(t1)}</strong> ＋ <strong>超過分 ${yen(r-M)} × 20.42% = ${yen(t2)}</strong>　合計：<strong>${yen(t1+t2)}</strong></div>`;
 }
 function splitCard(name,id,role,rate,net,color,note){
   return`<div class="sc"><div><div style="font-size:11px;font-weight:600;color:${color}">${name}</div><div style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace">${id} / ${role}</div></div><div style="text-align:right"><div style="font-size:10px;color:var(--muted)">${pct(rate)} / ${note}</div><div style="font-family:'DM Mono',monospace;font-size:15px;font-weight:600;color:${color}">${yen(net)}</div></div></div>`;

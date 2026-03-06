@@ -544,12 +544,15 @@ function calcCase(c, rankKey) {
   gross = Math.floor(gross);
 
   // Withholding (source tax)
+  // 計算式：（課税対象額 − 120,000円）× 10.21%（12万円以下は源泉なし）
   let tax = 0;
   if (!opts.corp) {
     const M = 1e6;
-    tax = gross <= M
-      ? Math.floor(gross * 0.1021)
-      : Math.floor(M * 0.1021 + (gross - M) * 0.2042);
+    if (gross > 120000) {
+      tax = gross <= M
+        ? Math.floor((gross - 120000) * 0.1021)
+        : Math.floor((M - 120000) * 0.1021 + (gross - M) * 0.2042);
+    }
   }
 
   const net = gross - tax;

@@ -4332,6 +4332,14 @@ function openNewModal(stageHint) {
     +'<div id="nc-corp-ext" style="display:none"><div class="fi"><label>担当者名</label><input type="text" id="nc-contact" placeholder="田中 一郎"></div></div>'
     +'<div class="fi"><label>種別</label><select id="nc-type" onchange="toggleAD()"><option value="reLet">🏠 賃貸</option><option value="reSale">🏢 売買</option><option value="sannai">🔄 三為</option><option value="hr">👥 人材</option></select></div>'+'<div id="nc-ad-wrap" style="margin-bottom:10px"><label style="display:flex;align-items:center;gap:7px;font-size:11px;cursor:pointer"><input type="checkbox" id="nc-ad"> AD案件（仲介手数料は鍵渡し後入金）</label></div>'
     +'<div class="fi"><label>希望条件</label><input type="text" id="nc-sub" placeholder="例: 渋谷区 1LDK / 目黒区 マンション 3,000万"></div>'
+    // 賃貸案件専用チェックリスト
+    +'<div id="nc-relet-checks" style="background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.2);border-radius:8px;padding:12px;margin-bottom:10px;font-size:11px">'
+    +'<div style="font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:8px">📋 審査通過後 確認事項</div>'
+    +'<label style="display:flex;align-items:center;gap:7px;margin-bottom:6px;cursor:pointer"><input type="checkbox" id="nc-consent"> 個人情報取扱同意フォームをクライアントに送付済み</label>'
+    +'<label style="display:flex;align-items:center;gap:7px;margin-bottom:6px;cursor:pointer"><input type="checkbox" id="nc-juminhyo"> 住民票の取得をクライアントに依頼済み</label>'
+    +'<label style="display:flex;align-items:center;gap:7px;cursor:pointer"><input type="checkbox" id="nc-name-rule"> 申込書の担当者名を自分のフルネームで入力済み</label>'
+    +'<div style="color:#b45309;margin-top:6px;font-size:10px">※ 未チェックでも登録できますが、審査通過前に完了させてください</div>'
+    +'</div>'
     +'<div id="nc-hr-wrap" style="display:none;border:1px solid var(--border2);border-radius:8px;padding:12px;margin-bottom:10px;background:var(--bg)">'+'<div style="font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:8px">👥 最初の応募先（任意・後で追加可）</div>'+'<div class="fi"><label>企業名</label><input type="text" id="nc-company" placeholder="例: 株式会社テクノ"></div>'+'<div class="fi"><label>ポジション</label><input type="text" id="nc-position" placeholder="例: エンジニア / 営業"></div>'+'<div class="fi"><label>想定年収（万円）</label><input type="number" id="nc-salary" placeholder="例: 600"></div>'+'</div>'+'<div class="row" style="margin-top:14px"><button class="btn btn-ghost" style="flex:1" onclick="closeModal()">キャンセル</button>'
     +'<button class="btn btn-gold" style="flex:2;justify-content:center" onclick="createCase()">登録</button></div>'
   );
@@ -4407,6 +4415,9 @@ function createCase() {
   open_case(id);
   // Slack #新規案件
   const typeLabel2 = type==='sannai'?'三為':type==='reSale'?'売買':type==='reLet'?'賃貸':'その他';
+  const consentOk  = document.getElementById('nc-consent')?.checked;
+  const juminhyoOk = document.getElementById('nc-juminhyo')?.checked;
+  const nameRuleOk = document.getElementById('nc-name-rule')?.checked;
   slackSend(SLACK_CH.新規案件, [
     ...slackHeader('🆕','新規案件登録'),
     '📁 *案件ID*：'+id,
@@ -4416,6 +4427,7 @@ function createCase() {
     type==='hr' ? '💼 *ポジション*：'+(document.getElementById('nc-position')?.value||'—') : null,
     adOnly ? '💡 AD案件' : null,
     '👨‍💼 *担当エージェント*：'+obj.agent,
+    type==='reLet' ? `📋 *確認事項*：個人情報同意${consentOk?'✅':'⬜'}　住民票依頼${juminhyoOk?'✅':'⬜'}　担当者名入力${nameRuleOk?'✅':'⬜'}` : null,
     sub&&sub!=='—' ? '📝 *備考*：'+sub : null,
     ...slackFooter(),
   ]);
