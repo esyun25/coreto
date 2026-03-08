@@ -324,7 +324,7 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
     <div style="margin-bottom:12px"></div>
     <div class="mfield-row">
       <div class="mfield" style="margin-bottom:0"><label>入社日 *</label><input type="date" id="r-joindate"></div>
-      <div class="mfield" style="margin-bottom:0"><label>手数料（総額・円）*</label><input type="number" id="r-fee" min="0" step="10000" placeholder="例：693000" style="font-family:'DM Mono',monospace"></div>
+      <div class="mfield" style="margin-bottom:0"><label>手数料（総額・円）*</label><input type="number" id="r-fee" min="0" step="10000" placeholder="例：693000" style="font-family:\'DM Mono\',monospace"></div>
     </div>
     <div style="margin-bottom:16px"></div>
     <div style="font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:7px">企業との返金保証条件</div>
@@ -408,6 +408,133 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
 
 <script src="db.js"></script>
 <script>
+// ================================================================
+//  Slack通知モジュール（早期退職アラート）
+//  db.js設定:
+//    window.SLACK_CONFIG.EARLY_QUIT_ALERT  = '退職報告受信・アラート用'
+//    window.SLACK_CONFIG.EARLY_QUIT_NOTIFY = '処理完了・在籍確認用'
+// ================================================================
+(function(){
+  var CFG   = window.SLACK_CONFIG || {};
+  var WH_AL = CFG.EARLY_QUIT_ALERT  || CFG.GENERAL || null;
+  var WH_NT = CFG.EARLY_QUIT_NOTIFY || CFG.GENERAL || null;
+
+  function post(wh, payload){
+    if(!wh){ console.log('[Slack未設定 EarlyQuit]', (payload.text||'').slice(0,60)); return; }
+    fetch(wh,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload),mode:'no-cors'}).catch(function(e){ console.error('[Slack EarlyQuit]',e); });
+  }
+  function hdr(t){ return{type:'header',text:{type:'plain_text',text:t,emoji:true}}; }
+  function flds(pairs){ return{type:'section',fields:pairs.map(function(p){return{type:'mrkdwn',text:'*'+p[0]+'*\n'+p[1]};})}; }
+  function sec(m){ return{type:'section',text:{type:'mrkdwn',text:m}}; }
+  function ctx(t){ return{type:'context',elements:[{type:'mrkdwn',text:t}]}; }
+  function div(){ return{type:'divider'}; }
+  function now(){ return new Date().toLocaleString('ja-JP'); }
+  function op(){ return((window._SESSION&&window._SESSION.name)||'HQスタッフ'); }
+  var yen = function(v){ return '¥'+Math.round(v).toLocaleString(); };
+
+  function workedDaysStr(join, quit){
+    var j=new Date(join), q=new Date(quit);
+    var d=Math.round((q-j)/(1000*60*60*24));
+    return d+'日（'+Math.floor(d/30.44)+'ヶ月）';
+  }
+  function refundStr(rf){
+    return rf&&rf.amt>0 ? rf.pct+'% 返金 → '+yen(rf.amt) : '返金不要';
+  }
+
+  // ① 退職報告受信（AG→HQ）
+  window.slackAlertQuitReceived = function(c, reason, note){
+    var rf = typeof calcRefund==='function' ? calcRefund(c) : {pct:0,amt:0};
+    post(WH_AL,{text:'🚨 早期退職報告: '+c.candidate+' — '+c.company, blocks:[
+      hdr('🚨 早期退職報告を受信'),
+      flds([
+        ['候補者',     c.candidate],
+        ['担当AG',     c.agName+'（'+c.agId+'）'],
+        ['企業名',     c.company],
+        ['入社日',     c.joinDate],
+        ['退職日',     c.quitDate||'—'],
+      ]),
+      c.quitDate ? flds([
+        ['在籍日数',   workedDaysStr(c.joinDate, c.quitDate)],
+        ['手数料',     yen(c.fee)],
+        ['返金区分',   refundStr(rf)],
+        ['報告者',     op()],
+      ]) : null,
+      reason||note ? sec((reason?'*理由:* '+reason:'')+(note?'\n*備考:* '+note:'')) : null,
+      div(),
+      sec('⚡ 速やかに企業・エージェントへ連絡し、返金手続きを進めてください。'),
+      ctx('COREBLDGシステム — 早期退職アラート | '+now()),
+    ].filter(Boolean)});
+  };
+
+  // ② 在籍確認OK（HQ操作）
+  window.slackNotifyAttendanceOK = function(c){
+    post(WH_NT,{text:'✅ 在籍確認OK: '+c.candidate+' — 第2回支払い確定', blocks:[
+      hdr('✅ 在籍確認 — 第2回支払い確定'),
+      flds([
+        ['候補者',       c.candidate],
+        ['担当AG',       c.agName+'（'+c.agId+'）'],
+        ['企業名',       c.company],
+        ['第2回支払額',  yen(c.pay2)],
+        ['支払予定日',   c.pay2Date||'—'],
+        ['確認者',       op()],
+      ]),
+      sec('次回の振込バッチ（月25日）に第2回支払いが追加されます。'),
+      ctx('COREBLDGシステム — 早期退職アラート | '+now()),
+    ]});
+  };
+
+  // ③ 返金処理完了（HQ操作）
+  window.slackNotifyRefundDone = function(c, refundAmt, note){
+    post(WH_NT,{text:'💸 返金処理完了: '+c.candidate+' — '+yen(refundAmt), blocks:[
+      hdr('💸 早期退職 — 返金処理完了'),
+      flds([
+        ['候補者',     c.candidate],
+        ['担当AG',     c.agName+'（'+c.agId+'）'],
+        ['企業名',     c.company],
+        ['退職日',     c.quitDate||'—'],
+        ['返金額',     yen(refundAmt)],
+        ['処理者',     op()],
+      ]),
+      note ? sec('*処理メモ:* '+note) : null,
+      ctx('COREBLDGシステム — 早期退職アラート | '+now()),
+    ].filter(Boolean)});
+  };
+
+  // ④ 第2回支払期限アプローチ（起動時自動チェック・7日前）
+  window.slackAlertPay2Soon = function(c, daysLeft){
+    post(WH_AL,{text:'⏰ 在籍確認期限間近: '+c.candidate+'（残'+daysLeft+'日）', blocks:[
+      hdr('⏰ 在籍確認 — 期限間近'),
+      flds([
+        ['候補者',       c.candidate],
+        ['担当AG',       c.agName+'（'+c.agId+'）'],
+        ['企業名',       c.company],
+        ['入社日',       c.joinDate],
+        ['第2回支払予定', c.pay2Date],
+        ['残り日数',     daysLeft+'日'],
+      ]),
+      sec('_在籍確認を行い、第2回支払いを確定してください。_'),
+      ctx('COREBLDGシステム — 早期退職アラート | 自動チェック | '+now()),
+    ]});
+  };
+
+  // ── 起動時: 第2回支払期限チェック ───────────────────────────
+  window._runPay2Check = function(){
+    var today = new Date(); today.setHours(0,0,0,0);
+    var alerted = [];
+    (window.CASES||[]).forEach(function(c){
+      if(c.attendance==='ok' || c.quitDate || !c.pay2Date) return;
+      var d2 = new Date(c.pay2Date); d2.setHours(0,0,0,0);
+      var diff = Math.round((d2-today)/(1000*60*60*24));
+      if(diff >= 0 && diff <= 7){
+        alerted.push(c.candidate+': 残'+diff+'日');
+        if(typeof slackAlertPay2Soon==='function') slackAlertPay2Soon(c, diff);
+      }
+    });
+    if(alerted.length) console.log('[在籍確認期限間近]', alerted.join(', '));
+  };
+})();
+
 // ── XSSエスケープ関数 ──────────────────────────────────────────────────────
 function escHtml(s) {
   if (s == null) return '';
@@ -542,7 +669,7 @@ function renderHQStats() {
       +'<div style="flex:1;font-size:12px;line-height:1.7"><strong style="color:var(--red)">'
       +urg3.map(c=>c.candidate).join('\u3001')+'\u2014 \u5728\u7c4d\u78ba\u8a8d\u304c3\u65e5\u4ee5\u5185\u306b\u671f\u9650</strong><br>'
       +'\u7b2c2\u56de\u652f\u6255\u65e5\u307e\u3067\u306b\u5728\u7c4d\u78ba\u8a8d\u304c\u5b8c\u4e86\u3057\u306a\u3044\u5834\u5408\u3001\u652f\u6255\u3044\u304c\u7fd4\u6708\u306b\u5ef6\u671f\u3055\u308c\u307e\u3059\u3002</div>'
-      +'<div style="font-size:16px;font-weight:700;color:var(--red);font-family:'DM Mono',monospace">'+urg3.length+'\u4ef6</div></div>'
+      +'<div style="font-size:16px;font-weight:700;color:var(--red);font-family:\'DM Mono\',monospace">'+urg3.length+'\u4ef6</div></div>'
     : '';
 }
 
@@ -562,7 +689,7 @@ function render2nd() {
     const dd = ov?'<span style="color:var(--red)">+'+Math.abs(dL)+'\u65e5\u8d85\u904e</span>'
       :'<span style="color:'+(dL<=7?'var(--orange)':'var(--text)')+'">'+dL+'\u65e5\u5f8c</span>';
     return '<tr class="'+(ug||ov?'urgent':'')+'"><td><div style="font-weight:700">'+c.candidate+'</div></td>'
-      +'<td><div style="font-size:11px">'+c.agName+'</div><div style="font-size:9px;color:var(--muted);font-family:'DM Mono',monospace">'+c.agId+'</div></td>'
+      +'<td><div style="font-size:11px">'+c.agName+'</div><div style="font-size:9px;color:var(--muted);font-family:\'DM Mono\',monospace">'+c.agId+'</div></td>'
       +'<td style="font-size:11px">'+c.company+'</td>'
       +'<td style="font-size:11px">'+fmt(c.joinDate)+'<br><span style="font-size:9px;color:var(--muted)">'+dI+'\u65e5\u76ee</span></td>'
       +'<td style="font-size:11px">'+fmt(c.pay2Date)+'</td>'
@@ -590,7 +717,7 @@ function renderAlerts() {
     const rf = calcRefund(c);
     const sp = c.quitStatus==='done'?'<span class="pill pill-green">\u2713 \u5bfe\u5fdc\u6e08\u307f</span>':'<span class="pill pill-red">\u5bfe\u5fdc\u5f85\u3061</span>';
     return '<tr class="'+(c.quitStatus==='pending'?'urgent':'')+'"><td style="font-weight:700">'+c.candidate+'</td>'
-      +'<td><div style="font-size:11px">'+c.agName+'</div><div style="font-size:9px;color:var(--muted);font-family:'DM Mono',monospace">'+c.agId+'</div></td>'
+      +'<td><div style="font-size:11px">'+c.agName+'</div><div style="font-size:9px;color:var(--muted);font-family:\'DM Mono\',monospace">'+c.agId+'</div></td>'
       +'<td style="font-size:11px">'+c.company+'</td>'
       +'<td style="font-size:11px">'+fmt(c.joinDate)+'</td>'
       +'<td style="color:var(--red);font-weight:700">'+fmt(c.quitDate)+'</td>'
@@ -605,8 +732,12 @@ function renderAlerts() {
 
 function hqConfirmAttendance(id) {
   const c=CASES.find(x=>x.id===id);
-  if(!confirm('「'+c.candidate+'」\u306e\u5728\u7c4d\u3092\u78ba\u8a8d\u3057\u307e\u3059\u304b\uff1f\n\u7b2c2\u56de\u652f\u6255\u3044 '+yen(c.pay2)+'\u304c\u7fcc25\u65e5\u30d0\u30c3\u30c1\u306b\u8ffd\u52a0\u3055\u308c\u307e\u3059\u3002'))return;
-  c.attendance='ok'; renderAll(); alert('\u2705 \u5728\u7c4d\u78ba\u8a8d\u6e08\u307f\u306b\u66f4\u65b0\u3057\u307e\u3057\u305f\u3002');
+  if(!confirm('「'+c.candidate+'\u300d\u306e\u5728\u7c4d\u3092\u78ba\u8a8d\u3057\u307e\u3059\u304b\uff1f\n\u7b2c2\u56de\u652f\u6255\u3044 '+yen(c.pay2)+'\u304c\u7fcc25\u65e5\u30d0\u30c3\u30c1\u306b\u8ffd\u52a0\u3055\u308c\u307e\u3059\u3002'))return;
+  c.attendance='ok';
+  // ② Slack通知: 在籍確認OK
+  if(typeof slackNotifyAttendanceOK==='function') slackNotifyAttendanceOK(c);
+  renderAll();
+  alert('\u2705 \u5728\u7c4d\u78ba\u8a8d\u6e08\u307f\u306b\u66f4\u65b0\u3057\u307e\u3057\u305f\u3002');
 }
 function hqProcessRefund(id) {
   const c=CASES.find(x=>x.id===id);
@@ -614,6 +745,8 @@ function hqProcessRefund(id) {
   const note=prompt('\u8fd4\u91d1\u51e6\u7406 \u8fd4\u91d1\u984d\uff1a'+yen(rf.amt)+'\n\n\u30e1\u30e2\u3092\u5165\u529b');
   if(note===null)return;
   c.quitStatus='done'; c.memo=note||new Date().toLocaleDateString('ja-JP')+' '+yen(rf.amt)+' \u56de\u53ce\u5b8c\u4e86';
+  // ③ Slack通知: 返金処理完了
+  if(typeof slackNotifyRefundDone==='function') slackNotifyRefundDone(c, rf.amt, note);
   renderAll();
 }
 function hqShowDetail(id) {
@@ -756,6 +889,8 @@ function submitQuit() {
   const note=document.getElementById('q-note').value;
   c.quitDate=qdate; c.attendance='quit'; c.quitStatus='pending';
   c.memo=[reason,note].filter(Boolean).join(' / ');
+  // \u2460 Slack\u901a\u77e5: \u9000\u8077\u5831\u544a\u53d7\u4fe1
+  if(typeof slackAlertQuitReceived==='function') slackAlertQuitReceived(c, reason, note);
   closeQuitModal(); renderAll();
   alert('\u26a0\ufe0f \u9000\u8077\u5831\u544a\u3092\u9001\u4fe1\u3057\u307e\u3057\u305f\u3002HQ\u304c\u8fd4\u91d1\u624b\u7d9a\u304d\u3092\u9032\u3081\u307e\u3059\u3002');
 }
@@ -780,6 +915,8 @@ window.addEventListener('DOMContentLoaded', function() {
     renderAgView();
   } else {
     renderAll();
+    // ④ 起動時: 第2回支払期限アプローチチェック（HQのみ）
+    setTimeout(function(){ if(typeof window._runPay2Check==='function') window._runPay2Check(); }, 1500);
   }
 });
 
