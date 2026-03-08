@@ -420,10 +420,154 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
     <div class="modal-body">
       <div class="use-list" id="use-list"></div>
     </div>
+    <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
+      <div style="font-size:9px;color:var(--muted);letter-spacing:1.5px;margin-bottom:8px">⚙️ テスト（デモ用）</div>
+      <button onclick="simulateCodeUse()" style="width:100%;padding:8px 12px;border-radius:8px;
+        background:rgba(79,156,249,.1);border:1px solid rgba(79,156,249,.25);color:var(--blue);
+        font-size:11px;font-weight:700;cursor:pointer;font-family:'Noto Sans JP',sans-serif">
+        📣 Slack通知テスト（コード使用をシミュレート）
+      </button>
+    </div>
   </div>
 </div>
 
 <script>
+// ================================================================
+//  Slack通知モジュール（特別紹介コード管理）
+//  db.js設定:
+//    window.SLACK_CONFIG.CODES_NOTIFY  = '紹介コード通知用webhook'
+//    window.SLACK_CONFIG.CODES_ALERTS  = 'アラート用webhook（上限・期限）'
+//    window.ZAPIER_CODES_WEBHOOK       = 'Zapier経由のコード使用通知'
+// ================================================================
+(function(){
+  var CFG   = window.SLACK_CONFIG || {};
+  var WH_NT = CFG.CODES_NOTIFY || CFG.GENERAL || null;
+  var WH_AL = CFG.CODES_ALERTS || CFG.GENERAL || null;
+
+  function post(wh, payload){
+    if(!wh){ console.log('[Slack未設定 Codes]', (payload.text||'').slice(0,60)); return; }
+    fetch(wh,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload),mode:'no-cors'}).catch(function(e){ console.error('[Slack Codes]',e); });
+  }
+  function hdr(t){ return{type:'header',text:{type:'plain_text',text:t,emoji:true}}; }
+  function flds(pairs){ return{type:'section',fields:pairs.map(function(p){return{type:'mrkdwn',text:'*'+p[0]+'*\n'+p[1]};})}; }
+  function sec(m){ return{type:'section',text:{type:'mrkdwn',text:m}}; }
+  function ctx(t){ return{type:'context',elements:[{type:'mrkdwn',text:t}]}; }
+  function now(){ return new Date().toLocaleString('ja-JP'); }
+  function op(){ return((window._SESSION&&window._SESSION.name)||'HQスタッフ'); }
+
+  var BEN_LABELS = { freefee:'月会費無料', rate:'カスタム報酬率', corp:'法人払い', rank:'ランク指定' };
+  function benStr(c){
+    var b = c.benefits||{};
+    var parts = Object.keys(BEN_LABELS).filter(function(k){ return b[k]; }).map(function(k){ return BEN_LABELS[k]; });
+    if(b.rate)   parts.push('RE:'+c.rateRE+'% / HR:'+c.rateHR+'%');
+    if(b.rank)   parts.push('ランク: '+c.rank);
+    return parts.length ? parts.join(' · ') : '特典なし';
+  }
+
+  // ① コード新規作成
+  window.slackNotifyCodeCreated = function(c){
+    post(WH_NT,{text:'🎫 紹介コード作成: '+c.code, blocks:[
+      hdr('🎫 特別紹介コード — 新規作成'),
+      flds([
+        ['コード',   '`'+c.code+'`'],
+        ['対象',     {all:'全員',re:'不動産AG',hr:'人材AG',pt:'PT'}[c.target]||c.target],
+        ['上限',     c.limit ? c.limit+'名' : '無制限'],
+        ['有効期限', c.expiry || '無期限'],
+      ]),
+      sec('*特典:* '+benStr(c)+(c.memo?'\n*メモ:* '+c.memo:'')),
+      ctx('COREBLDGシステム — 紹介コード管理 | 作成者: '+op()+' | '+now()),
+    ]});
+  };
+
+  // ② コード有効/無効切替
+  window.slackNotifyCodeToggle = function(c, isActive){
+    var icon = isActive ? '✅ 有効化' : '⏸ 無効化';
+    post(WH_NT,{text:icon+': '+c.code, blocks:[
+      hdr(icon+' — 紹介コード'),
+      flds([
+        ['コード',  '`'+c.code+'`'],
+        ['変更後',  isActive ? '✅ 有効' : '⏸ 無効'],
+        ['使用数',  c.used+'件'+(c.limit?' / '+c.limit+'名上限':'')],
+        ['操作者',  op()],
+      ]),
+      ctx('COREBLDGシステム — 紹介コード管理 | '+now()),
+    ]});
+  };
+
+  // ③ 上限到達アラート
+  window.slackAlertLimitReached = function(c){
+    post(WH_AL,{text:'🚨 紹介コード上限到達: '+c.code, blocks:[
+      hdr('🚨 紹介コード — 使用上限到達'),
+      flds([
+        ['コード',   '`'+c.code+'`'],
+        ['使用状況', c.used+' / '+c.limit+' 名（上限到達）'],
+        ['特典',     benStr(c)],
+      ]),
+      sec('_コードは自動的に使用不可になりました。延長する場合は上限数を変更してください。_'),
+      ctx('COREBLDGシステム — 紹介コード管理 | '+now()),
+    ]});
+  };
+
+  // ④ 期限切れ間近アラート（7日以内）
+  window.slackAlertExpirySoon = function(c, daysLeft){
+    post(WH_AL,{text:'⏰ 紹介コード期限間近: '+c.code+'（残'+daysLeft+'日）', blocks:[
+      hdr('⏰ 紹介コード — 有効期限間近'),
+      flds([
+        ['コード',     '`'+c.code+'`'],
+        ['有効期限',   c.expiry],
+        ['残り日数',   daysLeft+'日'],
+        ['使用状況',   c.used+'件'+(c.limit?' / '+c.limit+'名':'')],
+      ]),
+      sec('_期限を延長する場合はコードを編集してください。_'),
+      ctx('COREBLDGシステム — 紹介コード管理 | 自動チェック | '+now()),
+    ]});
+  };
+
+  // ⑤ コード使用通知（新規入会者がコードを使用したとき）
+  //    coreto-login.html や signup フローから: slackNotifyCodeUsed(code, user) を呼ぶ
+  //    user: { name, id, type, email }
+  window.slackNotifyCodeUsed = function(code, user){
+    var c = (window.CODES||[]).find(function(x){ return x.code===code; });
+    var typeLabel = {RE:'🏠 不動産AG',HR:'👥 人材AG',PT:'🤝 PT'}[user.type]||user.type;
+    post(WH_NT,{text:'🎉 紹介コード使用: '+code+' — '+(user.name||'新規入会'), blocks:[
+      hdr('🎉 紹介コード使用 — 新規入会'),
+      flds([
+        ['使用コード', '`'+code+'`'],
+        ['入会者',     (user.name||'—')+' （'+typeLabel+'）'],
+        ['入会者ID',   user.id||'—'],
+        ['コード使用数', c ? (c.used+1)+'件'+(c.limit?' / '+c.limit+'名':'') : '—'],
+      ]),
+      c ? sec('*適用特典:* '+benStr(c)) : null,
+      ctx('COREBLDGシステム — 入会処理 | '+now()),
+    ].filter(Boolean)});
+    // Zapier連携（CRM自動登録・在籍確認スケジュール など）
+    var ZAP = window.ZAPIER_CODES_WEBHOOK;
+    if(ZAP){
+      fetch(ZAP,{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({ code:code, userId:user.id, userName:user.name,
+          userType:user.type, email:user.email, ts:new Date().toISOString() }),
+        mode:'no-cors'}).catch(function(e){ console.error('[Zapier Codes]',e); });
+    }
+  };
+
+  // ── 起動時チェック: 期限切れ間近アラート ──────────────────────
+  window._runExpiryCheck = function(){
+    var today = new Date(); today.setHours(0,0,0,0);
+    var alerted = [];
+    (window.CODES||[]).forEach(function(c){
+      if(!c.active || !c.expiry) return;
+      var exp  = new Date(c.expiry); exp.setHours(0,0,0,0);
+      var diff = Math.round((exp-today)/(1000*60*60*24));
+      if(diff >= 0 && diff <= 7){
+        alerted.push(c.code+': 残'+diff+'日');
+        if(typeof slackAlertExpirySoon === 'function') slackAlertExpirySoon(c, diff);
+      }
+    });
+    if(alerted.length) console.log('[期限間近アラート送信]', alerted.join(', '));
+  };
+})();
+
 // ── XSSエスケープ関数 ──────────────────────────────────────────────────────
 function escHtml(s) {
   if (s == null) return '';
@@ -515,6 +659,8 @@ let selectedBens  = { freefee:false, rate:false, corp:false, rank:false };
 window.addEventListener('DOMContentLoaded', () => {
   renderStats();
   renderTable();
+  // 期限切れ間近チェック（起動時に一度だけ）
+  setTimeout(function(){ if(typeof window._runExpiryCheck==='function') window._runExpiryCheck(); }, 1500);
 });
 
 // ================================================================
@@ -717,6 +863,8 @@ function saveCode() {
   } else {
     CODES.unshift({ id: Date.now(), code, active:true, expiry, limit, used:0,
       benefits:{...selectedBens}, rateRE, rateHR, rank, target, memo, users:[] });
+    // ① Slack通知: 新規コード作成
+    if(typeof slackNotifyCodeCreated === 'function') slackNotifyCodeCreated(CODES[0]);
   }
   closeModal();
   renderStats();
@@ -738,7 +886,11 @@ function copyCode(code) {
 
 function toggleActive(id) {
   const c = CODES.find(x=>x.id===id);
-  if (c) c.active = !c.active;
+  if (c) {
+    c.active = !c.active;
+    // ② Slack通知: 有効/無効切替
+    if(typeof slackNotifyCodeToggle === 'function') slackNotifyCodeToggle(c, c.active);
+  }
   renderStats();
   renderTable();
 }
@@ -758,6 +910,7 @@ function deleteCode(id) {
 function showUsage(id) {
   const c = CODES.find(x=>x.id===id);
   if (!c) return;
+  _currentUsageCode = id;
   document.getElementById('um-title').textContent = `「${c.code}」使用履歴（${c.used}件）`;
   const TYPE_ICON = { RE:'🏠', HR:'👥', PT:'🤝' };
   document.getElementById('use-list').innerHTML = c.users.length
@@ -776,9 +929,75 @@ function showUsage(id) {
 
 function closeUsageModal() { document.getElementById('usage-modal').classList.remove('show'); }
 
+// ── デモ用: コード使用シミュレート ──────────────────────────────
+var _currentUsageCode = null;
+function simulateCodeUse() {
+  if (!_currentUsageCode) return;
+  var c = CODES.find(function(x){ return x.id === _currentUsageCode; });
+  if (!c) return;
+
+  var DEMO_NAMES = ['テスト 太郎','山本 花子','田中 誠','佐藤 純一','鈴木 優'];
+  var DEMO_TYPES = ['RE','RE','HR','PT','RE'];
+  var idx = c.users.length % DEMO_NAMES.length;
+  var user = {
+    name:  DEMO_NAMES[idx],
+    id:    '9'+(Date.now()%10000).toString().padStart(4,'0'),
+    type:  DEMO_TYPES[idx],
+    email: 'test'+Date.now()+'@example.com',
+  };
+
+  // ⑤ Slack通知
+  if(typeof slackNotifyCodeUsed === 'function') slackNotifyCodeUsed(c.code, user);
+
+  // データ更新
+  c.used++;
+  c.users.push({ id:user.id, name:user.name, type:user.type, date:new Date().toISOString().slice(0,10) });
+
+  // ③ 上限到達チェック
+  if(c.limit && c.used >= c.limit){
+    c.active = false;
+    if(typeof slackAlertLimitReached === 'function') slackAlertLimitReached(c);
+    alert('⚠️ 上限('+c.limit+'名)に到達しました。コードを無効化しSlackにアラートを送信しました。');
+  }
+
+  // UI更新
+  document.getElementById('um-title').textContent = '「'+c.code+'」使用履歴（'+c.used+'件）';
+  var TYPE_ICON = { RE:'🏠', HR:'👥', PT:'🤝' };
+  document.getElementById('use-list').innerHTML = c.users.map(function(u){
+    return '<div class="use-item">'
+      +'<div class="use-avatar">'+( TYPE_ICON[u.type]||'👤' )+'</div>'
+      +'<div style="flex:1"><div style="font-weight:700">'+u.name+'</div>'
+      +'<div style="color:var(--muted);font-size:10px">'+u.id+' ／ '+u.type+'</div></div>'
+      +'<div style="font-size:10px;color:var(--sub)">'+u.date+'</div>'
+      +'</div>';
+  }).join('');
+  renderStats();
+  renderTable();
+
+  // トースト
+  showToast('📣 コード使用通知をSlackに送信しました（テスト）');
+}
+
 // ================================================================
 //  CSV export
 // ================================================================
+// ── トースト通知 ─────────────────────────────────────────────────
+function showToast(msg) {
+  var t = document.getElementById('codes-toast');
+  if(!t){
+    t = document.createElement('div');
+    t.id = 'codes-toast';
+    t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999;'
+      +'background:#0f1119;border:1px solid rgba(79,156,249,.4);border-radius:12px;'
+      +'padding:12px 20px;font-size:12px;color:#e2e6f3;font-family:\'Noto Sans JP\',sans-serif;'
+      +'box-shadow:0 4px 20px rgba(0,0,0,.5);display:none';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg; t.style.display = 'block';
+  clearTimeout(t._tmr);
+  t._tmr = setTimeout(function(){ t.style.display='none'; }, 3200);
+}
+
 function exportCSV() {
   const rows = [['コード','有効','有効期限','使用数','上限','月会費無料','カスタム報酬率','法人払い','ランク指定','対象','メモ']];
   CODES.forEach(c => {
