@@ -552,6 +552,20 @@ function renderAiDocExtracted() {
     el.innerHTML = parts.join('');
     if (badge) badge.textContent = '✅ 解析完了 — チェックリストに反映済み';
   }
+
+  // ② Slack通知：AI書類解析で問題検出
+  if (currentApp && typeof slackNotifyAiIssue === 'function') {
+    var allIssues = [];
+    if (aiDocResults.id     && aiDocResults.id.issues     && aiDocResults.id.issues.length)
+      allIssues = allIssues.concat(aiDocResults.id.issues.map(function(i){ return '[身分証] ' + i; }));
+    if (aiDocResults.takken && aiDocResults.takken.issues && aiDocResults.takken.issues.length)
+      allIssues = allIssues.concat(aiDocResults.takken.issues.map(function(i){ return '[宅建士証] ' + i; }));
+    if (aiDocResults.id     && aiDocResults.id.is_valid     === false) allIssues.unshift('[身分証] 有効性チェック要確認');
+    if (aiDocResults.takken && aiDocResults.takken.is_valid === false) allIssues.push('[宅建士証] 有効性チェック要確認');
+    if (allIssues.length > 0) {
+      slackNotifyAiIssue(currentApp, 'combined', allIssues);
+    }
+  }
 }
 
 function aiInfoCell(label, val, span) {
@@ -610,6 +624,200 @@ function autoSetItem(itemId, status, memo) {
 var _origSelectApp = null;
 
 // ════════════════════════════════════════════════════════════════
+
+// ================================================================
+//  Slack通知
+//  通知先は用途に応じて2チャンネルに分ける想定
+//    ALERTS  : #審査-アラート（即時不合格・AI懸念）
+//    RESULTS : #審査-結果  （合格/不合格/保留/面接設定）
+//  本番前に db.js の SLACK_CONFIG に以下を追加してください:
+//    window.SLACK_CONFIG = {
+//      SCREENING_ALERTS:  'https://hooks.slack.com/services/XXX/YYY/ALERTS',
+//      SCREENING_RESULTS: 'https://hooks.slack.com/services/XXX/YYY/RESULTS',
+//    };
+// ================================================================
+(function() {
+  var CFG = window.SLACK_CONFIG || {};
+  var WH_ALERTS  = CFG.SCREENING_ALERTS  || CFG.GENERAL || 'YOUR_SLACK_WEBHOOK_URL';
+  var WH_RESULTS = CFG.SCREENING_RESULTS || CFG.GENERAL || 'YOUR_SLACK_WEBHOOK_URL';
+
+  // ── 低レベル送信ヘルパー ─────────────────────────────────────
+  function _post(webhook, payload) {
+    if (!webhook || webhook === 'YOUR_SLACK_WEBHOOK_URL') {
+      console.log('[Slack未設定]', payload.text || JSON.stringify(payload).slice(0, 120));
+      return;
+    }
+    fetch(webhook, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      mode: 'no-cors'
+    }).catch(function(e) { console.error('[Slack送信エラー]', e); });
+  }
+
+  // ── Block Kit メッセージビルダー ────────────────────────────
+  function _blocks(fallback, blocks) {
+    return { text: fallback, blocks: blocks };
+  }
+
+  function _header(txt) {
+    return { type:'header', text:{ type:'plain_text', text:txt, emoji:true } };
+  }
+  function _section(mrkdwn) {
+    return { type:'section', text:{ type:'mrkdwn', text:mrkdwn } };
+  }
+  function _fields(pairs) {  // pairs: [[label, value], ...]
+    return {
+      type: 'section',
+      fields: pairs.map(function(p) {
+        return { type:'mrkdwn', text:'*' + p[0] + '*\n' + p[1] };
+      })
+    };
+  }
+  function _divider() { return { type:'divider' }; }
+  function _ctx(txt) {
+    return { type:'context', elements:[{ type:'mrkdwn', text:txt }] };
+  }
+
+  var TYPE_LABEL = { re:'🏠 不動産AG', hr:'👥 人材AG', pt:'🤝 パートナー' };
+
+  // ──────────────────────────────────────────────────────────────
+  // ① 即時不合格（自動判定トリガー）
+  // ──────────────────────────────────────────────────────────────
+  window.slackNotifyInstantFail = function(app, reason) {
+    var label = TYPE_LABEL[app.type] || app.type;
+    _post(WH_ALERTS, _blocks(
+      '🚫 即時不合格：' + app.name,
+      [
+        _header('🚫 即時不合格が自動検出されました'),
+        _fields([
+          ['申請者', app.name + '（' + (app.kana||'') + '）'],
+          ['種別', label],
+          ['申請ID', app.id],
+          ['申請日時', app.applied],
+        ]),
+        _section('*不合格理由:*\n>' + reason),
+        _ctx('COREBLDGシステム — 書類審査チェックシート | 自動判定'),
+      ]
+    ));
+  };
+
+  // ──────────────────────────────────────────────────────────────
+  // ② AI書類解析 — 問題検出
+  // ──────────────────────────────────────────────────────────────
+  window.slackNotifyAiIssue = function(app, docType, issues) {
+    var label = TYPE_LABEL[app.type] || app.type;
+    var docLabel = docType === 'id' ? '🪪 身分証' : '📜 宅建士証';
+    _post(WH_ALERTS, _blocks(
+      '⚠️ AI書類解析で問題検出：' + app.name,
+      [
+        _header('⚠️ AI書類解析で問題が検出されました'),
+        _fields([
+          ['申請者', app.name],
+          ['種別', label],
+          ['書類種別', docLabel],
+          ['申請ID', app.id],
+        ]),
+        _section('*検出された問題:*\n' + issues.map(function(i){ return '• ' + i; }).join('\n')),
+        _section('_目視確認のうえ、チェックリストを更新してください。_'),
+        _ctx('COREBLDGシステム — 書類審査チェックシート | AI解析'),
+      ]
+    ));
+  };
+
+  // ──────────────────────────────────────────────────────────────
+  // ③ 審査結果：合格
+  // ──────────────────────────────────────────────────────────────
+  window.slackNotifyPass = function(app, token, signupUrl, note, reviewer) {
+    var label = TYPE_LABEL[app.type] || app.type;
+    _post(WH_RESULTS, _blocks(
+      '✅ 審査合格：' + app.name,
+      [
+        _header('✅ 書類審査 — 合格'),
+        _fields([
+          ['申請者', app.name + '（' + (app.kana||'') + '）'],
+          ['種別', label],
+          ['申請ID', app.id],
+          ['担当者（審査）', reviewer || '—'],
+        ]),
+        app.referralCode
+          ? _section('*紹介者:* ' + app.referralName + '（' + app.referralRank + '）　コード: `' + app.referralCode + '`')
+          : null,
+        note ? _section('*所見:*\n>' + note) : null,
+        _divider(),
+        _section('*入会トークン:*\n`' + token + '`'),
+        _section('*入会URL（LINE WORKSで送付してください）:*\n' + signupUrl),
+        _section('📅 Calendlyで面接を設定し、URLを申請者に送付してください。'),
+        _ctx('COREBLDGシステム — 書類審査チェックシート | ' + new Date().toLocaleString('ja-JP')),
+      ].filter(Boolean)
+    ));
+  };
+
+  // ──────────────────────────────────────────────────────────────
+  // ④ 審査結果：不合格
+  // ──────────────────────────────────────────────────────────────
+  window.slackNotifyFail = function(app, note, reviewer) {
+    var label = TYPE_LABEL[app.type] || app.type;
+    _post(WH_RESULTS, _blocks(
+      '❌ 審査不合格：' + app.name,
+      [
+        _header('❌ 書類審査 — 不合格'),
+        _fields([
+          ['申請者', app.name + '（' + (app.kana||'') + '）'],
+          ['種別', label],
+          ['申請ID', app.id],
+          ['担当者（審査）', reviewer || '—'],
+        ]),
+        _section('*不合格理由 / 所見:*\n>' + (note || '（記入なし）')),
+        _section('✉ 不合格通知メールを送付してください（Zapier自動送信 or 手動）。'),
+        _ctx('COREBLDGシステム — 書類審査チェックシート | ' + new Date().toLocaleString('ja-JP')),
+      ]
+    ));
+  };
+
+  // ──────────────────────────────────────────────────────────────
+  // ⑤ 審査結果：保留
+  // ──────────────────────────────────────────────────────────────
+  window.slackNotifyHold = function(app, note, reviewer) {
+    var label = TYPE_LABEL[app.type] || app.type;
+    _post(WH_RESULTS, _blocks(
+      '⏸ 保留：' + app.name + ' — 追加確認が必要です',
+      [
+        _header('⏸ 書類審査 — 保留（要追加確認）'),
+        _fields([
+          ['申請者', app.name + '（' + (app.kana||'') + '）'],
+          ['種別', label],
+          ['申請ID', app.id],
+          ['担当者（審査）', reviewer || '—'],
+        ]),
+        _section('*確認事項 / 所見:*\n>' + (note || '（記入なし）')),
+        _section('_追加確認が完了次第、審査を再開してください。_'),
+        _ctx('COREBLDGシステム — 書類審査チェックシート | ' + new Date().toLocaleString('ja-JP')),
+      ]
+    ));
+  };
+
+  // ──────────────────────────────────────────────────────────────
+  // ⑥ Calendlyリンク発行（面接案内送付）
+  // ──────────────────────────────────────────────────────────────
+  window.slackNotifyCalendly = function(app, reviewer) {
+    var label = TYPE_LABEL[app.type] || app.type;
+    _post(WH_RESULTS, _blocks(
+      '📅 面接リンク発行：' + app.name,
+      [
+        _header('📅 Calendly面接リンクを発行しました'),
+        _fields([
+          ['申請者', app.name],
+          ['メール', app.email],
+          ['種別', label],
+          ['担当者', reviewer || '—'],
+        ]),
+        _section('申請者に面接予約リンクを送付してください。\n有効期限：*7日間*'),
+        _ctx('COREBLDGシステム — 書類審査チェックシート | ' + new Date().toLocaleString('ja-JP')),
+      ]
+    ));
+  };
+})();
 
 function escHtml(s) {
   if (s == null) return '';
@@ -1117,6 +1325,10 @@ function runAutoChecks(app) {
     banner.classList.add('show');
     document.getElementById('ifb-title').textContent = '即時不合格条件に該当';
     document.getElementById('ifb-reason').textContent = ifReason;
+    // ① Slack通知：即時不合格
+    if (typeof slackNotifyInstantFail === 'function') {
+      slackNotifyInstantFail(app, ifReason);
+    }
   }
 }
 
@@ -1219,24 +1431,26 @@ function setVerdict(v) {
 function saveToKintone() {
   if (!currentApp) return;
   if (!currentVerdict) { alert('審査結果（合格/不合格/保留）を選択してください'); return; }
-  const note = document.getElementById('verdict-note').value;
+  const note     = document.getElementById('verdict-note').value;
+  const reviewer = (window._SESSION && window._SESSION.name) ? window._SESSION.name : 'HQスタッフ';
 
-  // Update local state
+  // ローカル状態を更新
   currentApp.status = currentVerdict === 'pass' ? 'pass' : currentVerdict === 'fail' ? 'fail' : 'hold';
   renderAppList();
 
-  const verdictJP = { pass:'合格', fail:'不合格', hold:'保留' }[currentVerdict];
-
   if (currentVerdict === 'pass') {
-    // 合格時: トークンURL発行 → LINE WORKSで送付
-    const typePrefix = currentApp.type === 'pt' ? 'PT' : currentApp.type === 'hr' ? 'AG' : 'AG';
-    const agNum = String(Math.floor(10000 + Math.random() * 9999));
-    const token = typePrefix + agNum + '-' + Math.random().toString(36).substr(2,6).toUpperCase();
-    const signupUrl = location.origin + location.pathname.replace('coreto-screening.html','coreto-agent-signup.html') + '?token=' + token;
+    // 合格: トークン発行 → モーダル表示 → Slack通知
+    const typePrefix = currentApp.type === 'pt' ? 'PT' : 'AG';
+    const agNum      = String(Math.floor(10000 + Math.random() * 9999));
+    const token      = typePrefix + agNum + '-' + Math.random().toString(36).substr(2,6).toUpperCase();
+    const signupUrl  = location.origin + location.pathname.replace('coreto-screening.html', 'coreto-agent-signup.html') + '?token=' + token;
 
-    // Show token + URL in a copyable modal
+    // ③ Slack通知：合格
+    if (typeof slackNotifyPass === 'function') slackNotifyPass(currentApp, token, signupUrl, note, reviewer);
+
+    // 入会URL発行モーダル
     const box = document.createElement('div');
-    box.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px';
+    box.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px';
     box.innerHTML = `
       <div style="background:#11141f;border:1px solid #2a3050;border-radius:16px;padding:28px;width:min(480px,100%);font-family:inherit">
         <div style="font-size:16px;font-weight:700;color:#e8eaf0;margin-bottom:6px">✅ 合格 — 入会URL発行</div>
@@ -1246,20 +1460,35 @@ function saveToKintone() {
         <div style="font-size:10px;color:#5a6080;margin-bottom:4px;letter-spacing:1px">入会URL（コピーして送付）</div>
         <div id="signup-url-box" style="background:#090b13;border:1px solid #1e2235;border-radius:8px;padding:10px 14px;font-size:11px;color:#4f9cf9;margin-bottom:16px;word-break:break-all">${signupUrl}</div>
         <div style="display:flex;gap:8px">
-          <button onclick="navigator.clipboard.writeText(document.getElementById('signup-url-box').textContent)" style="flex:1;background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.3);color:#c9a840;border-radius:8px;padding:10px;cursor:pointer;font-family:inherit">📋 URLをコピー</button>
+          <button onclick="navigator.clipboard.writeText(document.getElementById('signup-url-box').textContent).then(()=>this.textContent='✅ コピー済み')" style="flex:1;background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.3);color:#c9a840;border-radius:8px;padding:10px;cursor:pointer;font-family:inherit">📋 URLをコピー</button>
           <button onclick="this.closest('div[style*=fixed]').remove()" style="flex:1;background:transparent;border:1px solid #2a3050;color:#a0a8c0;border-radius:8px;padding:10px;cursor:pointer;font-family:inherit">閉じる</button>
         </div>
-        <div style="margin-top:12px;font-size:10px;color:#5a6080;line-height:1.7">※ Kintoneに結果・トークンを保存済み<br>※ 合格通知・面接日程はCalendlyで確認してください</div>
+        <div style="margin-top:12px;font-size:10px;color:#5a6080;line-height:1.8">
+          ✅ Kintoneに保存済み<br>
+          📣 Slack <code>#審査-結果</code> に通知済み<br>
+          📅 Calendlyで面接日程を設定してください
+        </div>
       </div>`;
     document.body.appendChild(box);
+
+  } else if (currentVerdict === 'fail') {
+    // ④ Slack通知：不合格
+    if (typeof slackNotifyFail === 'function') slackNotifyFail(currentApp, note, reviewer);
+    alert(`✅ Kintoneに保存しました\n\n申請者：${currentApp.name}\n審査結果：不合格\n所見：${note || '（なし）'}\n\n📣 Slack #審査-結果 に通知しました。\n✉ 不合格通知メールを送付してください。`);
+
   } else {
-    alert(`✅ Kintoneに保存しました\n\n申請者：${currentApp.name}\n審査結果：${verdictJP}\n所見：${note || '（なし）'}\n\nKintoneの申請レコードが更新されました。`);
+    // ⑤ Slack通知：保留
+    if (typeof slackNotifyHold === 'function') slackNotifyHold(currentApp, note, reviewer);
+    alert(`✅ Kintoneに保存しました\n\n申請者：${currentApp.name}\n審査結果：保留\n確認事項：${note || '（なし）'}\n\n📣 Slack #審査-結果 に通知しました。`);
   }
 }
 
 function sendCalendly() {
   if (!currentApp) return;
-  alert(`📅 Calendlyリンクを発行しました\n\n宛先：${currentApp.email}\n内容：面接予約リンク（有効期限：7日間）\n\n※本番ではCalendly API + Zapier経由で自動送信されます`);
+  const reviewer = (window._SESSION && window._SESSION.name) ? window._SESSION.name : 'HQスタッフ';
+  // ⑥ Slack通知：Calendlyリンク発行
+  if (typeof slackNotifyCalendly === 'function') slackNotifyCalendly(currentApp, reviewer);
+  alert(`📅 Calendlyリンクを発行しました\n\n宛先：${currentApp.email}\n内容：面接予約リンク（有効期限：7日間）\n\n📣 Slack #審査-結果 に通知しました。\n\n※本番ではCalendly API + Zapier経由で自動送信されます`);
 }
 
 function sendRejection() {
