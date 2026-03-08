@@ -159,6 +159,43 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
 .bar-val{color:var(--sub);width:30px;text-align:right;font-family:'DM Mono',monospace}
 
 .hidden{display:none!important}
+
+/* ── 売買案件ステータスパネル ── */
+.sale-panel{background:var(--card);border:1px solid rgba(201,168,76,.18);border-radius:14px;
+  margin-top:16px;overflow:hidden}
+.sale-panel-hdr{padding:13px 20px;border-bottom:1px solid rgba(201,168,76,.12);
+  background:linear-gradient(90deg,rgba(201,168,76,.06),transparent);
+  display:flex;align-items:center;justify-content:space-between}
+.sale-panel-title{font-size:9px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;
+  display:flex;align-items:center;gap:8px}
+.sale-panel-title::before{content:'';width:3px;height:11px;border-radius:2px;background:var(--gold)}
+.sale-case{border-bottom:1px solid var(--border);padding:14px 20px}
+.sale-case:last-child{border-bottom:none}
+.sc-top{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.sc-id{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)}
+.sc-name{font-size:13px;font-weight:700;flex:1}
+.sc-price{font-family:'DM Mono',monospace;font-size:12px;color:var(--gold)}
+.sc-role{font-size:9px;font-weight:700;padding:2px 7px;border-radius:4px}
+.role-buy{background:rgba(79,156,249,.12);color:var(--blue);border:1px solid rgba(79,156,249,.2)}
+.role-sell{background:rgba(251,146,60,.12);color:var(--orange);border:1px solid rgba(251,146,60,.2)}
+.sc-rows{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.sc-row{background:var(--card2);border-radius:8px;padding:9px 12px;border:1px solid var(--border)}
+.sr-label{font-size:9px;color:var(--muted);letter-spacing:.5px;margin-bottom:5px}
+.sr-val{font-size:11px;font-weight:600;display:flex;align-items:center;gap:5px}
+.sr-hist{margin-top:6px}
+.sr-hist-item{font-size:10px;color:var(--sub);display:flex;gap:6px;padding:3px 0;
+  border-top:1px solid rgba(30,34,53,.6);align-items:flex-start}
+.sr-hist-item:first-child{border-top:none}
+.sr-date{color:var(--muted);flex-shrink:0;font-family:'DM Mono',monospace;font-size:9px}
+.no-sale{padding:24px;text-align:center;color:var(--muted);font-size:12px}
+.badge-ok{background:rgba(52,211,153,.12);color:var(--green);border:1px solid rgba(52,211,153,.2);
+  font-size:9px;font-weight:700;padding:2px 7px;border-radius:4px}
+.badge-pending{background:rgba(251,146,60,.12);color:var(--orange);border:1px solid rgba(251,146,60,.2);
+  font-size:9px;font-weight:700;padding:2px 7px;border-radius:4px}
+.badge-ng{background:rgba(248,113,113,.12);color:var(--red);border:1px solid rgba(248,113,113,.2);
+  font-size:9px;font-weight:700;padding:2px 7px;border-radius:4px}
+.badge-none{background:rgba(74,82,112,.15);color:var(--muted);border:1px solid var(--border2);
+  font-size:9px;font-weight:700;padding:2px 7px;border-radius:4px}
 ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
 </style>
 </head>
@@ -252,6 +289,15 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
       </div>
     </div>
   </div>
+
+    <!-- ════ 売買案件ステータスパネル ════ -->
+    <div class="sale-panel" id="sale-status-panel" style="display:none">
+      <div class="sale-panel-hdr">
+        <div class="sale-panel-title">🏢 売買案件ステータス</div>
+        <span id="sale-badge-count" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--sub)"></span>
+      </div>
+      <div id="sale-cases-body"><!-- JS生成 --></div>
+    </div>
 
     <!-- ════ 名刺発注セクション ════ -->
     <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;margin-top:16px;overflow:hidden" id="bc-section">
@@ -487,6 +533,16 @@ const AGENT_DATA = {
       {icon:'🏆', text:'今月の成約数が3件に達しました！', time:'昨日', isNew:false},
     ],
     monthly: [{label:'10月',val:1},{label:'11月',val:2},{label:'12月',val:1},{label:'1月',val:2},{label:'2月',val:3}],
+    sale_cases: [
+      {
+        id:'S291047', name:'田中 美咲', prop:'港区 タワマン', salePrice:65000000, saleRole:'buy',
+        docCheckStatus:null,
+        mediationReqs:[],
+        reinsReqs:[],
+        step:'report',
+        hist:['2/21 内見なし・買付提出','2/22 買付受理 → 案件報告待ち'],
+      },
+    ],
   },
   '10008': {
     cases: 2, rewardEstimate: 1250000,
@@ -500,6 +556,24 @@ const AGENT_DATA = {
       {icon:'💰', text:'2月分 振込完了 ¥980,500', time:'2日前', isNew:false},
     ],
     monthly: [{label:'10月',val:2},{label:'11月',val:3},{label:'12月',val:2},{label:'1月',val:3},{label:'2月',val:2}],
+    sale_cases: [
+      {
+        id:'S819204', name:'吉田 大輔', prop:'目黒区 戸建て', salePrice:32000000, saleRole:'buy',
+        docCheckStatus:'ok',
+        mediationReqs:[{id:'MR001',date:'2/15',type:'専任媒介',price:32000000,status:'done'}],
+        reinsReqs:[{id:'RR001',date:'2/15',mediationType:'専任媒介',address:'目黒区 戸建て',status:'done'}],
+        step:'contract',
+        hist:['2/15 買付受領','2/20 書類チェック完了','2/20 売買契約締結'],
+      },
+      {
+        id:'S104382', name:'渡辺 健一', prop:'渋谷区 マンション', salePrice:28500000, saleRole:'sell',
+        docCheckStatus:null,
+        mediationReqs:[{id:'MR002',date:'2/22',type:'専任媒介',price:28500000,status:'pending'}],
+        reinsReqs:[],
+        step:'naiken',
+        hist:['2/22 内見予定','2/22 媒介契約書申請 受付済み'],
+      },
+    ],
   },
   '20005': {
     cases: 1, rewardEstimate: 382000,
@@ -620,6 +694,9 @@ function init() {
 
   // 名刺プレビュー
   initBusinessCard(ag);
+
+  // 売買案件ステータス
+  renderSaleCases(data.sale_cases || []);
 }
 
 function renderActions(type) {
@@ -662,6 +739,102 @@ function renderNotifs(list) {
       </div>
       ${n.isNew ? '<div class="ni-new"></div>' : ''}
     </div>`).join('');
+}
+
+function renderSaleCases(saleCases) {
+  const panel = document.getElementById('sale-status-panel');
+  const body  = document.getElementById('sale-cases-body');
+  const badge = document.getElementById('sale-badge-count');
+  if (!saleCases || !saleCases.length) {
+    panel.style.display = 'none';
+    return;
+  }
+  panel.style.display = '';
+  const pending = saleCases.filter(sc =>
+    sc.docCheckStatus !== 'ok' ||
+    (sc.mediationReqs||[]).some(r=>r.status!=='done') ||
+    (sc.reinsReqs||[]).some(r=>r.status!=='done')
+  ).length;
+  badge.textContent = saleCases.length + '件' + (pending ? '　⚠️ ' + pending + '件 要対応' : '　✅ 全対応済み');
+
+  const STEP_LABELS = {
+    naiken:'内見', offer:'買付', report:'案件報告', 'doc-check':'書類チェック',
+    'it-setsu':'IT重説', contract:'契約', settlement:'決済', done:'完了',
+    verify:'業者確認'
+  };
+
+  body.innerHTML = saleCases.map(sc => {
+    const roleHtml = sc.saleRole === 'sell'
+      ? '<span class="sc-role role-sell">売却側</span>'
+      : '<span class="sc-role role-buy">購入側</span>';
+
+    // 書類チェックバッジ
+    const dcBadge = sc.docCheckStatus === 'ok'
+      ? '<span class="badge-ok">✅ チェック完了</span>'
+      : sc.docCheckStatus === 'ng'
+      ? '<span class="badge-ng">❌ 要修正</span>'
+      : sc.docCheckStatus === 'pending'
+      ? '<span class="badge-pending">⏳ 確認中</span>'
+      : '<span class="badge-none">未実施</span>';
+
+    // 媒介申請リスト
+    const mrHtml = (sc.mediationReqs||[]).length
+      ? (sc.mediationReqs||[]).map(r => {
+          const stBadge = r.status === 'done'
+            ? '<span class="badge-ok">完了</span>'
+            : '<span class="badge-pending">処理中</span>';
+          return `<div class="sr-hist-item"><span class="sr-date">${escHtml(r.date)}</span><span>${escHtml(r.type)}</span>${stBadge}</div>`;
+        }).join('')
+      : '<div style="font-size:10px;color:var(--muted);padding:3px 0">申請なし</div>';
+
+    // レインズリスト
+    const rrHtml = (sc.reinsReqs||[]).length
+      ? (sc.reinsReqs||[]).map(r => {
+          const stBadge = r.status === 'done'
+            ? '<span class="badge-ok">登録済</span>'
+            : '<span class="badge-pending">処理中</span>';
+          return `<div class="sr-hist-item"><span class="sr-date">${escHtml(r.date)}</span><span>${escHtml(r.mediationType)}</span>${stBadge}</div>`;
+        }).join('')
+      : '<div style="font-size:10px;color:var(--muted);padding:3px 0">依頼なし</div>';
+
+    // 履歴
+    const histHtml = (sc.hist||[]).slice(0,3).map(h =>
+      `<div class="sr-hist-item"><span class="sr-date"></span><span>${escHtml(h)}</span></div>`
+    ).join('');
+
+    const stepLabel = STEP_LABELS[sc.step] || sc.step;
+    const stepColor = sc.step === 'done' ? 'var(--green)'
+      : sc.step === 'contract' || sc.step === 'settlement' ? 'var(--gold)'
+      : 'var(--blue)';
+
+    return `<div class="sale-case">
+      <div class="sc-top">
+        <span class="sc-id">${escHtml(sc.id)}</span>
+        <span class="sc-name">${escHtml(sc.name)}</span>
+        ${roleHtml}
+        <span class="sc-price">¥${(sc.salePrice||0).toLocaleString()}</span>
+        <span style="font-size:9px;padding:2px 7px;border-radius:4px;border:1px solid ${stepColor}44;color:${stepColor};background:${stepColor}11">${stepLabel}</span>
+      </div>
+      <div class="sc-rows">
+        <div class="sc-row">
+          <div class="sr-label">📂 書類チェック</div>
+          <div class="sr-val">${dcBadge}</div>
+        </div>
+        <div class="sc-row">
+          <div class="sr-label">📄 媒介契約書申請</div>
+          <div class="sr-hist">${mrHtml}</div>
+        </div>
+        <div class="sc-row">
+          <div class="sr-label">🏗️ レインズ登録</div>
+          <div class="sr-hist">${rrHtml}</div>
+        </div>
+        <div class="sc-row">
+          <div class="sr-label">📝 最近の動き</div>
+          <div class="sr-hist">${histHtml}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 function renderChart(monthly) {

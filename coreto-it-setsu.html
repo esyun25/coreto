@@ -337,6 +337,7 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
   <div class="cl-filter">
     <div class="clf on" data-f="all" onclick="filterCases('all',this)">全て</div>
     <div class="clf" data-f="it" onclick="filterCases('it',this)">IT重説待</div>
+    <div class="clf" data-f="sale" onclick="filterCases('sale',this)">🏢 売買</div>
     <div class="clf" data-f="scan" onclick="filterCases('scan',this)">書類管理</div>
     <div class="clf" data-f="done" onclick="filterCases('done',this)">完了</div>
   </div>
@@ -421,7 +422,7 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
           <div class="card-title" style="font-size:9px;color:var(--muted);letter-spacing:2px;
                text-transform:uppercase;display:flex;align-items:center;gap:8px;margin:0">
             <div style="width:3px;height:12px;background:#00b900;border-radius:2px"></div>
-            IT重説用スキャン書類
+            ${currentCase&&(currentCase.caseType==='reSale'||currentCase.caseType==='sannai')?'売買 スキャン書類（重説書・売買契約書）':'IT重説用スキャン書類'}
           </div>
           <div style="display:flex;align-items:center;gap:8px">
             <div id="drive-overall-badge" style="font-size:10px;padding:3px 10px;border-radius:6px;
@@ -591,7 +592,8 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
 
   // ① IT重説完了報告
   window.slackNotifyITSetsuComplete = function(c, itCheckDone, itCheckAll, docsDone, docsAll, memo){
-    post(blk('✅ IT重説完了: '+c.name+' 様', [
+    const isSaleCase2=(c.caseType==='reSale'||c.caseType==='sannai');
+    post(blk((isSaleCase2?'✅ 売買IT重説完了: ':'✅ IT重説完了: ')+c.name+' 様', [
       hdr('✅ IT重説 — 完了報告'),
       flds([
         ['クライアント',  c.name+' 様'],
@@ -846,7 +848,8 @@ async function aiExtractSignatures(docIdx, event) {
 
   // デモ用: 実際はfile objectを保持してbase64変換して送る
   // 本番ではdoc.fileObjectをbase64に変換してAPIに渡す
-  var docType = doc.key === 'keiyaku' ? '賃貸借契約書' : '重要事項説明書';
+  var isSaleCase = currentCase && (currentCase.caseType==='reSale'||currentCase.caseType==='sannai');
+    var docType = doc.key === 'keiyaku' ? (isSaleCase ? '売買契約書' : '賃貸借契約書') : '重要事項説明書';
 
   try {
     var response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -1250,6 +1253,33 @@ const CASES = [
       'cnt-1':'ok','cnt-2':'ok','end-1':'ok','end-2':'ok','end-3':'ok','end-4':'ok' },
     docCheckState:{ 'doc-1':'ok','doc-2':'ok','doc-3':'ok','doc-4':'ok','doc-5':'ok','doc-6':'ok' },
   },
+,
+  {
+    id:'0241', name:'吉田 大輔', prop:'目黒区 戸建て',
+    agent:'10008 田中健', mgmt:'株式会社CORETO事務局',
+    rent:0, salePrice:32000000, saleRole:'buy',
+    itDate:'2026-03-10 14:00', itStatus:'scheduled',
+    caseType:'reSale', contractType:'paper',
+    trackNos:{ send:'', reply:'', key:'' },
+    denshiStatus:{ sentAt:'', clientSignedAt:'', hqProcessedAt:'' },
+    status:'it-pending', checkState:{}, docCheckState:{},
+  },
+  {
+    id:'0238', name:'渡辺 健一', prop:'渋谷区 マンション',
+    agent:'10008 田中健', mgmt:'株式会社CORETO事務局',
+    rent:0, salePrice:28500000, saleRole:'sell',
+    itDate:'2026-03-08 15:00', itStatus:'done',
+    caseType:'reSale', contractType:'denshi',
+    itDoneAt:'2026-03-08 16:05', itDuration:65,
+    trackNos:{ send:'', reply:'', key:'' },
+    denshiStatus:{ sentAt:'2026-03-06 12:00', clientSignedAt:'', hqProcessedAt:'' },
+    status:'scan-pending', checkState:{
+      'sp-pre-1':'ok','sp-pre-2':'ok','sp-pre-3d':'ok','sp-pre-4':'ok',
+      'sp-ice-1':'ok','sp-ice-2d':'ok',
+      'sp-exp-1':'ok','sp-exp-2':'ok','sp-exp-3':'ok','sp-exp-4':'ok','sp-exp-5':'ok',
+      'sp-cnt-1':'ok','sp-cnt-2':'ok','sp-cnt-3':'ok',
+    }, docCheckState:{},
+  },
 ];
 
 // ================================================================
@@ -1375,10 +1405,131 @@ const IT_CHECKLIST = [
   },
 ];
 
-// 契約タイプに応じたチェックリストを返す
-function getActiveChecklist(contractType) {
+// ================================================================
+//  売買専用 IT重説チェックリスト
+//  ※ 賃貸と異なり「売買契約書」「権利関係」「融資特約」等が中心
+// ================================================================
+const SALE_IT_CHECKLIST = [
+  {
+    id:'sp-prep', icon:'📋', title:'事前準備',
+    items:[
+      { id:'sp-pre-1', label:'Google Meet URLの動作確認',
+        desc:'接続テスト実施。音声・ビデオが正常に動作することを確認' },
+      { id:'sp-pre-2', label:'日時・URL確認',
+        desc:'予約日時・クライアント名・Google Meet URLを確認。リマインドメール送付済みか確認' },
+      { id:'sp-pre-3p', label:'重説書・売買契約書のクライアント着荷確認',
+        desc:'郵送した重要事項説明書・売買契約書が届いているか事前確認',
+        tag:'required', tagLabel:'必須', contractTypes:['paper'] },
+      { id:'sp-pre-3d', label:'電子書類URL送付確認（keiyaku@coreto.jp）',
+        desc:'管理会社・売主側仲介から keiyaku@coreto.jp に書類が届いているか確認',
+        tag:'required', tagLabel:'必須', contractTypes:['denshi'] },
+      { id:'sp-pre-4', label:'宅建士証の準備',
+        desc:'宅建士証を手元に用意。カメラに映せる状態にしておく',
+        tag:'takken', tagLabel:'宅建士必須' },
+      { id:'sp-pre-5', label:'登記簿謄本・公図の手元確認',
+        desc:'事前に取得した登記簿謄本・公図・建物図面を手元に用意' },
+      { id:'sp-pre-6', label:'管理規約・重要事項調査報告書の確認（マンションの場合）',
+        desc:'管理費・修繕積立金・滞納状況・大規模修繕計画の数字を重説と照合' },
+    ]
+  },
+  {
+    id:'sp-ice', icon:'👋', title:'アイスブレイク・書類確認',
+    items:[
+      { id:'sp-ice-1', label:'自己紹介・宅建士証の提示',
+        desc:'氏名・宅建士登録番号を口頭説明し、宅建士証をカメラに提示',
+        tag:'takken', tagLabel:'宅建士証提示' },
+      { id:'sp-ice-2p', label:'クライアント手元の書類確認（紙）',
+        desc:'「重要事項説明書と売買契約書はお手元にございますか？」と確認',
+        tag:'required', tagLabel:'必須', contractTypes:['paper'] },
+      { id:'sp-ice-2d', label:'電子書類リンクの受信確認',
+        desc:'「電子書類リンクはお手元に届いていますか？IT重説後に署名いただきます」と案内',
+        tag:'required', tagLabel:'必須', contractTypes:['denshi'] },
+      { id:'sp-ice-3', label:'本日の流れの説明',
+        desc:'「重要事項説明 → 売買契約内容のご説明 → 署名ご案内の3部構成です」' },
+    ]
+  },
+  {
+    id:'sp-jyusetsu', icon:'📜', title:'重要事項説明（売買）',
+    items:[
+      { id:'sp-exp-1', label:'物件の表示・登記事項の説明',
+        desc:'登記簿上の地番・家屋番号・面積・権利種別（所有権／借地権）の読み上げ' },
+      { id:'sp-exp-2', label:'法令上の制限の説明',
+        desc:'用途地域・建蔽率・容積率・接道義務・日影規制・その他都市計画制限を説明' },
+      { id:'sp-exp-3', label:'インフラ・設備状況の説明',
+        desc:'上下水道・ガス・電気の引き込み状況。排水の方式（公共下水か浄化槽か）を確認' },
+      { id:'sp-exp-4', label:'マンション管理に関する事項（マンションのみ）',
+        desc:'管理費・修繕積立金の月額、滞納額、大規模修繕計画の有無・費用を説明' },
+      { id:'sp-exp-5', label:'物件状況報告書・告知事項の説明',
+        desc:'雨漏り・シロアリ・境界・近隣トラブル等の告知内容を読み上げ、クライアントの理解を確認' },
+      { id:'sp-exp-6', label:'質疑応答・クライアントの理解確認',
+        desc:'「ご不明な点はありますか？」を各セクション後に必ず確認。内容を記録',
+        tag:'required', tagLabel:'必須' },
+      { id:'sp-exp-7', label:'電磁的方法による重説の同意確認',
+        desc:'「IT重説による電磁的方法での説明に同意いただけますか？」の確認',
+        tag:'required', tagLabel:'法定必須' },
+    ]
+  },
+  {
+    id:'sp-contract', icon:'✍️', title:'売買契約内容の説明',
+    items:[
+      { id:'sp-cnt-1', label:'売買価格・手付金・残代金の説明',
+        desc:'売買代金の合計・手付金額・残代金（=売買代金−手付金）・支払いスケジュールを説明' },
+      { id:'sp-cnt-2', label:'融資特約・ローン条件の説明',
+        desc:'融資申込先・金額・特約の期限。「融資承認が得られない場合は白紙解除できます」と説明',
+        tag:'required', tagLabel:'重要' },
+      { id:'sp-cnt-3', label:'引き渡し日・所有権移転登記の説明',
+        desc:'残代金決済日=引き渡し日=登記日が原則。司法書士が当日対応することを説明' },
+      { id:'sp-cnt-4', label:'契約不適合責任（瑕疵担保）の説明',
+        desc:'引き渡し後に発覚した隠れた瑕疵についての責任範囲・期限・免責事項を説明' },
+      { id:'sp-cnt-5', label:'固定資産税等の精算の説明',
+        desc:'引き渡し日を基準に固定資産税・都市計画税を日割り精算することを説明' },
+    ]
+  },
+  {
+    id:'sp-hanko', icon:'🔏', title:'署名・捺印のご案内',
+    items:[
+      { id:'sp-hk-1p', label:'重要事項説明書 — 署名・捺印欄の案内',
+        desc:'「末尾の署名欄にご署名と捺印をお願いします（認印可）」',
+        contractTypes:['paper'] },
+      { id:'sp-hk-2p', label:'売買契約書 — 署名・捺印欄の案内',
+        desc:'「売買契約書の署名欄・割印箇所・各ページの捺印欄を順にご確認ください」',
+        contractTypes:['paper'] },
+      { id:'sp-hk-3p', label:'捺印漏れ・署名漏れの最終確認',
+        desc:'「全ページを通してご確認いただき、漏れのないようお願いします」',
+        tag:'required', tagLabel:'必須', contractTypes:['paper'] },
+      { id:'sp-hk-1d', label:'電子署名リンクの操作案内',
+        desc:'「リンクを開き内容確認後、「署名」ボタンをクリックしてください。スマートフォンでも可能です」',
+        tag:'required', tagLabel:'必須', contractTypes:['denshi'] },
+      { id:'sp-hk-2d', label:'宅建士の電子署名（重説書）',
+        desc:'IT重説完了後、宅建士も keiyaku@coreto.jp にて電子署名を実施',
+        tag:'takken', tagLabel:'宅建士署名', contractTypes:['denshi'] },
+    ]
+  },
+  {
+    id:'sp-closing', icon:'🔑', title:'今後の流れの説明',
+    items:[
+      { id:'sp-end-1p', label:'書類返送の案内（レターパック）',
+        desc:'「署名・捺印後はレターパックライトで返送してください。送付先は同封の封筒に記載しています」',
+        contractTypes:['paper'] },
+      { id:'sp-end-1d', label:'電子署名の完了目安を案内',
+        desc:'「IT重説後すぐにリンクから署名いただけます。署名完了後、弊社（keiyaku@coreto.jp）で確認します」',
+        contractTypes:['denshi'] },
+      { id:'sp-end-2', label:'融資申込スケジュールの確認',
+        desc:'住宅ローンの申込期限・承認期限・条件確認期限を再確認' },
+      { id:'sp-end-3', label:'残代金決済・引き渡し日程の確認',
+        desc:'残代金決済日（=所有権移転日）・引き渡し方法・鍵の受け渡し場所を確認' },
+      { id:'sp-end-4', label:'重説完了の記録',
+        desc:'宅建士名・実施日・クライアント確認の記録（本フォーム送信で自動記録）',
+        tag:'record', tagLabel:'Kintone記録' },
+    ]
+  },
+];
+
+// 契約タイプ・案件タイプに応じたチェックリストを返す
+function getActiveChecklist(contractType, caseType) {
   const ct = contractType || 'paper';
-  return IT_CHECKLIST.map(sec => ({
+  const list = (caseType === 'reSale' || caseType === 'sannai') ? SALE_IT_CHECKLIST : IT_CHECKLIST;
+  return list.map(sec => ({
     ...sec,
     items: sec.items.filter(it => !it.contractTypes || it.contractTypes.includes(ct))
   })).filter(sec => sec.items.length > 0);
@@ -1493,6 +1644,7 @@ function renderCaseList() {
     if (currentFilter === 'it')   return c.status === 'it-pending';
     if (currentFilter === 'scan') return c.status === 'scan-pending';
     if (currentFilter === 'done') return c.status === 'complete';
+    if (currentFilter === 'sale') return c.caseType === 'reSale' || c.caseType === 'sannai';
     return true;
   });
   document.getElementById('cl-count').textContent = filtered.length + ' 件';
@@ -1508,6 +1660,7 @@ function renderCaseList() {
         <div class="ci-name">${escHtml(c.name)}</div>
         <div class="ci-meta">
           <span style="font-size:10px;color:var(--sub)">${c.prop.slice(0,18)}…</span>
+          ${c.caseType==='reSale'||c.caseType==='sannai'?'<span style="font-size:8px;padding:1px 5px;border-radius:3px;background:rgba(201,168,76,.12);color:var(--gold);border:1px solid rgba(201,168,76,.2)">🏢 売買</span>':''}
           <span class="ci-badge" style="background:${clr}22;color:${clr};border:1px solid ${clr}44">${lbl}</span>
         </div>
       </div>`;
@@ -1594,8 +1747,10 @@ function renderCaseHeader() {
   document.getElementById('c-meta').innerHTML = `
     <span class="prop-tag">🏠 ${escHtml(c.prop)}</span>
     <span class="case-detail-row">担当：${c.agent}</span>
-    <span class="case-detail-row">管理会社：${c.mgmt}</span>
-    <span class="case-detail-row">家賃：¥${c.rent.toLocaleString()}</span>
+    <span class="case-detail-row">${(c.caseType==='reSale'||c.caseType==='sannai')?'事務局':'管理会社'}：${escHtml(c.mgmt)}</span>
+    <span class="case-detail-row">${(c.caseType==='reSale'||c.caseType==='sannai')
+      ?`物件価格：<span style="color:var(--gold);font-weight:600">¥${(c.salePrice||0).toLocaleString()}</span>　${c.saleRole==='sell'?'<span style="color:var(--orange);font-size:9px;padding:1px 6px;border:1px solid rgba(251,146,60,.3);border-radius:4px">売却側</span>':'<span style="color:var(--blue);font-size:9px;padding:1px 6px;border:1px solid rgba(79,156,249,.3);border-radius:4px">購入側</span>'}`
+      :`家賃：¥${c.rent.toLocaleString()}`}</span>
     <span class="case-detail-row" style="display:flex;align-items:center;gap:8px">
       ${c.contractType==='denshi'
         ? `<span style="background:rgba(52,211,153,.13);color:var(--green);border:1px solid rgba(52,211,153,.3);padding:2px 9px;border-radius:5px;font-size:10px;font-weight:700">📧 電子契約</span>
@@ -1615,7 +1770,7 @@ function renderCaseHeader() {
 //  IT Checklist render
 // ================================================================
 function renderITChecklist() {
-  const activeList = getActiveChecklist(currentCase.contractType);
+  const activeList = getActiveChecklist(currentCase.contractType, currentCase.caseType);
   const body = document.getElementById('it-checklist-body');
   body.innerHTML = activeList.map(sec => `
     <div class="sec-card" id="sec-${sec.id}">
@@ -1911,7 +2066,7 @@ function applyDocCheck(id, state) {
 // ================================================================
 function updateProgress() {
   if (!currentCase) return;
-  const activeList = getActiveChecklist(currentCase.contractType);
+  const activeList = getActiveChecklist(currentCase.contractType, currentCase.caseType);
   const allIT  = activeList.flatMap(s=>s.items);
   const doneIT = allIT.filter(it=>currentCase.checkState[it.id]).length;
   const isDenshi = (currentCase.contractType === 'denshi');
@@ -1937,7 +2092,7 @@ function updateProgress() {
 }
 
 function updateSectionProgress() {
-  const activeList = getActiveChecklist(currentCase.contractType);
+  const activeList = getActiveChecklist(currentCase.contractType, currentCase.caseType);
   activeList.forEach(sec => {
     const done = sec.items.filter(it=>currentCase.checkState[it.id]).length;
     const el   = document.getElementById(`sp-${sec.id}`);
@@ -2046,7 +2201,7 @@ function submitComplete() {
   if (progress) progress.style.display = 'block';
 
   // IT重説・書類チェック進捗を取得
-  var activeList = getActiveChecklist(currentCase.contractType);
+  var activeList = getActiveChecklist(currentCase.contractType, currentCase.caseType);
   var allIT   = activeList.flatMap(function(s){ return s.items; });
   var doneIT  = allIT.filter(function(it){ return currentCase.checkState[it.id]==='ok'; }).length;
   var isDenshi = (currentCase.contractType === 'denshi');
