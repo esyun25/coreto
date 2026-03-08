@@ -506,9 +506,78 @@ function exportCSV() {
 }
 
 function sendPayslips() {
+  // Slack通知モジュール
+  var CFG = window.SLACK_CONFIG || {};
+  var WH  = CFG.PAYSLIP_NOTIFY || CFG.GENERAL || null;
+  var WHIQ = CFG.PAYROLL_HQ    || CFG.GENERAL || null;
+
+  function post(wh, payload){
+    if(!wh){ console.log('[Slack未設定 Payroll]', payload.text||''); return; }
+    fetch(wh,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload),mode:'no-cors'}).catch(function(e){ console.error('[Slack Payroll]',e); });
+  }
+  function flds(pairs){ return{type:'section',fields:pairs.map(function(p){return{type:'mrkdwn',text:'*'+p[0]+'*\n'+p[1]};})}; }
+  function ctx(t){ return{type:'context',elements:[{type:'mrkdwn',text:t}]}; }
+  function now(){ return new Date().toLocaleString('ja-JP'); }
+  var yen = function(v){ return '¥'+Math.round(v).toLocaleString(); };
+
+  var IT_FEE = 2000;
+  var month  = '2026年2月';
+  var payDate= '2026年3月25日';
+  var totalNet = 0;
+  var count = 0;
+
+  // AG 個別通知（WH がある場合）
+  AGENTS.forEach(function(ag){
+    var r = calcRow(ag);
+    totalNet += r.net;
+    count++;
+    var msg = {
+      text: '💰 '+month+'分 支払明細 — '+ag.name+' 様',
+      blocks:[
+        { type:'header', text:{type:'plain_text', text:'💰 支払明細書のご通知', emoji:true} },
+        { type:'section', text:{type:'mrkdwn', text:'*'+ag.name+' 様*\n'+month+'分の報酬明細をお知らせします。'} },
+        { type:'divider' },
+        flds([
+          ['対象月',       month+'分'],
+          ['振込予定日',   payDate],
+          ['成約件数',     ag.cases+'件'],
+          ['ランク',       ag.rank],
+        ]),
+        flds([
+          ['報酬合計（税抜）', yen(ag.gross)],
+          ['源泉徴収',         r.tax>0?'-'+yen(r.tax):'¥0'],
+          ['IT重説',           ag.itCount>0?'+'+yen(ag.itCount*IT_FEE):'—'],
+          ['振込額',           yen(r.net)],
+        ]),
+        { type:'divider' },
+        { type:'section', text:{type:'mrkdwn', text:'詳細はCOREBLDGシステムの支払明細書ページをご確認ください。\nご不明な点は本部までご連絡ください。'} },
+        ctx('COREBLDGシステム — 支払明細書 | '+now()),
+      ]
+    };
+    post(WH, msg);
+  });
+
+  // HQ向け一括完了通知
+  post(WHIQ, {
+    text: '✅ 支払明細一括送信完了',
+    blocks:[
+      { type:'header', text:{type:'plain_text', text:'✅ 支払明細一括送信完了', emoji:true} },
+      flds([
+        ['対象月',    month+'分'],
+        ['送信数',    count+'名'],
+        ['振込総額',  yen(totalNet)],
+        ['振込予定日', payDate],
+      ]),
+      ctx('COREBLDGシステム — Payroll | 送信者: '+((window._SESSION&&window._SESSION.name)||'HQスタッフ')+' | '+now()),
+    ]
+  });
+
   document.getElementById('sp5').className='step-item done';
   document.getElementById('sp5').querySelector('.step-num').textContent='✓';
-  alert('✅ 全エージェントに2026年2月分の報酬明細をSlackで送信しました。');
+  var toastMsg = '✅ 全'+count+'名に'+month+'分の報酬明細をSlackで送信しました。';
+  if(!WH) toastMsg += '\n（Slack未設定のためコンソールログのみ）';
+  alert(toastMsg);
 }
 
 renderTable();

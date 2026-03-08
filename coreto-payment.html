@@ -10,7 +10,8 @@
     script-src 'self' 'unsafe-inline'
       https://cdnjs.cloudflare.com
       https://js.stripe.com
-      https://cdn-cgi/scripts;
+      https://cdn-cgi/scripts
+      https://unpkg.com;
     style-src 'self' 'unsafe-inline'
       https://fonts.googleapis.com;
     font-src 'self'
@@ -192,8 +193,34 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
   .stmt{box-shadow:none;border-radius:0;max-width:100%}
   body{background:#fff}
 }
+/* PDF/Slack追加ボタン */
+.pa-btn.pa-pdf{background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);color:#34d399}
+.pa-btn.pa-pdf:hover{background:rgba(52,211,153,.22)}
+.pa-btn.pa-slack{background:rgba(79,156,249,.12);border:1px solid rgba(79,156,249,.3);color:#4f9cf9}
+.pa-btn.pa-slack:hover{background:rgba(79,156,249,.22)}
+/* PDF生成中オーバーレイ */
+#pdf-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9999;
+  align-items:center;justify-content:center;flex-direction:column;gap:14px}
+#pdf-overlay.show{display:flex}
+#pdf-overlay .po-msg{color:#e2e6f3;font-size:14px;font-weight:700;font-family:'Noto Sans JP',sans-serif}
+#pdf-overlay .po-sub{color:#7a849e;font-size:11px;font-family:'Noto Sans JP',sans-serif}
+/* Slack送信トースト */
+#payslip-toast{display:none;position:fixed;bottom:24px;right:24px;z-index:9998;
+  background:#0f1119;border:1px solid rgba(79,156,249,.4);border-radius:12px;
+  padding:14px 20px;font-size:12px;color:#e2e6f3;max-width:300px;
+  font-family:'Noto Sans JP',sans-serif;box-shadow:0 4px 20px rgba(0,0,0,.5)}
 </style>
 </head>
+
+<!-- PDF生成中オーバーレイ -->
+<div id="pdf-overlay">
+  <div style="font-size:32px">📄</div>
+  <div class="po-msg" id="pdf-overlay-msg">PDF生成中...</div>
+  <div class="po-sub">しばらくお待ちください</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <body>
 
 <div class="header">
@@ -320,15 +347,188 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
 <!-- ─ Right Preview ─ -->
 <div class="preview">
   <div class="preview-actions">
-    <button class="pa-btn pa-print" onclick="window.print()">🖨 印刷 / PDF保存</button>
-    <button class="pa-btn pa-gen" onclick="generate()">🔄 再計算</button>
+    <button class="pa-btn pa-pdf"   onclick="downloadPDF()">⬇ PDF保存</button>
+    <button class="pa-btn pa-slack" onclick="sendPayslipSlack()" id="btn-slack-payslip">📣 Slackで送信</button>
+    <button class="pa-btn pa-print" onclick="window.print()">🖨 印刷</button>
+    <button class="pa-btn pa-gen"   onclick="generate()">🔄 再計算</button>
   </div>
   <div id="stmt-wrap"></div>
 </div>
 
 </div><!-- /layout -->
 
+<!-- Slackトースト -->
+<div id="payslip-toast"></div>
+
 <script>
+// ================================================================
+//  Slack通知モジュール（支払明細書）
+//  db.js: window.SLACK_CONFIG.PAYSLIP_NOTIFY = 'webhook_url'
+// ================================================================
+(function(){
+  var CFG = window.SLACK_CONFIG || {};
+  var WH  = CFG.PAYSLIP_NOTIFY || CFG.GENERAL || 'YOUR_SLACK_WEBHOOK_URL';
+
+  function post(payload){
+    if(!WH||WH==='YOUR_SLACK_WEBHOOK_URL'){
+      console.log('[Slack未設定 支払明細]', payload.text||''); return Promise.resolve();
+    }
+    return fetch(WH,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload),mode:'no-cors'}).catch(function(e){ console.error('[Slack 支払明細]',e); });
+  }
+  function hdr(t){ return{type:'header',text:{type:'plain_text',text:t,emoji:true}}; }
+  function sec(m){ return{type:'section',text:{type:'mrkdwn',text:m}}; }
+  function flds(pairs){ return{type:'section',fields:pairs.map(function(p){return{type:'mrkdwn',text:'*'+p[0]+'*\n'+p[1]};})}; }
+  function ctx(t){ return{type:'context',elements:[{type:'mrkdwn',text:t}]}; }
+  function div(){ return{type:'divider'}; }
+  function now(){ return new Date().toLocaleString('ja-JP'); }
+
+  // AG個人への支払明細通知
+  window.slackSendPayslip = function(info){
+    // info: { agName, agId, month, payDate, transfer, gross, tax, caseCount, rankLabel, bankLast4 }
+    var monthStr = info.month ? info.month.replace('-','年')+'月分' : '—';
+    return post({
+      text:'💰 '+monthStr+'支払明細: '+info.agName+' 様',
+      blocks:[
+        hdr('💰 支払明細書のご通知'),
+        sec('*'+info.agName+' 様*\n'+monthStr+'の報酬明細をお送りします。'),
+        div(),
+        flds([
+          ['対象月',       monthStr],
+          ['振込予定日',   info.payDate || '—'],
+          ['成約件数',     info.caseCount+'件'],
+          ['ランク',       info.rankLabel],
+        ]),
+        flds([
+          ['報酬合計（税抜）', '¥'+Math.round(info.gross).toLocaleString()],
+          ['源泉徴収',         info.tax>0?'-¥'+Math.round(info.tax).toLocaleString():'¥0'],
+          ['振込額',           '¥'+Math.round(info.transfer).toLocaleString()],
+          ['振込先（末尾）',   info.bankLast4?'···'+info.bankLast4:'登録済み口座'],
+        ]),
+        div(),
+        sec('詳細はCOREBLDGシステムの支払明細書ページをご確認ください。\nご不明な点は本部までご連絡ください。'),
+        ctx('COREBLDGシステム — 支払明細書ジェネレーター | '+now()),
+      ]
+    });
+  };
+
+  // HQ向け一括送信完了通知
+  window.slackNotifyBulkPayslip = function(month, count, totalNet){
+    var WH2 = CFG.PAYROLL_HQ || CFG.GENERAL || 'YOUR_SLACK_WEBHOOK_URL';
+    if(!WH2||WH2==='YOUR_SLACK_WEBHOOK_URL'){ console.log('[Slack未設定 一括]'); return; }
+    fetch(WH2,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        text:'✅ 支払明細一括送信完了',
+        blocks:[
+          hdr('✅ 支払明細一括送信完了'),
+          flds([
+            ['対象月', month],
+            ['送信数', count+'名'],
+            ['振込総額', '¥'+Math.round(totalNet).toLocaleString()],
+          ]),
+          ctx('COREBLDGシステム — Payroll | 送信: '+now()),
+        ]
+      }),mode:'no-cors'}).catch(function(e){ console.error(e); });
+  };
+})();
+
+// ================================================================
+//  PDF ダウンロード
+// ================================================================
+async function downloadPDF() {
+  var overlay = document.getElementById('pdf-overlay');
+  var msg     = document.getElementById('pdf-overlay-msg');
+  overlay.classList.add('show');
+  msg.textContent = 'PDF生成中...';
+
+  // stmt要素を白背景で一時取得
+  var el = document.querySelector('.stmt');
+  if (!el) { overlay.classList.remove('show'); alert('明細が生成されていません'); return; }
+
+  // エージェント名・月を取得
+  var agName  = (document.getElementById('ag-name')||{}).value || '明細';
+  var month   = (document.getElementById('target-month')||{}).value || '';
+  var monthStr = month ? month.replace('-','') : new Date().toISOString().slice(0,7).replace('-','');
+  var filename = 'CORETO_支払明細_' + monthStr + '_' + agName + '.pdf';
+
+  try {
+    msg.textContent = '画面をキャプチャ中...';
+    var canvas = await html2canvas(el, {
+      scale: 2, useCORS: true, backgroundColor: '#ffffff',
+      logging: false,
+      onclone: function(doc){
+        var s = doc.querySelector('.stmt');
+        if(s){ s.style.boxShadow='none'; s.style.borderRadius='0'; }
+      }
+    });
+    msg.textContent = 'PDF作成中...';
+    var { jsPDF } = window.jspdf;
+    var imgData  = canvas.toDataURL('image/png');
+    var pxToMm   = 0.264583;
+    var pdfW     = canvas.width  * pxToMm;
+    var pdfH     = canvas.height * pxToMm;
+    var pdf = new jsPDF({ orientation: pdfH>pdfW?'portrait':'landscape',
+                          unit:'mm', format:[pdfW, pdfH] });
+    pdf.addImage(imgData, 'PNG', 0, 0, pdfW, pdfH);
+    pdf.save(filename);
+    overlay.classList.remove('show');
+    showPayslipToast('✅ PDFを保存しました\n' + filename);
+  } catch(e) {
+    overlay.classList.remove('show');
+    console.error('PDF生成エラー:', e);
+    alert('PDF生成に失敗しました。印刷機能（Ctrl+P）をご利用ください。');
+  }
+}
+
+// ================================================================
+//  Slack 個別送信（payment.htmlから）
+// ================================================================
+function sendPayslipSlack() {
+  if (typeof slackSendPayslip !== 'function') return;
+  var agName    = (document.getElementById('ag-name')||{}).value || '—';
+  var agId      = (document.getElementById('ag-id')||{}).value   || '—';
+  var rankKey   = (document.getElementById('ag-rank')||{}).value || 'bronze';
+  var month     = (document.getElementById('target-month')||{}).value || '';
+  var payDate   = (document.getElementById('pay-date')||{}).value || '';
+  var bankNo    = (document.getElementById('bank-no')||{}).value  || '';
+  var RANKS_TMP = { bronze:'Bronze', silver:'Silver', gold:'Gold', platinum:'Platinum', founder:'創業メンバー' };
+
+  // stmtから振込額を読む（generate()済みを前提）
+  var bkTotalEl = document.querySelector('.bk-row.bk-total .bk-val');
+  var grossEl   = document.querySelector('.bk-row:first-child .bk-val');
+  var taxEl     = document.querySelector('.bk-val.bk-minus');
+  var parseVal  = function(el){ return el ? parseInt((el.textContent||'').replace(/[¥,\-]/g,''))||0 : 0; };
+
+  var btn = document.getElementById('btn-slack-payslip');
+  if(btn){ btn.disabled=true; btn.textContent='送信中...'; }
+
+  slackSendPayslip({
+    agName:    agName,
+    agId:      agId,
+    month:     month,
+    payDate:   payDate ? payDate.replace(/-/g,'/') : '—',
+    transfer:  parseVal(bkTotalEl),
+    gross:     parseVal(grossEl),
+    tax:       parseVal(taxEl),
+    caseCount: (window._lastCaseCount||cases.length||0),
+    rankLabel: RANKS_TMP[rankKey]||rankKey,
+    bankLast4: bankNo.slice(-4),
+  }).then(function(){
+    if(btn){ btn.disabled=false; btn.textContent='📣 Slackで送信'; }
+    showPayslipToast('📣 '+(agName)+' 様に支払明細をSlack通知しました');
+  });
+}
+
+function showPayslipToast(msg) {
+  var t = document.getElementById('payslip-toast');
+  if(!t) return;
+  t.style.display = 'block';
+  t.style.whiteSpace = 'pre-line';
+  t.textContent = msg;
+  clearTimeout(t._timer);
+  t._timer = setTimeout(function(){ t.style.display='none'; }, 3500);
+}
+
 // ================================================================
 //  Role detection (HQ vs Agent)
 // ================================================================
@@ -377,11 +577,16 @@ window.addEventListener('DOMContentLoaded', () => {
     // Agent view: hide editor, show statement fullscreen
     document.getElementById('editor-pane').style.display = 'none';
     document.querySelector('.layout').style.gridTemplateColumns = '1fr';
-    document.querySelector('.preview-actions').style.display = 'none';
+    // AG視点: PDFダウンロードのみ表示
+    document.querySelector('.preview-actions').style.display = 'flex';
+    var slkBtn = document.getElementById('btn-slack-payslip');
+    if(slkBtn) slkBtn.style.display = 'none';
+    var printBtn = document.querySelector('.pa-print');
+    if(printBtn) printBtn.style.display = 'none';
     // Add agent header
     const agHeader = document.createElement('div');
     agHeader.style.cssText = 'padding:14px 28px;background:rgba(52,211,153,.06);border-bottom:1px solid rgba(52,211,153,.15);font-size:12px;color:var(--sub);display:flex;align-items:center;justify-content:space-between';
-    agHeader.innerHTML = `<span>📄 支払明細書</span><span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">印刷：ブラウザのCtrl+P / ⌘+P</span>`;
+    agHeader.innerHTML = `<span>📄 支払明細書</span><span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">⬇ PDF保存 / 印刷：Ctrl+P</span>`;
     document.querySelector('.preview').insertBefore(agHeader, document.querySelector('.preview').firstChild);
   }
 });
@@ -777,6 +982,7 @@ function generate() {
   </div>`;
 
   document.getElementById('stmt-wrap').innerHTML = html;
+  window._lastCaseCount = cases.length;
 }
 </script>
 </body>
