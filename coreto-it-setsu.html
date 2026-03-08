@@ -557,6 +557,102 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
 </div>
 
 <script src="db.js">
+// ================================================================
+//  Slack通知モジュール（IT重説・契約書スキャン）
+//  設定: db.js の window.SLACK_CONFIG に以下を追加
+//    ITSETSU_NOTIFY: 'https://hooks.slack.com/services/XXX/YYY/ZZZ'
+// ================================================================
+(function(){
+  var CFG = window.SLACK_CONFIG || {};
+  var WH  = CFG.ITSETSU_NOTIFY || CFG.GENERAL || 'YOUR_SLACK_WEBHOOK_URL';
+
+  function post(payload){
+    if(!WH||WH==='YOUR_SLACK_WEBHOOK_URL'){
+      console.log('[Slack未設定 IT重説]', payload.text||''); return;
+    }
+    fetch(WH,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload),mode:'no-cors'})
+      .catch(function(e){ console.error('[Slack IT重説]',e); });
+  }
+
+  function blk(fb,blocks){ return{text:fb,blocks:blocks}; }
+  function hdr(t){ return{type:'header',text:{type:'plain_text',text:t,emoji:true}}; }
+  function sec(m){ return{type:'section',text:{type:'mrkdwn',text:m}}; }
+  function flds(pairs){
+    return{type:'section',fields:pairs.map(function(p){
+      return{type:'mrkdwn',text:'*'+p[0]+'*\n'+p[1]};
+    })};
+  }
+  function ctx(t){ return{type:'context',elements:[{type:'mrkdwn',text:t}]}; }
+  function div(){ return{type:'divider'}; }
+  function now(){ return new Date().toLocaleString('ja-JP'); }
+  function reviewer(){ return(window._SESSION&&window._SESSION.name)||'AGスタッフ'; }
+
+  // ① IT重説完了報告
+  window.slackNotifyITSetsuComplete = function(c, itCheckDone, itCheckAll, docsDone, docsAll, memo){
+    post(blk('✅ IT重説完了: '+c.name+' 様', [
+      hdr('✅ IT重説 — 完了報告'),
+      flds([
+        ['クライアント',  c.name+' 様'],
+        ['物件',          c.prop],
+        ['実施日時',      now()],
+        ['担当エージェント', c.agent],
+      ]),
+      sec('*重説チェック:* '+itCheckDone+'/'+itCheckAll+' 項目完了'
+        + (docsDone?'\n*書類管理:* '+docsDone+'/'+docsAll+' 項目完了':'')
+        + (memo?'\n*備考:* '+memo:'')),
+      div(),
+      sec('📦 次ステップ：契約書（復路）返送確認 → 書類スキャン管理へ'),
+      ctx('COREBLDGシステム — IT重説チェックシート | 担当: '+reviewer()+' | '+now()),
+    ]));
+  };
+
+  // ② 書類スキャン完了（全必須書類アップロード済み）
+  window.slackNotifyDocScanReady = function(c, readyCount, totalCount){
+    post(blk('📄 書類準備完了: '+c.name+' 様', [
+      hdr('📄 IT重説スキャン書類 — 全件準備完了'),
+      flds([
+        ['クライアント', c.name+' 様'],
+        ['物件',         c.prop],
+        ['IT重説日',     c.itDate],
+        ['書類数',       readyCount+'/'+totalCount+' 件'],
+      ]),
+      sec('全ての必須書類がアップロードされました。\nIT重説開始前に書類共有リンクをクライアントに送付してください。'),
+      ctx('COREBLDGシステム — IT重説チェックシート | '+now()),
+    ]));
+  };
+
+  // ③ 追跡番号登録（往路/復路）
+  window.slackNotifyTrackNo = function(c, direction, trackNo){
+    var dir = direction==='outbound'?'契約書 往路（発送）':'契約書 復路（返送）';
+    post(blk(dir+' 追跡番号登録: '+c.name+' 様', [
+      hdr('📮 '+dir+' — 追跡番号登録'),
+      flds([
+        ['クライアント', c.name+' 様'],
+        ['物件',         c.prop],
+        ['追跡番号',     '`'+trackNo+'`'],
+        ['登録担当',     reviewer()],
+      ]),
+      ctx('COREBLDGシステム — IT重説チェックシート | '+now()),
+    ]));
+  };
+
+  // ④ AI署名解析で懸念検出
+  window.slackNotifySignatureIssue = function(c, docLabel, issues){
+    post(blk('⚠️ 署名・捺印懸念: '+c.name+' 様', [
+      hdr('⚠️ AI署名解析 — 懸念事項検出'),
+      flds([
+        ['クライアント', c.name+' 様'],
+        ['物件',         c.prop],
+        ['書類種別',     docLabel],
+      ]),
+      sec('*検出された懸念:*\n'+issues.map(function(i){ return '• '+i; }).join('\n')),
+      sec('_目視確認のうえ、必要に応じて再捺印を依頼してください。_'),
+      ctx('COREBLDGシステム — IT重説チェックシート | AI解析 | '+now()),
+    ]));
+  };
+})();
+
 // ── XSS対策: ユーザー入力値のエスケープ ──────────────────────────────
 function escHtml(s) {
   if (s == null) return '';
@@ -1035,19 +1131,27 @@ function updateDriveOverallBadge(docs) {
   var allReady  = required.every(function(d){ return !!d.url; });
   var anyReady  = docs.some(function(d){ return !!d.url; });
   var readyCnt  = docs.filter(function(d){ return !!d.url; }).length;
+  var wasAllReady = badge.dataset.allReady === '1';
 
   if (allReady && required.length > 0) {
     badge.style.cssText = 'font-size:10px;padding:3px 10px;border-radius:6px;' +
       'background:rgba(0,185,0,.12);color:#00b900;border:1px solid rgba(0,185,0,.3)';
     badge.textContent = '✓ 準備完了（' + readyCnt + '/' + docs.length + '件）';
+    // ② Slack通知：書類全件準備完了（初回のみ）
+    if (!wasAllReady && currentCase && typeof slackNotifyDocScanReady === 'function') {
+      slackNotifyDocScanReady(currentCase, readyCnt, docs.length);
+    }
+    badge.dataset.allReady = '1';
   } else if (anyReady) {
     badge.style.cssText = 'font-size:10px;padding:3px 10px;border-radius:6px;' +
       'background:rgba(251,146,60,.1);color:var(--orange);border:1px solid rgba(251,146,60,.3)';
     badge.textContent = '準備中（' + readyCnt + '/' + docs.length + '件）';
+    badge.dataset.allReady = '0';
   } else {
     badge.style.cssText = 'font-size:10px;padding:3px 10px;border-radius:6px;' +
       'background:rgba(74,82,112,.15);color:var(--sub);border:1px solid var(--border2)';
     badge.textContent = '未アップロード';
+    badge.dataset.allReady = '0';
   }
   if (slackBtn) slackBtn.style.display = anyReady ? 'inline-flex' : 'none';
 }
@@ -1528,6 +1632,11 @@ function updateTrackNo(key, val) {
     : `<span style="color:var(--orange)">○</span><span style="color:var(--muted)">未登録</span>`;
   const wrap = document.getElementById(`scan-${key}`);
   if (wrap) { wrap.className = 'scan-item' + (filled?' filled':''); }
+  // ③ Slack通知：追跡番号登録
+  if (filled && currentCase && typeof slackNotifyTrackNo === 'function') {
+    var direction = key === 'outbound' ? 'outbound' : 'inbound';
+    slackNotifyTrackNo(currentCase, direction, val);
+  }
   updateProgress();
 }
 
@@ -1714,9 +1823,24 @@ function submitComplete() {
   if (cancelBtn) { cancelBtn.disabled = true; cancelBtn.style.opacity = '0.4'; }
   if (progress) progress.style.display = 'block';
 
+  // IT重説・書類チェック進捗を取得
+  var allIT   = IT_CHECKLIST.flatMap(function(s){ return s.items; });
+  var doneIT  = allIT.filter(function(it){ return (window._itCheckState||{})[it.id]==='ok'; }).length;
+  var doneDoc = DOC_CHECKLIST.filter(function(d){ return (window._docCheckState||{})[d.id]==='ok'; }).length;
+  var memo    = (document.getElementById('modal-memo')||{}).value || '';
+
   var steps = [
     { pct: 30,  msg: '💾 Kintoneに完了記録を保存中...',  ms: 700 },
-    { pct: 65,  msg: '📢 Slackに通知を送信中...',         ms: 600 },
+    { pct: 65,  msg: '📢 Slackに通知を送信中...',         ms: 600,
+      action: function(){
+        // ① Slack実通知
+        if (typeof slackNotifyITSetsuComplete === 'function') {
+          slackNotifyITSetsuComplete(
+            currentCase, doneIT, allIT.length, doneDoc, DOC_CHECKLIST.length, memo
+          );
+        }
+      }
+    },
     { pct: 90,  msg: '📱 LINE完了通知を送信中...',         ms: 500 },
     { pct: 100, msg: '✅ 全て完了しました',                ms: 400 },
   ];
@@ -1744,6 +1868,7 @@ function submitComplete() {
     var s = steps[i++];
     if (progMsg) progMsg.textContent = s.msg;
     if (progBar) progBar.style.width = s.pct + '%';
+    if (typeof s.action === 'function') { try { s.action(); } catch(e) { console.error(e); } }
     setTimeout(runStep, s.ms);
   }
   runStep();

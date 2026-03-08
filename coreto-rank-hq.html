@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com;
+    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+    font-src 'self' https://fonts.gstatic.com;
+    img-src 'self' data: blob:;
+    connect-src 'self' https://hooks.slack.com https://hooks.zapier.com;
+    frame-src 'none'; object-src 'none'; base-uri 'self';
+  ">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CORETO エージェントランクダッシュボード (HQ)</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090f;--card:#0f1119;--card2:#141720;--border:#1e2235;--border2:#252a3d;
+  --gold:#c9a84c;--gold-l:#e8c96a;--gold-dim:#7a5f22;
+  --blue:#4f9cf9;--green:#34d399;--red:#f87171;--orange:#fb923c;--purple:#a78bfa;
+  --teal:#2dd4bf;--muted:#4a5270;--sub:#7a849e;--text:#e2e6f3;
+  --bronze:#cd7f32;--silver:#c0c0c0;--plat:#a78bfa;
+}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* ── Header ── */
+.header{display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:54px;
+  border-bottom:1px solid var(--border);background:rgba(7,9,15,.95);backdrop-filter:blur(12px);
+  position:sticky;top:0;z-index:200}
+.logo{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--gold);letter-spacing:3px}
+.hdr-badge{background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.25);
+  color:var(--red);font-size:10px;font-weight:700;padding:3px 10px;border-radius:4px;letter-spacing:1px}
+.hdr-right{display:flex;align-items:center;gap:10px}
+.back-btn{font-size:10px;padding:5px 12px;border-radius:6px;border:1px solid var(--border2);
+  background:transparent;color:var(--muted);cursor:pointer;font-family:'Noto Sans JP',sans-serif}
+.back-btn:hover{color:var(--text);border-color:var(--border)}
+
+/* ── Layout ── */
+.body{max-width:1400px;margin:0 auto;padding:24px 24px 60px}
+
+/* ── サマリーカード ── */
+.summary-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px}
+.sum-card{background:var(--card);border:1px solid var(--border);border-radius:14px;
+  padding:16px 18px;position:relative;overflow:hidden;cursor:pointer;transition:border-color .15s}
+.sum-card:hover{border-color:var(--border2)}
+.sum-card.active{border-color:var(--gold)}
+.sum-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.sum-card.plat::before{background:var(--plat)}
+.sum-card.gold::before{background:var(--gold)}
+.sum-card.silver::before{background:var(--silver)}
+.sum-card.bronze::before{background:var(--bronze)}
+.sum-card.all::before{background:linear-gradient(90deg,var(--bronze),var(--silver),var(--gold),var(--plat))}
+.sum-label{font-size:9px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px}
+.sum-count{font-family:'Syne',sans-serif;font-size:32px;font-weight:800;line-height:1}
+.sum-card.plat  .sum-count{color:var(--plat)}
+.sum-card.gold  .sum-count{color:var(--gold)}
+.sum-card.silver .sum-count{color:var(--silver)}
+.sum-card.bronze .sum-count{color:var(--bronze)}
+.sum-card.all    .sum-count{color:var(--text)}
+.sum-sub{font-size:10px;color:var(--muted);margin-top:6px}
+.sum-trend{font-size:10px;margin-top:4px}
+.sum-trend.up{color:var(--green)}
+.sum-trend.dn{color:var(--red)}
+
+/* ── 昇格予測ゾーン ── */
+.promo-section{margin-bottom:24px}
+.sec-hdr{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.sec-title{font-size:13px;font-weight:700}
+.sec-badge{font-size:9px;font-weight:700;padding:2px 8px;border-radius:4px;
+  background:rgba(251,146,60,.12);border:1px solid rgba(251,146,60,.25);color:var(--orange)}
+.promo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:10px}
+
+.promo-card{background:var(--card);border:1px solid var(--border);border-radius:12px;
+  padding:14px 16px;display:flex;align-items:center;gap:14px;transition:border-color .15s;cursor:pointer}
+.promo-card:hover{border-color:var(--border2)}
+.promo-card.can-up{border-color:rgba(52,211,153,.3)}
+.promo-card.near{border-color:rgba(251,146,60,.3)}
+.promo-card.risk{border-color:rgba(248,113,113,.25)}
+.pc-avatar{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;
+  justify-content:center;font-size:18px;flex-shrink:0}
+.pc-info{flex:1;min-width:0}
+.pc-name{font-size:13px;font-weight:700;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pc-rank-row{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.pc-bar-wrap{background:rgba(255,255,255,.04);border-radius:4px;height:5px;overflow:hidden}
+.pc-bar{height:100%;border-radius:4px;transition:width .4s}
+.pc-pts-row{display:flex;justify-content:space-between;margin-top:4px}
+.pc-pts-val{font-family:'DM Mono',monospace;font-size:10px;color:var(--sub)}
+.pc-pts-target{font-family:'DM Mono',monospace;font-size:10px}
+.pc-action{flex-shrink:0}
+.pc-tag{font-size:9px;font-weight:700;padding:2px 8px;border-radius:4px;white-space:nowrap}
+.tag-up{background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);color:var(--green)}
+.tag-near{background:rgba(251,146,60,.12);border:1px solid rgba(251,146,60,.3);color:var(--orange)}
+.tag-risk{background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.25);color:var(--red)}
+.tag-stable{background:rgba(79,156,249,.08);border:1px solid rgba(79,156,249,.2);color:var(--blue)}
+
+/* ── フィルターバー ── */
+.filter-bar{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.filter-group{display:flex;gap:4px}
+.fb{padding:5px 12px;border-radius:7px;border:1px solid var(--border2);background:transparent;
+  color:var(--muted);font-size:11px;cursor:pointer;font-family:'Noto Sans JP',sans-serif;transition:all .15s}
+.fb.on{background:rgba(201,168,76,.1);border-color:rgba(201,168,76,.35);color:var(--gold)}
+.filter-search{flex:1;min-width:180px;max-width:280px;padding:6px 12px;background:var(--card2);
+  border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:12px;
+  font-family:'Noto Sans JP',sans-serif;outline:none}
+.filter-search:focus{border-color:var(--border)}
+.sort-sel{padding:5px 10px;background:var(--card2);border:1px solid var(--border2);
+  border-radius:8px;color:var(--sub);font-size:11px;font-family:'Noto Sans JP',sans-serif;outline:none;cursor:pointer}
+
+/* ── エージェントテーブル ── */
+.ag-table-wrap{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:24px}
+.ag-table{width:100%;border-collapse:collapse}
+.ag-table th{padding:10px 14px;font-size:9px;font-weight:700;color:var(--muted);letter-spacing:1.5px;
+  text-transform:uppercase;text-align:left;border-bottom:1px solid var(--border);background:var(--card2);cursor:pointer}
+.ag-table th:hover{color:var(--sub)}
+.ag-table th.sort-asc::after{content:' ↑';color:var(--gold)}
+.ag-table th.sort-desc::after{content:' ↓';color:var(--gold)}
+.ag-table td{padding:12px 14px;font-size:12px;border-bottom:1px solid rgba(30,34,53,.5);vertical-align:middle}
+.ag-table tr:last-child td{border-bottom:none}
+.ag-table tr:hover td{background:rgba(255,255,255,.015)}
+.ag-name{font-weight:700}
+.ag-id{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-top:1px}
+.rank-pill{display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;
+  font-size:9px;font-weight:800;letter-spacing:1px}
+.rp-plat  {background:rgba(167,139,250,.15);color:var(--plat);border:1px solid rgba(167,139,250,.3)}
+.rp-gold  {background:rgba(201,168,76,.15);color:var(--gold);border:1px solid rgba(201,168,76,.3)}
+.rp-silver{background:rgba(192,192,192,.12);color:var(--silver);border:1px solid rgba(192,192,192,.25)}
+.rp-bronze{background:rgba(205,127,50,.15);color:var(--bronze);border:1px solid rgba(205,127,50,.3)}
+.type-pill{font-size:9px;padding:1px 6px;border-radius:3px;font-weight:700}
+.tp-re{background:rgba(79,156,249,.12);color:var(--blue)}
+.tp-hr{background:rgba(45,212,191,.1);color:var(--teal)}
+.tp-pt{background:rgba(52,211,153,.1);color:var(--green)}
+.pts-bar-wrap{width:80px;background:rgba(255,255,255,.04);border-radius:3px;height:4px}
+.pts-bar{height:100%;border-radius:3px}
+.status-dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:5px}
+.s-active{background:var(--green)}
+.s-inactive{background:var(--muted)}
+.s-suspended{background:var(--red)}
+.action-btn{padding:4px 10px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;
+  border:1px solid var(--border2);background:transparent;color:var(--sub);font-family:'Noto Sans JP',sans-serif;transition:all .15s}
+.action-btn:hover{border-color:var(--gold);color:var(--gold)}
+.no-rows{text-align:center;padding:40px;color:var(--muted);font-size:13px}
+
+/* ── モーダル（ランク変更） ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;
+  display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .2s}
+.modal-overlay.show{opacity:1;pointer-events:all}
+.modal{background:#0f1119;border:1px solid var(--border2);border-radius:18px;
+  width:min(520px,100%);max-height:90vh;overflow-y:auto;padding:28px}
+.modal-hd{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px}
+.modal-title{font-size:16px;font-weight:700}
+.modal-close{background:transparent;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:2px 6px;border-radius:4px}
+.modal-close:hover{background:rgba(255,255,255,.05);color:var(--text)}
+.modal-sec{margin-bottom:18px}
+.modal-sec-title{font-size:9px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px}
+.modal-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mi-cell{background:rgba(255,255,255,.03);border-radius:8px;padding:10px 12px;border:1px solid var(--border)}
+.mi-label{font-size:9px;color:var(--muted);margin-bottom:3px}
+.mi-val{font-size:12px;font-weight:600}
+.rank-btns{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
+.rank-btn{padding:10px 6px;border-radius:8px;border:1px solid var(--border2);background:transparent;
+  color:var(--sub);font-size:11px;font-weight:700;cursor:pointer;font-family:'Noto Sans JP',sans-serif;
+  transition:all .15s;text-align:center}
+.rank-btn:hover{background:rgba(255,255,255,.04)}
+.rank-btn.sel{border-width:2px}
+.rank-btn.sel.plat{border-color:var(--plat);background:rgba(167,139,250,.1);color:var(--plat)}
+.rank-btn.sel.gold{border-color:var(--gold);background:rgba(201,168,76,.1);color:var(--gold)}
+.rank-btn.sel.silver{border-color:var(--silver);background:rgba(192,192,192,.08);color:var(--silver)}
+.rank-btn.sel.bronze{border-color:var(--bronze);background:rgba(205,127,50,.1);color:var(--bronze)}
+.guarantee-row{display:flex;align-items:center;gap:10px;margin-top:8px;padding:10px 12px;
+  background:rgba(255,255,255,.02);border-radius:8px;border:1px solid var(--border)}
+.guarantee-row label{font-size:12px;cursor:pointer;display:flex;align-items:center;gap:8px}
+.guarantee-months{padding:5px 10px;background:var(--card2);border:1px solid var(--border2);
+  border-radius:6px;color:var(--text);font-size:12px;outline:none;width:60px;font-family:'DM Mono',monospace}
+.note-input{width:100%;padding:8px 12px;background:var(--card2);border:1px solid var(--border2);
+  border-radius:8px;color:var(--text);font-size:12px;font-family:'Noto Sans JP',sans-serif;
+  outline:none;resize:vertical;min-height:60px}
+.note-input:focus{border-color:var(--gold)}
+.modal-footer{display:flex;gap:8px;margin-top:20px}
+.btn-primary{flex:1;padding:10px;border-radius:8px;background:rgba(201,168,76,.15);
+  border:1px solid rgba(201,168,76,.4);color:var(--gold);font-size:12px;font-weight:700;
+  cursor:pointer;font-family:'Noto Sans JP',sans-serif;transition:all .15s}
+.btn-primary:hover{background:rgba(201,168,76,.22)}
+.btn-slack{flex:1;padding:10px;border-radius:8px;background:rgba(79,156,249,.1);
+  border:1px solid rgba(79,156,249,.3);color:var(--blue);font-size:12px;font-weight:700;
+  cursor:pointer;font-family:'Noto Sans JP',sans-serif;transition:all .15s}
+.btn-slack:hover{background:rgba(79,156,249,.18)}
+.btn-cancel{padding:10px 18px;border-radius:8px;background:transparent;
+  border:1px solid var(--border2);color:var(--muted);font-size:12px;cursor:pointer;
+  font-family:'Noto Sans JP',sans-serif}
+
+/* ── 変更履歴 ── */
+.log-list{display:flex;flex-direction:column;gap:6px}
+.log-item{background:var(--card);border:1px solid var(--border);border-radius:8px;
+  padding:10px 14px;display:flex;align-items:center;gap:12px}
+.log-time{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);white-space:nowrap}
+.log-arrow{font-size:12px}
+.log-note{font-size:11px;color:var(--sub);flex:1}
+.log-by{font-size:10px;color:var(--muted)}
+
+/* ── スクロールバー ── */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div style="display:flex;align-items:center;gap:12px">
+    <div class="logo">CORETO</div>
+    <div style="width:1px;height:18px;background:var(--border2)"></div>
+    <div style="font-size:10px;color:var(--muted);letter-spacing:1px">エージェントランクダッシュボード</div>
+    <div class="hdr-badge">HQ ONLY</div>
+  </div>
+  <div class="hdr-right">
+    <button class="back-btn" onclick="location.href='coreto-hub.html'">← 管理ポータル</button>
+  </div>
+</div>
+
+<div class="body">
+
+  <!-- ── サマリーカード ── -->
+  <div class="summary-grid" id="summary-grid"></div>
+
+  <!-- ── 昇格・降格リスク予測 ── -->
+  <div class="promo-section">
+    <div class="sec-hdr">
+      <div class="sec-title">📈 今月の昇格予測 / 降格リスク</div>
+      <div class="sec-badge" id="promo-badge">—</div>
+    </div>
+    <div class="promo-grid" id="promo-grid"></div>
+  </div>
+
+  <!-- ── フィルターバー ── -->
+  <div class="filter-bar">
+    <div class="filter-group" id="rank-filters">
+      <button class="fb on" data-rank="all" onclick="setRankFilter('all',this)">すべて</button>
+      <button class="fb" data-rank="Platinum" onclick="setRankFilter('Platinum',this)">Platinum</button>
+      <button class="fb" data-rank="Gold" onclick="setRankFilter('Gold',this)">Gold</button>
+      <button class="fb" data-rank="Silver" onclick="setRankFilter('Silver',this)">Silver</button>
+      <button class="fb" data-rank="Bronze" onclick="setRankFilter('Bronze',this)">Bronze</button>
+    </div>
+    <div class="filter-group" id="type-filters">
+      <button class="fb on" data-type="all" onclick="setTypeFilter('all',this)">全種別</button>
+      <button class="fb" data-type="re" onclick="setTypeFilter('re',this)">不動産</button>
+      <button class="fb" data-type="hr" onclick="setTypeFilter('hr',this)">人材</button>
+    </div>
+    <input class="filter-search" type="text" placeholder="名前・IDで検索…" oninput="setSearch(this.value)" id="search-input">
+    <select class="sort-sel" onchange="setSort(this.value)">
+      <option value="pts_desc">今月ポイント↓</option>
+      <option value="pts_asc">今月ポイント↑</option>
+      <option value="rank_desc">ランク↓</option>
+      <option value="rank_asc">ランク↑</option>
+      <option value="rev_desc">今月報酬↓</option>
+      <option value="name_asc">名前</option>
+    </select>
+  </div>
+
+  <!-- ── エージェント一覧テーブル ── -->
+  <div class="ag-table-wrap">
+    <table class="ag-table">
+      <thead>
+        <tr>
+          <th>エージェント</th>
+          <th>種別</th>
+          <th>現ランク</th>
+          <th>今月ポイント</th>
+          <th>昇格まで</th>
+          <th>今月報酬</th>
+          <th>成約件数</th>
+          <th>ステータス</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="ag-tbody"></tbody>
+    </table>
+  </div>
+
+  <!-- ── 変更ログ ── -->
+  <div class="sec-hdr" style="margin-bottom:12px">
+    <div class="sec-title">📋 ランク変更ログ</div>
+  </div>
+  <div class="log-list" id="log-list"></div>
+
+</div><!-- /body -->
+
+<!-- ── ランク変更モーダル ── -->
+<div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)closeModal()">
+<div class="modal">
+  <div class="modal-hd">
+    <div>
+      <div class="modal-title">ランク変更 / 保証設定</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:3px" id="modal-ag-meta">—</div>
+    </div>
+    <button class="modal-close" onclick="closeModal()">✕</button>
+  </div>
+
+  <!-- 現在情報 -->
+  <div class="modal-sec">
+    <div class="modal-sec-title">現在の状況</div>
+    <div class="modal-info-grid" id="modal-info-grid"></div>
+  </div>
+
+  <!-- ランク選択 -->
+  <div class="modal-sec">
+    <div class="modal-sec-title">変更後のランク</div>
+    <div class="rank-btns" id="modal-rank-btns">
+      <button class="rank-btn bronze" data-rank="Bronze" onclick="selectModalRank('Bronze',this)">🥉<br>Bronze</button>
+      <button class="rank-btn silver" data-rank="Silver" onclick="selectModalRank('Silver',this)">🥈<br>Silver</button>
+      <button class="rank-btn gold"   data-rank="Gold"   onclick="selectModalRank('Gold',this)">🥇<br>Gold</button>
+      <button class="rank-btn plat"   data-rank="Platinum" onclick="selectModalRank('Platinum',this)">💎<br>Platinum</button>
+    </div>
+  </div>
+
+  <!-- ランク保証 -->
+  <div class="modal-sec">
+    <div class="modal-sec-title">ランク保証（任意）</div>
+    <div class="guarantee-row">
+      <label>
+        <input type="checkbox" id="guar-chk">
+        ランク保証を適用
+      </label>
+      <span style="font-size:12px;color:var(--sub)">保証期間：</span>
+      <input class="guarantee-months" type="number" id="guar-months" min="1" max="12" value="3">
+      <span style="font-size:12px;color:var(--sub)">ヶ月</span>
+    </div>
+    <div style="font-size:10px;color:var(--muted);margin-top:6px;padding:0 2px">
+      ※ 保証期間中はポイントが下回ってもランクを維持します
+    </div>
+  </div>
+
+  <!-- 変更理由 -->
+  <div class="modal-sec">
+    <div class="modal-sec-title">変更理由（ログに記録）</div>
+    <textarea class="note-input" id="modal-note" placeholder="例: 優秀エージェント特別昇格・メンター実績考慮 等"></textarea>
+  </div>
+
+  <div class="modal-footer">
+    <button class="btn-primary" onclick="applyRankChange()">💾 変更を保存</button>
+    <button class="btn-slack" onclick="applyRankChange(true)">📣 保存 + Slack通知</button>
+    <button class="btn-cancel" onclick="closeModal()">キャンセル</button>
+  </div>
+</div>
+</div><!-- /modal -->
+
+<script>
+// ══ AUTH GUARD (HQ専用) ══════════════════════════════════════
+(function() {
+  var s = null;
+  try { s = JSON.parse(sessionStorage.getItem('coreto_session') || 'null'); } catch(e) {}
+  if (!s || !s.userId || !s.sessionToken || s.sessionToken.length !== 64) {
+    sessionStorage.removeItem('coreto_session'); location.replace('coreto-login.html'); return;
+  }
+  var la = new Date(s.loginAt).getTime();
+  if (isNaN(la) || (Date.now() - la) > 28800000) {
+    sessionStorage.removeItem('coreto_session'); alert('セッションの有効期限が切れました。');
+    location.replace('coreto-login.html'); return;
+  }
+  if (s.type !== 'hq') { location.replace('coreto-hub.html'); return; }
+  window._SESSION = s;
+})();
+
+// ══ Slack通知 ══════════════════════════════════════════════
+(function(){
+  var CFG = window.SLACK_CONFIG || {};
+  var WH = CFG.RANK_ALERTS || CFG.GENERAL || 'YOUR_SLACK_WEBHOOK_URL';
+  function post(payload){
+    if(!WH||WH==='YOUR_SLACK_WEBHOOK_URL'){console.log('[Slack未設定]',payload.text);return;}
+    fetch(WH,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),mode:'no-cors'})
+      .catch(function(e){console.error('[Slack]',e);});
+  }
+  function blk(fb,blocks){return{text:fb,blocks:blocks};}
+  function hdr(t){return{type:'header',text:{type:'plain_text',text:t,emoji:true}};}
+  function sec(m){return{type:'section',text:{type:'mrkdwn',text:m}};}
+  function flds(pairs){return{type:'section',fields:pairs.map(function(p){return{type:'mrkdwn',text:'*'+p[0]+'*\n'+p[1]};})}}
+  function ctx(t){return{type:'context',elements:[{type:'mrkdwn',text:t}]};}
+
+  var RANK_EMOJI = {Platinum:'💎',Gold:'🥇',Silver:'🥈',Bronze:'🥉'};
+
+  window.slackNotifyRankChange = function(ag, oldRank, newRank, note, guaranteed, reviewer){
+    var isUp = ['Bronze','Silver','Gold','Platinum'].indexOf(newRank) >
+               ['Bronze','Silver','Gold','Platinum'].indexOf(oldRank);
+    var icon = isUp ? '🎉 ランク昇格' : '📉 ランク変更';
+    var re = (window._SESSION&&window._SESSION.name)||reviewer||'HQスタッフ';
+    post(blk(icon+': '+ag.name, [
+      hdr(icon),
+      flds([
+        ['エージェント', ag.name+'（ID: '+ag.id+'）'],
+        ['種別', ag.type==='re'?'🏠 不動産AG':ag.type==='hr'?'👥 人材AG':'🤝 PT'],
+        ['変更前ランク', (RANK_EMOJI[oldRank]||'')+'  '+oldRank],
+        ['変更後ランク', (RANK_EMOJI[newRank]||'')+'  '+newRank],
+      ]),
+      guaranteed ? sec('🛡 *ランク保証*が適用されました') : null,
+      note ? sec('*変更理由:*\n>'+note) : null,
+      ctx('COREBLDGシステム — ランクダッシュボード (HQ) | 担当: '+re+' | '+new Date().toLocaleString('ja-JP')),
+    ].filter(Boolean)));
+  };
+})();
+
+// ══ データ ══════════════════════════════════════════════════
+// agent-mgmt.html と共通のAGENTSデータ（本番はdb.js/Kintoneから取得）
+const AGENTS_RAW = [
+  { id:'10008', name:'佐藤 花子', kana:'サトウ ハナコ',  type:'re', rank:'Platinum', status:'active',
+    cases:98, monthRev:1800000, monthlyFee:0, sennin:true, joined:'2024-01-15',
+    email:'sato@example.com', area:'品川・渋谷・港区', note:'売上No.1。専任宅建士。メンター実績5名。' },
+  { id:'10012', name:'山田 誠',   kana:'ヤマダ マコト',  type:'re', rank:'Gold',     status:'active',
+    cases:52, monthRev:1200000, monthlyFee:0, sennin:true, joined:'2024-03-01',
+    email:'yamada@example.com', area:'渋谷・新宿・港区', note:'創業期からの中核エージェント。' },
+  { id:'10031', name:'小林 俊介', kana:'コバヤシ シュンスケ', type:'re', rank:'Gold', status:'active',
+    cases:41, monthRev:1000000, monthlyFee:0, sennin:false, joined:'2024-05-10',
+    email:'kobayashi@example.com', area:'目黒・世田谷', note:'佐藤花子が紹介。売買専門。' },
+  { id:'20005', name:'田中 美穂', kana:'タナカ ミホ',    type:'hr', rank:'Gold',     status:'active',
+    cases:44, monthRev:860000,  monthlyFee:0, sennin:false, joined:'2024-02-20',
+    email:'tanaka@example.com', area:'東京全域', note:'人材エージェントトップ。IT・外資系専門。' },
+  { id:'10023', name:'鈴木 健太', kana:'スズキ ケンタ',  type:'re', rank:'Silver',   status:'active',
+    cases:24, monthRev:720000,  monthlyFee:490, sennin:false, joined:'2024-07-15',
+    email:'suzuki@example.com', area:'渋谷・新宿', note:'山田誠が紹介。成長中。' },
+  { id:'20010', name:'松本 由美', kana:'マツモト ユミ',  type:'hr', rank:'Silver',   status:'active',
+    cases:18, monthRev:560000,  monthlyFee:490, sennin:false, joined:'2024-08-01',
+    email:'matsumoto@example.com', area:'東京・神奈川', note:'佐藤花子が紹介。IT業界専門。' },
+  { id:'10041', name:'渡辺 隆',   kana:'ワタナベ タカシ', type:'re', rank:'Bronze',  status:'active',
+    cases:8,  monthRev:240000,  monthlyFee:0, sennin:true, joined:'2025-01-10',
+    email:'watanabe@example.com', area:'さいたま・川口', note:'専任宅建士。着実に成長中。' },
+  { id:'10048', name:'吉田 大輔', kana:'ヨシダ ダイスケ', type:'re', rank:'Silver',  status:'active',
+    cases:16, monthRev:490000,  monthlyFee:490, sennin:false, joined:'2024-09-20',
+    email:'yoshida@example.com', area:'横浜・川崎', note:'神奈川エリア担当。' },
+  { id:'20015', name:'高橋 誠',   kana:'タカハシ マコト', type:'hr', rank:'Bronze',  status:'active',
+    cases:8,  monthRev:280000,  monthlyFee:980, sennin:false, joined:'2025-02-15',
+    email:'takahashi@example.com', area:'東京全域', note:'製造・医療業界担当。' },
+  { id:'10055', name:'林 奈緒',   kana:'ハヤシ ナオ',    type:'re', rank:'Bronze',  status:'active',
+    cases:4,  monthRev:150000,  monthlyFee:980, sennin:false, joined:'2025-04-01',
+    email:'hayashi@example.com', area:'渋谷・目黒', note:'都内賃貸専門。' },
+  { id:'20022', name:'木村 さくら', kana:'キムラ サクラ', type:'hr', rank:'Silver',  status:'active',
+    cases:12, monthRev:430000,  monthlyFee:490, sennin:false, joined:'2024-09-05',
+    email:'kimura@example.com', area:'東京全域', note:'ベンチャー専門。' },
+  { id:'10062', name:'中村 亮',   kana:'ナカムラ リョウ', type:'re', rank:'Bronze',  status:'inactive',
+    cases:3,  monthRev:0,       monthlyFee:980, sennin:false, joined:'2025-06-01',
+    email:'nakamura@example.com', area:'港区・六本木', note:'3ヶ月案件なし。フォロー要。' },
+  { id:'20031', name:'福田 雄介', kana:'フクダ ユウスケ', type:'hr', rank:'Bronze',  status:'suspended',
+    cases:6,  monthRev:0,       monthlyFee:980, sennin:false, joined:'2025-05-15',
+    email:'fukuda@example.com', area:'東京全域', note:'アカウント停止中。規約違反疑い。' },
+];
+
+// ポイント計算（月間報酬÷10万、切り捨て）
+function calcPts(ag) {
+  return Math.floor(ag.monthRev / 100000);
+}
+
+// ランク閾値
+const RANK_PTS = { Bronze:0, Silver:10, Gold:20, Platinum:30 };
+const RANK_ORDER = ['Bronze','Silver','Gold','Platinum'];
+function rankIdx(r){ return RANK_ORDER.indexOf(r); }
+function nextRank(r){ var i=rankIdx(r); return i<3?RANK_ORDER[i+1]:null; }
+function ptsForRank(r){ return RANK_PTS[r]||0; }
+
+// 各エージェントに今月ポイントを付与
+const AGENTS = AGENTS_RAW.map(function(ag){
+  return Object.assign({}, ag, { pts: calcPts(ag), guaranteed: false, guaranteeMos: 0 });
+});
+
+// ── 変更ログ ──────────────────────────────────────────────
+var CHANGE_LOG = [
+  { ts:'2026-03-01 10:22', agId:'10055', agName:'林 奈緒',
+    from:'Bronze', to:'Bronze', guaranteed:true, months:3, note:'新規加入ランク保証', by:'田中(HQ)' },
+  { ts:'2026-02-15 14:05', agId:'10008', agName:'佐藤 花子',
+    from:'Gold', to:'Platinum', guaranteed:false, months:0, note:'2月度ポイント32pt達成、自動昇格', by:'システム' },
+];
+
+// ── State ──────────────────────────────────────────────────
+var filterRank = 'all';
+var filterType = 'all';
+var filterSearch = '';
+var sortKey = 'pts_desc';
+var modalAg = null;
+var modalNewRank = null;
+
+// ── 初期化 ─────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', function(){
+  renderSummary();
+  renderPromoGrid();
+  renderTable();
+  renderLog();
+});
+
+// ── サマリー ───────────────────────────────────────────────
+function renderSummary(){
+  var counts = { Platinum:0, Gold:0, Silver:0, Bronze:0, total:0 };
+  AGENTS.filter(function(a){ return a.type!=='pt' && a.status==='active'; }).forEach(function(a){
+    counts[a.rank] = (counts[a.rank]||0)+1;
+    counts.total++;
+  });
+  var g = document.getElementById('summary-grid');
+  var defs = [
+    { key:'all',      cls:'all',    label:'TOTAL',    emoji:'👥' },
+    { key:'Platinum', cls:'plat',   label:'PLATINUM', emoji:'💎' },
+    { key:'Gold',     cls:'gold',   label:'GOLD',     emoji:'🥇' },
+    { key:'Silver',   cls:'silver', label:'SILVER',   emoji:'🥈' },
+    { key:'Bronze',   cls:'bronze', label:'BRONZE',   emoji:'🥉' },
+  ];
+  g.innerHTML = defs.map(function(d){
+    var cnt = d.key==='all' ? counts.total : (counts[d.key]||0);
+    var activeFilter = filterRank===d.key || (d.key==='all' && filterRank==='all');
+    return '<div class="sum-card '+d.cls+(activeFilter?' active':'')
+      +'" onclick="setRankFilter(\''+d.key+'\',null)" style="cursor:pointer">'
+      +'<div class="sum-label">'+d.label+'</div>'
+      +'<div class="sum-count">'+cnt+'</div>'
+      +'<div class="sum-sub">'+d.emoji+' アクティブエージェント</div>'
+      +'</div>';
+  }).join('');
+}
+
+// ── 昇格予測グリッド ───────────────────────────────────────
+function renderPromoGrid(){
+  var ags = AGENTS.filter(function(a){ return a.type!=='pt' && a.status==='active'; });
+  var items = ags.map(function(ag){
+    var nr = nextRank(ag.rank);
+    var needed = nr ? ptsForRank(nr) : null;
+    var pct = needed ? Math.min(100, Math.round(ag.pts/needed*100)) : 100;
+    var remaining = needed ? needed - ag.pts : 0;
+    var state = !nr ? 'max' : remaining<=0 ? 'can-up' : remaining<=3 ? 'near' :
+                ag.pts < ptsForRank(ag.rank)-2 ? 'risk' : 'stable';
+    return { ag:ag, nr:nr, needed:needed, pct:pct, remaining:remaining, state:state };
+  }).filter(function(x){ return x.state!=='max' && x.state!=='stable'; })
+    .sort(function(a,b){
+      var order = { 'can-up':0,'near':1,'risk':2 };
+      return (order[a.state]||9)-(order[b.state]||9);
+    });
+
+  document.getElementById('promo-badge').textContent =
+    items.filter(function(x){ return x.state==='can-up'; }).length + '名が昇格可能';
+
+  var RANK_BG = { Platinum:'rgba(167,139,250,.2)', Gold:'rgba(201,168,76,.2)',
+                  Silver:'rgba(192,192,192,.15)', Bronze:'rgba(205,127,50,.2)' };
+  var RANK_COL= { Platinum:plat_color(), Gold:'#c9a84c', Silver:'#c0c0c0', Bronze:'#cd7f32' };
+
+  document.getElementById('promo-grid').innerHTML = items.map(function(x){
+    var ag=x.ag; var nr=x.nr;
+    var tagCls = x.state==='can-up'?'tag-up':x.state==='near'?'tag-near':'tag-risk';
+    var tagTxt = x.state==='can-up'?'✓ 昇格可能':x.state==='near'?'あと'+x.remaining+'pt':'降格リスク';
+    var barCol = x.state==='can-up'?'var(--green)':x.state==='near'?'var(--orange)':'var(--red)';
+    return '<div class="promo-card '+x.state+'" onclick="openModal(\''+ag.id+'\')">'
+      +'<div class="pc-avatar" style="background:'+RANK_BG[ag.rank]+'">'+rankEmoji(ag.rank)+'</div>'
+      +'<div class="pc-info">'
+        +'<div class="pc-name">'+ag.name+'</div>'
+        +'<div class="pc-rank-row">'
+          +rankPill(ag.rank)
+          +(nr?'<span style="font-size:10px;color:var(--muted)">→</span>'+rankPill(nr):'')
+        +'</div>'
+        +'<div class="pc-bar-wrap"><div class="pc-bar" style="width:'+x.pct+'%;background:'+barCol+'"></div></div>'
+        +'<div class="pc-pts-row">'
+          +'<span class="pc-pts-val">'+ag.pts+' pt</span>'
+          +(x.needed?'<span class="pc-pts-target" style="color:'+barCol+'">目標 '+x.needed+' pt</span>':'')
+        +'</div>'
+      +'</div>'
+      +'<div class="pc-action"><span class="pc-tag '+tagCls+'">'+tagTxt+'</span></div>'
+      +'</div>';
+  }).join('') || '<div style="color:var(--muted);font-size:12px;padding:12px">昇格予測・降格リスク対象なし</div>';
+}
+function plat_color(){ return '#a78bfa'; }
+
+// ── テーブル ───────────────────────────────────────────────
+function renderTable(){
+  var ags = getFiltered();
+  var tbody = document.getElementById('ag-tbody');
+  if(!ags.length){ tbody.innerHTML='<tr><td colspan="9" class="no-rows">条件に一致するエージェントがいません</td></tr>'; return; }
+
+  var RANK_PTS_MAX = { Bronze:9, Silver:19, Gold:29, Platinum:99 };
+  tbody.innerHTML = ags.map(function(ag){
+    var nr = nextRank(ag.rank);
+    var needed = nr ? ptsForRank(nr) : null;
+    var pct = needed ? Math.min(100, Math.round(ag.pts/(needed)*100)) : 100;
+    var barCol = !nr?'var(--plat)':ag.pts>=needed?'var(--green)':ag.pts>=needed-3?'var(--orange)':'var(--blue)';
+    var gapTxt = !nr?'最上位':ag.pts>=needed?'<span style="color:var(--green);font-weight:700">昇格可</span>':'あと'+(needed-ag.pts)+'pt';
+    var stCls  = {active:'s-active',inactive:'s-inactive',suspended:'s-suspended'}[ag.status]||'s-inactive';
+    var stTxt  = {active:'稼働中',inactive:'休止',suspended:'停止'}[ag.status]||ag.status;
+    return '<tr>'
+      +'<td><div class="ag-name">'+ag.name+'</div><div class="ag-id">'+ag.id+'</div></td>'
+      +'<td><span class="type-pill tp-'+ag.type+'">'+{re:'不動産AG',hr:'人材AG'}[ag.type]+'</span></td>'
+      +'<td>'+rankPill(ag.rank)+(ag.guaranteed?'<span class="pc-tag tag-stable" style="margin-left:4px;font-size:8px">保証</span>':'')+'</td>'
+      +'<td><div style="display:flex;align-items:center;gap:8px">'
+        +'<span style="font-family:\'DM Mono\',monospace;font-size:12px;font-weight:700">'+ag.pts+'pt</span>'
+        +'<div class="pts-bar-wrap"><div class="pts-bar" style="width:'+pct+'%;background:'+barCol+'"></div></div>'
+      +'</div></td>'
+      +'<td>'+gapTxt+'</td>'
+      +'<td>¥'+ag.monthRev.toLocaleString()+'</td>'
+      +'<td>'+ag.cases+'件</td>'
+      +'<td><span class="status-dot '+stCls+'"></span>'+stTxt+'</td>'
+      +'<td><button class="action-btn" onclick="openModal(\''+ag.id+'\')">変更</button></td>'
+      +'</tr>';
+  }).join('');
+}
+
+function getFiltered(){
+  return AGENTS.filter(function(ag){
+    if(ag.type==='pt') return false;
+    if(filterRank!=='all' && ag.rank!==filterRank) return false;
+    if(filterType!=='all' && ag.type!==filterType) return false;
+    if(filterSearch){
+      var q=filterSearch.toLowerCase();
+      if(!ag.name.toLowerCase().includes(q) && !ag.id.includes(q)) return false;
+    }
+    return true;
+  }).sort(function(a,b){
+    if(sortKey==='pts_desc')  return b.pts-a.pts;
+    if(sortKey==='pts_asc')   return a.pts-b.pts;
+    if(sortKey==='rank_desc') return rankIdx(b.rank)-rankIdx(a.rank);
+    if(sortKey==='rank_asc')  return rankIdx(a.rank)-rankIdx(b.rank);
+    if(sortKey==='rev_desc')  return b.monthRev-a.monthRev;
+    if(sortKey==='name_asc')  return a.kana.localeCompare(b.kana,'ja');
+    return 0;
+  });
+}
+
+// ── フィルター操作 ─────────────────────────────────────────
+function setRankFilter(r, btn){
+  filterRank=r;
+  document.querySelectorAll('#rank-filters .fb').forEach(function(b){ b.classList.remove('on'); });
+  if(btn) btn.classList.add('on');
+  else {
+    var matched = document.querySelector('#rank-filters [data-rank="'+r+'"]');
+    if(matched) matched.classList.add('on');
+  }
+  renderSummary(); renderTable();
+}
+function setTypeFilter(t, btn){
+  filterType=t;
+  document.querySelectorAll('#type-filters .fb').forEach(function(b){ b.classList.remove('on'); });
+  btn.classList.add('on');
+  renderTable();
+}
+function setSearch(v){ filterSearch=v; renderTable(); }
+function setSort(v){ sortKey=v; renderTable(); }
+
+// ── ランク変更モーダル ─────────────────────────────────────
+function openModal(agId){
+  var ag = AGENTS.find(function(a){ return a.id===agId; });
+  if(!ag) return;
+  modalAg = ag;
+  modalNewRank = ag.rank;
+
+  document.getElementById('modal-ag-meta').textContent = ag.name+' / '+ag.id+' / '+ag.area;
+  document.getElementById('modal-note').value = '';
+  document.getElementById('guar-chk').checked = ag.guaranteed;
+  document.getElementById('guar-months').value = ag.guaranteeMos || 3;
+
+  // 情報グリッド
+  var nr = nextRank(ag.rank);
+  var needed = nr ? ptsForRank(nr) : null;
+  document.getElementById('modal-info-grid').innerHTML = [
+    ['現在のランク', rankPill(ag.rank)],
+    ['今月ポイント', '<span style="font-family:\'DM Mono\',monospace;font-weight:700">'+ag.pts+'pt</span>'],
+    ['昇格まで', nr ? (needed-ag.pts > 0 ? 'あと'+(needed-ag.pts)+'pt' : '<span style="color:var(--green)">昇格可能</span>') : '最上位ランク'],
+    ['今月報酬', '¥'+ag.monthRev.toLocaleString()],
+  ].map(function(c){
+    return '<div class="mi-cell"><div class="mi-label">'+c[0]+'</div><div class="mi-val">'+c[1]+'</div></div>';
+  }).join('');
+
+  // ランクボタン初期状態
+  selectModalRank(ag.rank, document.querySelector('.rank-btn[data-rank="'+ag.rank+'"]'));
+
+  document.getElementById('modal-overlay').classList.add('show');
+}
+
+function selectModalRank(r, btn){
+  modalNewRank = r;
+  document.querySelectorAll('.rank-btn').forEach(function(b){ b.classList.remove('sel'); });
+  if(btn) btn.classList.add('sel');
+  else {
+    var b2 = document.querySelector('.rank-btn[data-rank="'+r+'"]');
+    if(b2) b2.classList.add('sel');
+  }
+}
+
+function closeModal(){ document.getElementById('modal-overlay').classList.remove('show'); modalAg=null; }
+
+function applyRankChange(withSlack){
+  if(!modalAg || !modalNewRank) return;
+  var note  = document.getElementById('modal-note').value.trim();
+  var guar  = document.getElementById('guar-chk').checked;
+  var guMos = parseInt(document.getElementById('guar-months').value)||3;
+  var oldRank = modalAg.rank;
+  var reviewer = (window._SESSION && window._SESSION.name) || 'HQスタッフ';
+
+  // AGENTSを更新
+  modalAg.rank = modalNewRank;
+  modalAg.guaranteed = guar;
+  modalAg.guaranteeMos = guar ? guMos : 0;
+
+  // ログに追記
+  CHANGE_LOG.unshift({
+    ts: new Date().toLocaleString('ja-JP').replace(/\//g,'-'),
+    agId: modalAg.id, agName: modalAg.name,
+    from: oldRank, to: modalNewRank,
+    guaranteed: guar, months: guar ? guMos : 0,
+    note: note || '（理由記入なし）',
+    by: reviewer,
+  });
+
+  if(withSlack && typeof slackNotifyRankChange === 'function'){
+    slackNotifyRankChange(modalAg, oldRank, modalNewRank, note, guar, reviewer);
+  }
+
+  closeModal();
+  renderSummary();
+  renderPromoGrid();
+  renderTable();
+  renderLog();
+
+  var msg = '✅ ランクを変更しました\n\n'
+    + '対象: '+modalAg ? '' : ''
+    + (withSlack ? '\n📣 Slackに通知しました' : '');
+  // モーダルが既に閉じているのでシンプルに
+  var toast = document.createElement('div');
+  toast.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#1a2030;border:1px solid var(--green);'
+    +'color:var(--green);padding:12px 20px;border-radius:10px;font-size:12px;font-weight:700;z-index:9999;'
+    +'box-shadow:0 4px 20px rgba(0,0,0,.4)';
+  toast.textContent = '✅ ランク変更を保存しました'+(withSlack?' 📣 Slack通知済み':'');
+  document.body.appendChild(toast);
+  setTimeout(function(){ toast.remove(); }, 3000);
+}
+
+// ── 変更ログ ───────────────────────────────────────────────
+function renderLog(){
+  var RANK_EMOJI = {Platinum:'💎',Gold:'🥇',Silver:'🥈',Bronze:'🥉'};
+  document.getElementById('log-list').innerHTML = CHANGE_LOG.slice(0,20).map(function(l){
+    var isUp = rankIdx(l.to) > rankIdx(l.from);
+    var arrow = isUp
+      ? '<span class="log-arrow" style="color:var(--green)">'+RANK_EMOJI[l.from]+'→'+RANK_EMOJI[l.to]+'</span>'
+      : '<span class="log-arrow" style="color:var(--orange)">'+RANK_EMOJI[l.from]+'→'+RANK_EMOJI[l.to]+'</span>';
+    return '<div class="log-item">'
+      +'<div class="log-time">'+l.ts+'</div>'
+      +'<div style="font-size:12px;font-weight:700;white-space:nowrap">'+l.agName+'</div>'
+      +arrow
+      +(l.guaranteed ? '<span class="pc-tag tag-stable" style="font-size:9px;white-space:nowrap">保証'+l.months+'ヶ月</span>' : '')
+      +'<div class="log-note">'+escHtml(l.note)+'</div>'
+      +'<div class="log-by">'+escHtml(l.by)+'</div>'
+      +'</div>';
+  }).join('') || '<div style="color:var(--muted);font-size:12px;padding:12px">変更ログなし</div>';
+}
+
+// ── ヘルパー ───────────────────────────────────────────────
+function rankEmoji(r){ return {Platinum:'💎',Gold:'🥇',Silver:'🥈',Bronze:'🥉'}[r]||''; }
+
+function rankPill(r){
+  var cls = {Platinum:'rp-plat',Gold:'rp-gold',Silver:'rp-silver',Bronze:'rp-bronze'}[r]||'';
+  return '<span class="rank-pill '+cls+'">'+rankEmoji(r)+' '+r+'</span>';
+}
+
+function escHtml(s){
+  if(s==null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+</script>
+</body>
+</html>
