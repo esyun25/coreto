@@ -484,8 +484,9 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
         </div>
       </div>
 
-      <!-- Tracking numbers -->
-      <div class="scan-panel">
+      <!-- 追跡番号 / 電子契約ステータス（renderScanPanel()で切替描画） -->
+      <div id="track-panel-wrap"></div>
+      <div style="display:none" class="scan-panel" id="__legacy-scan-panel">
         <div class="card-title" style="font-size:9px;color:var(--muted);letter-spacing:2px;
              text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:8px">
           <div style="width:3px;height:12px;background:var(--green);border-radius:2px"></div>
@@ -1217,7 +1218,9 @@ const CASES = [
     id:'0234', name:'田中 雄介', prop:'渋谷区東2丁目マンション 302号室',
     agent:'10012 山田誠', mgmt:'株式会社エイブル渋谷', rent:120000,
     itDate:'2026-02-22 14:00', itStatus:'scheduled',
+    contractType:'paper',
     trackNos:{ send:'', reply:'', key:'' },
+    denshiStatus:{ sentAt:'', clientSignedAt:'', hqProcessedAt:'' },
     status:'it-pending', checkState:{},
     docCheckState:{},
   },
@@ -1225,40 +1228,53 @@ const CASES = [
     id:'0228', name:'佐藤 明日香', prop:'港区南青山4丁目1LDK',
     agent:'10012 山田誠', mgmt:'株式会社ハウスメイト', rent:185000,
     itDate:'2026-02-20 10:00', itStatus:'done',
+    contractType:'denshi',
     itDoneAt:'2026-02-20 11:02', itDuration:62,
-    trackNos:{ send:'123456789012', reply:'987654321098', key:'' },
+    trackNos:{ send:'', reply:'', key:'' },
+    denshiStatus:{ sentAt:'2026-02-18 15:30', clientSignedAt:'', hqProcessedAt:'' },
     status:'scan-pending', checkState:{ 'pre-1':'ok','pre-2':'ok','pre-3':'ok','pre-4':'ok',
-      'ice-1':'ok','exp-1':'ok','exp-2':'ok','exp-3':'ok','exp-4':'ok','exp-5':'ok',
-      'cnt-1':'ok','cnt-2':'ok','cnt-3':'ok','end-1':'ok','end-2':'ok','end-3':'ok' },
+      'ice-1':'ok','exp-1':'ok','exp-2':'ok','exp-3':'ok','exp-4':'ok',
+      'cnt-1':'ok','cnt-2':'ok','end-1':'ok','end-2':'ok','end-3':'ok','end-4':'ok' },
     docCheckState:{},
   },
   {
     id:'0220', name:'鈴木 健一', prop:'新宿区西新宿2LDK',
     agent:'10012 山田誠', mgmt:'積和不動産', rent:155000,
     itDate:'2026-02-15 15:00', itStatus:'done',
+    contractType:'paper',
     itDoneAt:'2026-02-15 16:05', itDuration:65,
     trackNos:{ send:'111222333444', reply:'555666777888', key:'999000111222' },
+    denshiStatus:{ sentAt:'', clientSignedAt:'', hqProcessedAt:'' },
     status:'complete', checkState:{ 'pre-1':'ok','pre-2':'ok','pre-3':'ok','pre-4':'ok',
-      'ice-1':'ok','exp-1':'ok','exp-2':'ok','exp-3':'ok','exp-4':'ok','exp-5':'ok',
-      'cnt-1':'ok','cnt-2':'ok','cnt-3':'ok','end-1':'ok','end-2':'ok','end-3':'ok' },
+      'ice-1':'ok','exp-1':'ok','exp-2':'ok','exp-3':'ok','exp-4':'ok',
+      'cnt-1':'ok','cnt-2':'ok','end-1':'ok','end-2':'ok','end-3':'ok','end-4':'ok' },
     docCheckState:{ 'doc-1':'ok','doc-2':'ok','doc-3':'ok','doc-4':'ok','doc-5':'ok','doc-6':'ok' },
   },
 ];
 
 // ================================================================
 //  IT重説チェックリスト定義
+//  ※ item に contractTypes: ['paper'] / ['denshi'] / 省略=両方 で条件分岐
 // ================================================================
 const IT_CHECKLIST = [
   {
     id:'prep', icon:'📋', title:'事前準備',
     items:[
-      { id:'pre-1', label:'Calendly予約の確認',
-        desc:'予約日時・顧客名・Google Meet URLを確認。リマインドメール送付済みか確認' },
-      { id:'pre-2', label:'Google Meet URLの動作確認',
+      { id:'pre-1', label:'Google Meet URLの動作確認',
         desc:'実際にURLを開き接続テスト。音声・ビデオが正常か確認' },
-      { id:'pre-3', label:'重説書・契約書の手元確認',
-        desc:'顧客に原本（郵送済み）が届いているか事前に確認する',
-        tag:'required', tagLabel:'必須' },
+      { id:'pre-2', label:'日時・URL確認',
+        desc:'予約日時・クライアント名・Google Meet URLを確認。リマインドメール送付済みか確認' },
+      // 紙契約のみ
+      { id:'pre-3p', label:'重説書・契約書の手元確認（クライアント着荷確認）',
+        desc:'クライアントに郵送した重要事項説明書・賃貸借契約書が届いているか事前に確認する',
+        tag:'required', tagLabel:'必須', contractTypes:['paper'] },
+      // 電子契約のみ
+      { id:'pre-3d', label:'電子契約URL送付確認（管理会社→ keiyaku@coreto.jp）',
+        desc:'管理会社から keiyaku@coreto.jp に電子契約書のメールが届いているか確認。未着の場合は管理会社に再送依頼',
+        tag:'required', tagLabel:'必須', contractTypes:['denshi'] },
+      { id:'pre-3d2', label:'クライアントへ電子署名リンクの事前送付',
+        desc:'keiyaku@coreto.jp に届いた電子署名リンクをクライアントにLINE WORKSで転送。「IT重説後に署名をお願いします」と案内',
+        tag:'required', tagLabel:'必須', contractTypes:['denshi'] },
       { id:'pre-4', label:'宅建士証の準備',
         desc:'宅建士証を手元に用意。カメラに映せる状態にしておく',
         tag:'takken', tagLabel:'宅建士必須' },
@@ -1270,21 +1286,26 @@ const IT_CHECKLIST = [
       { id:'ice-1', label:'自己紹介・宅建士証の提示',
         desc:'氏名・宅建士登録番号を口頭で説明し、宅建士証をカメラに映して提示',
         tag:'takken', tagLabel:'宅建士証提示' },
-      { id:'ice-2', label:'顧客手元の書類確認',
+      // 紙契約のみ
+      { id:'ice-2p', label:'クライアント手元の書類確認',
         desc:'「お手元に重要事項説明書と賃貸借契約書はございますか？」と確認する',
-        tag:'required', tagLabel:'必須' },
+        tag:'required', tagLabel:'必須', contractTypes:['paper'] },
+      // 電子契約のみ
+      { id:'ice-2d', label:'電子署名リンクの受信確認',
+        desc:'「電子署名のリンクはお手元に届いていますか？IT重説後に署名いただきます」と案内',
+        tag:'required', tagLabel:'必須', contractTypes:['denshi'] },
       { id:'ice-3', label:'本日の流れの説明',
-        desc:'「重要事項説明→契約書のご説明→捺印箇所のご案内の3部構成です」' },
+        desc:'「重要事項説明 → 契約内容のご説明 → 署名のご案内の3部構成です」' },
     ]
   },
   {
     id:'jyusetsu', icon:'📜', title:'重要事項説明',
     items:[
       { id:'exp-1', label:'各項目の読み上げと説明',
-        desc:'物件概要・登記事項・都市計画・設備状況・管理規約・特約事項を順に読み上げる（顧客は手元の書類を参照）' },
-      { id:'exp-2', label:'質疑応答・顧客の理解確認',
+        desc:'物件概要・登記事項・都市計画・設備状況・管理規約・特約事項を順に読み上げる' },
+      { id:'exp-2', label:'質疑応答・クライアントの理解確認',
         desc:'「ご不明な点はありますか？」を各セクション後に必ず確認。内容は記録に残す' },
-      { id:'exp-3', label:'顧客の同意確認（口頭）',
+      { id:'exp-3', label:'クライアントの同意確認（口頭）',
         desc:'「重要事項についてご理解いただけましたか？」→「はい」の口頭確認を取る',
         tag:'required', tagLabel:'必須' },
       { id:'exp-4', label:'電磁的方法による重説の同意確認',
@@ -1293,62 +1314,112 @@ const IT_CHECKLIST = [
     ]
   },
   {
-    id:'contract', icon:'✍️', title:'契約書説明',
+    id:'contract', icon:'✍️', title:'契約内容の説明',
     items:[
-      { id:'cnt-1', label:'契約書ページの案内',
-        desc:'「次に賃貸借契約書をご覧ください」と伝え、顧客に手元の契約書を開いてもらう' },
-      { id:'cnt-2', label:'契約内容の説明',
-        desc:'契約期間・更新条件（自動更新の有無）・解約条件・特約事項を説明' },
+      { id:'cnt-1', label:'契約内容のご説明',
+        desc:'「次に賃貸借契約書の内容をご説明します」と伝える' },
+      { id:'cnt-2', label:'契約期間・更新・解約・特約の説明',
+        desc:'契約期間・自動更新の有無・解約条件（予告期間・違約金）・特約事項を説明' },
     ]
   },
   {
-    id:'hanko', icon:'🔏', title:'捺印箇所のご案内',
+    id:'hanko', icon:'🔏', title:'署名・捺印のご案内',
     items:[
-      { id:'hk-1', label:'重要事項説明書 — 氏名・捺印欄',
-        desc:'「重要事項説明書の末尾、署名欄にご署名と捺印をお願いします（認印で可）」' },
-      { id:'hk-2', label:'賃貸借契約書 — 借主署名欄',
-        desc:'「賃貸借契約書の1枚目、借主の署名欄に住所・氏名をご記入ください」' },
-      { id:'hk-3', label:'賃貸借契約書 — 捺印箇所（全ページ）',
-        desc:'「契約書の各ページに捺印箇所があります。ページをめくりながら赤枠に捺印してください」' },
-      { id:'hk-4', label:'連帯保証人欄（該当者のみ）',
-        desc:'「連帯保証人様の署名・捺印欄が末尾にございます。後日保証人様にご対応いただく旨をお伝えください」' },
-      { id:'hk-5', label:'捺印漏れの最終確認を依頼',
+      // 紙契約のみ
+      { id:'hk-1p', label:'重要事項説明書 — 署名・捺印欄の案内',
+        desc:'「重要事項説明書の末尾、署名欄にご署名と捺印をお願いします（認印で可）」',
+        contractTypes:['paper'] },
+      { id:'hk-2p', label:'賃貸借契約書 — 借主署名欄の案内',
+        desc:'「賃貸借契約書の1枚目、借主の署名欄に住所・氏名をご記入ください」',
+        contractTypes:['paper'] },
+      { id:'hk-3p', label:'賃貸借契約書 — 全ページの捺印案内',
+        desc:'「契約書の各ページに捺印箇所があります。赤枠に捺印してください」',
+        contractTypes:['paper'] },
+      { id:'hk-4p', label:'連帯保証人欄の案内（該当者のみ）',
+        desc:'「連帯保証人様の署名・捺印欄が末尾にございます。後日保証人様にご対応いただく旨をお伝えください」',
+        contractTypes:['paper'] },
+      { id:'hk-5p', label:'捺印漏れの最終確認を依頼',
         desc:'「書類全体をもう一度ご確認いただき、捺印漏れがないかチェックをお願いします」',
-        tag:'required', tagLabel:'必須' },
+        tag:'required', tagLabel:'必須', contractTypes:['paper'] },
+      // 電子契約のみ
+      { id:'hk-1d', label:'電子署名リンクの操作方法を説明',
+        desc:'「お送りしたリンクを開き、内容を確認してから「署名」ボタンをクリックしてください。スマートフォンからでも可能です」',
+        tag:'required', tagLabel:'必須', contractTypes:['denshi'] },
+      { id:'hk-2d', label:'メールアドレス・本人確認の確認',
+        desc:'「電子署名のリンクは登録メールアドレスに届いています。認証コードが必要な場合は同じメールアドレスのメールを確認してください」',
+        contractTypes:['denshi'] },
+      { id:'hk-3d', label:'重要事項説明書の電子署名（宅建士）',
+        desc:'IT重説完了後、宅建士も電子署名を実施。keiyaku@coreto.jpにて処理',
+        tag:'takken', tagLabel:'宅建士署名', contractTypes:['denshi'] },
     ]
   },
   {
-    id:'closing', icon:'🔑', title:'今後の流れ説明',
+    id:'closing', icon:'🔑', title:'今後の流れの説明',
     items:[
-      { id:'end-1', label:'返送方法の案内',
-        desc:'「署名・捺印後はレターパックライトで返送してください。送付先は同封の封筒に記載しています」' },
+      // 紙契約のみ
+      { id:'end-1p', label:'書類返送方法の案内（レターパック）',
+        desc:'「署名・捺印後はレターパックライトで返送してください。送付先は同封の封筒に記載しています」',
+        contractTypes:['paper'] },
+      // 電子契約のみ
+      { id:'end-1d', label:'電子署名の完了目安を案内',
+        desc:'「IT重説後すぐにリンクから署名いただけます。署名完了後、弊社（keiyaku@coreto.jp）で確認します」',
+        contractTypes:['denshi'] },
       { id:'end-2', label:'鍵の受け渡し方法の確認',
-        desc:'入居日・鍵の受取方法（郵送 or 直接受取）を再確認してKintoneに記録' },
-      { id:'end-3', label:'入居日・今後のスケジュール確認',
-        desc:'入居予定日・ライフライン手続き（電気・ガス・水道）の案内' },
-      { id:'end-4', label:'重説実施の完了記録',
-        desc:'宅建士名・実施日・顧客確認の記録（本フォーム送信で自動記録）',
+        desc:'入居日・鍵の受取方法（郵送 or 直接受取）を確認して記録' },
+      { id:'end-3', label:'入居日・ライフライン手続きの案内',
+        desc:'入居予定日・電気・ガス・水道の手続きについて案内' },
+      { id:'end-4', label:'重説完了の記録',
+        desc:'宅建士名・実施日・クライアント確認の記録（本フォーム送信で自動記録）',
         tag:'record', tagLabel:'Kintone記録' },
     ]
   },
 ];
 
+// 契約タイプに応じたチェックリストを返す
+function getActiveChecklist(contractType) {
+  const ct = contractType || 'paper';
+  return IT_CHECKLIST.map(sec => ({
+    ...sec,
+    items: sec.items.filter(it => !it.contractTypes || it.contractTypes.includes(ct))
+  })).filter(sec => sec.items.length > 0);
+}
+
 // ================================================================
-//  Document scan checklist
+//  書類スキャンチェックリスト（紙契約）
 // ================================================================
 const DOC_CHECKLIST = [
   { id:'doc-1', label:'契約書（往路）発送 — 追跡番号登録',
     desc:'管理会社から届いた契約書を顧客へ発送。追跡番号をスキャン入力', required:true },
   { id:'doc-2', label:'返信用レターパック封入確認',
     desc:'返送用レターパックライト（送付先印字済み）を契約書に同封', required:true },
-  { id:'doc-3', label:'契約書（往路）顧客着確認',
-    desc:'追跡サイトで配達完了を確認。または顧客から着荷連絡を受ける' },
+  { id:'doc-3', label:'契約書（往路）クライアント着荷確認',
+    desc:'追跡サイトで配達完了を確認。またはクライアントから着荷連絡を受ける' },
   { id:'doc-4', label:'IT重説実施確認',
     desc:'IT重説が完了しているか確認（本ページのIT重説タブを参照）', required:true },
   { id:'doc-5', label:'契約書（復路）返送確認 — 追跡番号登録',
-    desc:'顧客が署名捺印して返送。追跡番号をスキャン入力、着荷を確認', required:true },
-  { id:'doc-6', label:'契約書内容の最終確認（署名・捺印）',
-    desc:'返送された契約書の署名・捺印漏れがないか確認。不備があれば顧客に連絡' },
+    desc:'クライアントが署名捺印して返送。追跡番号をスキャン入力、着荷を確認', required:true },
+  { id:'doc-6', label:'契約書内容の最終確認（署名・捺印漏れチェック）',
+    desc:'返送された契約書の署名・捺印漏れがないか確認。不備があればクライアントに連絡' },
+];
+
+// ================================================================
+//  書類スキャンチェックリスト（電子契約）
+// ================================================================
+const DENSHI_DOC_CHECKLIST = [
+  { id:'ddoc-1', label:'管理会社へ電子契約依頼（keiyaku@coreto.jp宛送付依頼）',
+    desc:'管理会社に「電子契約書の送付先は keiyaku@coreto.jp です」と案内する', required:true },
+  { id:'ddoc-2', label:'keiyaku@coreto.jp への電子契約メール着信確認',
+    desc:'管理会社からの電子署名リンクメールが keiyaku@coreto.jp に届いているか確認', required:true },
+  { id:'ddoc-3', label:'電子署名リンクをクライアントへ転送',
+    desc:'keiyaku@coreto.jp に届いたリンクをLINE WORKS経由でクライアントへ送付', required:true },
+  { id:'ddoc-4', label:'IT重説実施確認',
+    desc:'IT重説が完了しているか確認（本ページのIT重説タブを参照）', required:true },
+  { id:'ddoc-5', label:'クライアントの電子署名完了確認',
+    desc:'クライアントが電子署名を完了したことを確認（リンクのステータス確認 or クライアントから連絡）', required:true },
+  { id:'ddoc-6', label:'HQによる電子契約処理完了確認',
+    desc:'keiyaku@coreto.jp でHQが受領・最終処理。処理完了通知をHQから受け取る' },
+  { id:'ddoc-7', label:'契約書類のアーカイブ確認',
+    desc:'電子署名済みの契約書PDFをシステムにアップロードして保存' },
 ];
 
 // ================================================================
@@ -1525,6 +1596,18 @@ function renderCaseHeader() {
     <span class="case-detail-row">担当：${c.agent}</span>
     <span class="case-detail-row">管理会社：${c.mgmt}</span>
     <span class="case-detail-row">家賃：¥${c.rent.toLocaleString()}</span>
+    <span class="case-detail-row" style="display:flex;align-items:center;gap:8px">
+      ${c.contractType==='denshi'
+        ? `<span style="background:rgba(52,211,153,.13);color:var(--green);border:1px solid rgba(52,211,153,.3);padding:2px 9px;border-radius:5px;font-size:10px;font-weight:700">📧 電子契約</span>
+           <span style="font-size:9px;color:var(--muted)">keiyaku@coreto.jp 処理</span>`
+        : `<span style="background:rgba(79,156,249,.12);color:var(--blue);border:1px solid rgba(79,156,249,.25);padding:2px 9px;border-radius:5px;font-size:10px;font-weight:700">📮 紙契約（郵送）</span>`
+      }
+      <button onclick="toggleContractType('${c.id}')"
+        style="font-size:9px;padding:2px 8px;border-radius:4px;border:1px solid var(--border2);
+               background:transparent;color:var(--muted);cursor:pointer;font-family:inherit">
+        切替
+      </button>
+    </span>
     ${bookingInfo}`;
 }
 
@@ -1532,8 +1615,9 @@ function renderCaseHeader() {
 //  IT Checklist render
 // ================================================================
 function renderITChecklist() {
+  const activeList = getActiveChecklist(currentCase.contractType);
   const body = document.getElementById('it-checklist-body');
-  body.innerHTML = IT_CHECKLIST.map(sec => `
+  body.innerHTML = activeList.map(sec => `
     <div class="sec-card" id="sec-${sec.id}">
       <div class="sec-hdr" onclick="toggleSec('${sec.id}',this)">
         <div class="sec-hdr-left">
@@ -1552,6 +1636,7 @@ function renderITChecklist() {
 
   // Restore saved state
   Object.entries(currentCase.checkState).forEach(([id, state]) => applyCheck(id, state));
+  updateSectionProgress();
 }
 
 function renderChkItem(it, i) {
@@ -1582,38 +1667,150 @@ function renderChkItem(it, i) {
 // ================================================================
 function renderScanPanel() {
   const c = currentCase;
-  const items = [
-    { key:'send',  label:'往路（事務所→顧客）', icon:'📤', color:'var(--blue)',  placeholder:'追跡番号 12桁' },
-    { key:'reply', label:'復路（顧客→事務所）', icon:'📥', color:'var(--green)', placeholder:'追跡番号 12桁' },
-    { key:'key',   label:'鍵送付',               icon:'🔑', color:'var(--gold)',  placeholder:'追跡番号 12桁（任意）' },
-  ];
-  document.getElementById('scan-grid').innerHTML = items.map(item => {
-    const val     = c.trackNos[item.key] || '';
-    const filled  = !!val;
-    const missing = !filled && (item.key !== 'key');
-    return `
-      <div class="scan-item ${filled?'filled':missing?'missing':''}" id="scan-${item.key}">
-        <div class="si-label">${item.icon} ${item.label}</div>
-        <div class="si-type-badge" style="background:${item.color}22;color:${item.color};border:1px solid ${item.color}44">
-          ${item.key==='key'?'任意':'必須'}
+  const wrap = document.getElementById('track-panel-wrap');
+  if (!wrap) return;
+
+  if (c.contractType === 'denshi') {
+    // ── 電子契約ステータス管理パネル ──
+    const ds = c.denshiStatus || { sentAt:'', clientSignedAt:'', hqProcessedAt:'' };
+    wrap.innerHTML = `
+      <div class="scan-panel" style="border-color:rgba(52,211,153,.25)">
+        <div class="card-title" style="font-size:9px;color:var(--muted);letter-spacing:2px;
+             text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:8px">
+          <div style="width:3px;height:12px;background:var(--green);border-radius:2px"></div>
+          電子契約ステータス管理
         </div>
-        <div class="si-num ${filled?'':'empty'}" id="sn-${item.key}">
-          ${filled ? val : '未入力'}
+
+        <!-- 送付先メールアドレス表示 -->
+        <div style="display:flex;align-items:center;gap:10px;padding:9px 14px;
+                    background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.2);
+                    border-radius:9px;margin-bottom:14px;font-size:11px">
+          📧 <div>
+            <strong style="color:var(--green)">電子契約書の送付先：keiyaku@coreto.jp</strong>
+            <span style="color:var(--muted)">（管理会社にこのアドレスへ送付するよう伝えてください）</span>
+          </div>
         </div>
-        <div class="scan-input-row">
-          <input type="text" id="si-${item.key}" maxlength="12" placeholder="${item.placeholder}"
-                 value="${val}" oninput="updateTrackNo('${item.key}',this.value)"
-                 onfocus="this.select()">
-          <button class="scan-btn scan-go" onclick="lookupTrack('${item.key}')">🔍 追跡</button>
+
+        <!-- ステータス3ステップ -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px">
+          <div class="scan-item ${ds.sentAt?'filled':''}" id="ds-sent">
+            <div class="si-label">📤 管理会社→keiyaku着信</div>
+            <div class="si-type-badge" style="background:rgba(52,211,153,.15);color:var(--green);border:1px solid rgba(52,211,153,.3)">必須</div>
+            <div class="si-num ${ds.sentAt?'':'empty'}" id="dsn-sent">${ds.sentAt||'未確認'}</div>
+            <div class="scan-input-row">
+              <input type="text" id="dsi-sent" placeholder="着信日時（例：2026-03-08 14:30）"
+                     value="${ds.sentAt}" oninput="updateDenshiStatus('sentAt',this.value)">
+            </div>
+            <div class="si-status" id="dss-sent">
+              ${ds.sentAt
+                ? `<span style="color:var(--green)">✓</span><span style="color:var(--green)">確認済み</span>`
+                : `<span style="color:var(--orange)">○</span><span style="color:var(--muted)">未確認</span>`}
+            </div>
+          </div>
+          <div class="scan-item ${ds.clientSignedAt?'filled':''}" id="ds-signed">
+            <div class="si-label">✍️ クライアント電子署名完了</div>
+            <div class="si-type-badge" style="background:rgba(79,156,249,.15);color:var(--blue);border:1px solid rgba(79,156,249,.3)">必須</div>
+            <div class="si-num ${ds.clientSignedAt?'':'empty'}" id="dsn-signed">${ds.clientSignedAt||'未完了'}</div>
+            <div class="scan-input-row">
+              <input type="text" id="dsi-signed" placeholder="署名完了日時"
+                     value="${ds.clientSignedAt}" oninput="updateDenshiStatus('clientSignedAt',this.value)">
+            </div>
+            <div class="si-status" id="dss-signed">
+              ${ds.clientSignedAt
+                ? `<span style="color:var(--green)">✓</span><span style="color:var(--green)">署名完了</span>`
+                : `<span style="color:var(--orange)">○</span><span style="color:var(--muted)">署名待ち</span>`}
+            </div>
+          </div>
+          <div class="scan-item ${ds.hqProcessedAt?'filled':''}" id="ds-hq">
+            <div class="si-label">🏢 HQ処理完了</div>
+            <div class="si-type-badge" style="background:rgba(201,168,76,.12);color:var(--gold);border:1px solid rgba(201,168,76,.25)">任意</div>
+            <div class="si-num ${ds.hqProcessedAt?'':'empty'}" id="dsn-hq">${ds.hqProcessedAt||'処理中'}</div>
+            <div class="scan-input-row">
+              <input type="text" id="dsi-hq" placeholder="HQ処理完了日時"
+                     value="${ds.hqProcessedAt}" oninput="updateDenshiStatus('hqProcessedAt',this.value)">
+            </div>
+            <div class="si-status" id="dss-hq">
+              ${ds.hqProcessedAt
+                ? `<span style="color:var(--green)">✓</span><span style="color:var(--green)">処理完了</span>`
+                : `<span style="color:var(--orange)">○</span><span style="color:var(--muted)">処理待ち</span>`}
+            </div>
+          </div>
         </div>
-        <div class="si-status" id="ss-${item.key}">
-          ${filled
-            ? `<span style="color:var(--green)">✓</span><span style="color:var(--green)">登録済み</span>`
-            : `<span style="color:var(--orange)">○</span><span style="color:var(--muted)">未登録</span>`}
+
+        <div style="padding:10px 14px;background:rgba(52,211,153,.04);border:1px solid rgba(52,211,153,.12);
+                    border-radius:9px;font-size:11px;color:var(--sub);line-height:1.8">
+          💡 <strong style="color:var(--text)">電子契約の流れ：</strong>
+          ①管理会社がkeiyaku@coreto.jpに署名リンクを送付 → ②HQがクライアントにLINE WORKSで転送 →
+          ③クライアントが署名 → ④keiyaku@coreto.jpで受領・処理
         </div>
-        ${filled ? `<div class="si-date" id="sd-${item.key}">登録済み</div>` : ''}
       </div>`;
-  }).join('');
+  } else {
+    // ── 紙契約：追跡番号管理（レターパック）──
+    const items = [
+      { key:'send',  label:'往路（事務所→クライアント）', icon:'📤', color:'var(--blue)',  placeholder:'追跡番号 12桁' },
+      { key:'reply', label:'復路（クライアント→事務所）', icon:'📥', color:'var(--green)', placeholder:'追跡番号 12桁' },
+      { key:'key',   label:'鍵送付',                      icon:'🔑', color:'var(--gold)',  placeholder:'追跡番号 12桁（任意）' },
+    ];
+    wrap.innerHTML = `
+      <div class="scan-panel">
+        <div class="card-title" style="font-size:9px;color:var(--muted);letter-spacing:2px;
+             text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:8px">
+          <div style="width:3px;height:12px;background:var(--green);border-radius:2px"></div>
+          追跡番号管理（レターパック）
+        </div>
+        <div class="scan-grid" id="scan-grid">
+          ${items.map(item => {
+            const val = c.trackNos[item.key] || '';
+            const filled = !!val;
+            const missing = !filled && (item.key !== 'key');
+            return `<div class="scan-item ${filled?'filled':missing?'missing':''}" id="scan-${item.key}">
+              <div class="si-label">${item.icon} ${item.label}</div>
+              <div class="si-type-badge" style="background:${item.color}22;color:${item.color};border:1px solid ${item.color}44">
+                ${item.key==='key'?'任意':'必須'}
+              </div>
+              <div class="si-num ${filled?'':'empty'}" id="sn-${item.key}">${filled ? val : '未入力'}</div>
+              <div class="scan-input-row">
+                <input type="text" id="si-${item.key}" maxlength="12" placeholder="${item.placeholder}"
+                       value="${val}" oninput="updateTrackNo('${item.key}',this.value)"
+                       onfocus="this.select()">
+                <button class="scan-btn scan-go" onclick="lookupTrack('${item.key}')">🔍 追跡</button>
+              </div>
+              <div class="si-status" id="ss-${item.key}">
+                ${filled
+                  ? `<span style="color:var(--green)">✓</span><span style="color:var(--green)">登録済み</span>`
+                  : `<span style="color:var(--orange)">○</span><span style="color:var(--muted)">未登録</span>`}
+              </div>
+              ${filled ? `<div class="si-date" id="sd-${item.key}">登録済み</div>` : ''}
+            </div>`;
+          }).join('')}
+        </div>
+        <div style="padding:10px 14px;background:rgba(52,211,153,.05);border:1px solid rgba(52,211,153,.12);
+                    border-radius:9px;font-size:11px;color:var(--sub);line-height:1.8">
+          💡 <strong style="color:var(--text)">バーコードスキャナー対応：</strong>
+          追跡番号フィールドをクリック → バーコードスキャン → 自動入力（所要10秒）<br>
+          Honeywell Voyager 1200g（USB接続、ドライバ不要）推奨
+        </div>
+      </div>`;
+  }
+}
+
+function updateDenshiStatus(key, val) {
+  if (!currentCase.denshiStatus) currentCase.denshiStatus = {};
+  currentCase.denshiStatus[key] = val.trim();
+  const filled = !!val.trim();
+  const sfx = key==='sentAt'?'sent':key==='clientSignedAt'?'signed':'hq';
+  const numEl = document.getElementById(`dsn-${sfx}`);
+  const statEl = document.getElementById(`dss-${sfx}`);
+  const wrap = document.getElementById(`ds-${sfx}`);
+  if (numEl) numEl.textContent = filled ? val.trim() : (sfx==='hq'?'処理中':sfx==='signed'?'未完了':'未確認');
+  if (numEl) numEl.className = 'si-num' + (filled?'':' empty');
+  const greenMsg = sfx==='hq'?'処理完了':sfx==='signed'?'署名完了':'確認済み';
+  const orangeMsg = sfx==='hq'?'処理待ち':sfx==='signed'?'署名待ち':'未確認';
+  if (statEl) statEl.innerHTML = filled
+    ? `<span style="color:var(--green)">✓</span><span style="color:var(--green)">${greenMsg}</span>`
+    : `<span style="color:var(--orange)">○</span><span style="color:var(--muted)">${orangeMsg}</span>`;
+  if (wrap) wrap.className = 'scan-item' + (filled?' filled':'');
+  updateProgress();
 }
 
 function updateTrackNo(key, val) {
@@ -1650,7 +1847,9 @@ function lookupTrack(key) {
 //  Doc checklist
 // ================================================================
 function renderDocChecklist() {
-  document.getElementById('sec-doc-scan').innerHTML = DOC_CHECKLIST.map((it,i) => `
+  const isDenshi = (currentCase.contractType === 'denshi');
+  const list = isDenshi ? DENSHI_DOC_CHECKLIST : DOC_CHECKLIST;
+  document.getElementById('sec-doc-scan').innerHTML = list.map((it,i) => `
     <div class="chk" id="drow-${it.id}">
       <div class="chk-num">${String(i+1).padStart(2,'0')}</div>
       <div class="chk-body">
@@ -1712,13 +1911,18 @@ function applyDocCheck(id, state) {
 // ================================================================
 function updateProgress() {
   if (!currentCase) return;
-  const allIT  = IT_CHECKLIST.flatMap(s=>s.items);
+  const activeList = getActiveChecklist(currentCase.contractType);
+  const allIT  = activeList.flatMap(s=>s.items);
   const doneIT = allIT.filter(it=>currentCase.checkState[it.id]).length;
-  const trackDone = Object.values(currentCase.trackNos).filter(v=>v&&v.length===12).length;
+  const isDenshi = (currentCase.contractType === 'denshi');
+  const docList  = isDenshi ? DENSHI_DOC_CHECKLIST : DOC_CHECKLIST;
   const doneDoc = Object.values(currentCase.docCheckState).filter(v=>v).length;
+  // 紙のみ追跡番号カウント
+  const trackDone = isDenshi ? 0 : Object.values(currentCase.trackNos).filter(v=>v&&v.length===12).length;
+  const trackRequired = isDenshi ? 0 : 2;
 
-  const total = allIT.length + 2 + DOC_CHECKLIST.length; // 2 required tracks
-  const done  = doneIT + Math.min(trackDone,2) + doneDoc;
+  const total = allIT.length + trackRequired + docList.length;
+  const done  = doneIT + Math.min(trackDone, trackRequired) + doneDoc;
   const pct   = total > 0 ? Math.round((done/total)*100) : 0;
 
   const clr   = pct < 40 ? 'var(--orange)' : pct < 100 ? 'var(--blue)' : 'var(--green)';
@@ -1727,13 +1931,14 @@ function updateProgress() {
   document.getElementById('c-bar').style.width   = pct + '%';
   document.getElementById('c-bar').style.background = clr;
 
-  const itPct = allIT.length > 0 ? Math.round((doneIT/allIT.length)*100) : 0;
+  const trackLabel = isDenshi ? '' : ` ／ 追跡番号 ${trackDone}/2`;
   document.getElementById('ab-progress').textContent =
-    `IT重説 ${doneIT}/${allIT.length}項目 完了 ／ 書類 ${doneDoc}/${DOC_CHECKLIST.length}項目 ／ 追跡番号 ${trackDone}/3`;
+    `IT重説 ${doneIT}/${allIT.length}項目 完了 ／ 書類 ${doneDoc}/${docList.length}項目${trackLabel}`;
 }
 
 function updateSectionProgress() {
-  IT_CHECKLIST.forEach(sec => {
+  const activeList = getActiveChecklist(currentCase.contractType);
+  activeList.forEach(sec => {
     const done = sec.items.filter(it=>currentCase.checkState[it.id]).length;
     const el   = document.getElementById(`sp-${sec.id}`);
     if (el) el.textContent = `${done}/${sec.items.length}`;
@@ -1741,14 +1946,31 @@ function updateSectionProgress() {
 }
 
 function updateDocProgress() {
+  const isDenshi = (currentCase.contractType === 'denshi');
+  const docList  = isDenshi ? DENSHI_DOC_CHECKLIST : DOC_CHECKLIST;
   const done = Object.values(currentCase.docCheckState).filter(v=>v).length;
   const el   = document.getElementById('doc-prog');
-  if (el) el.textContent = `${done}/${DOC_CHECKLIST.length}`;
+  if (el) el.textContent = `${done}/${docList.length}`;
 }
 
 // ================================================================
 //  Section toggle
 // ================================================================
+function toggleContractType(caseId) {
+  const c = CASES.find(x=>x.id===caseId);
+  if (!c) return;
+  const was = c.contractType || 'paper';
+  c.contractType = (was === 'paper') ? 'denshi' : 'paper';
+  // 状態をリセット（チェックリストが変わるため）
+  c.checkState = {};
+  c.docCheckState = {};
+  renderCaseHeader();
+  renderITChecklist();
+  renderScanPanel();
+  renderDocChecklist();
+  updateProgress();
+}
+
 function toggleSec(id, btn) {
   const body = document.getElementById(`sb-${id}`);
   const chev = btn ? btn.querySelector('.sec-chev') : null;
@@ -1824,9 +2046,12 @@ function submitComplete() {
   if (progress) progress.style.display = 'block';
 
   // IT重説・書類チェック進捗を取得
-  var allIT   = IT_CHECKLIST.flatMap(function(s){ return s.items; });
-  var doneIT  = allIT.filter(function(it){ return (window._itCheckState||{})[it.id]==='ok'; }).length;
-  var doneDoc = DOC_CHECKLIST.filter(function(d){ return (window._docCheckState||{})[d.id]==='ok'; }).length;
+  var activeList = getActiveChecklist(currentCase.contractType);
+  var allIT   = activeList.flatMap(function(s){ return s.items; });
+  var doneIT  = allIT.filter(function(it){ return currentCase.checkState[it.id]==='ok'; }).length;
+  var isDenshi = (currentCase.contractType === 'denshi');
+  var docList  = isDenshi ? DENSHI_DOC_CHECKLIST : DOC_CHECKLIST;
+  var doneDoc = docList.filter(function(d){ return currentCase.docCheckState[d.id]==='ok'; }).length;
   var memo    = (document.getElementById('modal-memo')||{}).value || '';
 
   var steps = [
@@ -1836,7 +2061,7 @@ function submitComplete() {
         // ① Slack実通知
         if (typeof slackNotifyITSetsuComplete === 'function') {
           slackNotifyITSetsuComplete(
-            currentCase, doneIT, allIT.length, doneDoc, DOC_CHECKLIST.length, memo
+            currentCase, doneIT, allIT.length, doneDoc, docList.length, memo
           );
         }
       }
