@@ -834,6 +834,73 @@ html,body{height:100%;font-family:'Noto Sans JP',sans-serif;background:var(--bg)
 </div><!-- /layout -->
 
 <script>
+// ================================================================
+//  Slack通知モジュール（パートナーポータル）
+//  db.js設定:
+//    window.SLACK_CONFIG.PARTNER_REFERRAL = '紹介登録受信用webhook（HQ）'
+//    window.SLACK_CONFIG.PARTNER_MSG      = 'メッセージ転送用webhook'
+// ================================================================
+(function(){
+  var CFG   = window.SLACK_CONFIG || {};
+  var WH_RF = CFG.PARTNER_REFERRAL || CFG.GENERAL || null;
+  var WH_MS = CFG.PARTNER_MSG      || CFG.GENERAL || null;
+
+  function post(wh, payload){
+    if(!wh){ console.log('[Slack未設定 Partner]', (payload.text||'').slice(0,60)); return; }
+    fetch(wh,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload),mode:'no-cors'}).catch(function(e){ console.error('[Slack Partner]',e); });
+  }
+  function hdr(t){ return{type:'header',text:{type:'plain_text',text:t,emoji:true}}; }
+  function flds(pairs){ return{type:'section',fields:pairs.map(function(p){return{type:'mrkdwn',text:'*'+p[0]+'*\n'+p[1]};})}; }
+  function sec(m){ return{type:'section',text:{type:'mrkdwn',text:m}}; }
+  function ctx(t){ return{type:'context',elements:[{type:'mrkdwn',text:t}]}; }
+  function div(){ return{type:'divider'}; }
+  function now(){ return new Date().toLocaleString('ja-JP'); }
+
+  // ① 紹介登録受信（PT→HQ）
+  window.slackNotifyPartnerReferral = function(info){
+    // info: { ptName, ptId, clientName, clientTel, clientEmail, type, area, memo, propertyName, rent, madori, jobType, salary }
+    var typeLabel = {rent:'🏠 賃貸',buy:'🏢 売買',hr:'👥 人材紹介'}[info.type]||info.type;
+    var detail = '';
+    if(info.type==='hr'){
+      detail = (info.jobType?'職種: '+info.jobType:'')+(info.salary?' / 希望年収: '+info.salary+'万円':'');
+    } else {
+      detail = (info.propertyName||'')+(info.rent?' / ¥'+Number(info.rent).toLocaleString():'')+(info.madori?' / '+info.madori:'');
+    }
+    post(WH_RF,{text:'🤝 パートナー紹介受信: '+(info.clientName||'—')+' — '+typeLabel, blocks:[
+      hdr('🤝 パートナー紹介 — 新規案件受信'),
+      flds([
+        ['紹介パートナー', info.ptName+'（'+info.ptId+'）'],
+        ['種別',          typeLabel],
+        ['クライアント名', info.clientName||'—'],
+        ['電話番号',      info.clientTel||'—'],
+      ]),
+      flds([
+        ['メールアドレス', info.clientEmail||'未入力'],
+        ['希望エリア/業種', info.area||'—'],
+        ['案件詳細',       detail||'—'],
+      ]),
+      info.memo ? sec('*申し送り:* '+info.memo) : null,
+      div(),
+      sec('⚡ LINE WORKSグループを作成し、担当エージェントにアサインしてください。'),
+      ctx('COREBLDGシステム — パートナーポータル | '+now()),
+    ].filter(Boolean)});
+  };
+
+  // ② メッセージ送信通知（PT→HQ Slack転送）
+  window.slackNotifyPartnerMsg = function(ptName, ptId, toName, text){
+    post(WH_MS,{text:'💬 パートナーメッセージ: '+ptName+' → '+toName, blocks:[
+      hdr('💬 パートナーからのメッセージ'),
+      flds([
+        ['送信者', ptName+'（'+ptId+'）'],
+        ['宛先',   toName],
+      ]),
+      sec('_「'+text+'」_'),
+      ctx('COREBLDGシステム — パートナーポータル | '+now()),
+    ]});
+  };
+})();
+
 // ── XSS対策: ユーザー入力値のエスケープ ──────────────────────────────
 function escHtml(s) {
   if (s == null) return '';
@@ -1105,6 +1172,13 @@ function sendMsg(id) {
     body.appendChild(div);
     body.scrollTop = body.scrollHeight;
   }
+  // ② Slack転送（HQ宛メッセージのみ）
+  if(id === 1 && typeof slackNotifyPartnerMsg === 'function'){
+    var s = {}; try{ s = JSON.parse(sessionStorage.getItem('coreto_session')||'{}'); }catch(e){}
+    var ptName = s.name || '佐藤 美咲';
+    var ptId   = 'PT-'+(s.agId||'30007');
+    slackNotifyPartnerMsg(ptName, ptId, c.name, text);
+  }
 }
 
 // ═══════════════════════════════════════
@@ -1118,6 +1192,34 @@ function updateRegType() {
 }
 
 function submitReferral() {
+  // フォームから値を取得
+  const inputs = document.querySelectorAll('#page-5 input, #page-5 select, #page-5 textarea');
+  const get = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+  const fields = Array.from(inputs);
+  const clientName  = fields[0] ? fields[0].value.trim() : '';
+  const clientTel   = fields[1] ? fields[1].value.trim() : '';
+  const clientEmail = fields[2] ? fields[2].value.trim() : '';
+  const type        = get('reg-type');
+  const area        = get('reg-area');
+
+  if(!clientName || !clientTel){
+    alert('顧客名と電話番号を入力してください');
+    return;
+  }
+
+  // セッションからPT情報を取得
+  var s = {}; try{ s = JSON.parse(sessionStorage.getItem('coreto_session')||'{}'); }catch(e){}
+  var ptName = s.name || '佐藤 美咲';
+  var ptId   = 'PT-' + (s.agId || '30007');
+
+  // ① Slack通知: 紹介登録受信
+  if(typeof slackNotifyPartnerReferral === 'function'){
+    slackNotifyPartnerReferral({
+      ptName, ptId, clientName, clientTel, clientEmail, type, area,
+      memo:  fields[fields.length-1] ? fields[fields.length-1].value.trim() : '',
+    });
+  }
+
   alert('✅ 紹介を登録しました！\n\nCORETO本部がSlackで通知を受け取り、\n担当エージェントが顧客に連絡します。\n\n案件の進捗は「紹介案件」タブで確認できます。');
   nav(1, null);
 }
