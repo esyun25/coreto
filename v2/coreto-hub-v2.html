@@ -857,12 +857,26 @@ body {
 let currentRole = 'hq';
 let currentPage = 'dashboard';
 
+// ─────────────────────────────────────────
+// 権限マトリクス
+// ─────────────────────────────────────────
+// AG権限: フル操作（案件登録・編集・成約報告）
+// PT権限: 紹介投げ・進捗閲覧のみ（編集・操作ボタン非表示）
+// ─────────────────────────────────────────
+const PERMISSIONS = {
+  hq:    { re:'ag', hr:'ag', util:'ag' },  // HQは全事業フル
+  re_ag: { re:'ag', hr:'pt', util:'ag' },  // 不動産AG・光通信AG / 人材はPT扱い
+  hr_ag: { re:'pt', hr:'ag', util:'ag' },  // 人材AG・光通信AG / 不動産はPT扱い
+  pt:    { re:'pt', hr:'pt', util:'pt' },  // 全事業PT扱い（光通信は案件投げのみ可）
+  intern:{ re:null, hr:null, util:null },  // 訪問・リード投げのみ
+};
+
 const ROLES = {
-  hq:    { label:'HQ統括',  av:'HQ', nav: hqNav,    page: renderHQDash },
-  re_ag: { label:'RE-AG',   av:'AG', nav: agNav,    page: renderAGDash },
-  hr_ag: { label:'HR-AG',   av:'AG', nav: agNav,    page: renderAGDash },
-  pt:    { label:'PT',      av:'PT', nav: ptNav,    page: renderPTDash },
-  intern:{ label:'インターン',av:'IN',nav: internNav, page: renderInternDash },
+  hq:    { label:'HQ統括',    av:'HQ', nav: hqNav,     page: renderHQDash },
+  re_ag: { label:'RE-AG',     av:'AG', nav: reAgNav,   page: renderREAgDash },
+  hr_ag: { label:'HR-AG',     av:'AG', nav: hrAgNav,   page: renderHRAgDash },
+  pt:    { label:'PT',        av:'PT', nav: ptNav,     page: renderPTDash },
+  intern:{ label:'インターン', av:'IN', nav: internNav, page: renderInternDash },
 };
 
 function doLogin() {
@@ -902,54 +916,93 @@ function loginAs(role) {
 // ═══════════════════════════════════════════
 function hqNav() { return [
   { section: 'ダッシュボード', items: [
-    { icon:'🏠', label:'HQダッシュボード', page:'dashboard', badge: null, active: true },
-    { icon:'📊', label:'経営レポート', page:'exec', badge: null },
+    { icon:'🏠', label:'HQダッシュボード', page:'dashboard', active: true },
+    { icon:'📊', label:'経営レポート',     page:'exec' },
   ]},
   { section: 'CRM / 案件', items: [
-    { icon:'👥', label:'クライアント管理', page:'crm', badge: null },
-    { icon:'🏘️', label:'案件一覧', page:'cases', badge: '12' },
-    { icon:'💰', label:'入金監視', page:'remit', badge: '3', badgeColor:'amber' },
-    { icon:'📋', label:'書類審査', page:'screening', badge: '5', badgeColor:'amber' },
+    { icon:'👥', label:'クライアント管理', page:'crm' },
+    { icon:'🏘️', label:'案件一覧',        page:'cases',     badge:'12' },
+    { icon:'💰', label:'入金監視',        page:'remit',     badge:'3', badgeColor:'amber' },
+    { icon:'📋', label:'書類審査',        page:'screening', badge:'5', badgeColor:'amber' },
   ]},
   { section: '管理', items: [
-    { icon:'👤', label:'AG管理', page:'agents', badge: null },
-    { icon:'💴', label:'報酬・支払い', page:'payment', badge: null },
-    { icon:'🔑', label:'IT重説', page:'itsetsu', badge: '2', badgeColor:'amber' },
-    { icon:'⚡', label:'光通信SFA', page:'utility', badge: null },
-    { icon:'🎓', label:'インターン', page:'intern', badge: null },
+    { icon:'👤', label:'AG管理',          page:'agents' },
+    { icon:'💴', label:'報酬・支払い',    page:'payment' },
+    { icon:'🔑', label:'IT重説',          page:'itsetsu',   badge:'2', badgeColor:'amber' },
+    { icon:'⚡', label:'光通信SFA',       page:'utility' },
+    { icon:'🎓', label:'インターン',      page:'intern' },
   ]},
   { section: 'システム', items: [
-    { icon:'🔐', label:'ユーザー管理', page:'users', badge: null },
-    { icon:'🔔', label:'通知ログ', page:'notif', badge: null },
+    { icon:'🔐', label:'ユーザー管理',    page:'users' },
+    { icon:'🔔', label:'通知ログ',        page:'notif' },
   ]},
 ];}
 
-function agNav() { return [
+// 不動産AG: 不動産・光通信はフルAG権限 / 人材はPT扱い（進捗閲覧のみ）
+function reAgNav() { return [
   { section: 'ダッシュボード', items: [
-    { icon:'🏠', label:'マイダッシュボード', page:'dashboard', badge: null, active: true },
-    { icon:'🏅', label:'ランク・報酬', page:'rank', badge: null },
+    { icon:'🏠', label:'マイダッシュボード', page:'dashboard', active: true },
+    { icon:'🏅', label:'ランク・報酬',       page:'rank' },
   ]},
-  { section: '案件', items: [
-    { icon:'🏘️', label:'担当案件', page:'cases', badge: '4' },
-    { icon:'👥', label:'クライアント', page:'crm', badge: null },
-    { icon:'⚡', label:'光通信案件', page:'utility', badge: '2', badgeColor:'gold' },
+  { section: '不動産（AG権限）', items: [
+    { icon:'🏘️', label:'担当案件',           page:'re_cases',  badge:'4' },
+    { icon:'👥', label:'クライアント',       page:'crm' },
+    { icon:'🔑', label:'IT重説チェック',     page:'itsetsu' },
+  ]},
+  { section: '光通信（AG権限）', items: [
+    { icon:'⚡', label:'光通信案件',         page:'util_cases', badge:'2', badgeColor:'gold' },
+  ]},
+  { section: '人材（閲覧のみ）', items: [
+    { icon:'👤', label:'人材紹介の進捗',     page:'hr_ref',    note:'PT扱い' },
   ]},
   { section: 'ツール', items: [
-    { icon:'📋', label:'IT重説チェック', page:'itsetsu', badge: null },
-    { icon:'💴', label:'報酬明細', page:'payment', badge: null },
-    { icon:'📚', label:'研修・マニュアル', page:'onboard', badge: null },
+    { icon:'💴', label:'報酬明細',           page:'payment' },
+    { icon:'📚', label:'研修・マニュアル',   page:'onboard' },
   ]},
 ];}
 
+// 人材AG: 人材・光通信はフルAG権限 / 不動産はPT扱い（進捗閲覧のみ）
+function hrAgNav() { return [
+  { section: 'ダッシュボード', items: [
+    { icon:'🏠', label:'マイダッシュボード', page:'dashboard', active: true },
+    { icon:'🏅', label:'ランク・報酬',       page:'rank' },
+  ]},
+  { section: '人材（AG権限）', items: [
+    { icon:'👤', label:'担当案件（HR）',     page:'hr_cases',   badge:'3' },
+    { icon:'👥', label:'クライアント',       page:'crm' },
+  ]},
+  { section: '光通信（AG権限）', items: [
+    { icon:'⚡', label:'光通信案件',         page:'util_cases', badge:'1', badgeColor:'gold' },
+  ]},
+  { section: '不動産（閲覧のみ）', items: [
+    { icon:'🏘️', label:'不動産紹介の進捗', page:'re_ref',     note:'PT扱い' },
+  ]},
+  { section: 'ツール', items: [
+    { icon:'💴', label:'報酬明細',           page:'payment' },
+    { icon:'📚', label:'研修・マニュアル',   page:'onboard' },
+  ]},
+];}
+
+// PT: 全事業は紹介投げ・進捗閲覧のみ / 光通信のみ案件登録可
 function ptNav() { return [
   { section: 'ダッシュボード', items: [
-    { icon:'🏠', label:'PTポータル', page:'dashboard', active: true },
-    { icon:'💴', label:'報酬明細', page:'payment' },
+    { icon:'🏠', label:'PTポータル',         page:'dashboard', active: true },
+    { icon:'💴', label:'報酬明細',           page:'payment' },
   ]},
-  { section: '紹介', items: [
-    { icon:'👥', label:'紹介クライアント', page:'crm' },
-    { icon:'📊', label:'案件進捗', page:'cases' },
-    { icon:'🔑', label:'紹介コード', page:'code' },
+  { section: '不動産（紹介・閲覧）', items: [
+    { icon:'🏘️', label:'不動産紹介の投げ方', page:'re_refer' },
+    { icon:'📊', label:'不動産案件の進捗',   page:'re_progress' },
+  ]},
+  { section: '人材（紹介・閲覧）', items: [
+    { icon:'👤', label:'人材紹介の投げ方',   page:'hr_refer' },
+    { icon:'📊', label:'人材案件の進捗',     page:'hr_progress' },
+  ]},
+  { section: '光通信（案件投げ可）', items: [
+    { icon:'⚡', label:'光通信 案件を投げる', page:'util_submit', badge:'NEW', badgeColor:'gold' },
+    { icon:'📊', label:'投げた案件の進捗',   page:'util_progress' },
+  ]},
+  { section: 'その他', items: [
+    { icon:'🔑', label:'紹介コード',         page:'code' },
   ]},
 ];}
 
@@ -972,6 +1025,7 @@ function renderNav(sections) {
         <div class="nav-item ${item.active ? 'active' : ''}" onclick="navClick('${item.page}', this)">
           <div class="nav-icon">${item.icon}</div>
           <div class="nav-text">${item.label}</div>
+          ${item.note ? `<div style="font-size:9px;padding:1px 5px;border-radius:4px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.3);font-family:'DM Mono',monospace;letter-spacing:.3px">${item.note}</div>` : ''}
           ${item.badge ? `<div class="nav-badge ${item.badgeColor||''}">${item.badge}</div>` : ''}
         </div>
       `).join('')}
@@ -987,30 +1041,49 @@ function navClick(page, el) {
 }
 
 function routePage(page) {
+  // ページリンク（別ファイル）
   const pageLinks = {
-    crm:       'coreto-crm-v2.html',
-    cases:     'coreto-cases-v2.html',
-    remit:     'coreto-remittance-v2.html',
+    crm:           'coreto-crm-v2.html',
+    cases:         'coreto-cases-v2.html',
+    re_cases:      'coreto-cases-v2.html',
+    remit:         'coreto-remittance-v2.html',
   };
-  if (pageLinks[page]) {
-    window.location.href = pageLinks[page];
+  if (pageLinks[page]) { window.location.href = pageLinks[page]; return; }
+
+  const titles = {
+    dashboard:'ダッシュボード', exec:'経営レポート',
+    rank:'ランク・報酬', payment:'報酬明細', onboard:'研修・マニュアル',
+    re_cases:'不動産担当案件', hr_cases:'人材担当案件', util_cases:'光通信案件',
+    re_ref:'人材紹介の進捗（閲覧のみ）', hr_ref:'不動産紹介の進捗（閲覧のみ）',
+    re_refer:'不動産紹介の投げ方', hr_refer:'人材紹介の投げ方',
+    re_progress:'不動産案件の進捗', hr_progress:'人材案件の進捗',
+    util_submit:'光通信 案件を投げる', util_progress:'光通信案件の進捗',
+    screening:'書類審査', agents:'AG管理', itsetsu:'IT重説',
+    utility:'光通信SFA', intern:'インターン管理',
+    users:'ユーザー管理', notif:'通知ログ', code:'紹介コード',
+  };
+
+  document.getElementById('page-title').textContent = titles[page] || page;
+  document.getElementById('crumb-cur').textContent  = titles[page] || page;
+
+  // PT扱いページ（閲覧のみ）
+  const ptViewPages = ['re_ref', 'hr_ref', 're_progress', 'hr_progress', 'util_progress', 're_refer', 'hr_refer'];
+  if (ptViewPages.includes(page)) {
+    renderPTViewPage(page, titles[page]);
     return;
   }
-  const titles = {
-    dashboard:'ダッシュボード', exec:'経営レポート', crm:'クライアント管理',
-    cases:'案件一覧', remit:'入金監視パネル', screening:'書類審査',
-    agents:'AG管理', payment:'報酬・支払い', itsetsu:'IT重説',
-    utility:'光通信SFA', intern:'インターン管理', users:'ユーザー管理',
-    notif:'通知ログ', rank:'ランク・報酬', onboard:'研修・マニュアル',
-    map:'訪問エリアマップ', visit:'訪問記録', daily:'当日実績', code:'紹介コード',
-  };
-  document.getElementById('page-title').textContent = titles[page] || page;
-  document.getElementById('crumb-cur').textContent = titles[page] || page;
+
+  // 光通信案件投げ（PT専用）
+  if (page === 'util_submit') {
+    renderUtilSubmit();
+    return;
+  }
+
   document.getElementById('page-content').innerHTML = `
-    <div class="page-placeholder">
-      <div class="pp-icon">🚧</div>
-      <div class="pp-title">${titles[page] || page}</div>
-      <div class="pp-sub">このページは個別ファイルで作成予定です</div>
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px">
+      <div style="font-size:48px">🚧</div>
+      <div style="font-size:18px;font-weight:600;color:var(--ink);font-family:'Cormorant Garamond',serif">${titles[page]||page}</div>
+      <div style="font-size:13px;color:var(--muted)">このページは個別ファイルで作成予定です</div>
     </div>`;
 }
 
@@ -1306,17 +1379,238 @@ function renderHQDash() {
 }
 
 // ═══════════════════════════════════════════
-// AG DASHBOARD
+// PT扱いページ共通レンダー（閲覧のみバナー付き）
 // ═══════════════════════════════════════════
-function renderAGDash() {
-  document.getElementById('page-title').textContent = 'エージェントダッシュボード';
+function renderPTViewPage(page, title) {
+  const isRE = page.startsWith('re_');
+  const isHR = page.startsWith('hr_');
+  const isUtil = page.startsWith('util_');
+
+  const businessName = isRE ? '不動産' : isHR ? '人材' : '光通信';
+  const myBiz = currentRole === 're_ag' ? '不動産AG' : 'HR-AG';
+  const crossBiz = currentRole === 're_ag' ? '人材' : '不動産';
+
+  document.getElementById('topbar-actions').innerHTML = '';
+  document.getElementById('page-content').innerHTML = `
+    <!-- 権限バナー -->
+    <div style="background:#FFFBEB;border:1px solid rgba(217,119,6,.25);border-radius:10px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:flex-start;gap:12px">
+      <div style="font-size:18px;flex-shrink:0">🔒</div>
+      <div>
+        <div style="font-size:13px;font-weight:700;color:#92400E;margin-bottom:3px">閲覧専用 — ${crossBiz}事業</div>
+        <div style="font-size:12px;color:#B45309;line-height:1.6">
+          あなたは<strong>${myBiz}</strong>のため、${crossBiz}事業では<strong>パートナー（PT）扱い</strong>です。<br>
+          紹介した案件の進捗確認・紹介報酬の確認のみ可能です。案件の編集・操作はできません。
+        </div>
+      </div>
+    </div>
+
+    <!-- 紹介案件一覧（PT閲覧モード） -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title">${businessName}紹介案件 — 進捗一覧</div>
+      </div>
+      <div class="card">
+        ${isRE ? `
+        <div class="task-item">
+          <div class="task-prio mid"></div>
+          <div class="task-main">
+            <div class="task-name">田中 優子 様 ― 港区三田（賃貸）</div>
+            <div class="task-meta">RENT-0194 ／ 担当AG: AG-0042 山田 ／ 書類審査中</div>
+          </div>
+          <span class="badge amber">進行中</span>
+        </div>
+        <div class="task-item">
+          <div class="task-prio low"></div>
+          <div class="task-main">
+            <div class="task-name">高橋 大輔 様 ― 目黒区（売買）</div>
+            <div class="task-meta">SALE-0044 ／ 担当AG: AG-0042 山田 ／ 媒介契約中</div>
+          </div>
+          <span class="badge violet">進行中</span>
+        </div>` : isHR ? `
+        <div class="task-item">
+          <div class="task-prio mid"></div>
+          <div class="task-main">
+            <div class="task-name">中村 麻衣 様 ― 株式会社ABC 入社</div>
+            <div class="task-meta">HR-0022 ／ 担当AG: AG-0055 井上 ／ 在籍確認待ち（30日）</div>
+          </div>
+          <span class="badge emerald">在籍確認中</span>
+        </div>` : `
+        <div class="task-item">
+          <div class="task-prio low"></div>
+          <div class="task-main">
+            <div class="task-name">鈴木 美咲 様 ― 電力・回線 切替</div>
+            <div class="task-meta">UTL-0088 ／ 担当AG: AG-0042 山田 ／ 申込中</div>
+          </div>
+          <span class="badge violet">申込中</span>
+        </div>`}
+      </div>
+    </div>
+
+    <!-- 紹介報酬サマリー -->
+    <div class="section">
+      <div class="section-header"><div class="section-title">${businessName}紹介報酬</div></div>
+      <div class="card" style="padding:18px">
+        <div class="stat-row"><div class="stat-label">今月 確定報酬</div><div class="stat-val" style="color:var(--emerald)">¥49,500</div></div>
+        <div class="stat-row"><div class="stat-label">今月 見込み報酬</div><div class="stat-val">¥72,000</div></div>
+        <div class="stat-row"><div class="stat-label">紹介中の案件数</div><div class="stat-val">${isRE?'2':isHR?'1':'1'}件</div></div>
+      </div>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════
+// 光通信 案件投げ（PT専用フォーム）
+// ═══════════════════════════════════════════
+function renderUtilSubmit() {
+  document.getElementById('page-title').textContent = '光通信 案件を投げる';
+  document.getElementById('crumb-cur').textContent = '光通信案件投げ';
+  document.getElementById('topbar-actions').innerHTML = '';
+  document.getElementById('page-content').innerHTML = `
+    <!-- 説明バナー -->
+    <div style="background:var(--amber-bg);border:1px solid rgba(217,119,6,.2);border-radius:10px;padding:14px 18px;margin-bottom:20px;display:flex;gap:12px;align-items:flex-start">
+      <div style="font-size:18px;flex-shrink:0">⚡</div>
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--amber);margin-bottom:3px">光通信 案件投げ — PTポータル</div>
+        <div style="font-size:12px;color:var(--amber);line-height:1.6">
+          お客様から電力・ガス・光回線の切り替えに興味があると聞いたらここから投げてください。<br>
+          担当AGが引き継いで申込手続きを進めます。成約時に<strong>紹介報酬</strong>が発生します。
+        </div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 380px;gap:18px">
+      <!-- フォーム -->
+      <div class="card" style="padding:24px">
+        <div style="font-size:14px;font-weight:700;color:var(--ink);margin-bottom:18px;font-family:'Cormorant Garamond',serif;letter-spacing:.3px">お客様情報を入力</div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+          <div><label style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">お客様名 *</label>
+            <input id="uf-name" style="width:100%;padding:9px 12px;background:var(--cream);border:1.5px solid var(--border);border-radius:8px;font-size:13px;color:var(--ink);font-family:'Outfit','Noto Sans JP',sans-serif;outline:none;transition:.15s" placeholder="田中 優子" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border)'"></div>
+          <div><label style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">フリガナ</label>
+            <input id="uf-kana" style="width:100%;padding:9px 12px;background:var(--cream);border:1.5px solid var(--border);border-radius:8px;font-size:13px;color:var(--ink);font-family:'Outfit','Noto Sans JP',sans-serif;outline:none;transition:.15s" placeholder="タナカ ユウコ" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border)'"></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+          <div><label style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">電話番号 *</label>
+            <input id="uf-tel" type="tel" style="width:100%;padding:9px 12px;background:var(--cream);border:1.5px solid var(--border);border-radius:8px;font-size:13px;color:var(--ink);font-family:'Outfit',sans-serif;outline:none;transition:.15s" placeholder="090-0000-0000" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border)'"></div>
+          <div><label style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">メールアドレス</label>
+            <input id="uf-email" type="email" style="width:100%;padding:9px 12px;background:var(--cream);border:1.5px solid var(--border);border-radius:8px;font-size:13px;color:var(--ink);font-family:'Outfit',sans-serif;outline:none;transition:.15s" placeholder="email@example.com" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border)'"></div>
+        </div>
+
+        <div style="margin-bottom:14px"><label style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">現住所（市区町村まで）</label>
+          <input id="uf-addr" style="width:100%;padding:9px 12px;background:var(--cream);border:1.5px solid var(--border);border-radius:8px;font-size:13px;color:var(--ink);font-family:'Outfit','Noto Sans JP',sans-serif;outline:none;transition:.15s" placeholder="港区三田" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border)'"></div>
+
+        <div style="margin-bottom:18px">
+          <label style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:10px">切り替え希望サービス * （複数選択可）</label>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            ${[
+              {id:'sv-elec', icon:'⚡', label:'電力'},
+              {id:'sv-gas',  icon:'🔥', label:'ガス'},
+              {id:'sv-net',  icon:'📡', label:'光回線'},
+            ].map(s => `
+              <label style="display:flex;align-items:center;gap:8px;padding:9px 16px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;transition:.15s;font-size:13px;font-weight:500;color:var(--ink2)" id="label-${s.id}"
+                onmouseover="this.style.borderColor='var(--gold)'" onmouseout="if(!document.getElementById('${s.id}').checked)this.style.borderColor='var(--border)'">
+                <input type="checkbox" id="${s.id}" style="accent-color:var(--navy);width:14px;height:14px" onchange="toggleServiceLabel('${s.id}')">
+                <span>${s.icon}</span> ${s.label}
+              </label>`).join('')}
+          </div>
+        </div>
+
+        <div style="margin-bottom:18px"><label style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">メモ・温度感（任意）</label>
+          <textarea id="uf-memo" rows="3" style="width:100%;padding:9px 12px;background:var(--cream);border:1.5px solid var(--border);border-radius:8px;font-size:13px;color:var(--ink);font-family:'Outfit','Noto Sans JP',sans-serif;outline:none;resize:vertical;transition:.15s;line-height:1.5" placeholder="例：引越し予定で前向き、来月中に切り替えたいとのこと" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border)'"></textarea></div>
+
+        <button onclick="submitUtilCase()" style="width:100%;padding:13px;background:var(--navy);color:var(--gold);border:none;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif;letter-spacing:.5px;transition:all .2s" onmouseover="this.style.background='var(--navy-light)'" onmouseout="this.style.background='var(--navy)'">
+          ⚡ 光通信案件を投げる
+        </button>
+      </div>
+
+      <!-- サイドパネル -->
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <!-- 報酬説明 -->
+        <div class="card" style="padding:18px">
+          <div style="font-size:12px;font-weight:700;color:var(--ink);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px">💴 紹介報酬の目安</div>
+          <div class="stat-row"><div class="stat-label">電力のみ</div><div class="stat-val" style="color:var(--emerald)">¥3,000〜5,000</div></div>
+          <div class="stat-row"><div class="stat-label">光回線のみ</div><div class="stat-val" style="color:var(--emerald)">¥8,000〜15,000</div></div>
+          <div class="stat-row"><div class="stat-label">電力＋光回線</div><div class="stat-val" style="color:var(--amber)">¥15,000〜22,000</div></div>
+          <div class="stat-row"><div class="stat-label">電力＋ガス＋光回線</div><div class="stat-val" style="color:var(--amber)">¥20,000〜30,000</div></div>
+          <div style="margin-top:10px;font-size:10px;color:var(--faint);line-height:1.6">成約確定後、翌月末に報酬明細へ反映されます。</div>
+        </div>
+
+        <!-- フロー説明 -->
+        <div class="card" style="padding:18px">
+          <div style="font-size:12px;font-weight:700;color:var(--ink);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px">📋 投げ後の流れ</div>
+          ${[
+            {n:'1', t:'案件投げ', d:'このフォームを送信'},
+            {n:'2', t:'AG引き継ぎ', d:'担当AGがお客様に連絡'},
+            {n:'3', t:'申込手続き', d:'AGがお客様と手続き'},
+            {n:'4', t:'開通・成約', d:'開通確認後に成約'},
+            {n:'5', t:'報酬確定', d:'翌月末に明細へ反映'},
+          ].map(s=>`
+            <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px">
+              <div style="width:22px;height:22px;border-radius:50%;background:var(--navy);color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0;font-family:'DM Mono',monospace">${s.n}</div>
+              <div><div style="font-size:12px;font-weight:600;color:var(--ink)">${s.t}</div><div style="font-size:10px;color:var(--faint)">${s.d}</div></div>
+            </div>`).join('')}
+        </div>
+
+        <!-- 投げた件数 -->
+        <div class="card" style="padding:18px">
+          <div style="font-size:12px;font-weight:700;color:var(--ink);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">📊 今月の実績</div>
+          <div class="stat-row"><div class="stat-label">投げた件数</div><div class="stat-val">3件</div></div>
+          <div class="stat-row"><div class="stat-label">成約件数</div><div class="stat-val" style="color:var(--emerald)">1件</div></div>
+          <div class="stat-row"><div class="stat-label">確定報酬</div><div class="stat-val" style="color:var(--emerald)">¥18,500</div></div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function toggleServiceLabel(id) {
+  const cb = document.getElementById(id);
+  const label = document.getElementById('label-' + id);
+  if (cb.checked) {
+    label.style.borderColor = 'var(--gold)';
+    label.style.background = 'rgba(200,169,81,.06)';
+  } else {
+    label.style.borderColor = 'var(--border)';
+    label.style.background = '';
+  }
+}
+
+function submitUtilCase() {
+  const name = document.getElementById('uf-name').value;
+  const tel  = document.getElementById('uf-tel').value;
+  const svcs = ['sv-elec','sv-gas','sv-net'].filter(id => document.getElementById(id).checked);
+  if (!name || !tel) { alert('お客様名と電話番号は必須です'); return; }
+  if (svcs.length === 0) { alert('切り替え希望サービスを1つ以上選択してください'); return; }
+  const svcNames = {
+    'sv-elec':'電力', 'sv-gas':'ガス', 'sv-net':'光回線'
+  };
+  const svcStr = svcs.map(s => svcNames[s]).join('・');
+  if (confirm(`以下の内容で案件を投げますか？\n\nお客様：${name}\n電話番号：${tel}\nサービス：${svcStr}\n\n担当AGに通知されます。`)) {
+    document.getElementById('page-content').innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:16px">
+        <div style="font-size:64px">✅</div>
+        <div style="font-size:22px;font-weight:700;color:var(--ink);font-family:'Cormorant Garamond',serif">案件を投げました</div>
+        <div style="font-size:13px;color:var(--muted);text-align:center;line-height:1.7">
+          <strong>${name} 様</strong>（${svcStr}）の案件を登録しました。<br>
+          担当AGが24時間以内にお客様へご連絡します。<br>
+          進捗は「投げた案件の進捗」から確認できます。
+        </div>
+        <button onclick="routePage('util_progress')" style="padding:10px 28px;background:var(--navy);color:var(--gold);border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif;margin-top:8px">進捗を確認する →</button>
+      </div>`;
+  }
+}
+
+// ═══════════════════════════════════════════
+// RE-AG DASHBOARD
+// ═══════════════════════════════════════════
+function renderREAgDash() {
+  document.getElementById('page-title').textContent = '不動産エージェントダッシュボード';
   document.getElementById('crumb-cur').textContent = 'ダッシュボード';
   document.getElementById('topbar-actions').innerHTML = `
     <button class="topbar-btn ghost">📋 日報提出</button>
     <button class="topbar-btn primary">＋ 新規顧客登録</button>`;
 
   document.getElementById('page-content').innerHTML = `
-    <!-- KPI -->
     <div class="kpi-grid">
       <div class="kpi-card gold">
         <div class="kpi-label">今月報酬（見込み）</div>
@@ -1324,14 +1618,14 @@ function renderAGDash() {
         <div class="kpi-sub"><span class="kpi-delta up">↑¥42K</span> 先月比</div>
       </div>
       <div class="kpi-card emerald">
-        <div class="kpi-label">担当案件数</div>
-        <div class="kpi-value">6</div>
-        <div class="kpi-sub">進行中 4 ／ 成約待ち 2</div>
+        <div class="kpi-label">不動産担当案件</div>
+        <div class="kpi-value">4件</div>
+        <div class="kpi-sub">進行中 3 ／ 成約待ち 1</div>
       </div>
       <div class="kpi-card sky">
         <div class="kpi-label">ランクポイント</div>
         <div class="kpi-value">22 pt</div>
-        <div class="kpi-sub">Gold 達成 🥇 ／ Platinum まで8pt</div>
+        <div class="kpi-sub">Gold 🥇 ／ Platinum まで8pt</div>
       </div>
       <div class="kpi-card amber">
         <div class="kpi-label">光通信成約</div>
@@ -1340,11 +1634,18 @@ function renderAGDash() {
       </div>
     </div>
 
+    <!-- 権限区分バッジ -->
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px">
+      <div style="padding:6px 14px;background:var(--sky-bg);border:1px solid rgba(2,132,199,.2);border-radius:20px;font-size:11px;font-weight:700;color:var(--sky)">🏘️ 不動産 — AG権限（フル操作）</div>
+      <div style="padding:6px 14px;background:var(--amber-bg);border:1px solid rgba(217,119,6,.2);border-radius:20px;font-size:11px;font-weight:700;color:var(--amber)">⚡ 光通信 — AG権限（フル操作）</div>
+      <div style="padding:6px 14px;background:var(--cream2);border:1px solid var(--border-mid);border-radius:20px;font-size:11px;font-weight:600;color:var(--muted)">👤 人材 — PT扱い（紹介・閲覧のみ）</div>
+    </div>
+
     <div class="main-side">
       <div>
         <div class="section">
           <div class="section-header">
-            <div class="section-title">担当案件 進捗</div>
+            <div class="section-title">不動産担当案件</div>
             <div class="section-more" onclick="window.location.href='coreto-cases-v2.html'">すべて見る →</div>
           </div>
           <div class="card">
@@ -1365,20 +1666,35 @@ function renderAGDash() {
               <span class="badge sky">IT重説待ち</span>
             </div>
             <div class="task-item">
-              <div class="task-prio mid"></div>
-              <div class="task-main">
-                <div class="task-name">鈴木 美咲 様 ― 新宿区西新宿（光通信）</div>
-                <div class="task-meta">UTL-0088 ／ 電力・回線 申込手続き中</div>
-              </div>
-              <span class="badge violet">申込中</span>
-            </div>
-            <div class="task-item">
               <div class="task-prio low"></div>
               <div class="task-main">
                 <div class="task-name">高橋 大輔 様 ― 目黒区中目黒（賃貸）</div>
                 <div class="task-meta">RENT-0188 ／ 内見調整中</div>
               </div>
               <span class="badge muted">内見調整</span>
+            </div>
+          </div>
+        </div>
+        <div class="section">
+          <div class="section-header">
+            <div class="section-title">光通信担当案件</div>
+          </div>
+          <div class="card">
+            <div class="task-item">
+              <div class="task-prio mid"></div>
+              <div class="task-main">
+                <div class="task-name">鈴木 美咲 様 ― 電力・回線 切替</div>
+                <div class="task-meta">UTL-0088 ／ 申込手続き中</div>
+              </div>
+              <span class="badge violet">申込中</span>
+            </div>
+            <div class="task-item">
+              <div class="task-prio low"></div>
+              <div class="task-main">
+                <div class="task-name">山田 一郎 様 ― ガス・回線 切替（PTから投げ）</div>
+                <div class="task-meta">UTL-0090 ／ PT-0015 佐藤より</div>
+              </div>
+              <span class="badge sky">対応中</span>
             </div>
           </div>
         </div>
@@ -1397,25 +1713,154 @@ function renderAGDash() {
                 <span>今月ポイント</span><span style="font-weight:700;color:var(--ink)">22 / 30pt</span>
               </div>
               <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">
-                <div style="height:100%;width:73%;background:var(--gold);border-radius:3px;transition:width .6s"></div>
+                <div style="height:100%;width:73%;background:var(--gold);border-radius:3px"></div>
               </div>
               <div style="font-size:10px;color:var(--faint);margin-top:6px">Platinum まであと8pt</div>
             </div>
-            <div class="stat-row"><div class="stat-label">月額費用</div><div class="stat-val" style="color:var(--emerald)">¥0</div></div>
             <div class="stat-row"><div class="stat-label">報酬率（不動産）</div><div class="stat-val">70%</div></div>
             <div class="stat-row"><div class="stat-label">報酬率（光通信）</div><div class="stat-val">85%</div></div>
+            <div class="stat-row"><div class="stat-label">人材紹介報酬率</div><div class="stat-val" style="color:var(--muted)">PT扱い</div></div>
           </div>
         </div>
         <div class="section">
-          <div class="section-header"><div class="section-title">LINE連携ステータス</div></div>
-          <div class="card" style="padding:16px 18px">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-              <div style="width:10px;height:10px;border-radius:50%;background:var(--emerald)"></div>
-              <div style="font-size:13px;font-weight:600;color:var(--ink)">認証済み</div>
+          <div class="section-header"><div class="section-title">人材紹介の進捗（PT扱い）</div></div>
+          <div class="card" style="padding:14px 16px">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:8px 10px;background:var(--amber-bg);border-radius:7px">
+              <span style="font-size:13px">🔒</span>
+              <span style="font-size:11px;color:var(--amber);font-weight:600">人材事業はPT権限（閲覧のみ）</span>
             </div>
-            <div class="stat-row"><div class="stat-label">登録LINE ID</div><div class="stat-val" style="font-size:11px;font-family:'DM Mono',monospace">U4a8f3d...2c1</div></div>
-            <div class="stat-row"><div class="stat-label">認証日</div><div class="stat-val" style="font-size:11px">2026/4/1</div></div>
-            <button onclick="alert('再連携フロー')" style="width:100%;padding:8px;background:var(--cream);border:1px solid var(--border);border-radius:8px;font-size:12px;color:var(--muted);cursor:pointer;margin-top:8px;font-family:'Outfit',sans-serif">🔄 LINEアカウントを再連携</button>
+            <div class="stat-row"><div class="stat-label">紹介中の人材案件</div><div class="stat-val">1件</div></div>
+            <div class="stat-row"><div class="stat-label">確定報酬（人材紹介）</div><div class="stat-val" style="color:var(--emerald)">¥49,500</div></div>
+            <button onclick="navClick('hr_ref', document.querySelector('[onclick*=hr_ref]'))" style="margin-top:10px;width:100%;padding:7px;background:var(--cream);border:1px solid var(--border);border-radius:7px;font-size:11px;color:var(--muted);cursor:pointer;font-family:'Outfit',sans-serif">進捗を確認する →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ═══════════════════════════════════════════
+// HR-AG DASHBOARD
+// ═══════════════════════════════════════════
+function renderHRAgDash() {
+  document.getElementById('page-title').textContent = '人材エージェントダッシュボード';
+  document.getElementById('crumb-cur').textContent = 'ダッシュボード';
+  document.getElementById('topbar-actions').innerHTML = `
+    <button class="topbar-btn ghost">📋 日報提出</button>
+    <button class="topbar-btn primary">＋ 新規求職者登録</button>`;
+
+  document.getElementById('page-content').innerHTML = `
+    <div class="kpi-grid">
+      <div class="kpi-card gold">
+        <div class="kpi-label">今月報酬（見込み）</div>
+        <div class="kpi-value">¥195K</div>
+        <div class="kpi-sub"><span class="kpi-delta up">↑¥28K</span> 先月比</div>
+      </div>
+      <div class="kpi-card emerald">
+        <div class="kpi-label">人材担当案件</div>
+        <div class="kpi-value">3件</div>
+        <div class="kpi-sub">選考中 2 ／ 在籍確認中 1</div>
+      </div>
+      <div class="kpi-card sky">
+        <div class="kpi-label">ランクポイント</div>
+        <div class="kpi-value">16 pt</div>
+        <div class="kpi-sub">Silver 🥈 ／ Gold まで4pt</div>
+      </div>
+      <div class="kpi-card amber">
+        <div class="kpi-label">光通信成約</div>
+        <div class="kpi-value">3件</div>
+        <div class="kpi-sub">今月 ¥42,000 追加報酬</div>
+      </div>
+    </div>
+
+    <!-- 権限区分バッジ -->
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px">
+      <div style="padding:6px 14px;background:var(--violet-bg);border:1px solid rgba(124,58,237,.2);border-radius:20px;font-size:11px;font-weight:700;color:var(--violet)">👤 人材 — AG権限（フル操作）</div>
+      <div style="padding:6px 14px;background:var(--amber-bg);border:1px solid rgba(217,119,6,.2);border-radius:20px;font-size:11px;font-weight:700;color:var(--amber)">⚡ 光通信 — AG権限（フル操作）</div>
+      <div style="padding:6px 14px;background:var(--cream2);border:1px solid var(--border-mid);border-radius:20px;font-size:11px;font-weight:600;color:var(--muted)">🏘️ 不動産 — PT扱い（紹介・閲覧のみ）</div>
+    </div>
+
+    <div class="main-side">
+      <div>
+        <div class="section">
+          <div class="section-header">
+            <div class="section-title">人材担当案件</div>
+          </div>
+          <div class="card">
+            <div class="task-item">
+              <div class="task-prio high"></div>
+              <div class="task-main">
+                <div class="task-name">中村 麻衣 様 ― 株式会社ABC 在籍確認待ち</div>
+                <div class="task-meta">HR-0022 ／ 在籍確認期限：2026/04/01（30日目）</div>
+              </div>
+              <span class="badge emerald">在籍確認中</span>
+            </div>
+            <div class="task-item">
+              <div class="task-prio mid"></div>
+              <div class="task-main">
+                <div class="task-name">伊藤 花子 様 ― 株式会社XYZ 最終面接</div>
+                <div class="task-meta">HR-0025 ／ 面接日：4/15</div>
+              </div>
+              <span class="badge sky">選考中</span>
+            </div>
+            <div class="task-item">
+              <div class="task-prio low"></div>
+              <div class="task-main">
+                <div class="task-name">渡辺 誠 様 ― 書類選考中</div>
+                <div class="task-meta">HR-0027 ／ 3社書類送付済み</div>
+              </div>
+              <span class="badge violet">書類選考</span>
+            </div>
+          </div>
+        </div>
+        <div class="section">
+          <div class="section-header">
+            <div class="section-title">光通信担当案件</div>
+          </div>
+          <div class="card">
+            <div class="task-item">
+              <div class="task-prio mid"></div>
+              <div class="task-main">
+                <div class="task-name">木村 陽子 様 ― 電力切替</div>
+                <div class="task-meta">UTL-0091 ／ 手続き中</div>
+              </div>
+              <span class="badge amber">申込中</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="section">
+          <div class="section-header"><div class="section-title">ランク進捗</div></div>
+          <div class="card" style="padding:20px">
+            <div style="text-align:center;margin-bottom:16px">
+              <div style="font-size:32px;margin-bottom:4px">🥈</div>
+              <div style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:700;color:var(--ink)">Silver</div>
+              <div style="font-size:12px;color:var(--muted)">AG-0088 鈴木 花子</div>
+            </div>
+            <div style="background:var(--cream);border-radius:8px;padding:12px 14px;margin-bottom:12px">
+              <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:6px">
+                <span>今月ポイント</span><span style="font-weight:700;color:var(--ink)">16 / 20pt</span>
+              </div>
+              <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+                <div style="height:100%;width:80%;background:var(--gold);border-radius:3px"></div>
+              </div>
+              <div style="font-size:10px;color:var(--faint);margin-top:6px">Gold まであと4pt</div>
+            </div>
+            <div class="stat-row"><div class="stat-label">報酬率（人材）</div><div class="stat-val">65%</div></div>
+            <div class="stat-row"><div class="stat-label">報酬率（光通信）</div><div class="stat-val">80%</div></div>
+            <div class="stat-row"><div class="stat-label">不動産紹介報酬率</div><div class="stat-val" style="color:var(--muted)">PT扱い</div></div>
+          </div>
+        </div>
+        <div class="section">
+          <div class="section-header"><div class="section-title">不動産紹介の進捗（PT扱い）</div></div>
+          <div class="card" style="padding:14px 16px">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:8px 10px;background:var(--amber-bg);border-radius:7px">
+              <span style="font-size:13px">🔒</span>
+              <span style="font-size:11px;color:var(--amber);font-weight:600">不動産事業はPT権限（閲覧のみ）</span>
+            </div>
+            <div class="stat-row"><div class="stat-label">紹介中の不動産案件</div><div class="stat-val">2件</div></div>
+            <div class="stat-row"><div class="stat-label">確定報酬（不動産紹介）</div><div class="stat-val" style="color:var(--emerald)">¥77,000</div></div>
           </div>
         </div>
       </div>
@@ -1425,17 +1870,85 @@ function renderAGDash() {
 
 function renderPTDash() {
   document.getElementById('page-title').textContent = 'PTポータル';
+  document.getElementById('crumb-cur').textContent = 'PTポータル';
+  document.getElementById('topbar-actions').innerHTML = `
+    <button class="topbar-btn primary" onclick="navClick('util_submit', {classList:{add:()=>{},remove:()=>{}}})">⚡ 光通信案件を投げる</button>`;
+
   document.getElementById('page-content').innerHTML = `
-    <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr)">
+    <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr)">
       <div class="kpi-card gold"><div class="kpi-label">累計紹介報酬</div><div class="kpi-value">¥142K</div></div>
-      <div class="kpi-card emerald"><div class="kpi-label">成約案件数</div><div class="kpi-value">8件</div></div>
-      <div class="kpi-card sky"><div class="kpi-label">紹介中（進行中）</div><div class="kpi-value">3件</div></div>
+      <div class="kpi-card emerald"><div class="kpi-label">成約件数（全事業）</div><div class="kpi-value">8件</div></div>
+      <div class="kpi-card amber"><div class="kpi-label">光通信 投げた件数</div><div class="kpi-value">3件</div><div class="kpi-sub">成約 1件 / ¥18,500</div></div>
+      <div class="kpi-card sky"><div class="kpi-label">進行中</div><div class="kpi-value">3件</div></div>
     </div>
-    <div class="section"><div class="section-title" style="margin-bottom:14px">紹介中案件</div>
-    <div class="card">
-      <div class="task-item"><div class="task-prio mid"></div><div class="task-main"><div class="task-name">田中 様 ― 港区（賃貸）</div><div class="task-meta">IT重説待ち ／ 紹介報酬 ¥27,500（見込み）</div></div><span class="badge amber">進行中</span></div>
-      <div class="task-item"><div class="task-prio low"></div><div class="task-main"><div class="task-name">鈴木 様 ― 人材紹介</div><div class="task-meta">書類審査中 ／ 紹介報酬 ¥45,000（見込み）</div></div><span class="badge sky">審査中</span></div>
-    </div></div>`;
+
+    <!-- 光通信CTAカード（PT専用の目玉機能） -->
+    <div style="background:linear-gradient(135deg,var(--navy) 0%,var(--navy-light) 100%);border-radius:12px;padding:22px 24px;margin-bottom:22px;display:flex;align-items:center;justify-content:space-between;gap:16px;box-shadow:0 8px 32px rgba(13,26,45,.2)">
+      <div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(200,169,81,.6);margin-bottom:6px">PT専用機能</div>
+        <div style="font-size:20px;font-weight:700;color:var(--gold);font-family:'Cormorant Garamond',serif;margin-bottom:4px">⚡ 光通信案件を今すぐ投げる</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.55);line-height:1.6">電力・ガス・光回線に興味があるお客様がいたら即投げ。<br>成約で<span style="color:var(--gold);font-weight:700">¥3,000〜30,000</span>の紹介報酬が発生します。</div>
+      </div>
+      <button onclick="routePage('util_submit')" style="padding:12px 24px;background:var(--gold);color:var(--navy);border:none;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif;white-space:nowrap;flex-shrink:0;transition:all .2s" onmouseover="this.style.background='var(--gold-light)'" onmouseout="this.style.background='var(--gold)'">
+        案件を投げる →
+      </button>
+    </div>
+
+    <div class="main-side">
+      <div>
+        <div class="section">
+          <div class="section-header"><div class="section-title">進行中の紹介案件</div></div>
+          <div class="card">
+            <div class="task-item">
+              <div class="task-prio high"></div>
+              <div class="task-main">
+                <div class="task-name">田中 様 ― 港区（賃貸）</div>
+                <div class="task-meta">RENT-0194 ／ IT重説待ち ／ 紹介報酬 ¥27,500（見込み）</div>
+              </div>
+              <span class="badge amber">進行中</span>
+            </div>
+            <div class="task-item">
+              <div class="task-prio mid"></div>
+              <div class="task-main">
+                <div class="task-name">鈴木 様 ― 人材紹介</div>
+                <div class="task-meta">HR-0025 ／ 書類審査中 ／ 紹介報酬 ¥45,000（見込み）</div>
+              </div>
+              <span class="badge sky">審査中</span>
+            </div>
+            <div class="task-item">
+              <div class="task-prio low"></div>
+              <div class="task-main">
+                <div class="task-name">山田 様 ― 光通信（電力＋回線）</div>
+                <div class="task-meta">UTL-0090 ／ 申込中 ／ 紹介報酬 ¥18,500（見込み）</div>
+              </div>
+              <span class="badge violet">申込中</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="section">
+          <div class="section-header"><div class="section-title">今月の報酬明細</div></div>
+          <div class="card" style="padding:16px 18px">
+            <div class="stat-row"><div class="stat-label">不動産紹介</div><div class="stat-val" style="color:var(--emerald)">¥77,000</div></div>
+            <div class="stat-row"><div class="stat-label">人材紹介</div><div class="stat-val" style="color:var(--emerald)">¥49,500</div></div>
+            <div class="stat-row"><div class="stat-label">光通信紹介</div><div class="stat-val" style="color:var(--emerald)">¥18,500</div></div>
+            <div class="stat-row" style="border-top:2px solid var(--border);margin-top:4px;padding-top:10px"><div class="stat-label" style="font-weight:700;color:var(--ink)">今月合計</div><div class="stat-val" style="font-size:18px;color:var(--amber)">¥145,000</div></div>
+          </div>
+        </div>
+        <div class="section">
+          <div class="section-header"><div class="section-title">権限一覧</div></div>
+          <div class="card" style="padding:14px 16px">
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <div style="padding:7px 10px;background:var(--cream2);border-radius:7px;font-size:11px;color:var(--muted)">🏘️ 不動産 — <span style="color:var(--ink)">紹介投げ・進捗閲覧のみ</span></div>
+              <div style="padding:7px 10px;background:var(--cream2);border-radius:7px;font-size:11px;color:var(--muted)">👤 人材 — <span style="color:var(--ink)">紹介投げ・進捗閲覧のみ</span></div>
+              <div style="padding:7px 10px;background:var(--amber-bg);border:1px solid rgba(217,119,6,.15);border-radius:7px;font-size:11px;color:var(--amber)">⚡ 光通信 — <span style="font-weight:700">案件投げ可（NEW）</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
 }
 
 function renderInternDash() {
