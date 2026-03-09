@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>入金監視パネル — COREBLDG</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0D1A2D;--navy-m:#152238;--navy-l:#1E3252;
+  --gold:#C8A951;--gold-dim:rgba(200,169,81,.15);
+  --cream:#F7F4EE;--cream2:#EFECE4;--white:#FFFFFF;
+  --ink:#1A1A2E;--muted:#6B7280;--faint:#9CA3AF;
+  --em:#059669;--em-bg:#ECFDF5;--am:#D97706;--am-bg:#FFFBEB;
+  --rd:#DC2626;--rd-bg:#FEF2F2;--sk:#0284C7;--sk-bg:#F0F9FF;
+  --vt:#7C3AED;--vt-bg:#F5F3FF;--bd:#E5E0D5;--bd2:#D4CFC4;
+  --sw:240px;--r:10px;--r-sm:7px;
+  --sh:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:var(--cream)}
+.shell{display:flex;height:100vh}
+.sb{width:var(--sw);background:var(--navy);display:flex;flex-direction:column;flex-shrink:0;position:relative}
+.sb::after{content:'';position:absolute;top:0;right:0;width:1px;height:100%;background:linear-gradient(180deg,rgba(200,169,81,.25) 0%,rgba(200,169,81,.06) 50%,transparent 100%)}
+.sb-head{padding:24px 20px 18px;border-bottom:1px solid rgba(255,255,255,.06)}
+.sb-logo{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;letter-spacing:5px;color:var(--gold)}
+.sb-ver{font-size:9px;letter-spacing:2px;color:rgba(200,169,81,.3);font-family:'DM Mono',monospace;margin-top:2px}
+.sb-user{margin:14px 14px 10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:9px 11px;display:flex;align-items:center;gap:9px}
+.sb-av{width:28px;height:28px;border-radius:50%;background:var(--gold-dim);border:1px solid rgba(200,169,81,.25);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--gold)}
+.sb-uname{font-size:11px;font-weight:600;color:rgba(255,255,255,.8)}
+.sb-urole{font-size:9px;color:rgba(255,255,255,.3);font-family:'DM Mono',monospace}
+.sb-nav{flex:1;overflow-y:auto;padding:6px 10px}
+.nav-sec-label{font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.18);padding:10px 8px 4px;font-family:'DM Mono',monospace}
+.nav-item{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:7px;cursor:pointer;transition:all .13s;text-decoration:none;position:relative;margin-bottom:1px}
+.nav-item:hover{background:rgba(255,255,255,.06)}
+.nav-item.active{background:rgba(200,169,81,.1)}
+.nav-item.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:16px;background:var(--gold);border-radius:0 2px 2px 0}
+.nav-icon{width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:13px;border-radius:6px;background:rgba(255,255,255,.04);flex-shrink:0}
+.nav-item.active .nav-icon{background:rgba(200,169,81,.12)}
+.nav-label{font-size:11px;font-weight:500;color:rgba(255,255,255,.55);flex:1}
+.nav-item.active .nav-label{color:var(--gold)}
+.nav-item:hover .nav-label{color:rgba(255,255,255,.82)}
+.nav-badge{font-size:9px;font-weight:700;padding:1px 6px;border-radius:10px;background:var(--rd);color:#fff;font-family:'DM Mono',monospace}
+.nav-badge.amber{background:var(--am)}
+.sb-foot{padding:10px 14px 18px;border-top:1px solid rgba(255,255,255,.05)}
+.sb-foot-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;cursor:pointer;font-size:11px;color:rgba(255,255,255,.3);transition:.13s}
+.sb-foot-item:hover{background:rgba(255,255,255,.05);color:rgba(255,255,255,.6)}
+.content{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:58px;background:var(--white);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 24px;gap:14px;flex-shrink:0;box-shadow:var(--sh)}
+.tb-title{font-size:16px;font-weight:600;color:var(--ink);font-family:'Cormorant Garamond',serif}
+.tb-crumb{font-size:11px;color:var(--faint);margin-top:1px}
+.tb-crumb a{color:var(--muted);text-decoration:none}
+.tb-crumb a:hover{color:var(--am)}
+.tb-actions{margin-left:auto;display:flex;gap:9px;align-items:center}
+.btn{padding:7px 16px;border-radius:var(--r-sm);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;font-family:'Outfit',sans-serif;border:none}
+.btn-primary{background:var(--navy);color:var(--gold)}
+.btn-primary:hover{background:var(--navy-l)}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--bd)}
+.btn-ghost:hover{background:var(--cream);color:var(--ink)}
+.btn-sm{padding:5px 12px;font-size:11px}
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;font-family:'DM Mono',monospace}
+.badge-em{background:var(--em-bg);color:var(--em)}
+.badge-am{background:var(--am-bg);color:var(--am)}
+.badge-rd{background:var(--rd-bg);color:var(--rd)}
+.badge-sk{background:var(--sk-bg);color:var(--sk)}
+.badge-nt{background:var(--cream2);color:var(--muted)}
+.page{flex:1;overflow-y:auto;padding:24px}
+.page::-webkit-scrollbar{width:5px}
+.page::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:3px}
+
+/* KPI */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
+.kpi{background:var(--white);border:1px solid var(--bd);border-radius:var(--r);padding:16px 18px;box-shadow:var(--sh);position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.kpi.rd::before{background:var(--rd)}
+.kpi.am::before{background:var(--am)}
+.kpi.em::before{background:var(--em)}
+.kpi.sk::before{background:var(--sk)}
+.kpi-label{font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+.kpi-val{font-size:26px;font-weight:700;color:var(--ink);font-family:'Cormorant Garamond',serif}
+.kpi-sub{font-size:10px;color:var(--faint);margin-top:4px}
+
+/* MAIN PANEL */
+.panel{background:var(--white);border:1px solid var(--bd);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh);margin-bottom:18px}
+.panel-head{padding:14px 20px;border-bottom:1px solid var(--bd);background:var(--cream);display:flex;align-items:center;justify-content:space-between}
+.panel-title{font-size:12px;font-weight:700;color:var(--ink);text-transform:uppercase;letter-spacing:.5px;display:flex;align-items:center;gap:8px}
+.panel-actions{display:flex;gap:8px}
+
+/* REMIT ROWS */
+.remit-row{padding:16px 20px;border-bottom:1px solid var(--bd);transition:background .12s}
+.remit-row:last-child{border-bottom:none}
+.remit-row:hover{background:rgba(200,169,81,.03)}
+.rr-top{display:flex;align-items:center;gap:14px;margin-bottom:10px}
+.rr-deadline-chip{padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;font-family:'DM Mono',monospace;flex-shrink:0}
+.rr-deadline-chip.urgent{background:var(--rd-bg);color:var(--rd);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.7}}
+.rr-deadline-chip.soon{background:var(--am-bg);color:var(--am)}
+.rr-deadline-chip.ok{background:var(--em-bg);color:var(--em)}
+.rr-deadline-chip.pending{background:var(--cream2);color:var(--muted)}
+.rr-client{font-size:14px;font-weight:700;color:var(--ink);flex:1}
+.rr-amount{font-size:18px;font-weight:700;color:var(--ink);font-family:'Cormorant Garamond',serif;flex-shrink:0}
+.rr-meta{display:flex;gap:20px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.rr-meta-item{font-size:11px;color:var(--muted)}
+.rr-meta-item strong{font-weight:700;color:var(--ink);margin-right:3px}
+.rr-meta-item.mono{font-family:'DM Mono',monospace;font-size:11px}
+.rr-breakdown{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.rr-breakdown-item{background:var(--cream2);padding:4px 10px;border-radius:6px;font-size:10px;color:var(--muted);font-family:'DM Mono',monospace}
+.rr-breakdown-item strong{color:var(--ink)}
+.rr-actions{display:flex;gap:8px;align-items:center}
+.rr-confirm-btn{padding:7px 18px;background:var(--navy);color:var(--gold);border:none;border-radius:var(--r-sm);font-size:12px;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif;transition:all .15s;letter-spacing:.3px}
+.rr-confirm-btn:hover{background:var(--navy-l);transform:translateY(-1px)}
+.rr-confirm-btn.disabled{background:var(--cream2);color:var(--faint);cursor:not-allowed;transform:none}
+.rr-confirm-btn.done{background:var(--em-bg);color:var(--em);border:1px solid rgba(5,150,105,.3)}
+.rr-detail-btn{padding:7px 14px;background:transparent;color:var(--muted);border:1px solid var(--bd);border-radius:var(--r-sm);font-size:11px;cursor:pointer;font-family:'Outfit',sans-serif;transition:.15s}
+.rr-detail-btn:hover{border-color:var(--bd2);background:var(--cream)}
+.rr-status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.rr-status-dot.rd{background:var(--rd);box-shadow:0 0 6px rgba(220,38,38,.5)}
+.rr-status-dot.am{background:var(--am)}
+.rr-status-dot.em{background:var(--em)}
+.rr-status-dot.nt{background:var(--faint)}
+
+/* ZENGIN */
+.zengin-panel{background:var(--white);border:1px solid var(--bd);border-radius:var(--r);padding:20px;box-shadow:var(--sh)}
+.zengin-title{font-size:12px;font-weight:700;color:var(--ink);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.zengin-select-area{background:var(--cream);border:1.5px dashed var(--bd2);border-radius:var(--r-sm);padding:16px;margin-bottom:14px}
+.zengin-check-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;cursor:pointer;transition:.12s}
+.zengin-check-row:hover{background:rgba(200,169,81,.05)}
+.zengin-check-row input[type=checkbox]{accent-color:var(--navy);width:14px;height:14px}
+.zengin-label{font-size:12px;font-weight:500;color:var(--ink);flex:1}
+.zengin-amt{font-size:12px;font-weight:700;font-family:'DM Mono',monospace;color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="shell">
+<nav class="sb">
+  <div class="sb-head"><div class="sb-logo">CORE<br>BLDG</div><div class="sb-ver">v2.0 — CORETO</div></div>
+  <div class="sb-user"><div class="sb-av">HQ</div><div><div class="sb-uname">田中 誠一</div><div class="sb-urole">HQ / exec</div></div></div>
+  <div class="sb-nav">
+    <div class="nav-sec-label">ダッシュボード</div>
+    <a class="nav-item" href="coreto-hub-v2.html"><div class="nav-icon">🏠</div><div class="nav-label">HQダッシュボード</div></a>
+    <div class="nav-sec-label">CRM / 案件</div>
+    <a class="nav-item" href="coreto-crm-v2.html"><div class="nav-icon">👥</div><div class="nav-label">クライアント管理</div></a>
+    <a class="nav-item" href="coreto-cases-v2.html"><div class="nav-icon">📁</div><div class="nav-label">案件一覧</div><span class="nav-badge">12</span></a>
+    <a class="nav-item active" href="coreto-remittance-v2.html"><div class="nav-icon">💰</div><div class="nav-label">入金監視</div><span class="nav-badge amber">3</span></a>
+    <a class="nav-item" href="#"><div class="nav-icon">📋</div><div class="nav-label">書類審査</div><span class="nav-badge amber">5</span></a>
+    <div class="nav-sec-label">管理</div>
+    <a class="nav-item" href="#"><div class="nav-icon">👤</div><div class="nav-label">AG管理</div></a>
+    <a class="nav-item" href="#"><div class="nav-icon">💴</div><div class="nav-label">報酬・支払い</div></a>
+    <a class="nav-item" href="#"><div class="nav-icon">⚡</div><div class="nav-label">光通信SFA</div></a>
+  </div>
+  <div class="sb-foot">
+    <div class="sb-foot-item"><span>⚙️</span><span>設定</span></div>
+  </div>
+</nav>
+
+<div class="content">
+  <div class="topbar">
+    <div>
+      <div class="tb-title">入金監視パネル</div>
+      <div class="tb-crumb"><a href="coreto-hub-v2.html">COREBLDG</a> › <span>入金監視</span></div>
+    </div>
+    <div class="tb-actions">
+      <button class="btn btn-ghost" onclick="exportCSV()">📄 全銀ファイル出力</button>
+      <button class="btn btn-ghost">📊 送金履歴</button>
+    </div>
+  </div>
+
+  <div class="page">
+    <!-- KPI -->
+    <div class="kpi-row">
+      <div class="kpi rd">
+        <div class="kpi-label">緊急（本日期限）</div>
+        <div class="kpi-val">1件</div>
+        <div class="kpi-sub">¥348,000 要送金</div>
+      </div>
+      <div class="kpi am">
+        <div class="kpi-label">3日以内</div>
+        <div class="kpi-val">2件</div>
+        <div class="kpi-sub">¥563,000 合計</div>
+      </div>
+      <div class="kpi em">
+        <div class="kpi-label">今月送金完了</div>
+        <div class="kpi-val">18件</div>
+        <div class="kpi-sub">¥4,280,000 送金済み</div>
+      </div>
+      <div class="kpi sk">
+        <div class="kpi-label">入金待ち（振込）</div>
+        <div class="kpi-val">3件</div>
+        <div class="kpi-sub">¥758,000 確認待ち</div>
+      </div>
+    </div>
+
+    <!-- URGENT -->
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-title">🔴 緊急 ― 本日送金期限</div>
+        <div class="panel-actions">
+          <button class="btn btn-primary btn-sm" onclick="exportZengin([0])">全銀ファイル出力（1件）</button>
+        </div>
+      </div>
+      <!-- Row 1: urgent -->
+      <div class="remit-row" id="row-0">
+        <div class="rr-top">
+          <div class="rr-status-dot rd"></div>
+          <div class="rr-deadline-chip urgent">本日期限</div>
+          <div class="rr-client">田中 優子 様 ― 港区三田3丁目</div>
+          <div class="rr-amount">¥348,000</div>
+        </div>
+        <div class="rr-meta">
+          <div class="rr-meta-item mono">RENT-0194</div>
+          <div class="rr-meta-item"><strong>担当:</strong>AG-0042 山田 誠</div>
+          <div class="rr-meta-item"><strong>送金先:</strong>三田不動産管理（株）</div>
+          <div class="rr-meta-item mono">三菱UFJ / 新宿 / 普通 / 1234567</div>
+        </div>
+        <div class="rr-breakdown">
+          <div class="rr-breakdown-item">敷金 <strong>¥110,000</strong></div>
+          <div class="rr-breakdown-item">前家賃 <strong>¥198,000</strong></div>
+          <div class="rr-breakdown-item">保証料 <strong>¥40,000</strong></div>
+        </div>
+        <div class="rr-actions">
+          <span class="badge badge-sk" id="status-0">入金確認済み</span>
+          <button class="rr-confirm-btn" id="remit-btn-0" onclick="executeRemit(0)">送金実行</button>
+          <button class="rr-detail-btn" onclick="window.location.href='coreto-rental-v2.html'">案件詳細 →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SOON -->
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-title">🟡 送金期限 3日以内</div>
+        <div class="panel-actions">
+          <button class="btn btn-ghost btn-sm" onclick="exportZengin([1,2])">全銀ファイル出力（2件）</button>
+        </div>
+      </div>
+      <!-- Row 2 -->
+      <div class="remit-row" id="row-1">
+        <div class="rr-top">
+          <div class="rr-status-dot am"></div>
+          <div class="rr-deadline-chip soon">3日後 (4/12)</div>
+          <div class="rr-client">鈴木 健太 様 ― 渋谷区代々木</div>
+          <div class="rr-amount">¥215,000</div>
+        </div>
+        <div class="rr-meta">
+          <div class="rr-meta-item mono">RENT-0193</div>
+          <div class="rr-meta-item"><strong>担当:</strong>AG-0088 田中 花子</div>
+          <div class="rr-meta-item"><strong>送金先:</strong>代々木管理センター</div>
+          <div class="rr-meta-item mono">みずほ / 渋谷 / 普通 / 2345678</div>
+        </div>
+        <div class="rr-breakdown">
+          <div class="rr-breakdown-item">敷金 <strong>¥75,000</strong></div>
+          <div class="rr-breakdown-item">前家賃 <strong>¥110,000</strong></div>
+          <div class="rr-breakdown-item">保証料 <strong>¥30,000</strong></div>
+        </div>
+        <div class="rr-actions">
+          <span class="badge badge-sk" id="status-1">入金確認済み</span>
+          <button class="rr-confirm-btn" id="remit-btn-1" onclick="executeRemit(1)">送金実行</button>
+          <button class="rr-detail-btn">案件詳細 →</button>
+        </div>
+      </div>
+      <!-- Row 3: awaiting payment -->
+      <div class="remit-row" id="row-2">
+        <div class="rr-top">
+          <div class="rr-status-dot am"></div>
+          <div class="rr-deadline-chip soon">3日後 (4/12)</div>
+          <div class="rr-client">伊藤 花子 様 ― 品川区大崎</div>
+          <div class="rr-amount">¥195,000</div>
+        </div>
+        <div class="rr-meta">
+          <div class="rr-meta-item mono">RENT-0190</div>
+          <div class="rr-meta-item"><strong>担当:</strong>AG-0055 井上 誠</div>
+          <div class="rr-meta-item"><strong>送金先:</strong>大崎不動産管理（株）</div>
+          <div class="rr-meta-item mono">三井住友 / 品川 / 普通 / 3456789</div>
+        </div>
+        <div class="rr-breakdown">
+          <div class="rr-breakdown-item">敷金 <strong>¥65,000</strong></div>
+          <div class="rr-breakdown-item">前家賃 <strong>¥100,000</strong></div>
+          <div class="rr-breakdown-item">保証料 <strong>¥30,000</strong></div>
+        </div>
+        <div class="rr-actions">
+          <span class="badge badge-am" id="status-2">入金待ち（振込）</span>
+          <button class="rr-confirm-btn disabled" id="remit-btn-2">入金確認待ち</button>
+          <button class="rr-confirm-btn" onclick="confirmPayment(2)" style="background:var(--sk-bg);color:var(--sk);border:1px solid rgba(2,132,199,.2);font-size:11px">✓ 入金確認</button>
+          <button class="rr-detail-btn">案件詳細 →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- OK -->
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-title" style="color:var(--em)">✅ 余裕あり（7日以上）</div>
+      </div>
+      <div class="remit-row">
+        <div class="rr-top">
+          <div class="rr-status-dot em"></div>
+          <div class="rr-deadline-chip ok">7日後 (4/16)</div>
+          <div class="rr-client">山本 美咲 様 ― 新宿区西新宿</div>
+          <div class="rr-amount">¥195,000</div>
+        </div>
+        <div class="rr-meta">
+          <div class="rr-meta-item mono">RENT-0189</div>
+          <div class="rr-meta-item"><strong>担当:</strong>AG-0042 山田 誠</div>
+          <div class="rr-meta-item"><strong>送金先:</strong>新宿不動産管理（株）</div>
+        </div>
+        <div class="rr-actions">
+          <span class="badge badge-nt" id="status-3">入金待ち（振込）</span>
+          <button class="rr-confirm-btn disabled">入金確認待ち</button>
+          <button class="rr-detail-btn">案件詳細 →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ZENGIN OUTPUT -->
+    <div class="zengin-panel">
+      <div class="zengin-title">📄 全銀ファイル出力（バッチ送金）</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:12px">出力する案件を選択してください（入金確認済みのみ選択可）</div>
+      <div class="zengin-select-area">
+        <div class="zengin-check-row">
+          <input type="checkbox" id="zg-0" checked>
+          <label class="zengin-label" for="zg-0">RENT-0194 ― 田中 優子 様 → 三田不動産管理（株）</label>
+          <div class="zengin-amt">¥348,000</div>
+        </div>
+        <div class="zengin-check-row">
+          <input type="checkbox" id="zg-1" checked>
+          <label class="zengin-label" for="zg-1">RENT-0193 ― 鈴木 健太 様 → 代々木管理センター</label>
+          <div class="zengin-amt">¥215,000</div>
+        </div>
+        <div class="zengin-check-row" style="opacity:.4">
+          <input type="checkbox" id="zg-2" disabled>
+          <label class="zengin-label" for="zg-2">RENT-0190 ― 伊藤 花子 様（入金未確認・選択不可）</label>
+          <div class="zengin-amt">¥195,000</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <button class="btn btn-primary" onclick="exportZenginAll()" style="padding:10px 22px">全銀ファイルを出力（2件 / ¥563,000）</button>
+        <span style="font-size:11px;color:var(--faint)">出力後、インターネットバンキングに取り込んで一括送金してください</span>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+function executeRemit(idx) {
+  if (!confirm(`RENT-019${4-idx>0?4:3} の送金を実行しますか？\n\n一度実行すると取り消せません。`)) return;
+  const btn = document.getElementById(`remit-btn-${idx}`);
+  const status = document.getElementById(`status-${idx}`);
+  btn.className = 'rr-confirm-btn done';
+  btn.textContent = '✓ 送金完了';
+  btn.onclick = null;
+  status.className = 'badge badge-em';
+  status.textContent = '送金完了';
+  const row = document.getElementById(`row-${idx}`);
+  row.style.opacity = '.6';
+  const dot = row.querySelector('.rr-status-dot');
+  dot.className = 'rr-status-dot em';
+  alert('送金完了処理が記録されました。\n担当AGの公式LINEに自動通知が送信されます。');
+}
+
+function confirmPayment(idx) {
+  if (!confirm('入金を確認しましたか？ネットバンキングの明細と照合してください。')) return;
+  const status = document.getElementById(`status-${idx}`);
+  const btn = document.getElementById(`remit-btn-${idx}`);
+  status.className = 'badge badge-sk';
+  status.textContent = '入金確認済み';
+  btn.className = 'rr-confirm-btn';
+  btn.textContent = '送金実行';
+  btn.onclick = () => executeRemit(idx);
+  document.getElementById(`row-${idx}`).querySelector('.rr-status-dot').className = 'rr-status-dot sk';
+}
+
+function exportZengin(ids) {
+  alert(`全銀ファイルを出力します（${ids.length}件）\n\n実装時：全銀協規格CSV/固定長ファイルをダウンロード`);
+}
+
+function exportZenginAll() {
+  alert('全銀ファイルを出力します（2件 / 合計 ¥563,000）\n\n実装時：ご利用のインターネットバンキングに取り込んでください');
+}
+
+function exportCSV() {
+  alert('送金履歴CSVをダウンロードします（実装時：Kintone APIからエクスポート）');
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>案件一覧 — COREBLDG</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0D1A2D;--navy-m:#152238;--navy-l:#1E3252;
+  --gold:#C8A951;--gold-dim:rgba(200,169,81,.15);
+  --cream:#F7F4EE;--cream2:#EFECE4;--white:#FFFFFF;
+  --ink:#1A1A2E;--ink2:#2D3748;--muted:#6B7280;--faint:#9CA3AF;
+  --em:#059669;--em-bg:#ECFDF5;--am:#D97706;--am-bg:#FFFBEB;
+  --rd:#DC2626;--rd-bg:#FEF2F2;--sk:#0284C7;--sk-bg:#F0F9FF;
+  --vt:#7C3AED;--vt-bg:#F5F3FF;--bd:#E5E0D5;--bd2:#D4CFC4;
+  --sw:240px;--r:10px;--r-sm:7px;
+  --sh:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:var(--cream)}
+.shell{display:flex;height:100vh}
+.sb{width:var(--sw);background:var(--navy);display:flex;flex-direction:column;flex-shrink:0;position:relative}
+.sb::after{content:'';position:absolute;top:0;right:0;width:1px;height:100%;background:linear-gradient(180deg,rgba(200,169,81,.25) 0%,rgba(200,169,81,.06) 50%,transparent 100%)}
+.sb-head{padding:24px 20px 18px;border-bottom:1px solid rgba(255,255,255,.06)}
+.sb-logo{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;letter-spacing:5px;color:var(--gold)}
+.sb-ver{font-size:9px;letter-spacing:2px;color:rgba(200,169,81,.3);font-family:'DM Mono',monospace;margin-top:2px}
+.sb-user{margin:14px 14px 10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:9px 11px;display:flex;align-items:center;gap:9px}
+.sb-av{width:28px;height:28px;border-radius:50%;background:var(--gold-dim);border:1px solid rgba(200,169,81,.25);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--gold);flex-shrink:0}
+.sb-uname{font-size:11px;font-weight:600;color:rgba(255,255,255,.8)}
+.sb-urole{font-size:9px;color:rgba(255,255,255,.3);font-family:'DM Mono',monospace}
+.sb-nav{flex:1;overflow-y:auto;padding:6px 10px}
+.sb-nav::-webkit-scrollbar{width:3px}
+.sb-nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:2px}
+.nav-sec-label{font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.18);padding:10px 8px 4px;font-family:'DM Mono',monospace}
+.nav-item{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:7px;cursor:pointer;transition:all .13s;text-decoration:none;position:relative;margin-bottom:1px}
+.nav-item:hover{background:rgba(255,255,255,.06)}
+.nav-item.active{background:rgba(200,169,81,.1)}
+.nav-item.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:16px;background:var(--gold);border-radius:0 2px 2px 0}
+.nav-icon{width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:13px;border-radius:6px;background:rgba(255,255,255,.04);flex-shrink:0}
+.nav-item.active .nav-icon{background:rgba(200,169,81,.12)}
+.nav-label{font-size:11px;font-weight:500;color:rgba(255,255,255,.55);flex:1}
+.nav-item.active .nav-label,.nav-item:hover .nav-label{color:var(--gold)}
+.nav-item:hover .nav-label{color:rgba(255,255,255,.82)}
+.nav-badge{font-size:9px;font-weight:700;padding:1px 6px;border-radius:10px;background:var(--rd);color:#fff;font-family:'DM Mono',monospace}
+.nav-badge.amber{background:var(--am)}
+.sb-foot{padding:10px 14px 18px;border-top:1px solid rgba(255,255,255,.05)}
+.sb-foot-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;cursor:pointer;font-size:11px;color:rgba(255,255,255,.3);transition:.13s}
+.sb-foot-item:hover{background:rgba(255,255,255,.05);color:rgba(255,255,255,.6)}
+.content{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:58px;background:var(--white);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 24px;gap:14px;flex-shrink:0;box-shadow:var(--sh)}
+.tb-title{font-size:16px;font-weight:600;color:var(--ink);font-family:'Cormorant Garamond',serif;letter-spacing:.5px}
+.tb-crumb{font-size:11px;color:var(--faint);display:flex;align-items:center;gap:5px;margin-top:1px}
+.tb-crumb a{color:var(--muted);text-decoration:none}
+.tb-crumb a:hover{color:var(--am)}
+.tb-actions{margin-left:auto;display:flex;gap:9px;align-items:center}
+.btn{padding:7px 16px;border-radius:var(--r-sm);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;font-family:'Outfit',sans-serif;border:none}
+.btn-primary{background:var(--navy);color:var(--gold)}
+.btn-primary:hover{background:var(--navy-l)}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--bd)}
+.btn-ghost:hover{background:var(--cream);color:var(--ink)}
+.btn-sm{padding:5px 12px;font-size:11px}
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;font-family:'DM Mono',monospace}
+.badge-em{background:var(--em-bg);color:var(--em)}
+.badge-am{background:var(--am-bg);color:var(--am)}
+.badge-rd{background:var(--rd-bg);color:var(--rd)}
+.badge-sk{background:var(--sk-bg);color:var(--sk)}
+.badge-vt{background:var(--vt-bg);color:var(--vt)}
+.badge-gd{background:var(--gold-dim);color:var(--am)}
+.badge-nt{background:var(--cream2);color:var(--muted)}
+
+/* TABS */
+.tab-bar{padding:0 24px;background:var(--white);border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:0}
+.tab{padding:12px 18px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:.15s;white-space:nowrap;display:flex;align-items:center;gap:7px}
+.tab:hover{color:var(--ink)}
+.tab.active{color:var(--navy);border-bottom-color:var(--gold)}
+.tab-count{font-size:10px;padding:1px 6px;border-radius:10px;background:var(--cream2);font-family:'DM Mono',monospace}
+.tab.active .tab-count{background:var(--gold-dim);color:var(--am)}
+.view-toggle{margin-left:auto;display:flex;gap:4px}
+.view-btn{width:30px;height:30px;border:1px solid var(--bd);border-radius:6px;background:var(--white);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;transition:.13s}
+.view-btn.active{background:var(--navy);border-color:var(--navy)}
+.view-btn:hover:not(.active){background:var(--cream)}
+
+/* FILTER */
+.filter-bar{display:flex;align-items:center;gap:10px;padding:14px 24px;background:var(--cream);border-bottom:1px solid var(--bd);flex-wrap:wrap}
+.search-wrap{position:relative;flex:1;min-width:200px}
+.search-wrap input{width:100%;padding:8px 12px 8px 34px;background:var(--white);border:1.5px solid var(--bd);border-radius:var(--r-sm);font-size:12px;color:var(--ink);outline:none;font-family:'Outfit','Noto Sans JP',sans-serif;transition:.15s}
+.search-wrap input:focus{border-color:var(--gold)}
+.search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--faint)}
+.fsel{padding:7px 11px;background:var(--white);border:1.5px solid var(--bd);border-radius:var(--r-sm);font-size:12px;color:var(--ink);outline:none;cursor:pointer;font-family:'Outfit',sans-serif}
+
+/* LIST VIEW */
+.page{flex:1;overflow-y:auto;padding:20px 24px}
+.page::-webkit-scrollbar{width:5px}
+.page::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:3px}
+.case-list{display:flex;flex-direction:column;gap:8px}
+.case-row{background:var(--white);border:1px solid var(--bd);border-radius:var(--r);padding:14px 18px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:all .15s;box-shadow:var(--sh)}
+.case-row:hover{border-color:rgba(200,169,81,.4);transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,0,0,.08)}
+.case-type-pill{padding:4px 10px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;font-family:'DM Mono',monospace;flex-shrink:0}
+.type-rental{background:var(--sk-bg);color:var(--sk)}
+.type-sale{background:var(--em-bg);color:var(--em)}
+.type-hr{background:var(--vt-bg);color:var(--vt)}
+.type-utility{background:var(--am-bg);color:var(--am)}
+.case-id{font-size:10px;font-family:'DM Mono',monospace;color:var(--faint);margin-bottom:2px}
+.case-name{font-size:14px;font-weight:600;color:var(--ink)}
+.case-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.case-info{flex:1;min-width:0}
+.case-meta{display:flex;gap:16px;align-items:center;flex-shrink:0}
+.case-meta-item{text-align:right}
+.case-meta-label{font-size:9px;color:var(--faint);font-family:'DM Mono',monospace;letter-spacing:.5px}
+.case-meta-val{font-size:12px;font-weight:600;color:var(--ink);margin-top:1px}
+.case-arrow{font-size:16px;color:var(--faint);flex-shrink:0;transition:.15s}
+.case-row:hover .case-arrow{color:var(--am);transform:translateX(2px)}
+
+/* KANBAN */
+.kanban{display:flex;gap:14px;overflow-x:auto;padding-bottom:16px;height:100%}
+.kanban::-webkit-scrollbar{height:5px}
+.kanban::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:3px}
+.kanban-col{flex-shrink:0;width:240px;display:flex;flex-direction:column;gap:8px}
+.kanban-head{padding:10px 14px;border-radius:var(--r-sm);display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.kh-title{font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase}
+.kh-count{font-size:10px;font-family:'DM Mono',monospace;padding:2px 7px;border-radius:10px;font-weight:700}
+.kanban-card{background:var(--white);border:1px solid var(--bd);border-radius:var(--r-sm);padding:12px 13px;cursor:pointer;transition:all .15s;box-shadow:var(--sh)}
+.kanban-card:hover{border-color:rgba(200,169,81,.4);transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.08)}
+.kc-id{font-size:9px;font-family:'DM Mono',monospace;color:var(--faint);margin-bottom:4px}
+.kc-name{font-size:12px;font-weight:700;color:var(--ink);margin-bottom:3px}
+.kc-prop{font-size:11px;color:var(--muted);margin-bottom:8px}
+.kc-footer{display:flex;align-items:center;justify-content:space-between}
+.kc-ag{font-size:9px;font-family:'DM Mono',monospace;color:var(--faint)}
+.kc-flag{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:700}
+</style>
+</head>
+<body>
+<div class="shell">
+<nav class="sb">
+  <div class="sb-head"><div class="sb-logo">CORE<br>BLDG</div><div class="sb-ver">v2.0 — CORETO</div></div>
+  <div class="sb-user"><div class="sb-av">HQ</div><div><div class="sb-uname">田中 誠一</div><div class="sb-urole">HQ / exec</div></div></div>
+  <div class="sb-nav">
+    <div class="nav-sec-label">ダッシュボード</div>
+    <a class="nav-item" href="coreto-hub-v2.html"><div class="nav-icon">🏠</div><div class="nav-label">HQダッシュボード</div></a>
+    <div class="nav-sec-label">CRM / 案件</div>
+    <a class="nav-item" href="coreto-crm-v2.html"><div class="nav-icon">👥</div><div class="nav-label">クライアント管理</div></a>
+    <a class="nav-item active" href="coreto-cases-v2.html"><div class="nav-icon">📁</div><div class="nav-label">案件一覧</div><span class="nav-badge">12</span></a>
+    <a class="nav-item" href="coreto-remittance-v2.html"><div class="nav-icon">💰</div><div class="nav-label">入金監視</div><span class="nav-badge amber">3</span></a>
+    <a class="nav-item" href="#"><div class="nav-icon">📋</div><div class="nav-label">書類審査</div><span class="nav-badge amber">5</span></a>
+    <div class="nav-sec-label">管理</div>
+    <a class="nav-item" href="#"><div class="nav-icon">👤</div><div class="nav-label">AG管理</div></a>
+    <a class="nav-item" href="#"><div class="nav-icon">💴</div><div class="nav-label">報酬・支払い</div></a>
+    <a class="nav-item" href="#"><div class="nav-icon">⚡</div><div class="nav-label">光通信SFA</div></a>
+  </div>
+  <div class="sb-foot">
+    <div class="sb-foot-item"><span>⚙️</span><span>設定</span></div>
+    <div class="sb-foot-item"><span>📖</span><span>マニュアル</span></div>
+  </div>
+</nav>
+<div class="content">
+  <div class="topbar">
+    <div>
+      <div class="tb-title">案件一覧</div>
+      <div class="tb-crumb"><a href="coreto-hub-v2.html">COREBLDG</a> › <span>案件一覧</span></div>
+    </div>
+    <div class="tb-actions">
+      <button class="btn btn-ghost">📤 エクスポート</button>
+      <button class="btn btn-primary" onclick="newCase()">＋ 新規案件</button>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tab-bar">
+    <div class="tab active" onclick="switchTab('all',this)">すべて<span class="tab-count">47</span></div>
+    <div class="tab" onclick="switchTab('rental',this)">🏠 賃貸<span class="tab-count">28</span></div>
+    <div class="tab" onclick="switchTab('sale',this)">🏢 売買<span class="tab-count">9</span></div>
+    <div class="tab" onclick="switchTab('hr',this)">👤 HR<span class="tab-count">6</span></div>
+    <div class="tab" onclick="switchTab('utility',this)">⚡ 光通信<span class="tab-count">4</span></div>
+    <div class="view-toggle">
+      <div class="view-btn active" id="btn-list" onclick="switchView('list')" title="リスト">☰</div>
+      <div class="view-btn" id="btn-kanban" onclick="switchView('kanban')" title="カンバン">⊞</div>
+    </div>
+  </div>
+
+  <!-- Filter -->
+  <div class="filter-bar">
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="クライアント名・案件番号・物件で検索…">
+    </div>
+    <select class="fsel">
+      <option>すべてのAG</option>
+      <option>AG-0042 山田</option>
+      <option>AG-0088 田中</option>
+      <option>AG-0055 井上</option>
+    </select>
+    <select class="fsel">
+      <option>すべてのステータス</option>
+      <option>申込中</option>
+      <option>審査中</option>
+      <option>IT重説待ち</option>
+      <option>入金待ち</option>
+      <option>成約</option>
+    </select>
+  </div>
+
+  <!-- Page content -->
+  <div class="page" id="page-view">
+    <div class="case-list" id="list-view">
+      <!-- Rental -->
+      <div class="case-row" onclick="window.location.href='coreto-rental-v2.html'">
+        <div class="case-type-pill type-rental">賃貸</div>
+        <div class="case-info">
+          <div class="case-id">RENT-0194</div>
+          <div class="case-name">田中 優子 様</div>
+          <div class="case-sub">港区三田3丁目 2LDK ／ ¥198,000/月</div>
+        </div>
+        <div class="case-meta">
+          <div class="case-meta-item"><div class="case-meta-label">ステータス</div><div><span class="badge badge-am">審査中</span></div></div>
+          <div class="case-meta-item"><div class="case-meta-label">担当AG</div><div class="case-meta-val" style="font-family:'DM Mono',monospace;font-size:11px">AG-0042</div></div>
+          <div class="case-meta-item"><div class="case-meta-label">最終更新</div><div class="case-meta-val" style="font-size:11px">2時間前</div></div>
+        </div>
+        <div class="case-arrow">›</div>
+      </div>
+      <div class="case-row">
+        <div class="case-type-pill type-rental">賃貸</div>
+        <div class="case-info">
+          <div class="case-id">RENT-0193</div>
+          <div class="case-name">鈴木 健太 様</div>
+          <div class="case-sub">渋谷区代々木 1LDK ／ ¥155,000/月</div>
+        </div>
+        <div class="case-meta">
+          <div class="case-meta-item"><div class="case-meta-label">ステータス</div><div><span class="badge badge-sk">IT重説待ち</span></div></div>
+          <div class="case-meta-item"><div class="case-meta-label">担当AG</div><div class="case-meta-val" style="font-family:'DM Mono',monospace;font-size:11px">AG-0088</div></div>
+          <div class="case-meta-item"><div class="case-meta-label">最終更新</div><div class="case-meta-val" style="font-size:11px">昨日</div></div>
+        </div>
+        <div class="case-arrow">›</div>
+      </div>
+      <div class="case-row">
+        <div class="case-type-pill type-rental">賃貸</div>
+        <div class="case-info">
+          <div class="case-id">RENT-0192</div>
+          <div class="case-name">高橋 美咲 様</div>
+          <div class="case-sub">新宿区西新宿 2LDK ／ ¥175,000/月</div>
+        </div>
+        <div class="case-meta">
+          <div class="case-meta-item"><div class="case-meta-label">ステータス</div><div><span class="badge badge-rd">入金待ち 🔴</span></div></div>
+          <div class="case-meta-item"><div class="case-meta-label">担当AG</div><div class="case-meta-val" style="font-family:'DM Mono',monospace;font-size:11px">AG-0042</div></div>
+          <div class="case-meta-item"><div class="case-meta-label">送金期限</div><div class="case-meta-val" style="color:var(--rd);font-size:11px">本日</div></div>
+        </div>
+        <div class="case-arrow">›</div>
+      </div>
+      <!-- Sale -->
+      <div class="case-row">
+        <div class="case-type-pill type-sale">売買</div>
+        <div class="case-info">
+          <div class="case-id">SALE-0044</div>
+          <div class="case-name">山本 大輔 様</div>
+          <div class="case-sub">目黒区中目黒 マンション 3,800万円</div>
+        </div>
+        <div class="case-meta">
+          <div class="case-meta-item"><div class="case-meta-label">ステータス</div><div><span class="badge badge-vt">媒介契約中</span></div></div>
+          <div class="case-meta-item"><div class="case-meta-label">担当AG</div><div class="case-meta-val" style="font-family:'DM Mono',monospace;font-size:11px">AG-0042</div></div>
+          <div class="case-meta-item"><div class="case-meta-label">レインズ期限</div><div class="case-meta-val" style="color:var(--am);font-size:11px">3日後</div></div>
+        </div>
+        <div class="case-arrow">›</div>
+      </div>
+      <!-- HR -->
+      <div class="case-row">
+        <div class="case-type-pill type-hr">人材</div>
+        <div class="case-info">
+          <div class="case-id">HR-0022</div>
+          <div class="case-name">中村 麻衣 様</div>
+          <div class="case-sub">株式会社ABC 営業職 ／ 年収430万円</div>
+        </div>
+        <div class="case-meta">
+          <div class="case-meta-item"><div class="case-meta-label">ステータス</div><div><span class="badge badge-em">在籍確認待ち</span></div></div>
+          <div class="case-meta-item"><div class="case-meta-label">担当AG</div><div class="case-meta-val" style="font-family:'DM Mono',monospace;font-size:11px">AG-0055</div></div>
+          <div class="case-meta-item"><div class="case-meta-label">入社日</div><div class="case-meta-val" style="font-size:11px">2026/03/01</div></div>
+        </div>
+        <div class="case-arrow">›</div>
+      </div>
+      <!-- Utility -->
+      <div class="case-row">
+        <div class="case-type-pill type-utility">光通信</div>
+        <div class="case-info">
+          <div class="case-id">UTL-0088</div>
+          <div class="case-name">田中 優子 様</div>
+          <div class="case-sub">電力・光回線 切り替え ／ 報酬見込み ¥18,500</div>
+        </div>
+        <div class="case-meta">
+          <div class="case-meta-item"><div class="case-meta-label">ステータス</div><div><span class="badge badge-vt">申込中</span></div></div>
+          <div class="case-meta-item"><div class="case-meta-label">担当AG</div><div class="case-meta-val" style="font-family:'DM Mono',monospace;font-size:11px">AG-0042</div></div>
+          <div class="case-meta-item"><div class="case-meta-label">開通予定</div><div class="case-meta-val" style="font-size:11px">5月中旬</div></div>
+        </div>
+        <div class="case-arrow">›</div>
+      </div>
+    </div>
+
+    <!-- Kanban view (hidden by default) -->
+    <div class="kanban" id="kanban-view" style="display:none">
+      <!-- リード -->
+      <div class="kanban-col">
+        <div class="kanban-head" style="background:var(--cream2)">
+          <div class="kh-title" style="color:var(--muted)">リード</div>
+          <div class="kh-count" style="background:var(--white);color:var(--muted)">6</div>
+        </div>
+        <div class="kanban-card"><div class="kc-id">RENT-0198</div><div class="kc-name">木村 陽子 様</div><div class="kc-prop">渋谷区希望・2LDK</div><div class="kc-footer"><div class="kc-ag">AG-0042</div><div class="kc-flag badge-nt badge" style="font-size:9px">初回接触</div></div></div>
+        <div class="kanban-card"><div class="kc-id">RENT-0197</div><div class="kc-name">佐々木 誠 様</div><div class="kc-prop">港区・品川区希望</div><div class="kc-footer"><div class="kc-ag">AG-0088</div><div class="kc-flag badge-nt badge" style="font-size:9px">ヒアリング済み</div></div></div>
+      </div>
+      <!-- 内見 -->
+      <div class="kanban-col">
+        <div class="kanban-head" style="background:var(--sk-bg)">
+          <div class="kh-title" style="color:var(--sk)">内見</div>
+          <div class="kh-count" style="background:var(--white);color:var(--sk)">4</div>
+        </div>
+        <div class="kanban-card"><div class="kc-id">RENT-0196</div><div class="kc-name">高橋 大輔 様</div><div class="kc-prop">目黒区 2LDK 内見4/12</div><div class="kc-footer"><div class="kc-ag">AG-0042</div><div class="kc-flag badge-sk badge" style="font-size:9px">日程確定</div></div></div>
+        <div class="kanban-card"><div class="kc-id">RENT-0195</div><div class="kc-name">田村 春香 様</div><div class="kc-prop">新宿区 1LDK</div><div class="kc-footer"><div class="kc-ag">AG-0055</div><div class="kc-flag badge-nt badge" style="font-size:9px">調整中</div></div></div>
+      </div>
+      <!-- 申込・審査 -->
+      <div class="kanban-col">
+        <div class="kanban-head" style="background:var(--am-bg)">
+          <div class="kh-title" style="color:var(--am)">申込・審査</div>
+          <div class="kh-count" style="background:var(--white);color:var(--am)">5</div>
+        </div>
+        <div class="kanban-card" onclick="window.location.href='coreto-rental-v2.html'"><div class="kc-id">RENT-0194</div><div class="kc-name">田中 優子 様</div><div class="kc-prop">港区三田 2LDK</div><div class="kc-footer"><div class="kc-ag">AG-0042</div><div class="kc-flag badge-am badge" style="font-size:9px">書類確認中</div></div></div>
+        <div class="kanban-card"><div class="kc-id">RENT-0193</div><div class="kc-name">鈴木 健太 様</div><div class="kc-prop">渋谷区代々木 1LDK</div><div class="kc-footer"><div class="kc-ag">AG-0088</div><div class="kc-flag badge-em badge" style="font-size:9px">審査通過</div></div></div>
+      </div>
+      <!-- IT重説 -->
+      <div class="kanban-col">
+        <div class="kanban-head" style="background:var(--vt-bg)">
+          <div class="kh-title" style="color:var(--vt)">IT重説</div>
+          <div class="kh-count" style="background:var(--white);color:var(--vt)">3</div>
+        </div>
+        <div class="kanban-card"><div class="kc-id">RENT-0191</div><div class="kc-name">渡辺 誠 様</div><div class="kc-prop">新宿区西新宿 2LDK</div><div class="kc-footer"><div class="kc-ag">AG-0042</div><div class="kc-flag badge-sk badge" style="font-size:9px">4/12 予定</div></div></div>
+      </div>
+      <!-- 入金・送金 -->
+      <div class="kanban-col">
+        <div class="kanban-head" style="background:var(--rd-bg)">
+          <div class="kh-title" style="color:var(--rd)">入金・送金</div>
+          <div class="kh-count" style="background:var(--white);color:var(--rd)">3</div>
+        </div>
+        <div class="kanban-card"><div class="kc-id">RENT-0192</div><div class="kc-name">高橋 美咲 様</div><div class="kc-prop">新宿区西新宿 2LDK</div><div class="kc-footer"><div class="kc-ag">AG-0042</div><div class="kc-flag badge-rd badge" style="font-size:9px">期限本日</div></div></div>
+      </div>
+      <!-- 成約 -->
+      <div class="kanban-col">
+        <div class="kanban-head" style="background:var(--em-bg)">
+          <div class="kh-title" style="color:var(--em)">成約</div>
+          <div class="kh-count" style="background:var(--white);color:var(--em)">7</div>
+        </div>
+        <div class="kanban-card"><div class="kc-id">RENT-0185</div><div class="kc-name">中村 麻衣 様</div><div class="kc-prop">港区麻布 1LDK</div><div class="kc-footer"><div class="kc-ag">AG-0055</div><div class="kc-flag badge-em badge" style="font-size:9px">成約済み</div></div></div>
+        <div class="kanban-card"><div class="kc-id">RENT-0183</div><div class="kc-name">山田 花子 様</div><div class="kc-prop">渋谷区恵比寿 2LDK</div><div class="kc-footer"><div class="kc-ag">AG-0042</div><div class="kc-flag badge-em badge" style="font-size:9px">成約済み</div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+let currentView = 'list';
+
+function switchView(v) {
+  currentView = v;
+  document.getElementById('list-view').style.display = v==='list' ? 'flex' : 'none';
+  document.getElementById('kanban-view').style.display = v==='kanban' ? 'flex' : 'none';
+  document.getElementById('btn-list').classList.toggle('active', v==='list');
+  document.getElementById('btn-kanban').classList.toggle('active', v==='kanban');
+}
+
+function switchTab(type, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function newCase() {
+  alert('新規案件登録（実装時：事業種別を選択→案件登録フォームへ）');
+}
+</script>
+</body>
+</html>

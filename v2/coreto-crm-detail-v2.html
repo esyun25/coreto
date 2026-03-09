@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>クライアント詳細 — COREBLDG</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0D1A2D;--navy-m:#152238;--navy-l:#1E3252;
+  --gold:#C8A951;--gold-l:#DFC06A;--gold-dim:rgba(200,169,81,.15);
+  --cream:#F7F4EE;--cream2:#EFECE4;--white:#FFFFFF;
+  --ink:#1A1A2E;--ink2:#2D3748;--muted:#6B7280;--faint:#9CA3AF;
+  --em:#059669;--em-bg:#ECFDF5;--am:#D97706;--am-bg:#FFFBEB;
+  --rd:#DC2626;--rd-bg:#FEF2F2;--sk:#0284C7;--sk-bg:#F0F9FF;
+  --vt:#7C3AED;--vt-bg:#F5F3FF;--bd:#E5E0D5;--bd2:#D4CFC4;
+  --sw:240px;--r:10px;--r-sm:7px;
+  --sh:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:var(--cream)}
+.shell{display:flex;height:100vh}
+/* --- SIDEBAR (same as crm) --- */
+.sb{width:var(--sw);background:var(--navy);display:flex;flex-direction:column;flex-shrink:0;position:relative}
+.sb::after{content:'';position:absolute;top:0;right:0;width:1px;height:100%;background:linear-gradient(180deg,rgba(200,169,81,.25) 0%,rgba(200,169,81,.06) 50%,transparent 100%)}
+.sb-head{padding:24px 20px 18px;border-bottom:1px solid rgba(255,255,255,.06)}
+.sb-logo{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;letter-spacing:5px;color:var(--gold)}
+.sb-ver{font-size:9px;letter-spacing:2px;color:rgba(200,169,81,.3);font-family:'DM Mono',monospace;margin-top:2px}
+.sb-user{margin:14px 14px 10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:9px 11px;display:flex;align-items:center;gap:9px}
+.sb-av{width:28px;height:28px;border-radius:50%;background:var(--gold-dim);border:1px solid rgba(200,169,81,.25);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--gold);flex-shrink:0}
+.sb-uname{font-size:11px;font-weight:600;color:rgba(255,255,255,.8)}
+.sb-urole{font-size:9px;color:rgba(255,255,255,.3);font-family:'DM Mono',monospace}
+.sb-nav{flex:1;overflow-y:auto;padding:6px 10px}
+.sb-nav::-webkit-scrollbar{width:3px}
+.sb-nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:2px}
+.nav-sec-label{font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.18);padding:10px 8px 4px;font-family:'DM Mono',monospace}
+.nav-item{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:7px;cursor:pointer;transition:all .13s;text-decoration:none;position:relative;margin-bottom:1px}
+.nav-item:hover{background:rgba(255,255,255,.06)}
+.nav-item.active{background:rgba(200,169,81,.1)}
+.nav-item.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:16px;background:var(--gold);border-radius:0 2px 2px 0}
+.nav-icon{width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:13px;border-radius:6px;background:rgba(255,255,255,.04);flex-shrink:0}
+.nav-item.active .nav-icon{background:rgba(200,169,81,.12)}
+.nav-label{font-size:11px;font-weight:500;color:rgba(255,255,255,.55);flex:1}
+.nav-item.active .nav-label{color:var(--gold)}
+.nav-item:hover .nav-label{color:rgba(255,255,255,.82)}
+.nav-badge{font-size:9px;font-weight:700;padding:1px 6px;border-radius:10px;background:var(--rd);color:#fff;font-family:'DM Mono',monospace}
+.nav-badge.amber{background:var(--am)}
+.sb-foot{padding:10px 14px 18px;border-top:1px solid rgba(255,255,255,.05)}
+.sb-foot-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;cursor:pointer;font-size:11px;color:rgba(255,255,255,.3);transition:.13s}
+.sb-foot-item:hover{background:rgba(255,255,255,.05);color:rgba(255,255,255,.6)}
+/* --- CONTENT --- */
+.content{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:58px;background:var(--white);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 24px;gap:14px;flex-shrink:0;box-shadow:var(--sh)}
+.tb-back{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);cursor:pointer;text-decoration:none;transition:.13s;flex-shrink:0}
+.tb-back:hover{color:var(--am)}
+.tb-divider{width:1px;height:20px;background:var(--bd);flex-shrink:0}
+.tb-title{font-size:16px;font-weight:600;color:var(--ink);font-family:'Cormorant Garamond',serif;letter-spacing:.5px}
+.tb-crumb{font-size:11px;color:var(--faint);margin-top:1px}
+.tb-actions{margin-left:auto;display:flex;gap:9px;align-items:center}
+.btn{padding:7px 16px;border-radius:var(--r-sm);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;font-family:'Outfit',sans-serif;border:none;letter-spacing:.3px}
+.btn-primary{background:var(--navy);color:var(--gold)}
+.btn-primary:hover{background:var(--navy-l);transform:translateY(-1px)}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--bd)}
+.btn-ghost:hover{background:var(--cream);color:var(--ink)}
+.btn-sm{padding:5px 12px;font-size:11px}
+/* --- LAYOUT --- */
+.detail-wrap{flex:1;overflow-y:auto;display:flex;gap:20px;padding:24px}
+.detail-wrap::-webkit-scrollbar{width:5px}
+.detail-wrap::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:3px}
+.detail-main{flex:1;display:flex;flex-direction:column;gap:16px;min-width:0}
+.detail-side{width:300px;flex-shrink:0;display:flex;flex-direction:column;gap:16px}
+/* --- PROFILE HEADER --- */
+.profile-header{background:var(--white);border:1px solid var(--bd);border-radius:var(--r);padding:20px 22px;box-shadow:var(--sh)}
+.ph-top{display:flex;align-items:flex-start;gap:16px;margin-bottom:16px}
+.ph-avatar{width:56px;height:56px;border-radius:50%;background:var(--gold-dim);border:2px solid rgba(200,169,81,.3);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:var(--am);font-family:'DM Mono',monospace;flex-shrink:0}
+.ph-info{flex:1}
+.ph-name{font-size:20px;font-weight:700;color:var(--ink);font-family:'Cormorant Garamond',serif;letter-spacing:.5px;margin-bottom:3px}
+.ph-id{font-size:11px;color:var(--faint);font-family:'DM Mono',monospace;margin-bottom:8px}
+.ph-tags{display:flex;gap:6px;flex-wrap:wrap}
+.ph-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start}
+.ph-meta{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding-top:14px;border-top:1px solid var(--bd)}
+.ph-meta-item{}
+.ph-meta-label{font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--faint);margin-bottom:3px}
+.ph-meta-val{font-size:13px;font-weight:500;color:var(--ink)}
+.ph-meta-val.link{color:var(--sk);cursor:pointer;text-decoration:underline;text-decoration-style:dotted}
+/* --- SECTION CARD --- */
+.sec-card{background:var(--white);border:1px solid var(--bd);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh)}
+.sec-head{padding:14px 18px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;background:var(--cream)}
+.sec-title{font-size:12px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:7px;letter-spacing:.3px;text-transform:uppercase}
+.sec-title-icon{font-size:14px}
+.sec-body{padding:18px}
+/* --- CASES GRID --- */
+.cases-grid{display:flex;flex-direction:column;gap:8px}
+.case-card{border:1px solid var(--bd);border-radius:var(--r-sm);padding:12px 14px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:12px}
+.case-card:hover{border-color:var(--gold);background:rgba(200,169,81,.03)}
+.case-type-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.case-type-dot.rental{background:var(--sk)}
+.case-type-dot.sale{background:var(--em)}
+.case-type-dot.hr{background:var(--vt)}
+.case-type-dot.utility{background:var(--am)}
+.case-info{flex:1}
+.case-id{font-size:10px;font-family:'DM Mono',monospace;color:var(--faint);margin-bottom:2px}
+.case-label{font-size:13px;font-weight:600;color:var(--ink)}
+.case-status{margin-left:auto}
+/* --- TIMELINE --- */
+.timeline{display:flex;flex-direction:column;gap:0}
+.tl-item{display:flex;gap:12px;padding:12px 0;position:relative}
+.tl-item:not(:last-child)::after{content:'';position:absolute;left:13px;top:36px;bottom:0;width:1px;background:var(--bd)}
+.tl-dot{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;z-index:1;border:2px solid var(--white)}
+.tl-dot.sk{background:var(--sk-bg);color:var(--sk)}
+.tl-dot.em{background:var(--em-bg);color:var(--em)}
+.tl-dot.am{background:var(--am-bg);color:var(--am)}
+.tl-dot.rd{background:var(--rd-bg);color:var(--rd)}
+.tl-dot.nt{background:var(--cream2);color:var(--muted)}
+.tl-body{flex:1;min-width:0}
+.tl-text{font-size:12px;color:var(--ink);line-height:1.5;margin-bottom:2px}
+.tl-text strong{font-weight:700}
+.tl-time{font-size:10px;color:var(--faint);font-family:'DM Mono',monospace}
+.tl-add{display:flex;align-items:center;gap:8px;margin-top:10px}
+.tl-input{flex:1;padding:8px 12px;background:var(--cream);border:1.5px solid var(--bd);border-radius:var(--r-sm);font-size:12px;color:var(--ink);font-family:'Outfit','Noto Sans JP',sans-serif;outline:none;transition:.15s}
+.tl-input:focus{border-color:var(--gold);background:var(--white)}
+/* --- HEARING TABLE --- */
+.h-row{display:flex;gap:12px;margin-bottom:10px;align-items:flex-start}
+.h-label{font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted);width:120px;flex-shrink:0;padding-top:2px}
+.h-val{font-size:12px;color:var(--ink);flex:1;line-height:1.5}
+.h-empty{font-size:12px;color:var(--faint);font-style:italic}
+/* --- UTILITY GRID --- */
+.util-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.util-card{border:1px solid var(--bd);border-radius:var(--r-sm);padding:12px;text-align:center}
+.util-card.active{border-color:var(--em);background:var(--em-bg)}
+.util-card.pending{border-color:var(--am);background:var(--am-bg)}
+.util-icon{font-size:20px;margin-bottom:4px}
+.util-name{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.util-status-text{font-size:11px;font-weight:600}
+.util-status-text.active{color:var(--em)}
+.util-status-text.pending{color:var(--am)}
+.util-status-text.none{color:var(--faint)}
+/* --- DOCS --- */
+.doc-list{display:flex;flex-direction:column;gap:6px}
+.doc-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--bd);border-radius:var(--r-sm);transition:.13s;cursor:pointer}
+.doc-item:hover{border-color:var(--bd2);background:var(--cream)}
+.doc-icon{font-size:16px;flex-shrink:0}
+.doc-info{flex:1}
+.doc-name{font-size:12px;font-weight:500;color:var(--ink)}
+.doc-meta{font-size:10px;color:var(--faint);font-family:'DM Mono',monospace}
+.doc-status{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px}
+/* --- SCORE WIDGET --- */
+.score-big{text-align:center;padding:20px 16px}
+.score-circle{width:80px;height:80px;border-radius:50%;background:conic-gradient(var(--em) 0% 82%,var(--cream2) 82% 100%);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;position:relative}
+.score-inner{width:60px;height:60px;border-radius:50%;background:var(--white);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:var(--ink);font-family:'Cormorant Garamond',serif}
+.score-label{font-size:11px;color:var(--muted);letter-spacing:.5px}
+/* BADGES */
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;font-family:'DM Mono',monospace}
+.badge-em{background:var(--em-bg);color:var(--em)}
+.badge-am{background:var(--am-bg);color:var(--am)}
+.badge-rd{background:var(--rd-bg);color:var(--rd)}
+.badge-sk{background:var(--sk-bg);color:var(--sk)}
+.badge-vt{background:var(--vt-bg);color:var(--vt)}
+.badge-gd{background:var(--gold-dim);color:var(--am)}
+.badge-nt{background:var(--cream2);color:var(--muted)}
+/* REMIT STATUS */
+.remit-status{display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:var(--r-sm);font-size:12px;font-weight:500;margin-bottom:8px}
+.remit-status.ok{background:var(--em-bg);color:var(--em)}
+.remit-status.pending{background:var(--am-bg);color:var(--am)}
+</style>
+</head>
+<body>
+<div class="shell">
+<!-- SIDEBAR -->
+<nav class="sb">
+  <div class="sb-head"><div class="sb-logo">CORE<br>BLDG</div><div class="sb-ver">v2.0 — CORETO</div></div>
+  <div class="sb-user"><div class="sb-av">HQ</div><div><div class="sb-uname">田中 誠一</div><div class="sb-urole">HQ / exec</div></div></div>
+  <div class="sb-nav">
+    <div class="nav-sec-label">ダッシュボード</div>
+    <a class="nav-item" href="coreto-hub-v2.html"><div class="nav-icon">🏠</div><div class="nav-label">HQダッシュボード</div></a>
+    <div class="nav-sec-label">CRM / 案件</div>
+    <a class="nav-item active" href="coreto-crm-v2.html"><div class="nav-icon">👥</div><div class="nav-label">クライアント管理</div></a>
+    <a class="nav-item" href="coreto-cases-v2.html"><div class="nav-icon">📁</div><div class="nav-label">案件一覧</div><span class="nav-badge">12</span></a>
+    <a class="nav-item" href="coreto-remittance-v2.html"><div class="nav-icon">💰</div><div class="nav-label">入金監視</div><span class="nav-badge amber">3</span></a>
+    <a class="nav-item" href="#"><div class="nav-icon">📋</div><div class="nav-label">書類審査</div><span class="nav-badge amber">5</span></a>
+    <div class="nav-sec-label">管理</div>
+    <a class="nav-item" href="#"><div class="nav-icon">👤</div><div class="nav-label">AG管理</div></a>
+    <a class="nav-item" href="#"><div class="nav-icon">💴</div><div class="nav-label">報酬・支払い</div></a>
+    <a class="nav-item" href="#"><div class="nav-icon">⚡</div><div class="nav-label">光通信SFA</div></a>
+  </div>
+  <div class="sb-foot">
+    <div class="sb-foot-item"><span>⚙️</span><span>設定</span></div>
+    <div class="sb-foot-item"><span>📖</span><span>マニュアル</span></div>
+  </div>
+</nav>
+
+<!-- CONTENT -->
+<div class="content">
+  <div class="topbar">
+    <a class="tb-back" href="coreto-crm-v2.html">← 一覧に戻る</a>
+    <div class="tb-divider"></div>
+    <div>
+      <div class="tb-title">田中 優子 様</div>
+      <div class="tb-crumb">CRM › CLI-0001</div>
+    </div>
+    <div class="tb-actions">
+      <button class="btn btn-ghost btn-sm">📋 書類確認</button>
+      <button class="btn btn-ghost btn-sm">⚡ 光通信案内</button>
+      <button class="btn btn-primary btn-sm" onclick="window.location.href='coreto-rental-v2.html'">案件詳細 →</button>
+    </div>
+  </div>
+
+  <div class="detail-wrap">
+    <!-- MAIN -->
+    <div class="detail-main">
+
+      <!-- ① Profile Header -->
+      <div class="profile-header">
+        <div class="ph-top">
+          <div class="ph-avatar">田</div>
+          <div class="ph-info">
+            <div class="ph-name">田中 優子</div>
+            <div class="ph-id">CLI-0001 ／ タナカ ユウコ ／ 個人</div>
+            <div class="ph-tags">
+              <span class="badge badge-sk">商談中</span>
+              <span class="badge badge-gd">AG-0042</span>
+              <span class="badge badge-nt">PT紹介</span>
+            </div>
+          </div>
+          <div class="ph-actions">
+            <button class="btn btn-ghost btn-sm">✏️ 編集</button>
+            <button class="btn btn-ghost btn-sm">📲 LINE送信</button>
+          </div>
+        </div>
+        <div class="ph-meta">
+          <div class="ph-meta-item">
+            <div class="ph-meta-label">電話番号</div>
+            <div class="ph-meta-val link">090-1234-5678</div>
+          </div>
+          <div class="ph-meta-item">
+            <div class="ph-meta-label">メールアドレス</div>
+            <div class="ph-meta-val link" style="font-size:11px">tanaka@example.com</div>
+          </div>
+          <div class="ph-meta-item">
+            <div class="ph-meta-label">現住所</div>
+            <div class="ph-meta-val">港区芝浦 2-3-4</div>
+          </div>
+          <div class="ph-meta-item">
+            <div class="ph-meta-label">生年月日</div>
+            <div class="ph-meta-val">1988/06/14（35歳）</div>
+          </div>
+          <div class="ph-meta-item">
+            <div class="ph-meta-label">職業 / 年収</div>
+            <div class="ph-meta-val">会社員 ／ 約480万円</div>
+          </div>
+          <div class="ph-meta-item">
+            <div class="ph-meta-label">登録日</div>
+            <div class="ph-meta-val">2026/03/28</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ② 担当案件一覧 -->
+      <div class="sec-card">
+        <div class="sec-head">
+          <div class="sec-title"><span class="sec-title-icon">📁</span>担当案件</div>
+          <button class="btn btn-ghost btn-sm" onclick="window.location.href='coreto-cases-v2.html'">＋ 案件追加</button>
+        </div>
+        <div class="sec-body">
+          <div class="cases-grid">
+            <div class="case-card" onclick="window.location.href='coreto-rental-v2.html'">
+              <div class="case-type-dot rental"></div>
+              <div class="case-info">
+                <div class="case-id">RENT-0194</div>
+                <div class="case-label">賃貸 ― 港区三田3丁目（申込・審査中）</div>
+              </div>
+              <div class="case-status"><span class="badge badge-am">審査中</span></div>
+            </div>
+            <div class="case-card">
+              <div class="case-type-dot utility"></div>
+              <div class="case-info">
+                <div class="case-id">UTL-0088</div>
+                <div class="case-label">光通信 ― 電力・回線 切り替え申込中</div>
+              </div>
+              <div class="case-status"><span class="badge badge-vt">申込中</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ③ 活動タイムライン -->
+      <div class="sec-card">
+        <div class="sec-head">
+          <div class="sec-title"><span class="sec-title-icon">📍</span>活動タイムライン</div>
+          <button class="btn btn-ghost btn-sm">全件表示</button>
+        </div>
+        <div class="sec-body">
+          <div class="timeline">
+            <div class="tl-item">
+              <div class="tl-dot em">✓</div>
+              <div class="tl-body">
+                <div class="tl-text"><strong>書類審査 提出完了</strong> ― 本人確認書類・収入証明 受領</div>
+                <div class="tl-time">2026/04/08 14:32 ／ 担当：HQ鈴木</div>
+              </div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-dot sk">📋</div>
+              <div class="tl-body">
+                <div class="tl-text"><strong>申込書 受付</strong> ― 港区三田3丁目 2LDK 申込</div>
+                <div class="tl-time">2026/04/06 11:15 ／ AG-0042 山田</div>
+              </div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-dot am">🏠</div>
+              <div class="tl-body">
+                <div class="tl-text"><strong>内見実施</strong> ― 三田3丁目・芝公園2物件</div>
+                <div class="tl-time">2026/04/05 13:00 ／ AG-0042 山田</div>
+              </div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-dot nt">📞</div>
+              <div class="tl-body">
+                <div class="tl-text">初回ヒアリング実施。港区・渋谷区希望。2LDK・家賃22万以下</div>
+                <div class="tl-time">2026/03/28 15:00 ／ AG-0042 山田</div>
+              </div>
+            </div>
+          </div>
+          <div class="tl-add">
+            <input class="tl-input" placeholder="活動メモを追加…">
+            <button class="btn btn-primary btn-sm">追加</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ④ ヒアリング情報 -->
+      <div class="sec-card">
+        <div class="sec-head">
+          <div class="sec-title"><span class="sec-title-icon">📝</span>ヒアリング情報</div>
+          <button class="btn btn-ghost btn-sm">✏️ 編集</button>
+        </div>
+        <div class="sec-body">
+          <div class="h-row"><div class="h-label">希望エリア</div><div class="h-val">港区・渋谷区・品川区</div></div>
+          <div class="h-row"><div class="h-label">間取り</div><div class="h-val">2LDK〜3LDK</div></div>
+          <div class="h-row"><div class="h-label">予算（家賃）</div><div class="h-val">〜¥220,000/月（共益費込み）</div></div>
+          <div class="h-row"><div class="h-label">入居希望時期</div><div class="h-val">2026年5月〜6月</div></div>
+          <div class="h-row"><div class="h-label">条件・こだわり</div><div class="h-val">駅徒歩8分以内・ペット可・2階以上・宅配ボックス</div></div>
+          <div class="h-row"><div class="h-label">備考</div><div class="h-val">在宅勤務多いためWi-Fi環境重視。光通信切り替えに前向き。</div></div>
+        </div>
+      </div>
+
+      <!-- ⑤ 光通信契約状況 -->
+      <div class="sec-card">
+        <div class="sec-head">
+          <div class="sec-title"><span class="sec-title-icon">⚡</span>光通信契約状況</div>
+          <button class="btn btn-ghost btn-sm" onclick="window.location.href='#utility'">案件を開く</button>
+        </div>
+        <div class="sec-body">
+          <div class="util-grid">
+            <div class="util-card pending">
+              <div class="util-icon">⚡</div>
+              <div class="util-name">電力</div>
+              <div class="util-status-text pending">申込中</div>
+            </div>
+            <div class="util-card">
+              <div class="util-icon">🔥</div>
+              <div class="util-name">ガス</div>
+              <div class="util-status-text none">未案内</div>
+            </div>
+            <div class="util-card pending">
+              <div class="util-icon">📡</div>
+              <div class="util-name">光回線</div>
+              <div class="util-status-text pending">申込中</div>
+            </div>
+          </div>
+          <div style="margin-top:10px;font-size:11px;color:var(--muted)">UTL-0088 ／ AG-0042 担当 ／ 開通予定：2026年5月中旬</div>
+        </div>
+      </div>
+
+      <!-- ⑥ 収納代行状況 -->
+      <div class="sec-card">
+        <div class="sec-head">
+          <div class="sec-title"><span class="sec-title-icon">💰</span>収納代行状況</div>
+          <button class="btn btn-ghost btn-sm" onclick="window.location.href='coreto-remittance-v2.html'">監視パネルを開く</button>
+        </div>
+        <div class="sec-body">
+          <div class="remit-status pending">⏳ 入金待ち ― 初期費用 ¥348,000（送金期限：2026/04/15）</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div><div style="font-size:10px;color:var(--faint);margin-bottom:3px">敷金</div><div style="font-size:13px;font-weight:700;color:var(--ink)">¥110,000</div></div>
+            <div><div style="font-size:10px;color:var(--faint);margin-bottom:3px">礼金</div><div style="font-size:13px;font-weight:700;color:var(--ink)">¥110,000</div></div>
+            <div><div style="font-size:10px;color:var(--faint);margin-bottom:3px">前家賃</div><div style="font-size:13px;font-weight:700;color:var(--ink)">¥110,000</div></div>
+            <div><div style="font-size:10px;color:var(--faint);margin-bottom:3px">仲介手数料</div><div style="font-size:13px;font-weight:700;color:var(--ink)">¥110,000</div></div>
+          </div>
+          <div style="margin-top:12px;font-size:11px;color:var(--muted)">送金先：三田不動産管理（株）三菱UFJ銀行 新宿支店</div>
+        </div>
+      </div>
+
+      <!-- ⑦ 書類ステータス -->
+      <div class="sec-card">
+        <div class="sec-head">
+          <div class="sec-title"><span class="sec-title-icon">📂</span>書類ステータス</div>
+        </div>
+        <div class="sec-body">
+          <div class="doc-list">
+            <div class="doc-item">
+              <div class="doc-icon">🪪</div>
+              <div class="doc-info"><div class="doc-name">身分証明書（運転免許証）</div><div class="doc-meta">2026/04/06 アップロード</div></div>
+              <span class="badge badge-em">確認済み</span>
+            </div>
+            <div class="doc-item">
+              <div class="doc-icon">📄</div>
+              <div class="doc-info"><div class="doc-name">収入証明書（源泉徴収票 2025年分）</div><div class="doc-meta">2026/04/07 アップロード</div></div>
+              <span class="badge badge-em">確認済み</span>
+            </div>
+            <div class="doc-item">
+              <div class="doc-icon">📝</div>
+              <div class="doc-info"><div class="doc-name">申込書</div><div class="doc-meta">2026/04/06 アップロード</div></div>
+              <span class="badge badge-am">審査中</span>
+            </div>
+            <div class="doc-item" style="border-style:dashed;border-color:var(--bd2);background:var(--cream);cursor:default">
+              <div class="doc-icon">＋</div>
+              <div class="doc-info"><div class="doc-name" style="color:var(--faint)">書類をアップロード</div><div class="doc-meta">クリックまたはドラッグ＆ドロップ</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SIDE -->
+    <div class="detail-side">
+
+      <!-- Lead score -->
+      <div class="sec-card">
+        <div class="sec-head"><div class="sec-title"><span class="sec-title-icon">📊</span>リードスコア</div></div>
+        <div class="score-big">
+          <div class="score-circle"><div class="score-inner">82</div></div>
+          <div class="score-label" style="color:var(--em);font-weight:700;margin-bottom:6px">HIGH PRIORITY</div>
+          <div style="font-size:11px;color:var(--muted)">成約確度：高</div>
+        </div>
+        <div style="padding:0 16px 16px">
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <div style="display:flex;justify-content:space-between;font-size:11px">
+              <span style="color:var(--muted)">接触頻度</span>
+              <span style="font-weight:700;color:var(--em)">+30</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:11px">
+              <span style="color:var(--muted)">書類提出済み</span>
+              <span style="font-weight:700;color:var(--em)">+25</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:11px">
+              <span style="color:var(--muted)">内見実施済み</span>
+              <span style="font-weight:700;color:var(--em)">+20</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:11px">
+              <span style="color:var(--muted)">予算合致度</span>
+              <span style="font-weight:700;color:var(--am)">+7</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ⑧ 紹介ネットワーク -->
+      <div class="sec-card">
+        <div class="sec-head"><div class="sec-title"><span class="sec-title-icon">🔗</span>紹介ネットワーク</div></div>
+        <div class="sec-body">
+          <div style="font-size:10px;color:var(--faint);margin-bottom:8px">紹介者</div>
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--cream);border-radius:var(--r-sm);margin-bottom:12px">
+            <div style="width:28px;height:28px;border-radius:50%;background:var(--gold-dim);border:1px solid rgba(200,169,81,.3);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--am)">佐</div>
+            <div>
+              <div style="font-size:12px;font-weight:600;color:var(--ink)">佐藤 健一</div>
+              <div style="font-size:10px;color:var(--faint);font-family:'DM Mono',monospace">PT-0015</div>
+            </div>
+            <span class="badge badge-gd" style="margin-left:auto">PT</span>
+          </div>
+          <div style="font-size:10px;color:var(--faint)">この顧客からの紹介：なし</div>
+        </div>
+      </div>
+
+      <!-- ⑨ LINE連携 -->
+      <div class="sec-card">
+        <div class="sec-head"><div class="sec-title"><span class="sec-title-icon">📲</span>LINE連携（お客様窓口）</div></div>
+        <div class="sec-body">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+            <div style="width:8px;height:8px;border-radius:50%;background:var(--em)"></div>
+            <span style="font-size:12px;font-weight:600;color:var(--em)">紐づけ済み</span>
+          </div>
+          <div style="font-size:11px;color:var(--muted);line-height:1.7">
+            案件番号 RENT-0194 で認証済み<br>
+            <span style="font-family:'DM Mono',monospace;color:var(--faint)">Ub3f8a2...9c1</span><br>
+            紐づけ日：2026/04/06
+          </div>
+          <button style="margin-top:12px;width:100%;padding:7px;background:var(--cream);border:1px solid var(--bd);border-radius:7px;font-size:11px;color:var(--muted);cursor:pointer;font-family:'Outfit',sans-serif">📲 LINEでメッセージ送信</button>
+        </div>
+      </div>
+
+      <!-- ⑩ メモ・TODO -->
+      <div class="sec-card">
+        <div class="sec-head"><div class="sec-title"><span class="sec-title-icon">📌</span>メモ・TODO</div></div>
+        <div class="sec-body">
+          <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:12px">
+            <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--am-bg);border-radius:6px">
+              <input type="checkbox" style="accent-color:var(--am)">
+              <span style="font-size:12px;color:var(--ink)">管理会社へ送金情報を入力する</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--cream);border-radius:6px">
+              <input type="checkbox" style="accent-color:var(--em)">
+              <span style="font-size:12px;color:var(--ink)">IT重説の日程調整をする</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--cream);border-radius:6px">
+              <input type="checkbox" checked style="accent-color:var(--em)">
+              <span style="font-size:12px;color:var(--faint);text-decoration:line-through">初回ヒアリング実施</span>
+            </div>
+          </div>
+          <div style="display:flex;gap:7px">
+            <input style="flex:1;padding:7px 10px;background:var(--cream);border:1.5px solid var(--bd);border-radius:6px;font-size:11px;color:var(--ink);outline:none;font-family:'Outfit',sans-serif" placeholder="TODOを追加…">
+            <button class="btn btn-primary btn-sm">＋</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>賃貸案件詳細 — COREBLDG</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0D1A2D;--navy-m:#152238;--navy-l:#1E3252;
+  --gold:#C8A951;--gold-dim:rgba(200,169,81,.15);
+  --cream:#F7F4EE;--cream2:#EFECE4;--white:#FFFFFF;
+  --ink:#1A1A2E;--ink2:#2D3748;--muted:#6B7280;--faint:#9CA3AF;
+  --em:#059669;--em-bg:#ECFDF5;--am:#D97706;--am-bg:#FFFBEB;
+  --rd:#DC2626;--rd-bg:#FEF2F2;--sk:#0284C7;--sk-bg:#F0F9FF;
+  --vt:#7C3AED;--vt-bg:#F5F3FF;--bd:#E5E0D5;--bd2:#D4CFC4;
+  --sw:240px;--r:10px;--r-sm:7px;
+  --sh:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:var(--cream)}
+.shell{display:flex;height:100vh}
+.sb{width:var(--sw);background:var(--navy);display:flex;flex-direction:column;flex-shrink:0;position:relative}
+.sb::after{content:'';position:absolute;top:0;right:0;width:1px;height:100%;background:linear-gradient(180deg,rgba(200,169,81,.25) 0%,rgba(200,169,81,.06) 50%,transparent 100%)}
+.sb-head{padding:24px 20px 18px;border-bottom:1px solid rgba(255,255,255,.06)}
+.sb-logo{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;letter-spacing:5px;color:var(--gold)}
+.sb-ver{font-size:9px;letter-spacing:2px;color:rgba(200,169,81,.3);font-family:'DM Mono',monospace;margin-top:2px}
+.sb-user{margin:14px 14px 10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:9px 11px;display:flex;align-items:center;gap:9px}
+.sb-av{width:28px;height:28px;border-radius:50%;background:var(--gold-dim);border:1px solid rgba(200,169,81,.25);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--gold);flex-shrink:0}
+.sb-uname{font-size:11px;font-weight:600;color:rgba(255,255,255,.8)}
+.sb-urole{font-size:9px;color:rgba(255,255,255,.3);font-family:'DM Mono',monospace}
+.sb-nav{flex:1;overflow-y:auto;padding:6px 10px}
+.sb-nav::-webkit-scrollbar{width:3px}
+.sb-nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:2px}
+.nav-sec-label{font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.18);padding:10px 8px 4px;font-family:'DM Mono',monospace}
+.nav-item{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:7px;cursor:pointer;transition:all .13s;text-decoration:none;position:relative;margin-bottom:1px}
+.nav-item:hover{background:rgba(255,255,255,.06)}
+.nav-item.active{background:rgba(200,169,81,.1)}
+.nav-item.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:16px;background:var(--gold);border-radius:0 2px 2px 0}
+.nav-icon{width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:13px;border-radius:6px;background:rgba(255,255,255,.04);flex-shrink:0}
+.nav-item.active .nav-icon{background:rgba(200,169,81,.12)}
+.nav-label{font-size:11px;font-weight:500;color:rgba(255,255,255,.55);flex:1}
+.nav-item.active .nav-label{color:var(--gold)}
+.nav-item:hover .nav-label{color:rgba(255,255,255,.82)}
+.nav-badge{font-size:9px;font-weight:700;padding:1px 6px;border-radius:10px;background:var(--rd);color:#fff;font-family:'DM Mono',monospace}
+.nav-badge.amber{background:var(--am)}
+.sb-foot{padding:10px 14px 18px;border-top:1px solid rgba(255,255,255,.05)}
+.sb-foot-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;cursor:pointer;font-size:11px;color:rgba(255,255,255,.3);transition:.13s}
+.sb-foot-item:hover{background:rgba(255,255,255,.05);color:rgba(255,255,255,.6)}
+.content{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:58px;background:var(--white);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 24px;gap:14px;flex-shrink:0;box-shadow:var(--sh)}
+.tb-back{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);cursor:pointer;text-decoration:none;transition:.13s;flex-shrink:0}
+.tb-back:hover{color:var(--am)}
+.tb-div{width:1px;height:20px;background:var(--bd);flex-shrink:0}
+.tb-title{font-size:16px;font-weight:600;color:var(--ink);font-family:'Cormorant Garamond',serif}
+.tb-crumb{font-size:11px;color:var(--faint);margin-top:1px}
+.tb-actions{margin-left:auto;display:flex;gap:9px;align-items:center}
+.btn{padding:7px 16px;border-radius:var(--r-sm);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;font-family:'Outfit',sans-serif;border:none;letter-spacing:.3px}
+.btn-primary{background:var(--navy);color:var(--gold)}
+.btn-primary:hover{background:var(--navy-l);transform:translateY(-1px);box-shadow:0 4px 14px rgba(13,26,45,.25)}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--bd)}
+.btn-ghost:hover{background:var(--cream);color:var(--ink)}
+.btn-sm{padding:5px 12px;font-size:11px}
+.btn-danger{background:var(--rd-bg);color:var(--rd);border:1px solid rgba(220,38,38,.2)}
+.btn-danger:hover{background:var(--rd);color:var(--white)}
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;font-family:'DM Mono',monospace}
+.badge-em{background:var(--em-bg);color:var(--em)}
+.badge-am{background:var(--am-bg);color:var(--am)}
+.badge-rd{background:var(--rd-bg);color:var(--rd)}
+.badge-sk{background:var(--sk-bg);color:var(--sk)}
+.badge-vt{background:var(--vt-bg);color:var(--vt)}
+.badge-gd{background:var(--gold-dim);color:var(--am)}
+.badge-nt{background:var(--cream2);color:var(--muted)}
+
+/* STEP PIPELINE */
+.pipeline-wrap{background:var(--white);border:1px solid var(--bd);border-radius:var(--r);padding:22px 24px;box-shadow:var(--sh);margin-bottom:16px}
+.pipeline-title{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:18px;display:flex;align-items:center;gap:8px}
+.pipeline{display:flex;align-items:center;gap:0;overflow-x:auto;padding-bottom:4px}
+.step{display:flex;flex-direction:column;align-items:center;position:relative;flex:1;min-width:80px}
+.step-connector{position:absolute;top:14px;left:calc(-50% + 14px);right:calc(50% + 14px);height:2px;background:var(--bd)}
+.step-connector.done{background:var(--em)}
+.step:first-child .step-connector{display:none}
+.step-circle{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:'DM Mono',monospace;z-index:1;position:relative;border:2px solid}
+.step-circle.done{background:var(--em);border-color:var(--em);color:var(--white)}
+.step-circle.active{background:var(--white);border-color:var(--gold);color:var(--navy)}
+.step-circle.todo{background:var(--white);border-color:var(--bd2);color:var(--faint)}
+.step-label{font-size:10px;font-weight:600;color:var(--muted);margin-top:6px;text-align:center;white-space:nowrap}
+.step.active .step-label{color:var(--navy);font-weight:700}
+.step.done .step-label{color:var(--em)}
+
+/* CASE INFO CARDS */
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.info-card{background:var(--white);border:1px solid var(--bd);border-radius:var(--r);padding:18px 20px;box-shadow:var(--sh)}
+.ic-title{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;justify-content:space-between}
+.ic-row{display:flex;justify-content:space-between;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--bd)}
+.ic-row:last-child{border-bottom:none}
+.ic-label{font-size:11px;color:var(--faint);flex-shrink:0;width:110px}
+.ic-val{font-size:12px;font-weight:500;color:var(--ink);text-align:right}
+.ic-val.mono{font-family:'DM Mono',monospace;color:var(--muted)}
+.ic-val.em{color:var(--em);font-weight:700}
+.ic-val.am{color:var(--am);font-weight:700}
+.ic-val.rd{color:var(--rd);font-weight:700}
+
+/* REMITTANCE SECTION */
+.remit-section{background:var(--white);border:1px solid var(--bd);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh);margin-bottom:16px}
+.remit-head{padding:16px 20px;border-bottom:1px solid var(--bd);background:var(--cream);display:flex;align-items:center;justify-content:space-between}
+.remit-head-title{font-size:12px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:.5px}
+.remit-body{padding:20px}
+.alert-banner{display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:var(--r-sm);margin-bottom:18px;font-size:12px;font-weight:600}
+.alert-banner.danger{background:var(--rd-bg);color:var(--rd);border:1px solid rgba(220,38,38,.2)}
+.alert-banner.warn{background:var(--am-bg);color:var(--am);border:1px solid rgba(217,119,6,.2)}
+.alert-banner.ok{background:var(--em-bg);color:var(--em);border:1px solid rgba(5,150,105,.2)}
+
+/* FORM */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px}
+.form-row{margin-bottom:0}
+.form-label{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px}
+.form-input{width:100%;padding:9px 12px;background:var(--cream);border:1.5px solid var(--bd);border-radius:var(--r-sm);font-size:13px;color:var(--ink);font-family:'Outfit','Noto Sans JP',sans-serif;outline:none;transition:.15s}
+.form-input:focus{border-color:var(--gold);background:var(--white);box-shadow:0 0 0 3px rgba(200,169,81,.1)}
+.form-input::placeholder{color:var(--faint)}
+.form-select{width:100%;padding:9px 12px;background:var(--cream);border:1.5px solid var(--bd);border-radius:var(--r-sm);font-size:13px;color:var(--ink);font-family:'Outfit',sans-serif;outline:none;cursor:pointer}
+.form-sep{grid-column:1/-1;border-top:1px solid var(--bd);margin:4px 0}
+
+/* AMOUNT TABLE */
+.amount-table{background:var(--cream);border:1px solid var(--bd);border-radius:var(--r-sm);overflow:hidden;margin-bottom:14px}
+.amount-row{display:flex;align-items:center;padding:10px 14px;border-bottom:1px solid var(--bd)}
+.amount-row:last-child{border-bottom:none;background:rgba(200,169,81,.08)}
+.amount-label{font-size:12px;color:var(--ink);flex:1}
+.amount-label.total{font-weight:700;color:var(--navy)}
+.amount-input{width:140px;text-align:right;padding:7px 10px;background:var(--white);border:1.5px solid var(--bd);border-radius:6px;font-size:13px;font-weight:600;color:var(--ink);font-family:'DM Mono',monospace;outline:none;transition:.15s}
+.amount-input:focus{border-color:var(--gold)}
+.amount-val{font-size:14px;font-weight:700;color:var(--navy);font-family:'Cormorant Garamond',serif;width:140px;text-align:right}
+
+/* CHECKLIST */
+.checklist{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+.check-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--bd);border-radius:var(--r-sm);transition:.13s;cursor:pointer}
+.check-item:hover{background:var(--cream)}
+.check-item.done{background:var(--em-bg);border-color:rgba(5,150,105,.2)}
+.check-box{width:18px;height:18px;border-radius:4px;border:2px solid var(--bd2);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:.13s;font-size:10px}
+.check-item.done .check-box{background:var(--em);border-color:var(--em);color:var(--white)}
+.check-label{font-size:12px;font-weight:500;color:var(--ink);flex:1}
+.check-item.done .check-label{color:var(--em)}
+.check-meta{font-size:10px;color:var(--faint);font-family:'DM Mono',monospace}
+
+/* RIGHT PANEL */
+.detail-wrap{flex:1;overflow-y:auto;display:flex;gap:18px;padding:20px 24px}
+.detail-wrap::-webkit-scrollbar{width:5px}
+.detail-wrap::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:3px}
+.detail-main{flex:1;display:flex;flex-direction:column;min-width:0}
+.detail-side{width:280px;flex-shrink:0;display:flex;flex-direction:column;gap:14px}
+.side-card{background:var(--white);border:1px solid var(--bd);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh)}
+.side-card-head{padding:12px 16px;border-bottom:1px solid var(--bd);background:var(--cream);font-size:11px;font-weight:700;color:var(--ink);text-transform:uppercase;letter-spacing:.5px}
+.side-card-body{padding:14px 16px}
+.si-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--bd)}
+.si-row:last-child{border-bottom:none}
+.si-label{font-size:11px;color:var(--faint)}
+.si-val{font-size:12px;font-weight:600;color:var(--ink)}
+.action-list{display:flex;flex-direction:column;gap:7px;padding:12px 16px}
+.action-btn{width:100%;padding:10px 14px;border-radius:var(--r-sm);border:none;font-size:12px;font-weight:600;cursor:pointer;font-family:'Outfit',sans-serif;transition:all .15s;display:flex;align-items:center;gap:8px}
+.action-btn.primary{background:var(--navy);color:var(--gold)}
+.action-btn.primary:hover{background:var(--navy-l)}
+.action-btn.secondary{background:var(--cream);color:var(--ink);border:1px solid var(--bd)}
+.action-btn.secondary:hover{border-color:var(--bd2);background:var(--cream2)}
+.action-btn.warn{background:var(--am-bg);color:var(--am);border:1px solid rgba(217,119,6,.2)}
+</style>
+</head>
+<body>
+<div class="shell">
+<nav class="sb">
+  <div class="sb-head"><div class="sb-logo">CORE<br>BLDG</div><div class="sb-ver">v2.0 — CORETO</div></div>
+  <div class="sb-user"><div class="sb-av">AG</div><div><div class="sb-uname">山田 誠</div><div class="sb-urole">AG-0042 / Gold</div></div></div>
+  <div class="sb-nav">
+    <div class="nav-sec-label">ダッシュボード</div>
+    <a class="nav-item" href="coreto-hub-v2.html"><div class="nav-icon">🏠</div><div class="nav-label">マイダッシュボード</div></a>
+    <div class="nav-sec-label">案件・顧客</div>
+    <a class="nav-item active" href="coreto-cases-v2.html"><div class="nav-icon">📁</div><div class="nav-label">担当案件</div><span class="nav-badge">4</span></a>
+    <a class="nav-item" href="coreto-crm-v2.html"><div class="nav-icon">👥</div><div class="nav-label">クライアント</div></a>
+    <a class="nav-item" href="#"><div class="nav-icon">⚡</div><div class="nav-label">光通信案件</div><span class="nav-badge" style="background:var(--gold);color:var(--navy)">2</span></a>
+    <div class="nav-sec-label">ツール</div>
+    <a class="nav-item" href="#"><div class="nav-icon">📋</div><div class="nav-label">IT重説チェック</div></a>
+    <a class="nav-item" href="#"><div class="nav-icon">💴</div><div class="nav-label">報酬明細</div></a>
+    <a class="nav-item" href="#"><div class="nav-icon">📚</div><div class="nav-label">マニュアル</div></a>
+  </div>
+  <div class="sb-foot">
+    <div class="sb-foot-item"><span>⚙️</span><span>設定</span></div>
+    <div class="sb-foot-item"><span>📖</span><span>マニュアル</span></div>
+  </div>
+</nav>
+
+<div class="content">
+  <div class="topbar">
+    <a class="tb-back" href="coreto-cases-v2.html">← 案件一覧に戻る</a>
+    <div class="tb-div"></div>
+    <div>
+      <div class="tb-title">田中 優子 様 ― 港区三田3丁目</div>
+      <div class="tb-crumb">案件一覧 › RENT-0194 › 賃貸案件詳細</div>
+    </div>
+    <div class="tb-actions">
+      <button class="btn btn-ghost btn-sm" onclick="window.location.href='coreto-crm-detail-v2.html'">👤 クライアント詳細</button>
+      <button class="btn btn-ghost btn-sm">📋 書類確認</button>
+      <button class="btn btn-primary btn-sm" onclick="document.getElementById('remit-section').scrollIntoView({behavior:'smooth'})">💰 送金情報入力</button>
+    </div>
+  </div>
+
+  <div class="detail-wrap">
+    <!-- MAIN -->
+    <div class="detail-main">
+
+      <!-- Step Pipeline -->
+      <div class="pipeline-wrap">
+        <div class="pipeline-title">📍 ステップ進捗 — RENT-0194 <span class="badge badge-am" style="margin-left:4px">書類審査中</span></div>
+        <div class="pipeline">
+          <div class="step done">
+            <div class="step-connector done"></div>
+            <div class="step-circle done">✓</div>
+            <div class="step-label">リード</div>
+          </div>
+          <div class="step done">
+            <div class="step-connector done"></div>
+            <div class="step-circle done">✓</div>
+            <div class="step-label">内見</div>
+          </div>
+          <div class="step done">
+            <div class="step-connector done"></div>
+            <div class="step-circle done">✓</div>
+            <div class="step-label">申込</div>
+          </div>
+          <div class="step active">
+            <div class="step-connector"></div>
+            <div class="step-circle active">4</div>
+            <div class="step-label">書類審査</div>
+          </div>
+          <div class="step todo">
+            <div class="step-connector"></div>
+            <div class="step-circle todo">5</div>
+            <div class="step-label">IT重説</div>
+          </div>
+          <div class="step todo">
+            <div class="step-connector"></div>
+            <div class="step-circle todo">6</div>
+            <div class="step-label">入金確認</div>
+          </div>
+          <div class="step todo">
+            <div class="step-connector"></div>
+            <div class="step-circle todo">7</div>
+            <div class="step-label">管理会社<br>送金</div>
+          </div>
+          <div class="step todo">
+            <div class="step-connector"></div>
+            <div class="step-circle todo">8</div>
+            <div class="step-label">鍵渡し</div>
+          </div>
+          <div class="step todo">
+            <div class="step-connector"></div>
+            <div class="step-circle todo">✦</div>
+            <div class="step-label">成約</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Case info -->
+      <div class="info-grid">
+        <div class="info-card">
+          <div class="ic-title">物件情報</div>
+          <div class="ic-row"><div class="ic-label">物件名</div><div class="ic-val">三田ガーデンハウス 802</div></div>
+          <div class="ic-row"><div class="ic-label">所在地</div><div class="ic-val">港区三田3丁目</div></div>
+          <div class="ic-row"><div class="ic-label">間取り</div><div class="ic-val">2LDK / 65.4㎡</div></div>
+          <div class="ic-row"><div class="ic-label">家賃</div><div class="ic-val em">¥198,000/月</div></div>
+          <div class="ic-row"><div class="ic-label">管理会社</div><div class="ic-val">三田不動産管理（株）</div></div>
+          <div class="ic-row"><div class="ic-label">入居予定日</div><div class="ic-val">2026/05/01</div></div>
+        </div>
+        <div class="info-card">
+          <div class="ic-title">案件情報</div>
+          <div class="ic-row"><div class="ic-label">案件番号</div><div class="ic-val mono">RENT-0194</div></div>
+          <div class="ic-row"><div class="ic-label">クライアント</div><div class="ic-val">田中 優子 様</div></div>
+          <div class="ic-row"><div class="ic-label">担当AG</div><div class="ic-val mono">AG-0042 山田 誠</div></div>
+          <div class="ic-row"><div class="ic-label">紹介者</div><div class="ic-val mono">PT-0015 佐藤</div></div>
+          <div class="ic-row"><div class="ic-label">仲介手数料</div><div class="ic-val em">¥198,000（税別）</div></div>
+          <div class="ic-row"><div class="ic-label">AG報酬（70%）</div><div class="ic-val em">¥138,600</div></div>
+        </div>
+      </div>
+
+      <!-- Remittance Section -->
+      <div class="remit-section" id="remit-section">
+        <div class="remit-head">
+          <div class="remit-head-title">💰 収納代行 ― 管理会社送金情報</div>
+          <span class="badge badge-am">入力待ち</span>
+        </div>
+        <div class="remit-body">
+          <div class="alert-banner warn">⚠️ 審査通過後の必須対応 ― 入居日（5/1）の14日前までに送金情報を入力してください。送金期限：2026/04/17</div>
+
+          <!-- Bank info -->
+          <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:12px">管理会社 送金先口座</div>
+          <div class="form-grid">
+            <div class="form-row"><label class="form-label">管理会社名</label><input class="form-input" placeholder="三田不動産管理株式会社" id="mgmt-name"></div>
+            <div class="form-row"><label class="form-label">銀行名</label><input class="form-input" placeholder="三菱UFJ銀行" id="bank-name"></div>
+            <div class="form-row"><label class="form-label">支店名</label><input class="form-input" placeholder="新宿支店" id="branch"></div>
+            <div class="form-row"><label class="form-label">口座種別</label>
+              <select class="form-select" id="acct-type"><option>普通</option><option>当座</option></select>
+            </div>
+            <div class="form-row"><label class="form-label">口座番号</label><input class="form-input" placeholder="1234567（7桁）" id="acct-no" maxlength="7" pattern="[0-9]{7}"></div>
+            <div class="form-row"><label class="form-label">口座名義（カタカナ）</label><input class="form-input" placeholder="ミタフドウサンカンリ（カ" id="acct-name"></div>
+          </div>
+
+          <!-- Amount breakdown -->
+          <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:12px">送金金額 内訳</div>
+          <div class="amount-table">
+            <div class="amount-row">
+              <div class="amount-label">敷金</div>
+              <input class="amount-input" placeholder="¥110,000" id="amt-shikikin" oninput="calcTotal()">
+            </div>
+            <div class="amount-row">
+              <div class="amount-label">前家賃</div>
+              <input class="amount-input" placeholder="¥198,000" id="amt-maeyachin" oninput="calcTotal()">
+            </div>
+            <div class="amount-row">
+              <div class="amount-label">保証料</div>
+              <input class="amount-input" placeholder="¥40,000" id="amt-hosho" oninput="calcTotal()">
+            </div>
+            <div class="amount-row">
+              <div class="amount-label">その他（管理費・鍵交換費等）</div>
+              <input class="amount-input" placeholder="¥0" id="amt-other" oninput="calcTotal()">
+            </div>
+            <div class="amount-row">
+              <div class="amount-label total">合計送金金額</div>
+              <div class="amount-val" id="amt-total">¥—</div>
+            </div>
+          </div>
+
+          <!-- Deadline -->
+          <div class="form-grid" style="grid-template-columns:1fr 1fr;margin-bottom:0">
+            <div class="form-row"><label class="form-label">送金期限日</label><input class="form-input" type="date" value="2026-04-17" id="deadline"></div>
+            <div class="form-row"><label class="form-label">決済方法</label>
+              <select class="form-select" id="payment-method">
+                <option>カード（Square）</option>
+                <option>銀行振込</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="margin-top:6px;font-size:11px;color:var(--faint)">
+            ※ 仲介手数料（¥198,000）はCORETO収益のため送金対象外です。敷金・前家賃・保証料等のみ送金します。
+          </div>
+
+          <div style="display:flex;gap:10px;margin-top:18px;padding-top:16px;border-top:1px solid var(--bd)">
+            <button class="btn btn-ghost" style="flex:1" onclick="saveDraft()">下書き保存</button>
+            <button class="btn btn-primary" style="flex:2" onclick="submitRemit()">✓ 送金情報を登録・HQに通知</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- IT重説チェックリスト -->
+      <div class="remit-section">
+        <div class="remit-head">
+          <div class="remit-head-title">🔑 IT重説 チェックリスト</div>
+          <span class="badge badge-nt">未実施</span>
+        </div>
+        <div class="remit-body">
+          <div class="alert-banner warn">⚠️ 審査通過後 — IT重説の日程調整が必要です。HQに宅建士割当を依頼してください。</div>
+          <div class="checklist">
+            <div class="check-item done" onclick="toggleCheck(this)">
+              <div class="check-box">✓</div>
+              <div class="check-label">重要事項説明書の作成・確認</div>
+              <div class="check-meta">2026/04/06</div>
+            </div>
+            <div class="check-item done" onclick="toggleCheck(this)">
+              <div class="check-box">✓</div>
+              <div class="check-label">クライアントへのIT重説案内（URL送付）</div>
+              <div class="check-meta">2026/04/07</div>
+            </div>
+            <div class="check-item" onclick="toggleCheck(this)">
+              <div class="check-box"></div>
+              <div class="check-label">日程調整 ― HQに宅建士割当を依頼</div>
+              <div class="check-meta">未対応</div>
+            </div>
+            <div class="check-item" onclick="toggleCheck(this)">
+              <div class="check-box"></div>
+              <div class="check-label">Zoom URL設定・クライアントへ共有</div>
+              <div class="check-meta">未対応</div>
+            </div>
+            <div class="check-item" onclick="toggleCheck(this)">
+              <div class="check-box"></div>
+              <div class="check-label">IT重説実施・録画URL保存</div>
+              <div class="check-meta">未対応</div>
+            </div>
+          </div>
+          <button class="btn btn-ghost btn-sm" style="width:100%" onclick="alert('HQにIT重説割当依頼を送信します')">📨 HQに宅建士割当を依頼する</button>
+        </div>
+      </div>
+
+      <!-- 光通信案内 -->
+      <div class="remit-section">
+        <div class="remit-head">
+          <div class="remit-head-title">⚡ 光通信案内</div>
+          <span class="badge badge-vt">案内済み</span>
+        </div>
+        <div class="remit-body">
+          <div class="alert-banner ok">✓ 光通信の案内済みです — UTL-0088 で申込手続き中</div>
+          <div style="display:flex;gap:10px">
+            <button class="btn btn-ghost btn-sm" style="flex:1" onclick="window.location.href='#'">UTL-0088 を開く →</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- SIDE -->
+    <div class="detail-side">
+      <!-- Quick actions -->
+      <div class="side-card">
+        <div class="side-card-head">クイックアクション</div>
+        <div class="action-list">
+          <button class="action-btn primary" onclick="document.getElementById('remit-section').scrollIntoView({behavior:'smooth'})">💰 送金情報を入力</button>
+          <button class="action-btn secondary" onclick="alert('HQにIT重説割当依頼を送信')">📨 IT重説を依頼</button>
+          <button class="action-btn secondary" onclick="window.location.href='coreto-crm-detail-v2.html'">👤 クライアント詳細</button>
+          <button class="action-btn secondary">📋 書類を確認</button>
+          <button class="action-btn warn" onclick="alert('成約報告画面へ')">🏆 成約を報告</button>
+        </div>
+      </div>
+
+      <!-- Reward estimate -->
+      <div class="side-card">
+        <div class="side-card-head">報酬見込み</div>
+        <div class="side-card-body">
+          <div class="si-row"><div class="si-label">仲介手数料</div><div class="si-val">¥198,000</div></div>
+          <div class="si-row"><div class="si-label">AG報酬率（Gold）</div><div class="si-val">70%</div></div>
+          <div class="si-row"><div class="si-label">AG報酬</div><div class="si-val" style="color:var(--em);font-family:'Cormorant Garamond',serif;font-size:15px">¥138,600</div></div>
+          <div class="si-row"><div class="si-label">PT報酬（佐藤）</div><div class="si-val">¥49,500（25%）</div></div>
+          <div class="si-row" style="border:none"><div class="si-label">光通信ボーナス</div><div class="si-val" style="color:var(--am)">+¥18,500</div></div>
+        </div>
+      </div>
+
+      <!-- Timeline -->
+      <div class="side-card">
+        <div class="side-card-head">案件タイムライン</div>
+        <div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <div style="width:7px;height:7px;border-radius:50%;background:var(--em);flex-shrink:0;margin-top:4px"></div>
+            <div><div style="font-size:11px;font-weight:600;color:var(--ink)">書類提出完了</div><div style="font-size:10px;color:var(--faint);font-family:'DM Mono',monospace">04/08 14:32</div></div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <div style="width:7px;height:7px;border-radius:50%;background:var(--em);flex-shrink:0;margin-top:4px"></div>
+            <div><div style="font-size:11px;font-weight:600;color:var(--ink)">申込書受付</div><div style="font-size:10px;color:var(--faint);font-family:'DM Mono',monospace">04/06 11:15</div></div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <div style="width:7px;height:7px;border-radius:50%;background:var(--em);flex-shrink:0;margin-top:4px"></div>
+            <div><div style="font-size:11px;font-weight:600;color:var(--ink)">内見実施（2物件）</div><div style="font-size:10px;color:var(--faint);font-family:'DM Mono',monospace">04/05 13:00</div></div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <div style="width:7px;height:7px;border-radius:50%;background:var(--em);flex-shrink:0;margin-top:4px"></div>
+            <div><div style="font-size:11px;font-weight:600;color:var(--ink)">初回ヒアリング</div><div style="font-size:10px;color:var(--faint);font-family:'DM Mono',monospace">03/28 15:00</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+function calcTotal(){
+  const ids=['amt-shikikin','amt-maeyachin','amt-hosho','amt-other'];
+  let total=0;
+  ids.forEach(id=>{
+    const v=document.getElementById(id).value.replace(/[^0-9]/g,'');
+    if(v) total+=parseInt(v);
+  });
+  document.getElementById('amt-total').textContent=total>0?'¥'+total.toLocaleString():'¥—';
+}
+
+function toggleCheck(el){
+  el.classList.toggle('done');
+  const box=el.querySelector('.check-box');
+  box.textContent=el.classList.contains('done')?'✓':'';
+  const meta=el.querySelector('.check-meta');
+  if(el.classList.contains('done')) meta.textContent='完了';
+}
+
+function saveDraft(){
+  alert('下書きを保存しました');
+}
+
+function submitRemit(){
+  const name=document.getElementById('mgmt-name').value;
+  const bank=document.getElementById('bank-name').value;
+  if(!name||!bank){
+    alert('管理会社名と銀行名は必須です');
+    return;
+  }
+  if(confirm('送金情報を登録してHQに通知しますか？\n\n登録後、HQが内容を確認して送金を実行します。')){
+    document.querySelector('.alert-banner.warn').className='alert-banner ok';
+    document.querySelector('.alert-banner.ok').textContent='✓ 送金情報を登録しました — HQに通知済み。入金確認後に送金が実行されます。';
+    document.querySelector('.remit-head .badge').className='badge badge-em';
+    document.querySelector('.remit-head .badge').textContent='登録済み';
+  }
+}
+</script>
+</body>
+</html>
