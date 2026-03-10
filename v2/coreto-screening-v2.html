@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>書類審査 — COREBLDG</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0D1A2D;--navy-m:#152238;--navy-l:#1E3252;
+  --gold:#C8A951;--gold-l:#DFC06A;--gold-dim:rgba(200,169,81,.15);
+  --cream:#F7F4EE;--cream2:#EFECE4;--white:#FFFFFF;
+  --ink:#1A1A2E;--ink2:#2D3748;--muted:#6B7280;--faint:#9CA3AF;
+  --em:#059669;--em-bg:#ECFDF5;--am:#D97706;--am-bg:#FFFBEB;
+  --rd:#DC2626;--rd-bg:#FEF2F2;--sk:#0284C7;--sk-bg:#F0F9FF;
+  --vt:#7C3AED;--vt-bg:#F5F3FF;
+  --bd:#E5E0D5;--bd2:#D4CFC4;
+  --sw:240px;--r:10px;--r-sm:7px;
+  --sh:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+  --sh-md:0 4px 16px rgba(0,0,0,.08);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:var(--cream)}
+.shell{display:flex;height:100vh}
+.sb{width:var(--sw);background:var(--navy);display:flex;flex-direction:column;flex-shrink:0;position:relative}
+.sb::after{content:'';position:absolute;top:0;right:0;width:1px;height:100%;background:linear-gradient(180deg,rgba(200,169,81,.25) 0%,rgba(200,169,81,.06) 50%,transparent 100%)}
+.sb-head{padding:24px 20px 18px;border-bottom:1px solid rgba(255,255,255,.06)}
+.sb-logo{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;letter-spacing:5px;color:var(--gold)}
+.sb-ver{font-size:9px;letter-spacing:2px;color:rgba(200,169,81,.3);font-family:'DM Mono',monospace;margin-top:2px}
+.sb-user{margin:14px 14px 10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:9px 11px;display:flex;align-items:center;gap:9px}
+.sb-av{width:28px;height:28px;border-radius:50%;background:var(--gold-dim);border:1px solid rgba(200,169,81,.25);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--gold);flex-shrink:0}
+.sb-nav{flex:1;overflow-y:auto;padding:6px 10px}
+.sb-nav::-webkit-scrollbar{width:3px}
+.sb-nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:2px}
+.content{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--cream)}
+.topbar{height:58px;background:var(--white);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 24px;gap:14px;flex-shrink:0;box-shadow:var(--sh)}
+.tb-title{font-size:16px;font-weight:600;color:var(--ink);font-family:'Cormorant Garamond',serif;letter-spacing:.5px}
+.tb-crumb{font-size:11px;color:var(--faint);display:flex;align-items:center;gap:5px;margin-top:1px}
+.tb-crumb a{color:var(--muted);text-decoration:none}
+.tb-crumb a:hover{color:var(--am)}
+.tb-actions{margin-left:auto;display:flex;gap:9px;align-items:center}
+.btn{padding:7px 16px;border-radius:var(--r-sm);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;font-family:'Outfit',sans-serif;border:none;letter-spacing:.3px}
+.btn-primary{background:var(--navy);color:var(--gold)}
+.btn-primary:hover{background:var(--navy-l);transform:translateY(-1px);box-shadow:0 4px 14px rgba(13,26,45,.25)}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--bd)}
+.btn-ghost:hover{background:var(--cream);color:var(--ink)}
+.page{flex:1;overflow-y:auto;padding:24px}
+.page::-webkit-scrollbar{width:5px}
+.page::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:3px}
+.qs-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+.qs-card{background:var(--white);border:1px solid var(--bd);border-radius:var(--r);padding:16px 18px;box-shadow:var(--sh);position:relative;overflow:hidden}
+.qs-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.qs-card.c1::before{background:var(--am)}
+.qs-card.c2::before{background:var(--rd)}
+.qs-card.c3::before{background:var(--em)}
+.qs-card.c4::before{background:var(--sk)}
+.qs-label{font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+.qs-val{font-size:24px;font-weight:700;color:var(--ink);font-family:'Cormorant Garamond',serif}
+.qs-sub{font-size:10px;color:var(--faint);margin-top:4px}
+.card{background:var(--white);border:1px solid var(--bd);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden}
+.filter-bar{background:var(--white);border:1px solid var(--bd);border-radius:var(--r);padding:14px 18px;margin-bottom:18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;box-shadow:var(--sh)}
+.search-wrap{position:relative;flex:1;min-width:220px}
+.search-wrap input{width:100%;padding:9px 12px 9px 36px;background:var(--cream);border:1.5px solid var(--bd);border-radius:var(--r-sm);font-size:13px;color:var(--ink);font-family:'Outfit','Noto Sans JP',sans-serif;outline:none;transition:border-color .15s}
+.search-wrap input:focus{border-color:var(--gold)}
+.search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--faint);font-size:14px}
+.filter-select{padding:8px 12px;background:var(--cream);border:1.5px solid var(--bd);border-radius:var(--r-sm);font-size:12px;color:var(--ink);font-family:'Outfit',sans-serif;outline:none;cursor:pointer}
+table{width:100%;border-collapse:collapse}
+thead th{padding:10px 14px;text-align:left;font-size:10px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);background:var(--cream);border-bottom:1px solid var(--bd);white-space:nowrap;font-family:'DM Mono',monospace}
+thead th:first-child{padding-left:18px}
+tbody tr{border-bottom:1px solid var(--bd);transition:background .1s;cursor:pointer}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:rgba(200,169,81,.04)}
+tbody td{padding:12px 14px;vertical-align:middle;font-size:12px;color:var(--ink2)}
+tbody td:first-child{padding-left:18px}
+.mono{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)}
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:600;letter-spacing:.4px;font-family:'DM Mono',monospace;white-space:nowrap}
+.badge-am{background:var(--am-bg);color:var(--am)}
+.badge-rd{background:var(--rd-bg);color:var(--rd)}
+.badge-em{background:var(--em-bg);color:var(--em)}
+.badge-sk{background:var(--sk-bg);color:var(--sk)}
+.badge-nt{background:var(--cream2);color:var(--muted)}
+
+/* チェックシートパネル */
+.sheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:400;display:none;backdrop-filter:blur(2px)}
+.sheet-panel{position:fixed;right:0;top:0;bottom:0;width:620px;background:var(--white);z-index:401;display:none;flex-direction:column;box-shadow:-8px 0 40px rgba(0,0,0,.15);overflow:hidden}
+.sheet-panel.open,.sheet-overlay.open{display:flex}
+.sheet-head{background:var(--navy);padding:20px 24px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.sheet-title{font-family:'Cormorant Garamond',serif;font-size:17px;font-weight:600;color:var(--gold)}
+.sheet-body{flex:1;overflow-y:auto;padding:20px 24px}
+.sheet-foot{padding:16px 24px;border-top:1px solid var(--bd);background:var(--cream);display:flex;gap:10px;flex-shrink:0}
+.check-group{margin-bottom:20px}
+.check-group-title{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--bd)}
+.check-item{display:flex;align-items:flex-start;gap:12px;padding:10px 12px;border-radius:8px;margin-bottom:4px;transition:.1s;border:1.5px solid transparent}
+.check-item:hover{background:var(--cream)}
+.check-item.ok{background:var(--em-bg);border-color:rgba(5,150,105,.15)}
+.check-item.ng{background:var(--rd-bg);border-color:rgba(220,38,38,.15)}
+.check-item.skip{background:var(--cream);border-color:var(--bd);opacity:.6}
+.check-left{display:flex;gap:6px;margin-top:1px}
+.chk-btn{width:28px;height:28px;border-radius:6px;border:1.5px solid var(--bd);background:var(--white);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:.13s;flex-shrink:0}
+.chk-btn:hover{transform:scale(1.08)}
+.chk-btn.ok{background:var(--em-bg);border-color:var(--em)}
+.chk-btn.ng{background:var(--rd-bg);border-color:var(--rd)}
+.chk-btn.skip{background:var(--cream2);border-color:var(--bd2)}
+.check-content{flex:1}
+.check-label{font-size:13px;font-weight:500;color:var(--ink)}
+.check-memo{width:100%;margin-top:6px;padding:6px 9px;background:var(--cream);border:1.5px solid var(--bd);border-radius:6px;font-size:11px;color:var(--ink);font-family:'Outfit','Noto Sans JP',sans-serif;outline:none;resize:none;display:none;line-height:1.5}
+.check-memo.show{display:block}
+.score-indicator{background:var(--white);border:1px solid var(--bd);border-radius:10px;padding:14px 18px;margin-bottom:18px;display:flex;align-items:center;gap:18px}
+.score-circle{width:54px;height:54px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:700;flex-shrink:0}
+.score-circle.green{background:var(--em-bg);color:var(--em);border:2px solid var(--em)}
+.score-circle.amber{background:var(--am-bg);color:var(--am);border:2px solid var(--am)}
+.score-circle.red{background:var(--rd-bg);color:var(--rd);border:2px solid var(--rd)}
+.progress-bar-wrap{flex:1}
+.progress-label{font-size:10px;color:var(--muted);margin-bottom:5px;display:flex;justify-content:space-between}
+.progress-bar{height:8px;background:var(--cream2);border-radius:4px;overflow:hidden}
+.progress-fill{height:100%;border-radius:4px;transition:width .4s}
+.progress-fill.green{background:var(--em)}
+.progress-fill.amber{background:var(--am)}
+.progress-fill.red{background:var(--rd)}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- SIDEBAR -->
+<nav class="sb">
+  <div class="sb-head">
+    <div class="sb-logo">CORE<br>BLDG</div>
+    <div class="sb-ver">v2.0 — CORETO</div>
+  </div>
+  <div class="sb-user">
+    <div class="sb-av" id="sb-av">--</div>
+    <div>
+      <div id="sb-name" style="font-size:11px;font-weight:600;color:rgba(255,255,255,.8)">...</div>
+      <div id="sb-role" style="font-size:9px;color:rgba(255,255,255,.3);font-family:'DM Mono',monospace">...</div>
+    </div>
+  </div>
+  <div class="sb-nav" id="sb-nav"><!-- CNAV --></div>
+</nav>
+
+<!-- CONTENT -->
+<div class="content">
+  <div class="topbar">
+    <div>
+      <div class="tb-title">書類審査</div>
+      <div class="tb-crumb">
+        <a href="coreto-hub-v2.html">COREBLDG</a> ›
+        <span id="tb-role-label">書類審査</span>
+      </div>
+    </div>
+    <div class="tb-actions">
+      <button class="btn btn-ghost" onclick="exportCSV()">📤 CSV出力</button>
+      <button class="btn btn-ghost" onclick="notifySlack()">🔔 Slack通知</button>
+    </div>
+  </div>
+
+  <div class="page" id="page">
+    <!-- KPI -->
+    <div class="qs-row">
+      <div class="qs-card c1">
+        <div class="qs-label">審査待ち</div>
+        <div class="qs-val" id="cnt-pending">5</div>
+        <div class="qs-sub">最古: 3日前</div>
+      </div>
+      <div class="qs-card c2">
+        <div class="qs-label">NG（要対応）</div>
+        <div class="qs-val" id="cnt-ng" style="color:var(--rd)">2</div>
+        <div class="qs-sub">書類不備あり</div>
+      </div>
+      <div class="qs-card c3">
+        <div class="qs-label">今月 承認済み</div>
+        <div class="qs-val" id="cnt-ok">18</div>
+        <div class="qs-sub">前月比 +3</div>
+      </div>
+      <div class="qs-card c4">
+        <div class="qs-label">平均審査日数</div>
+        <div class="qs-val">1.4<span style="font-size:14px;color:var(--muted)">日</span></div>
+        <div class="qs-sub">目標 2日以内</div>
+      </div>
+    </div>
+
+    <!-- フィルター -->
+    <div class="filter-bar">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="search-input" placeholder="申込者名・案件IDで検索" oninput="applyFilters()">
+      </div>
+      <select class="filter-select" id="f-status" onchange="applyFilters()">
+        <option value="">全ステータス</option>
+        <option value="pending">審査待ち</option>
+        <option value="ng">NG・要差戻し</option>
+        <option value="ok">承認済み</option>
+        <option value="sent">申込書送付済み</option>
+      </select>
+      <select class="filter-select" id="f-type" onchange="applyFilters()">
+        <option value="">不動産・人材 全て</option>
+        <option value="rent">賃貸</option>
+        <option value="sale">売買</option>
+        <option value="hr">人材</option>
+      </select>
+      <span style="font-size:12px;color:var(--muted);font-family:'DM Mono',monospace" id="filter-count">8件</span>
+    </div>
+
+    <!-- テーブル -->
+    <div class="card">
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>申込者</th>
+              <th>案件ID</th>
+              <th>種別</th>
+              <th>担当AG</th>
+              <th>提出日</th>
+              <th>審査状況</th>
+              <th>チェック進捗</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tbl-body">
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- チェックシートパネル（右スライド） -->
+<div class="sheet-overlay" id="sheet-overlay" onclick="closeSheet()"></div>
+<div class="sheet-panel" id="sheet-panel">
+  <div class="sheet-head">
+    <div>
+      <div class="sheet-title" id="sheet-title">書類審査チェックシート</div>
+      <div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:2px;font-family:'DM Mono',monospace" id="sheet-sub">—</div>
+    </div>
+    <button onclick="closeSheet()" style="background:rgba(255,255,255,.1);border:none;width:30px;height:30px;border-radius:50%;color:rgba(255,255,255,.6);font-size:16px;cursor:pointer">✕</button>
+  </div>
+  <div class="sheet-body" id="sheet-body">
+  </div>
+  <div class="sheet-foot">
+    <button class="btn btn-ghost" style="flex:1" onclick="saveDraft()">一時保存</button>
+    <button class="btn" id="btn-ng" style="flex:1;background:var(--rd-bg);color:var(--rd);border:1px solid rgba(220,38,38,.2)" onclick="submitNG()">❌ NG・差戻し</button>
+    <button class="btn btn-primary" style="flex:1" onclick="submitOK()">✅ 承認・次へ進む</button>
+  </div>
+</div>
+
+<script>
+// ── データ ──────────────────────────────────
+const APPS = [
+  { id:'SCR-0051', name:'田中 優子', kana:'タナカ ユウコ', caseId:'RENT-0194', type:'rent', typeLabel:'賃貸', ag:'AG-0042 山田 誠', submitted:'2026/03/07', status:'pending', checked:2, total:10, ngCount:0 },
+  { id:'SCR-0052', name:'高橋 大輔', kana:'タカハシ ダイスケ', caseId:'SALE-0044', type:'sale', typeLabel:'売買', ag:'AG-0042 山田 誠', submitted:'2026/03/06', status:'ng', checked:7, total:10, ngCount:2 },
+  { id:'SCR-0053', name:'中村 麻衣', kana:'ナカムラ マイ', caseId:'HR-0022', type:'hr', typeLabel:'人材', ag:'AG-0088 鈴木 花子', submitted:'2026/03/06', status:'pending', checked:0, total:8, ngCount:0 },
+  { id:'SCR-0054', name:'鈴木 健太', kana:'スズキ ケンタ', caseId:'RENT-0198', type:'rent', typeLabel:'賃貸', ag:'AG-0042 山田 誠', submitted:'2026/03/05', status:'pending', checked:5, total:10, ngCount:1 },
+  { id:'SCR-0055', name:'加藤 みなみ', kana:'カトウ ミナミ', caseId:'RENT-0201', type:'rent', typeLabel:'賃貸', ag:'AG-0015 佐藤 純', submitted:'2026/03/08', status:'sent', checked:10, total:10, ngCount:0 },
+  { id:'SCR-0046', name:'渡辺 隆', kana:'ワタナベ タカシ', caseId:'SALE-0039', type:'sale', typeLabel:'売買', ag:'AG-0042 山田 誠', submitted:'2026/03/04', status:'ok', checked:10, total:10, ngCount:0 },
+  { id:'SCR-0047', name:'伊藤 真由子', kana:'イトウ マユコ', caseId:'HR-0019', type:'hr', typeLabel:'人材', ag:'AG-0088 鈴木 花子', submitted:'2026/03/03', status:'ok', checked:8, total:8, ngCount:0 },
+  { id:'SCR-0049', name:'山本 浩二', kana:'ヤマモト コウジ', caseId:'RENT-0186', type:'rent', typeLabel:'賃貸', ag:'AG-0015 佐藤 純', submitted:'2026/03/01', status:'ok', checked:10, total:10, ngCount:0 },
+];
+
+const STATUS_MAP = {
+  pending: { label:'審査待ち', cls:'badge-am' },
+  ng:      { label:'NG・差戻し', cls:'badge-rd' },
+  ok:      { label:'承認済み', cls:'badge-em' },
+  sent:    { label:'申込書送付済み', cls:'badge-sk' },
+};
+
+// ── チェックリスト定義 ──────────────────────
+const CHECKS = {
+  rent: [
+    { group:'本人確認書類', items:[
+      {id:'id1',label:'顔写真付き身分証（有効期限内）'},
+      {id:'id2',label:'記載の住所が現住所と一致'},
+      {id:'id3',label:'氏名・生年月日が申込書と一致'},
+    ]},
+    { group:'収入証明', items:[
+      {id:'ic1',label:'源泉徴収票（直近1年分）'},
+      {id:'ic2',label:'収入が家賃の36倍以上'},
+      {id:'ic3',label:'在職証明または雇用形態の確認'},
+    ]},
+    { group:'申込書', items:[
+      {id:'ap1',label:'全項目記入済み'},
+      {id:'ap2',label:'緊急連絡先記載あり'},
+      {id:'ap3',label:'入居者全員分の情報記載'},
+      {id:'ap4',label:'サイン・捺印あり'},
+    ]},
+  ],
+  sale: [
+    { group:'本人確認書類', items:[
+      {id:'id1',label:'顔写真付き身分証（有効期限内）'},
+      {id:'id2',label:'住民票（3か月以内発行）'},
+    ]},
+    { group:'資金計画・ローン', items:[
+      {id:'ln1',label:'事前審査結果または通帳コピー'},
+      {id:'ln2',label:'自己資金証明（必要額の確認）'},
+      {id:'ln3',label:'他ローン残債の確認'},
+    ]},
+    { group:'媒介契約', items:[
+      {id:'mc1',label:'媒介契約書 署名・捺印確認'},
+      {id:'mc2',label:'重要事項説明実施確認'},
+      {id:'mc3',label:'契約日・引渡し日の合意確認'},
+      {id:'mc4',label:'瑕疵担保・インスペクション条件確認'},
+      {id:'mc5',label:'仲介手数料の合意確認'},
+    ]},
+  ],
+  hr: [
+    { group:'本人確認書類', items:[
+      {id:'id1',label:'顔写真付き身分証（有効期限内）'},
+      {id:'id2',label:'最終学歴証明書または卒業証明'},
+    ]},
+    { group:'職歴確認', items:[
+      {id:'cv1',label:'履歴書の記載内容が矛盾なし'},
+      {id:'cv2',label:'職務経歴書の詳細確認'},
+      {id:'cv3',label:'空白期間の理由確認・記録'},
+    ]},
+    { group:'雇用条件確認', items:[
+      {id:'ec1',label:'求人票との条件照合'},
+      {id:'ec2',label:'給与・待遇の合意確認'},
+      {id:'ec3',label:'入社日の調整・確認'},
+    ]},
+  ],
+};
+
+// ── 状態管理 ──────────────────────────────
+let checkState = {};
+let currentApp = null;
+let allApps = [...APPS];
+
+// ── レンダリング ──────────────────────────
+function renderTable(apps) {
+  const tbody = document.getElementById('tbl-body');
+  document.getElementById('filter-count').textContent = `${apps.length}件`;
+  tbody.innerHTML = apps.map(a => {
+    const pct = a.total > 0 ? Math.round(a.checked/a.total*100) : 0;
+    const pctCls = pct===100?'var(--em)':pct>50?'var(--am)':'var(--rd)';
+    const st = STATUS_MAP[a.status];
+    return `<tr onclick="openSheet('${a.id}')">
+      <td>
+        <div style="font-size:13px;font-weight:600;color:var(--ink)">${a.name}</div>
+        <div class="mono">${a.kana}</div>
+      </td>
+      <td class="mono">${a.caseId}</td>
+      <td><span class="badge ${a.type==='rent'?'badge-sk':a.type==='sale'?'badge-em':'badge-vt'}">${a.typeLabel}</span></td>
+      <td style="font-size:12px;color:var(--muted)">${a.ag.split(' ')[1]||a.ag}</td>
+      <td class="mono">${a.submitted}</td>
+      <td><span class="badge ${st.cls}">${st.label}</span></td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="flex:1;min-width:70px;height:5px;background:var(--cream2);border-radius:3px;overflow:hidden">
+            <div style="height:100%;width:${pct}%;background:${pctCls};border-radius:3px;transition:width .4s"></div>
+          </div>
+          <span style="font-size:10px;font-family:'DM Mono',monospace;color:${pctCls};font-weight:700">${a.checked}/${a.total}</span>
+          ${a.ngCount>0?`<span class="badge badge-rd" style="font-size:9px">NG ${a.ngCount}</span>`:''}
+        </div>
+      </td>
+      <td><button class="btn btn-ghost" style="font-size:11px;padding:5px 12px" onclick="event.stopPropagation();openSheet('${a.id}')">審査する →</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function applyFilters() {
+  const q  = document.getElementById('search-input').value.toLowerCase();
+  const st = document.getElementById('f-status').value;
+  const tp = document.getElementById('f-type').value;
+  const filtered = allApps.filter(a =>
+    (!q  || a.name.includes(q) || a.caseId.toLowerCase().includes(q)) &&
+    (!st || a.status === st) &&
+    (!tp || a.type === tp)
+  );
+  renderTable(filtered);
+}
+
+// ── チェックシートパネル ──────────────────
+function openSheet(id) {
+  currentApp = allApps.find(a => a.id === id);
+  if (!currentApp) return;
+  const checks = CHECKS[currentApp.type] || CHECKS.rent;
+
+  document.getElementById('sheet-title').textContent = `📋 ${currentApp.name}（${currentApp.typeLabel}）`;
+  document.getElementById('sheet-sub').textContent = `${currentApp.caseId} ／ 担当: ${currentApp.ag}`;
+
+  // チェック状態を初期化（未登録なら全て未）
+  if (!checkState[id]) {
+    checkState[id] = {};
+    checks.forEach(g => g.items.forEach(i => { checkState[id][i.id] = { state:'none', memo:'' }; }));
+  }
+
+  renderSheet(checks);
+  document.getElementById('sheet-overlay').classList.add('open');
+  document.getElementById('sheet-panel').classList.add('open');
+}
+
+function renderSheet(checks) {
+  const state = checkState[currentApp.id];
+  let okCount=0, ngCount=0, total=0;
+  checks.forEach(g => g.items.forEach(i => {
+    total++;
+    if (state[i.id]?.state==='ok') okCount++;
+    if (state[i.id]?.state==='ng') ngCount++;
+  }));
+  const pct = total>0 ? Math.round(okCount/total*100) : 0;
+  const circleCls = ngCount>0 ? 'red' : pct===100 ? 'green' : 'amber';
+  const barCls = ngCount>0 ? 'red' : pct===100 ? 'green' : 'amber';
+
+  document.getElementById('sheet-body').innerHTML = `
+    <div class="score-indicator">
+      <div class="score-circle ${circleCls}">${pct}%</div>
+      <div class="progress-bar-wrap">
+        <div class="progress-label">
+          <span>チェック進捗</span>
+          <span style="font-family:'DM Mono',monospace">✅ ${okCount} ／ ❌ ${ngCount} ／ 未 ${total-okCount-ngCount}</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill ${barCls}" style="width:${pct}%"></div>
+        </div>
+        ${ngCount>0 ? `<div style="font-size:11px;color:var(--rd);margin-top:6px;font-weight:600">⚠ ${ngCount}件のNGがあります。差戻し前に理由を記入してください。</div>` : ''}
+      </div>
+    </div>
+
+    ${checks.map(g => `
+      <div class="check-group">
+        <div class="check-group-title">${g.group}</div>
+        ${g.items.map(item => {
+          const st = state[item.id] || { state:'none', memo:'' };
+          return `
+            <div class="check-item ${st.state!=='none'?st.state:''}" id="ci-${item.id}">
+              <div class="check-left">
+                <button class="chk-btn ${st.state==='ok'?'ok':''}" onclick="setCheck('${item.id}','ok')" title="OK">✓</button>
+                <button class="chk-btn ${st.state==='ng'?'ng':''}" onclick="setCheck('${item.id}','ng')" title="NG">✗</button>
+              </div>
+              <div class="check-content">
+                <div class="check-label">${item.label}</div>
+                <textarea class="check-memo ${st.memo||st.state==='ng'?'show':''}" id="memo-${item.id}"
+                  rows="2" placeholder="メモ・差戻し理由を入力"
+                  onchange="saveMemo('${item.id}',this.value)">${st.memo||''}</textarea>
+              </div>
+            </div>`;
+        }).join('')}
+      </div>
+    `).join('')}`;
+}
+
+function setCheck(itemId, newState) {
+  if (!currentApp) return;
+  const st = checkState[currentApp.id];
+  st[itemId].state = st[itemId].state === newState ? 'none' : newState;
+  const checks = CHECKS[currentApp.type] || CHECKS.rent;
+  renderSheet(checks);
+
+  // テーブル行のカウントを更新
+  const app = allApps.find(a => a.id === currentApp.id);
+  if (app) {
+    app.checked = Object.values(st).filter(v => v.state === 'ok').length;
+    app.ngCount  = Object.values(st).filter(v => v.state === 'ng').length;
+    app.total    = Object.keys(st).length;
+  }
+  applyFilters();
+}
+
+function saveMemo(itemId, val) {
+  if (currentApp) checkState[currentApp.id][itemId].memo = val;
+}
+
+function closeSheet() {
+  document.getElementById('sheet-overlay').classList.remove('open');
+  document.getElementById('sheet-panel').classList.remove('open');
+  currentApp = null;
+}
+
+function saveDraft() {
+  alert('一時保存しました。');
+}
+
+function submitOK() {
+  if (!currentApp) return;
+  if (!confirm(`${currentApp.name} の書類審査を「承認」しますか？`)) return;
+  currentApp.status = 'ok';
+  closeSheet();
+  applyFilters();
+  showToast('✅ 承認しました。担当AGに通知を送信しました。', 'em');
+}
+
+function submitNG() {
+  if (!currentApp) return;
+  const ngItems = Object.entries(checkState[currentApp.id] || {}).filter(([,v])=>v.state==='ng');
+  if (ngItems.length === 0) { alert('NGの項目がありません。NGボタンで問題箇所を指定してから差戻してください。'); return; }
+  if (!confirm(`${currentApp.name} の審査を「差戻し」しますか？NG ${ngItems.length}件を担当AGに通知します。`)) return;
+  currentApp.status = 'ng';
+  closeSheet();
+  applyFilters();
+  showToast('❌ 差戻しました。担当AGにSlack通知を送信しました。', 'rd');
+}
+
+function exportCSV() { alert('CSV出力機能（実装予定）'); }
+function notifySlack() { alert('Slack通知を送信しました（デモ）'); }
+
+function showToast(msg, type) {
+  const t = document.createElement('div');
+  t.style.cssText = `position:fixed;bottom:28px;right:28px;z-index:999;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;font-family:'Outfit',sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.15);transition:opacity .4s;${type==='em'?'background:#ECFDF5;color:#059669;border:1px solid rgba(5,150,105,.2)':'background:#FEF2F2;color:#DC2626;border:1px solid rgba(220,38,38,.2)'}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(()=>{t.style.opacity='0';setTimeout(()=>t.remove(),400)}, 3200);
+}
+
+// ── 初期化 ───────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  renderTable(allApps);
+  // ロールに応じてページ説明を更新
+  const role = sessionStorage.getItem('coreto_role') || 'hq';
+  const roleLabel = role === 'hq' ? '全体' : '担当分';
+  const el = document.getElementById('tb-role-label');
+  if (el) el.textContent = `書類審査（${roleLabel}）`;
+  CNAV.init('screening');
+});
+</script>
+<script src="coreto-nav-v2.js"></script>
+</body>
+</html>

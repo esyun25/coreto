@@ -824,11 +824,11 @@ body {
     </div>
 
     <div class="sb-footer">
-      <div class="sb-footer-item" onclick="window.location.href='coreto-hub-v2.html'">
-        <span>⚙️</span><span>設定・ログアウト</span>
+      <div class="sb-footer-item" onclick="openSettingsModal()">
+        <span>⚙️</span><span>設定</span>
       </div>
-      <div class="sb-footer-item">
-        <span>📖</span><span>マニュアル</span>
+      <div class="sb-footer-item" onclick="doLogout()">
+        <span>🚪</span><span>ログアウト</span>
       </div>
     </div>
   </nav>
@@ -891,6 +891,9 @@ function doLogin() {
 
 function loginAs(role) {
   currentRole = role;
+  // 外部ページ遷移後もロールを保持するためsessionStorageへ保存
+  sessionStorage.setItem('coreto_role', role);
+
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
 
@@ -910,6 +913,22 @@ function loginAs(role) {
   renderNav(r.nav());
   r.page();
 }
+
+// ハッシュ遷移（外部ページの#link → hubでページ描画）
+(function() {
+  const hash = window.location.hash.replace('#','');
+  if (hash && hash !== '') {
+    const role = sessionStorage.getItem('coreto_role');
+    if (role) {
+      loginAs(role);
+      setTimeout(() => {
+        navClick(hash, document.querySelector('.nav-item') || { classList:{add:()=>{},remove:()=>{}} });
+        routePage(hash);
+      }, 50);
+      window.history.replaceState(null,'',window.location.pathname);
+    }
+  }
+})();
 
 // ═══════════════════════════════════════════
 // NAV DEFINITIONS
@@ -2330,9 +2349,71 @@ function renderInternDash() {
     </div>`;
 }
 
+// ═══════════════════════════════════════════
+// 設定モーダル
+// ═══════════════════════════════════════════
+const SETTINGS_MODAL_HTML = `
+<div id="s-overlay" onclick="closeSettingsModal()" style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9998;backdrop-filter:blur(2px)"></div>
+<div id="s-modal" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;width:420px;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.2)">
+  <div style="background:#0D1A2D;padding:18px 22px;display:flex;align-items:center;justify-content:space-between">
+    <div style="font-family:'Cormorant Garamond',serif;font-size:16px;font-weight:700;letter-spacing:3px;color:#C8A951">設定</div>
+    <button onclick="closeSettingsModal()" style="background:rgba(255,255,255,.1);border:none;width:28px;height:28px;border-radius:50%;color:rgba(255,255,255,.6);font-size:16px;cursor:pointer">✕</button>
+  </div>
+  <div style="padding:20px 22px">
+    <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#6B7280;margin-bottom:10px">表示設定</div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px">
+      <label style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#F7F4EE;border-radius:8px;cursor:pointer">
+        <span style="font-size:13px;color:#1A1A2E">デスクトップ通知</span>
+        <input type="checkbox" checked style="accent-color:#0D1A2D;width:14px;height:14px">
+      </label>
+      <label style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#F7F4EE;border-radius:8px;cursor:pointer">
+        <span style="font-size:13px;color:#1A1A2E">ダークモード（開発中）</span>
+        <input type="checkbox" disabled style="accent-color:#0D1A2D;width:14px;height:14px">
+      </label>
+    </div>
+    <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#6B7280;margin-bottom:10px">アカウント</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div style="padding:10px 14px;background:#F7F4EE;border-radius:8px;display:flex;justify-content:space-between;font-size:13px">
+        <span style="color:#6B7280">ログイン中</span>
+        <span style="font-weight:600;color:#1A1A2E" id="s-modal-user">—</span>
+      </div>
+      <div style="padding:10px 14px;background:#F7F4EE;border-radius:8px;display:flex;justify-content:space-between;font-size:13px">
+        <span style="color:#6B7280">バージョン</span>
+        <span style="font-family:'DM Mono',monospace;color:#9CA3AF">COREBLDG v2.0</span>
+      </div>
+    </div>
+  </div>
+  <div style="padding:0 22px 22px;display:flex;gap:8px">
+    <button onclick="closeSettingsModal()" style="flex:1;padding:11px;background:#F7F4EE;border:1px solid #E5E0D5;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:#6B7280">閉じる</button>
+    <button onclick="doLogout()" style="flex:1;padding:11px;background:#DC2626;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;color:#fff">ログアウト</button>
+  </div>
+</div>`;
+
+function openSettingsModal() {
+  if (document.getElementById('s-modal')) return;
+  const wrap = document.createElement('div');
+  wrap.innerHTML = SETTINGS_MODAL_HTML;
+  [...wrap.children].forEach(el => document.body.appendChild(el));
+  const names = { hq:'田中 誠一（統括）', re_ag:'山田 誠（RE-AG）', hr_ag:'鈴木 花子（HR-AG）', pt:'佐藤 健一（PT）', intern:'渡辺 大輝（インターン）' };
+  const u = document.getElementById('s-modal-user');
+  if (u) u.textContent = names[currentRole] || '—';
+}
+
+function closeSettingsModal() {
+  ['s-overlay','s-modal'].forEach(id => { const el = document.getElementById(id); if(el) el.remove(); });
+}
+
+function doLogout() {
+  if (!confirm('ログアウトしますか？')) return;
+  sessionStorage.removeItem('coreto_role');
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  closeSettingsModal();
+}
+
 // Auto-login as HQ for demo
 window.addEventListener('DOMContentLoaded', () => {
-  // Start at login screen
+  // Start at login screen — ハッシュ遷移はloginAs内で処理
 });
 </script>
 </body>

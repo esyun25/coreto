@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IT重説管理 — COREBLDG</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0D1A2D;--navy-m:#152238;--navy-l:#1E3252;
+  --gold:#C8A951;--gold-l:#DFC06A;--gold-dim:rgba(200,169,81,.15);
+  --cream:#F7F4EE;--cream2:#EFECE4;--white:#FFFFFF;
+  --ink:#1A1A2E;--ink2:#2D3748;--muted:#6B7280;--faint:#9CA3AF;
+  --em:#059669;--em-bg:#ECFDF5;--am:#D97706;--am-bg:#FFFBEB;
+  --rd:#DC2626;--rd-bg:#FEF2F2;--sk:#0284C7;--sk-bg:#F0F9FF;
+  --vt:#7C3AED;--vt-bg:#F5F3FF;
+  --bd:#E5E0D5;--bd2:#D4CFC4;
+  --sw:240px;--r:10px;--r-sm:7px;
+  --sh:0 1px 3px rgba(0,0,0,.06);--sh-md:0 4px 16px rgba(0,0,0,.08);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:var(--cream)}
+.shell{display:flex;height:100vh}
+.sb{width:var(--sw);background:var(--navy);display:flex;flex-direction:column;flex-shrink:0;position:relative}
+.sb::after{content:'';position:absolute;top:0;right:0;width:1px;height:100%;background:linear-gradient(180deg,rgba(200,169,81,.25) 0%,rgba(200,169,81,.06) 50%,transparent 100%)}
+.sb-head{padding:24px 20px 18px;border-bottom:1px solid rgba(255,255,255,.06)}
+.sb-logo{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;letter-spacing:5px;color:var(--gold)}
+.sb-ver{font-size:9px;letter-spacing:2px;color:rgba(200,169,81,.3);font-family:'DM Mono',monospace;margin-top:2px}
+.sb-user{margin:14px 14px 10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:9px 11px;display:flex;align-items:center;gap:9px}
+.sb-av{width:28px;height:28px;border-radius:50%;background:var(--gold-dim);border:1px solid rgba(200,169,81,.25);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--gold);flex-shrink:0}
+.sb-nav{flex:1;overflow-y:auto;padding:6px 10px}
+.sb-nav::-webkit-scrollbar{width:3px}
+.sb-nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:2px}
+.content{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--cream)}
+.topbar{height:58px;background:var(--white);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 24px;gap:14px;flex-shrink:0;box-shadow:var(--sh)}
+.tb-title{font-size:16px;font-weight:600;color:var(--ink);font-family:'Cormorant Garamond',serif;letter-spacing:.5px}
+.tb-crumb{font-size:11px;color:var(--faint);display:flex;align-items:center;gap:5px;margin-top:1px}
+.tb-crumb a{color:var(--muted);text-decoration:none}
+.tb-crumb a:hover{color:var(--am)}
+.tb-actions{margin-left:auto;display:flex;gap:9px;align-items:center}
+.btn{padding:7px 16px;border-radius:var(--r-sm);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;font-family:'Outfit',sans-serif;border:none;letter-spacing:.3px}
+.btn-primary{background:var(--navy);color:var(--gold)}
+.btn-primary:hover{background:var(--navy-l);transform:translateY(-1px);box-shadow:0 4px 14px rgba(13,26,45,.25)}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--bd)}
+.btn-ghost:hover{background:var(--cream);color:var(--ink)}
+.page{flex:1;overflow-y:auto;padding:24px}
+.page::-webkit-scrollbar{width:5px}
+.page::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:3px}
+.qs-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.qs-card{background:var(--white);border:1px solid var(--bd);border-radius:var(--r);padding:16px 18px;box-shadow:var(--sh);position:relative;overflow:hidden}
+.qs-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.qs-card.c1::before{background:var(--am)}
+.qs-card.c2::before{background:var(--sk)}
+.qs-card.c3::before{background:var(--em)}
+.qs-card.c4::before{background:var(--vt)}
+.qs-label{font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+.qs-val{font-size:24px;font-weight:700;color:var(--ink);font-family:'Cormorant Garamond',serif}
+.qs-sub{font-size:10px;color:var(--faint);margin-top:4px}
+.card{background:var(--white);border:1px solid var(--bd);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden}
+.section-bar{display:flex;align-items:center;justify-content:space-between;padding:14px 18px 12px;border-bottom:1px solid var(--bd)}
+.section-title{font-size:14px;font-weight:600;color:var(--ink);font-family:'Cormorant Garamond',serif}
+.filter-bar{background:var(--white);border:1px solid var(--bd);border-radius:var(--r);padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;box-shadow:var(--sh)}
+.search-wrap{position:relative;flex:1;min-width:200px}
+.search-wrap input{width:100%;padding:8px 12px 8px 34px;background:var(--cream);border:1.5px solid var(--bd);border-radius:var(--r-sm);font-size:12px;color:var(--ink);font-family:'Outfit','Noto Sans JP',sans-serif;outline:none;transition:.15s}
+.search-wrap input:focus{border-color:var(--gold)}
+.search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--faint)}
+.filter-select{padding:8px 12px;background:var(--cream);border:1.5px solid var(--bd);border-radius:var(--r-sm);font-size:12px;color:var(--ink);font-family:'Outfit',sans-serif;outline:none;cursor:pointer}
+table{width:100%;border-collapse:collapse}
+thead th{padding:10px 14px;text-align:left;font-size:10px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);background:var(--cream);border-bottom:1px solid var(--bd);white-space:nowrap;font-family:'DM Mono',monospace}
+thead th:first-child{padding-left:18px}
+tbody tr{border-bottom:1px solid var(--bd);transition:background .1s;cursor:pointer}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:rgba(200,169,81,.04)}
+tbody td{padding:12px 14px;vertical-align:middle;font-size:12px;color:var(--ink2)}
+tbody td:first-child{padding-left:18px}
+.mono{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)}
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:600;letter-spacing:.4px;font-family:'DM Mono',monospace;white-space:nowrap}
+.badge-am{background:var(--am-bg);color:var(--am)}
+.badge-rd{background:var(--rd-bg);color:var(--rd)}
+.badge-em{background:var(--em-bg);color:var(--em)}
+.badge-sk{background:var(--sk-bg);color:var(--sk)}
+.badge-vt{background:var(--vt-bg);color:var(--vt)}
+.badge-nt{background:var(--cream2);color:var(--muted)}
+/* チェックリストパネル */
+.panel-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:400;display:none;backdrop-filter:blur(2px)}
+.panel-drawer{position:fixed;right:0;top:0;bottom:0;width:640px;background:var(--white);z-index:401;display:none;flex-direction:column;box-shadow:-8px 0 40px rgba(0,0,0,.15);overflow:hidden}
+.panel-drawer.open,.panel-overlay.open{display:flex}
+.panel-head{background:var(--navy);padding:20px 24px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.panel-title{font-family:'Cormorant Garamond',serif;font-size:17px;font-weight:600;color:var(--gold)}
+.panel-body{flex:1;overflow-y:auto;padding:20px 24px}
+.panel-foot{padding:16px 24px;border-top:1px solid var(--bd);background:var(--cream);display:flex;gap:10px;flex-shrink:0}
+/* 重説チェック専用スタイル */
+.it-step{background:var(--white);border:1px solid var(--bd);border-radius:10px;margin-bottom:12px;overflow:hidden}
+.it-step-head{display:flex;align-items:center;gap:12px;padding:12px 16px;cursor:pointer;transition:.13s;user-select:none}
+.it-step-head:hover{background:var(--cream)}
+.it-step-num{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;font-family:'DM Mono',monospace}
+.it-step-num.done{background:var(--em-bg);color:var(--em);border:2px solid var(--em)}
+.it-step-num.partial{background:var(--am-bg);color:var(--am);border:2px solid var(--am)}
+.it-step-num.none{background:var(--cream2);color:var(--muted);border:2px solid var(--bd)}
+.it-step-title{font-size:13px;font-weight:600;color:var(--ink);flex:1}
+.it-step-body{padding:0 16px 14px;border-top:1px solid var(--bd);background:var(--cream)}
+.it-check-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;margin-top:8px;background:var(--white);border:1.5px solid var(--bd);transition:.13s}
+.it-check-item.checked{background:var(--em-bg);border-color:rgba(5,150,105,.2)}
+.it-check-item input[type="checkbox"]{width:16px;height:16px;accent-color:var(--em);flex-shrink:0;cursor:pointer}
+.it-check-item label{font-size:12px;color:var(--ink);cursor:pointer;flex:1}
+.it-check-item.checked label{color:var(--em)}
+/* 日程ピッカー */
+.date-slots{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.date-slot{padding:10px;border:1.5px solid var(--bd);border-radius:8px;text-align:center;cursor:pointer;transition:.13s;background:var(--white)}
+.date-slot:hover{border-color:var(--gold);background:rgba(200,169,81,.04)}
+.date-slot.selected{border-color:var(--em);background:var(--em-bg)}
+.date-slot-day{font-size:11px;font-weight:600;color:var(--ink)}
+.date-slot-time{font-size:10px;color:var(--muted);margin-top:2px;font-family:'DM Mono',monospace}
+.date-slot.selected .date-slot-day{color:var(--em)}
+/* 電子署名エリア */
+.sig-box{border:2px dashed var(--bd);border-radius:10px;padding:28px;text-align:center;margin-top:10px;background:var(--cream)}
+.sig-box.signed{border-color:var(--em);background:var(--em-bg)}
+/* タブ */
+.tab-bar{display:flex;gap:4px;padding:14px 18px 0;border-bottom:1px solid var(--bd);background:var(--white)}
+.tab{padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;border-bottom:2.5px solid transparent;color:var(--muted);transition:.13s}
+.tab.active{color:var(--ink);border-bottom-color:var(--navy)}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- SIDEBAR -->
+<nav class="sb">
+  <div class="sb-head">
+    <div class="sb-logo">CORE<br>BLDG</div>
+    <div class="sb-ver">v2.0 — CORETO</div>
+  </div>
+  <div class="sb-user">
+    <div class="sb-av" id="sb-av">--</div>
+    <div>
+      <div id="sb-name" style="font-size:11px;font-weight:600;color:rgba(255,255,255,.8)">...</div>
+      <div id="sb-role" style="font-size:9px;color:rgba(255,255,255,.3);font-family:'DM Mono',monospace">...</div>
+    </div>
+  </div>
+  <div class="sb-nav" id="sb-nav"><!-- CNAV --></div>
+</nav>
+
+<!-- CONTENT -->
+<div class="content">
+  <div class="topbar">
+    <div>
+      <div class="tb-title">IT重説管理</div>
+      <div class="tb-crumb">
+        <a href="coreto-hub-v2.html">COREBLDG</a> › <span>IT重説管理</span>
+      </div>
+    </div>
+    <div class="tb-actions">
+      <button class="btn btn-ghost" id="btn-schedule" onclick="openScheduleModal()">📅 日程調整</button>
+      <button class="btn btn-primary" onclick="openNewModal()">＋ IT重説を登録</button>
+    </div>
+  </div>
+
+  <div class="content" style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+    <!-- タブバー -->
+    <div class="tab-bar">
+      <div class="tab active" id="tab-list" onclick="switchTab('list')">案件一覧</div>
+      <div class="tab" id="tab-calendar" onclick="switchTab('calendar')">カレンダー</div>
+      <div class="tab" id="tab-log" onclick="switchTab('log')">完了ログ</div>
+    </div>
+
+    <div class="page" id="page-content">
+      <!-- KPI -->
+      <div class="qs-row" style="margin-top:0;padding-top:0">
+        <div class="qs-card c1">
+          <div class="qs-label">日程未確定</div>
+          <div class="qs-val" style="color:var(--am)">3</div>
+          <div class="qs-sub">要日程調整</div>
+        </div>
+        <div class="qs-card c2">
+          <div class="qs-label">今週予定</div>
+          <div class="qs-val">4</div>
+          <div class="qs-sub">うち明日: 2件</div>
+        </div>
+        <div class="qs-card c3">
+          <div class="qs-label">今月完了</div>
+          <div class="qs-val">22</div>
+          <div class="qs-sub">前月比 +4</div>
+        </div>
+        <div class="qs-card c4">
+          <div class="qs-label">電子契約率</div>
+          <div class="qs-val">78<span style="font-size:14px;color:var(--muted)">%</span></div>
+          <div class="qs-sub">目標 90%</div>
+        </div>
+      </div>
+
+      <!-- フィルター -->
+      <div class="filter-bar">
+        <div class="search-wrap">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="search-input" placeholder="入居者名・案件IDで検索" oninput="applyFilters()">
+        </div>
+        <select class="filter-select" id="f-status" onchange="applyFilters()">
+          <option value="">全ステータス</option>
+          <option value="unscheduled">日程未確定</option>
+          <option value="scheduled">日程確定</option>
+          <option value="done">重説完了</option>
+          <option value="signed">電子署名済み</option>
+        </select>
+        <select class="filter-select" id="f-ag" onchange="applyFilters()">
+          <option value="">全AG</option>
+          <option value="AG-0042">山田 誠</option>
+          <option value="AG-0015">佐藤 純</option>
+          <option value="AG-0028">田中 健</option>
+        </select>
+        <span style="font-size:12px;color:var(--muted);font-family:'DM Mono',monospace" id="filter-count">7件</span>
+      </div>
+
+      <!-- テーブル -->
+      <div class="card">
+        <table>
+          <thead>
+            <tr>
+              <th>入居者 / 案件</th>
+              <th>物件</th>
+              <th>担当宅建士</th>
+              <th>重説日時</th>
+              <th>実施方法</th>
+              <th>ステータス</th>
+              <th>チェックリスト</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tbl-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- チェックリストパネル（右スライド） -->
+<div class="panel-overlay" id="panel-overlay" onclick="closePanel()"></div>
+<div class="panel-drawer" id="panel-drawer">
+  <div class="panel-head">
+    <div>
+      <div class="panel-title" id="panel-title">IT重説チェックリスト</div>
+      <div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:2px;font-family:'DM Mono',monospace" id="panel-sub">—</div>
+    </div>
+    <button onclick="closePanel()" style="background:rgba(255,255,255,.1);border:none;width:30px;height:30px;border-radius:50%;color:rgba(255,255,255,.6);font-size:16px;cursor:pointer">✕</button>
+  </div>
+  <div class="panel-body" id="panel-body"></div>
+  <div class="panel-foot">
+    <button class="btn btn-ghost" style="flex:1" onclick="closePanel()">閉じる</button>
+    <button class="btn" style="flex:1;background:var(--sk-bg);color:var(--sk);border:1px solid rgba(2,132,199,.2)" onclick="sendReminder()">📨 リマインド送信</button>
+    <button class="btn btn-primary" style="flex:1" onclick="markDone()">✅ 重説完了</button>
+  </div>
+</div>
+
+<!-- 新規登録モーダル -->
+<div class="modal-bg" id="modal-new" style="position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:500;display:none;align-items:center;justify-content:center;backdrop-filter:blur(2px)">
+  <div style="background:var(--white);border-radius:14px;padding:28px;width:500px;max-width:90vw;box-shadow:0 24px 64px rgba(0,0,0,.15);border:1px solid var(--bd)">
+    <div style="font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:var(--ink);margin-bottom:4px">＋ IT重説を登録</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:20px">不動産賃貸・売買の重要事項説明（IT重説）を新規登録します</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+      <div>
+        <label style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">案件ID</label>
+        <input class="form-input" placeholder="RENT-0000 / SALE-0000" style="width:100%;padding:9px 12px;background:var(--cream);border:1.5px solid var(--bd);border-radius:var(--r-sm);font-size:13px;color:var(--ink);font-family:'Outfit',sans-serif;outline:none">
+      </div>
+      <div>
+        <label style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">担当AG</label>
+        <select style="width:100%;padding:9px 12px;background:var(--cream);border:1.5px solid var(--bd);border-radius:var(--r-sm);font-size:13px;color:var(--ink);font-family:'Outfit',sans-serif;outline:none;cursor:pointer">
+          <option>AG-0042 山田 誠</option>
+          <option>AG-0015 佐藤 純</option>
+          <option>AG-0028 田中 健</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+      <div>
+        <label style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">実施日時</label>
+        <input type="datetime-local" style="width:100%;padding:9px 12px;background:var(--cream);border:1.5px solid var(--bd);border-radius:var(--r-sm);font-size:13px;color:var(--ink);font-family:'Outfit',sans-serif;outline:none">
+      </div>
+      <div>
+        <label style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">実施方法</label>
+        <select style="width:100%;padding:9px 12px;background:var(--cream);border:1.5px solid var(--bd);border-radius:var(--r-sm);font-size:13px;color:var(--ink);font-family:'Outfit',sans-serif;outline:none;cursor:pointer">
+          <option>Zoom</option>
+          <option>Google Meet</option>
+          <option>対面</option>
+          <option>その他</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--bd)">
+      <button class="btn btn-ghost" onclick="document.getElementById('modal-new').style.display='none'">キャンセル</button>
+      <button class="btn btn-primary" onclick="submitNewCase()">登録する</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── データ ──────────────────────────────────
+const CASES = [
+  { id:'ITS-0051', name:'田中 優子', caseId:'RENT-0194', property:'港区三田3-4-12 302号', ag:'AG-0042', agName:'山田 誠', takken:'宅建士 山田 誠（登録番号 東京123456）', datetime:'2026/03/12 14:00', method:'Zoom', status:'scheduled', checkedCount:3, totalCount:12, signed:false },
+  { id:'ITS-0052', name:'鈴木 健太', caseId:'RENT-0198', property:'渋谷区恵比寿1-2-3 501号', ag:'AG-0042', agName:'山田 誠', takken:'宅建士 山田 誠（登録番号 東京123456）', datetime:'', method:'Zoom', status:'unscheduled', checkedCount:0, totalCount:12, signed:false },
+  { id:'ITS-0053', name:'加藤 みなみ', caseId:'RENT-0201', property:'目黒区中目黒2-1-8 201号', ag:'AG-0015', agName:'佐藤 純', takken:'宅建士 佐藤 純（登録番号 東京234567）', datetime:'2026/03/11 10:00', method:'Google Meet', status:'done', checkedCount:12, totalCount:12, signed:false },
+  { id:'ITS-0054', name:'伊藤 翔', caseId:'RENT-0188', property:'品川区大崎1-5-6 801号', ag:'AG-0028', agName:'田中 健', takken:'宅建士 田中 健（登録番号 東京345678）', datetime:'2026/03/10 15:30', method:'Zoom', status:'signed', checkedCount:12, totalCount:12, signed:true },
+  { id:'ITS-0050', name:'高橋 美咲', caseId:'RENT-0182', property:'新宿区西新宿7-8-2 1402号', ag:'AG-0042', agName:'山田 誠', takken:'宅建士 山田 誠（登録番号 東京123456）', datetime:'', method:'Zoom', status:'unscheduled', checkedCount:0, totalCount:12, signed:false },
+  { id:'ITS-0048', name:'中村 陽子', caseId:'RENT-0176', property:'港区白金台5-2-1 305号', ag:'AG-0015', agName:'佐藤 純', takken:'宅建士 佐藤 純（登録番号 東京234567）', datetime:'2026/03/14 11:00', method:'Zoom', status:'scheduled', checkedCount:7, totalCount:12, signed:false },
+  { id:'ITS-0046', name:'山田 一郎', caseId:'SALE-0039', property:'渋谷区代々木3-4-5 戸建て', ag:'AG-0042', agName:'山田 誠', takken:'宅建士 山田 誠（登録番号 東京123456）', datetime:'2026/03/08 14:00', method:'対面', status:'signed', checkedCount:14, totalCount:14, signed:true },
+];
+
+const STATUS_LABEL = {
+  unscheduled:{ label:'日程未確定', cls:'badge-am' },
+  scheduled:  { label:'日程確定',   cls:'badge-sk' },
+  done:       { label:'重説完了',   cls:'badge-vt' },
+  signed:     { label:'電子署名済', cls:'badge-em' },
+};
+
+// IT重説チェックリスト（賃貸）
+const CHECK_ITEMS_RENT = [
+  { group:'事前確認', items:[
+    '本人確認（顔写真付き身分証の画面確認）',
+    '宅建士証の提示・説明',
+    '映像・音声の相互確認',
+    '録画・録音の同意取得',
+  ]},
+  { group:'重要事項説明', items:[
+    '取引態様（媒介・代理・自ら）の説明',
+    '物件の表示（所在地・面積等）',
+    '設備・附帯設備の説明',
+    '法令上の制限（用途地域等）',
+    '契約期間・更新・解約条件',
+    '敷金・礼金・賃料・管理費',
+    '特約事項（原状回復等）',
+    '建物状況調査（インスペクション）の有無',
+  ]},
+];
+const CHECK_ITEMS_SALE = [
+  { group:'事前確認', items:[
+    '本人確認（顔写真付き身分証の画面確認）',
+    '宅建士証の提示・説明',
+    '映像・音声の相互確認',
+    '録画・録音の同意取得',
+  ]},
+  { group:'重要事項説明', items:[
+    '取引態様の説明',
+    '登記記録・権利関係の説明',
+    '法令上の制限（用途地域・建ぺい率・容積率）',
+    '接道・セットバックの確認',
+    '石綿・耐震・住宅性能評価の確認',
+    'ローン条件・ローン特約',
+    '売買代金・決済・引渡し条件',
+    '瑕疵担保責任・保険',
+    '特記事項',
+    '買取特約・買換え特約',
+  ]},
+];
+
+let currentCase = null;
+let checkStates = {};
+let selectedDate = null;
+
+function getChecks(c) {
+  return c.caseId.startsWith('SALE') ? CHECK_ITEMS_SALE : CHECK_ITEMS_RENT;
+}
+
+// ── テーブル描画 ───────────────────────────
+function renderTable(cases) {
+  document.getElementById('filter-count').textContent = `${cases.length}件`;
+  document.getElementById('tbl-body').innerHTML = cases.map(c => {
+    const st = STATUS_LABEL[c.status];
+    const pct = c.totalCount > 0 ? Math.round(c.checkedCount/c.totalCount*100) : 0;
+    const pctColor = pct===100?'var(--em)':pct>50?'var(--am)':'var(--rd)';
+    return `<tr onclick="openPanel('${c.id}')">
+      <td>
+        <div style="font-size:13px;font-weight:600;color:var(--ink)">${c.name}</div>
+        <div class="mono">${c.caseId}</div>
+      </td>
+      <td style="font-size:11px;color:var(--muted);max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.property}</td>
+      <td style="font-size:12px;color:var(--ink2)">${c.agName}<div class="mono">${c.ag}</div></td>
+      <td class="mono">${c.datetime||'<span style="color:var(--am);font-weight:600">未定</span>'}</td>
+      <td style="font-size:12px;color:var(--muted)">${c.method}</td>
+      <td><span class="badge ${st.cls}">${st.label}</span>${c.signed?'<span class="badge badge-em" style="margin-left:4px">🔏</span>':''}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:7px">
+          <div style="flex:1;min-width:60px;height:5px;background:var(--cream2);border-radius:3px;overflow:hidden">
+            <div style="height:100%;width:${pct}%;background:${pctColor};border-radius:3px;transition:width .4s"></div>
+          </div>
+          <span style="font-size:10px;font-family:'DM Mono',monospace;color:${pctColor};font-weight:700">${c.checkedCount}/${c.totalCount}</span>
+        </div>
+      </td>
+      <td><button class="btn btn-ghost" style="font-size:11px;padding:5px 12px" onclick="event.stopPropagation();openPanel('${c.id}')">確認 →</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function applyFilters() {
+  const q  = document.getElementById('search-input').value.toLowerCase();
+  const st = document.getElementById('f-status').value;
+  const ag = document.getElementById('f-ag').value;
+  const filtered = CASES.filter(c =>
+    (!q  || c.name.includes(q) || c.caseId.toLowerCase().includes(q)) &&
+    (!st || c.status === st) &&
+    (!ag || c.ag === ag)
+  );
+  renderTable(filtered);
+}
+
+// ── チェックリストパネル ──────────────────
+function openPanel(id) {
+  currentCase = CASES.find(c => c.id === id);
+  if (!currentCase) return;
+
+  document.getElementById('panel-title').textContent = `🔑 ${currentCase.name}（IT重説チェックリスト）`;
+  document.getElementById('panel-sub').textContent = `${currentCase.caseId} ／ ${currentCase.property}`;
+
+  if (!checkStates[id]) {
+    const checks = getChecks(currentCase);
+    checkStates[id] = {};
+    checks.forEach(g => g.items.forEach((item,i) => { checkStates[id][`${g.group}-${i}`] = false; }));
+  }
+
+  renderPanel();
+  document.getElementById('panel-overlay').classList.add('open');
+  document.getElementById('panel-drawer').classList.add('open');
+}
+
+function renderPanel() {
+  const c = currentCase;
+  const checks = getChecks(c);
+  const state = checkStates[c.id];
+  let done = Object.values(state).filter(Boolean).length;
+  let total = Object.keys(state).length;
+  const pct = total > 0 ? Math.round(done/total*100) : 0;
+
+  document.getElementById('panel-body').innerHTML = `
+
+    <!-- 基本情報 -->
+    <div style="background:var(--cream);border:1px solid var(--bd);border-radius:10px;padding:14px 16px;margin-bottom:16px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:12px">
+        <div><span style="color:var(--muted);font-size:10px;display:block;margin-bottom:2px">担当宅建士</span><span style="font-weight:600;color:var(--ink)">${c.takken}</span></div>
+        <div><span style="color:var(--muted);font-size:10px;display:block;margin-bottom:2px">実施方法</span><span style="font-weight:600;color:var(--ink)">${c.method}</span></div>
+        <div><span style="color:var(--muted);font-size:10px;display:block;margin-bottom:2px">実施日時</span><span style="font-weight:600;color:${c.datetime?'var(--ink)':'var(--am)'}">${c.datetime||'未設定'}</span></div>
+        <div><span style="color:var(--muted);font-size:10px;display:block;margin-bottom:2px">電子署名</span><span style="font-weight:600;color:${c.signed?'var(--em)':'var(--muted)'}">${c.signed?'✅ 署名済み':'未署名'}</span></div>
+      </div>
+    </div>
+
+    <!-- 進捗 -->
+    <div style="display:flex;align-items:center;gap:14px;padding:12px 16px;background:var(--white);border:1px solid var(--bd);border-radius:10px;margin-bottom:16px">
+      <div style="width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;font-family:'Cormorant Garamond',serif;flex-shrink:0;${pct===100?'background:var(--em-bg);color:var(--em);border:2px solid var(--em)':pct>50?'background:var(--am-bg);color:var(--am);border:2px solid var(--am)':'background:var(--cream2);color:var(--muted);border:2px solid var(--bd)'}">${pct}%</div>
+      <div style="flex:1">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:5px;display:flex;justify-content:space-between"><span>チェック進捗</span><span style="font-family:'DM Mono',monospace">${done} / ${total}</span></div>
+        <div style="height:7px;background:var(--cream2);border-radius:4px;overflow:hidden">
+          <div style="height:100%;width:${pct}%;background:${pct===100?'var(--em)':pct>50?'var(--am)':'var(--rd)'};border-radius:4px;transition:width .4s"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 日程設定（未定の場合） -->
+    ${!c.datetime ? `
+    <div style="background:var(--am-bg);border:1px solid rgba(217,119,6,.2);border-radius:10px;padding:14px 16px;margin-bottom:16px">
+      <div style="font-size:12px;font-weight:700;color:var(--am);margin-bottom:10px">📅 実施日時が未設定です — 候補日を選択してください</div>
+      <div class="date-slots">
+        ${['3/11 (火) 10:00','3/12 (水) 14:00','3/13 (木) 16:00','3/14 (金) 10:00','3/17 (月) 13:00','3/18 (火) 15:00'].map((d,i) => `
+          <div class="date-slot" id="slot-${i}" onclick="selectSlot(${i},'${d}')">
+            <div class="date-slot-day">${d.split(' ')[0]}</div>
+            <div class="date-slot-time">${d.split(' ').slice(1).join(' ')}</div>
+          </div>`).join('')}
+      </div>
+      <button class="btn btn-primary" style="width:100%;margin-top:10px" onclick="confirmSlot()">この日程で確定する</button>
+    </div>` : ''}
+
+    <!-- チェックリスト -->
+    ${checks.map(g => {
+      const groupItems = g.items.map((item, i) => {
+        const key = `${g.group}-${i}`;
+        const checked = state[key] || false;
+        return `<div class="it-check-item ${checked?'checked':''}" id="cci-${key}">
+          <input type="checkbox" id="chk-${key}" ${checked?'checked':''} onchange="toggleCheck('${c.id}','${key}',this.checked)">
+          <label for="chk-${key}">${item}</label>
+        </div>`;
+      }).join('');
+      const groupDone = g.items.filter((_,i) => state[`${g.group}-${i}`]).length;
+      return `<div class="it-step">
+        <div class="it-step-head" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
+          <div class="it-step-num ${groupDone===g.items.length?'done':groupDone>0?'partial':'none'}">${groupDone===g.items.length?'✓':groupDone||'—'}</div>
+          <div class="it-step-title">${g.group}</div>
+          <span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--muted)">${groupDone}/${g.items.length}</span>
+          <span style="color:var(--faint);font-size:12px;margin-left:6px">▾</span>
+        </div>
+        <div class="it-step-body" style="display:${groupDone<g.items.length?'block':'none'}">${groupItems}</div>
+      </div>`;
+    }).join('')}
+
+    <!-- 電子署名 -->
+    <div style="margin-top:16px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:10px">電子署名・契約書スキャン</div>
+      <div class="sig-box ${c.signed?'signed':''}">
+        ${c.signed
+          ? `<div style="font-size:28px;margin-bottom:8px">✅</div>
+             <div style="font-size:14px;font-weight:700;color:var(--em)">電子署名完了</div>
+             <div style="font-size:11px;color:var(--em);margin-top:4px;font-family:'DM Mono',monospace">2026/03/10 16:42:18</div>`
+          : `<div style="font-size:28px;margin-bottom:8px">🔏</div>
+             <div style="font-size:13px;font-weight:600;color:var(--muted)">電子署名を受領してください</div>
+             <button class="btn btn-primary" style="margin-top:12px" onclick="requestSignature()">📧 署名依頼を送信</button>`
+        }
+      </div>
+    </div>`;
+}
+
+function toggleCheck(caseId, key, val) {
+  checkStates[caseId][key] = val;
+  const el = document.getElementById(`cci-${key}`);
+  if (el) el.className = `it-check-item ${val?'checked':''}`;
+  // 進捗バー更新
+  const state = checkStates[caseId];
+  let done = Object.values(state).filter(Boolean).length;
+  const c = CASES.find(x => x.id === caseId);
+  if (c) { c.checkedCount = done; applyFilters(); }
+  // パネル内進捗バーも再描画（軽量版）
+  renderPanel();
+}
+
+function selectSlot(i, label) {
+  selectedDate = label;
+  document.querySelectorAll('.date-slot').forEach((el,j) => {
+    el.classList.toggle('selected', i === j);
+  });
+}
+
+function confirmSlot() {
+  if (!selectedDate) { alert('日程を選択してください'); return; }
+  if (currentCase) {
+    currentCase.datetime = `2026/${selectedDate.replace(/\(.*?\)\s*/,'')}`;
+    currentCase.status = 'scheduled';
+    showToast('📅 日程を確定しました。担当AGとクライアントに通知しました。', 'sk');
+    renderPanel();
+    applyFilters();
+  }
+}
+
+function requestSignature() { showToast('📧 電子署名依頼メールを送信しました。', 'sk'); }
+
+function sendReminder() {
+  if (!currentCase) return;
+  showToast('📨 リマインドをLINE・メールで送信しました。', 'sk');
+}
+
+function markDone() {
+  if (!currentCase) return;
+  const state = checkStates[currentCase.id] || {};
+  const undone = Object.values(state).filter(v=>!v).length;
+  if (undone > 0 && !confirm(`未チェックが${undone}件あります。重説完了にしますか？`)) return;
+  currentCase.status = 'done';
+  currentCase.checkedCount = currentCase.totalCount;
+  closePanel();
+  applyFilters();
+  showToast('✅ 重説完了を記録しました。電子署名依頼を送信します。', 'em');
+}
+
+function closePanel() {
+  document.getElementById('panel-overlay').classList.remove('open');
+  document.getElementById('panel-drawer').classList.remove('open');
+  currentCase = null;
+}
+
+function openNewModal() { document.getElementById('modal-new').style.display='flex'; }
+function openScheduleModal() { alert('一括日程調整モーダル（実装予定）\n未定案件をまとめて日程調整できます。'); }
+
+function submitNewCase() {
+  alert('IT重説案件を登録しました（デモ）');
+  document.getElementById('modal-new').style.display='none';
+}
+
+function switchTab(tab) {
+  ['list','calendar','log'].forEach(t => {
+    document.getElementById(`tab-${t}`).classList.toggle('active', t===tab);
+  });
+  if (tab !== 'list') {
+    document.getElementById('page-content').innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:300px;gap:12px">
+        <div style="font-size:40px">${tab==='calendar'?'📅':'📋'}</div>
+        <div style="font-size:16px;font-weight:600;color:var(--ink);font-family:'Cormorant Garamond',serif">${tab==='calendar'?'カレンダービュー':'完了ログ'}</div>
+        <div style="font-size:12px;color:var(--muted)">実装予定</div>
+      </div>`;
+  } else {
+    location.reload();
+  }
+}
+
+function showToast(msg, type) {
+  const colors = { em:'#ECFDF5;color:#059669;border:1px solid rgba(5,150,105,.2)', sk:'#F0F9FF;color:#0284C7;border:1px solid rgba(2,132,199,.2)', rd:'#FEF2F2;color:#DC2626;border:1px solid rgba(220,38,38,.2)' };
+  const t = document.createElement('div');
+  t.style.cssText = `position:fixed;bottom:28px;right:28px;z-index:999;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;font-family:'Outfit',sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.15);background:${colors[type]||colors.em}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity .4s';setTimeout(()=>t.remove(),400)}, 3200);
+}
+
+// ── ロール別表示調整 ──────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  const role = sessionStorage.getItem('coreto_role') || 'hq';
+  // RE-AGは担当分のみ表示
+  const displayCases = role === 're_ag'
+    ? CASES.filter(c => c.ag === 'AG-0042')
+    : role === 'hr_ag'
+    ? [] // 人材AGにはIT重説なし → リダイレクト
+    : CASES;
+
+  if (role === 'hr_ag') {
+    document.getElementById('page-content').innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:300px;gap:12px">
+        <div style="font-size:40px">🔒</div>
+        <div style="font-size:16px;font-weight:600;color:var(--ink);font-family:'Cormorant Garamond',serif">IT重説はHR-AGの対象外です</div>
+        <div style="font-size:12px;color:var(--muted)">不動産案件のみIT重説が発生します。</div>
+      </div>`;
+  } else {
+    renderTable(displayCases);
+  }
+  CNAV.init('itsetsu');
+});
+</script>
+<script src="coreto-nav-v2.js"></script>
+</body>
+</html>
