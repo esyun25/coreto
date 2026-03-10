@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>光通信SFA — COREBLDG</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0D1A2D;--navy-l:#1E3252;--gold:#C8A951;--gold-l:#DFC06A;--gold-dim:rgba(200,169,81,.15);--cream:#F7F4EE;--cream2:#EFECE4;--white:#FFFFFF;--ink:#1A1A2E;--ink2:#2D3748;--muted:#6B7280;--faint:#9CA3AF;--em:#059669;--em-bg:#ECFDF5;--am:#D97706;--am-bg:#FFFBEB;--rd:#DC2626;--rd-bg:#FEF2F2;--sk:#0284C7;--sk-bg:#F0F9FF;--vt:#7C3AED;--vt-bg:#F5F3FF;--bd:#E5E0D5;--bd2:#D4CFC4;--sw:240px;--r:10px;--r-sm:7px;--sh:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04)}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:var(--cream)}
+.shell{display:flex;height:100vh}
+.sb{width:var(--sw);background:var(--navy);display:flex;flex-direction:column;flex-shrink:0;position:relative}
+.sb::after{content:'';position:absolute;top:0;right:0;width:1px;height:100%;background:linear-gradient(180deg,rgba(200,169,81,.25) 0%,rgba(200,169,81,.06) 50%,transparent 100%)}
+.sb-head{padding:24px 20px 18px;border-bottom:1px solid rgba(255,255,255,.06)}
+.sb-logo{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;letter-spacing:5px;color:var(--gold)}
+.sb-ver{font-size:9px;letter-spacing:2px;color:rgba(200,169,81,.3);font-family:'DM Mono',monospace;margin-top:2px}
+.sb-user{margin:14px 14px 10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:9px 11px;display:flex;align-items:center;gap:9px}
+.sb-av{width:28px;height:28px;border-radius:50%;background:var(--gold-dim);border:1px solid rgba(200,169,81,.25);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--gold);flex-shrink:0}
+.sb-un{font-size:11px;font-weight:600;color:rgba(255,255,255,.8)}
+.sb-ur{font-size:9px;color:rgba(255,255,255,.3);font-family:'DM Mono',monospace}
+.sb-nav{flex:1;overflow-y:auto;padding:6px 10px}
+.nsl{font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.18);padding:10px 8px 4px;font-family:'DM Mono',monospace}
+.ni{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:7px;cursor:pointer;transition:all .13s;text-decoration:none;position:relative;margin-bottom:1px}
+.ni:hover{background:rgba(255,255,255,.06)}
+.ni.active{background:rgba(200,169,81,.1)}
+.ni.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:16px;background:var(--gold);border-radius:0 2px 2px 0}
+.ni-ic{width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:13px;border-radius:6px;background:rgba(255,255,255,.04);flex-shrink:0}
+.ni.active .ni-ic{background:rgba(200,169,81,.12)}
+.ni-lb{font-size:11px;font-weight:500;color:rgba(255,255,255,.55);flex:1}
+.ni.active .ni-lb,.ni:hover .ni-lb{color:var(--gold)}
+.nb{font-size:9px;font-weight:700;padding:1px 6px;border-radius:10px;background:var(--rd);color:#fff;font-family:'DM Mono',monospace}
+.nb.am{background:var(--am)}.nb.gd{background:var(--am)}
+.sf{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;cursor:pointer;font-size:11px;color:rgba(255,255,255,.3);transition:.13s}
+.sf:hover{background:rgba(255,255,255,.05);color:rgba(255,255,255,.6)}
+.content{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:58px;background:var(--white);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 24px;gap:14px;flex-shrink:0;box-shadow:var(--sh)}
+.tb-title{font-size:16px;font-weight:600;color:var(--ink);font-family:'Cormorant Garamond',serif;letter-spacing:.5px}
+.tb-crumb{font-size:11px;color:var(--faint);margin-top:1px}
+.tb-crumb a{color:var(--muted);text-decoration:none}
+.tb-act{margin-left:auto;display:flex;gap:9px;align-items:center}
+.btn{padding:7px 16px;border-radius:var(--r-sm);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;font-family:'Outfit',sans-serif;border:none}
+.btn-p{background:var(--navy);color:var(--gold)}.btn-p:hover{background:var(--navy-l)}
+.btn-g{background:transparent;color:var(--muted);border:1px solid var(--bd)}.btn-g:hover{background:var(--cream);color:var(--ink)}
+.btn-sm{padding:5px 12px;font-size:11px}
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;font-family:'DM Mono',monospace}
+.b-em{background:var(--em-bg);color:var(--em)}.b-am{background:var(--am-bg);color:var(--am)}.b-rd{background:var(--rd-bg);color:var(--rd)}.b-sk{background:var(--sk-bg);color:var(--sk)}.b-vt{background:var(--vt-bg);color:var(--vt)}.b-gd{background:var(--gold-dim);color:var(--am)}.b-nt{background:var(--cream2);color:var(--muted)}
+.tab-bar{padding:0 24px;background:var(--white);border-bottom:1px solid var(--bd);display:flex;align-items:center}
+.tab{padding:12px 18px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:.15s}
+.tab:hover{color:var(--ink)}.tab.active{color:var(--navy);border-bottom-color:var(--gold)}
+.page{flex:1;overflow-y:auto;padding:24px}
+.page::-webkit-scrollbar{width:5px}.page::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:3px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.kpi{background:var(--white);border:1px solid var(--bd);border-radius:var(--r);padding:16px 18px;box-shadow:var(--sh);position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.kpi.gd::before{background:var(--gold)}.kpi.em::before{background:var(--em)}.kpi.sk::before{background:var(--sk)}.kpi.vt::before{background:var(--vt)}.kpi.am::before{background:var(--am)}
+.kpi-lb{font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+.kpi-vl{font-size:24px;font-weight:700;color:var(--ink);font-family:'Cormorant Garamond',serif}
+.kpi-sb{font-size:10px;color:var(--faint);margin-top:4px}
+.card{background:var(--white);border:1px solid var(--bd);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden;margin-bottom:18px}
+.card-head{padding:14px 20px;border-bottom:1px solid var(--bd);background:var(--cream);display:flex;align-items:center;justify-content:space-between}
+.card-title{font-size:12px;font-weight:700;color:var(--ink);text-transform:uppercase;letter-spacing:.5px}
+table{width:100%;border-collapse:collapse}
+thead th{padding:10px 14px;text-align:left;font-size:10px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);background:var(--cream);border-bottom:1px solid var(--bd);white-space:nowrap;font-family:'DM Mono',monospace}
+thead th:first-child{padding-left:18px}
+tbody tr{border-bottom:1px solid var(--bd);transition:background .1s;cursor:pointer}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:rgba(200,169,81,.03)}
+tbody td{padding:12px 14px;font-size:12px;color:var(--ink2);vertical-align:middle}
+tbody td:first-child{padding-left:18px}
+.td-name{font-size:13px;font-weight:600;color:var(--ink)}
+.td-sub{font-size:10px;color:var(--faint);font-family:'DM Mono',monospace;margin-top:1px}
+/* PIPELINE */
+.pipeline{display:flex;gap:12px;overflow-x:auto;padding-bottom:8px;margin-bottom:20px}
+.pipeline::-webkit-scrollbar{height:4px}.pipeline::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:2px}
+.pl-col{min-width:200px;flex-shrink:0}
+.pl-head{padding:10px 12px;border-radius:var(--r-sm) var(--r-sm) 0 0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;display:flex;align-items:center;justify-content:space-between}
+.pl-body{background:var(--cream2);border:1px solid var(--bd);border-top:none;border-radius:0 0 var(--r-sm) var(--r-sm);min-height:200px;padding:8px;display:flex;flex-direction:column;gap:7px}
+.pl-card{background:var(--white);border:1px solid var(--bd);border-radius:var(--r-sm);padding:10px 12px;cursor:pointer;transition:box-shadow .15s}
+.pl-card:hover{box-shadow:0 4px 12px rgba(0,0,0,.08)}
+.pl-cname{font-size:12px;font-weight:600;color:var(--ink);margin-bottom:3px}
+.pl-cmeta{font-size:10px;color:var(--faint);font-family:'DM Mono',monospace;margin-bottom:5px}
+.pl-ctag{display:flex;gap:5px;flex-wrap:wrap}
+.pl-sv{font-size:9px;padding:2px 7px;border-radius:10px;font-weight:600}
+.sv-e{background:#FEF3C7;color:#92400E}
+.sv-g{background:#FCE7F3;color:#9D174D}
+.sv-n{background:#DBEAFE;color:#1E40AF}
+/* PT badge in table */
+.pt-from{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;background:var(--gold-dim);border-radius:10px;font-size:9px;font-weight:700;color:var(--am);font-family:'DM Mono',monospace}
+</style>
+</head>
+<body>
+<div class="shell">
+<nav class="sb">
+  <div class="sb-head"><div class="sb-logo">CORE<br>BLDG</div><div class="sb-ver">v2.0 — CORETO</div></div>
+  <div class="sb-user"><div class="sb-av">HQ</div><div><div class="sb-un">田中 誠一</div><div class="sb-ur">HQ / exec</div></div></div>
+  <div class="sb-nav">
+    <div class="nsl">ダッシュボード</div>
+    <a class="ni" href="coreto-hub-v2.html"><div class="ni-ic">🏠</div><div class="ni-lb">HQダッシュボード</div></a>
+    <div class="nsl">CRM / 案件</div>
+    <a class="ni" href="coreto-crm-v2.html"><div class="ni-ic">👥</div><div class="ni-lb">クライアント管理</div></a>
+    <a class="ni" href="coreto-cases-v2.html"><div class="ni-ic">📁</div><div class="ni-lb">案件一覧</div><span class="nb">12</span></a>
+    <a class="ni" href="coreto-remittance-v2.html"><div class="ni-ic">💰</div><div class="ni-lb">入金監視</div><span class="nb am">3</span></a>
+    <div class="nsl">管理</div>
+    <a class="ni" href="coreto-payment-v2.html"><div class="ni-ic">💴</div><div class="ni-lb">報酬・支払い</div></a>
+    <a class="ni" href="coreto-line-auth-v2.html"><div class="ni-ic">📲</div><div class="ni-lb">LINE認証管理</div></a>
+    <a class="ni active" href="coreto-utility-v2.html"><div class="ni-ic">⚡</div><div class="ni-lb">光通信SFA</div></a>
+    <a class="ni" href="coreto-intern-v2.html"><div class="ni-ic">🎓</div><div class="ni-lb">インターン</div></a>
+  </div>
+  <div style="padding:10px 14px 18px;border-top:1px solid rgba(255,255,255,.05)"><div class="sf"><span>⚙️</span><span>設定</span></div></div>
+</nav>
+
+<div class="content">
+  <div class="topbar">
+    <div>
+      <div class="tb-title">光通信SFA</div>
+      <div class="tb-crumb"><a href="coreto-hub-v2.html">COREBLDG</a> › <span>光通信SFA</span></div>
+    </div>
+    <div class="tb-act">
+      <button class="btn btn-g btn-sm">📤 CSV出力</button>
+      <button class="btn btn-p" onclick="switchTab('new',document.querySelectorAll('.tab')[2])">＋ 新規案件登録</button>
+    </div>
+  </div>
+  <div class="tab-bar">
+    <div class="tab active" onclick="switchTab('pipeline',this)">パイプライン</div>
+    <div class="tab" onclick="switchTab('list',this)">案件一覧</div>
+    <div class="tab" onclick="switchTab('new',this)">新規登録</div>
+    <div class="tab" onclick="switchTab('stats',this)">成績集計</div>
+  </div>
+  <div class="page" id="pg"></div>
+</div>
+</div>
+
+<script>
+let tab='pipeline';
+
+function switchTab(t,el){
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  if(el)el.classList.add('active');
+  tab=t; renderTab(t);
+}
+
+function renderTab(t){
+  const pg=document.getElementById('pg');
+  if(t==='pipeline') pg.innerHTML=pipelinePage();
+  if(t==='list')     pg.innerHTML=listPage();
+  if(t==='new')      pg.innerHTML=newPage();
+  if(t==='stats')    pg.innerHTML=statsPage();
+}
+
+// ── PIPELINE ──
+function pipelinePage(){
+  const cols=[
+    {key:'lead',label:'リード受付',color:'var(--am)',bg:'var(--am-bg)',cards:[
+      {name:'中村 義雄 様',meta:'UTL-0095',from:'PT-0022 高橋',svcs:['e','n']},
+      {name:'小林 奈々 様',meta:'UTL-0096',from:'PT-0015 佐藤',svcs:['e']},
+      {name:'吉田 太郎 様',meta:'UTL-0097',from:'インターン',svcs:['n']},
+    ]},
+    {key:'contact',label:'初回連絡済み',color:'var(--sk)',bg:'var(--sk-bg)',cards:[
+      {name:'鈴木 美咲 様',meta:'UTL-0088',from:'AG-0042',svcs:['e','n']},
+      {name:'山田 一郎 様',meta:'UTL-0090',from:'PT-0015 佐藤',svcs:['g','n']},
+    ]},
+    {key:'apply',label:'申込手続き中',color:'var(--vt)',bg:'var(--vt-bg)',cards:[
+      {name:'佐々木 恵 様',meta:'UTL-0085',from:'AG-0088',svcs:['e']},
+      {name:'渡辺 陽子 様',meta:'UTL-0081',from:'AG-0042',svcs:['e','n']},
+    ]},
+    {key:'open',label:'開通待ち',color:'var(--navy)',bg:'rgba(13,26,45,.07)',cards:[
+      {name:'田中 博 様',meta:'UTL-0076',from:'AG-0071',svcs:['n']},
+    ]},
+    {key:'done',label:'開通完了',color:'var(--em)',bg:'var(--em-bg)',cards:[
+      {name:'木村 陽子 様',meta:'UTL-0091',from:'AG-0088',svcs:['e']},
+      {name:'岡田 恵 様',meta:'UTL-0080',from:'AG-0042',svcs:['e','n']},
+    ]},
+  ];
+  const svMap={e:{cls:'sv-e',lb:'電力'},g:{cls:'sv-g',lb:'ガス'},n:{cls:'sv-n',lb:'光回線'}};
+  return`
+  <div class="kpi-row">
+    <div class="kpi am"><div class="kpi-lb">新着リード（今週）</div><div class="kpi-vl">3件</div><div class="kpi-sb">PT投げ 2 / インターン 1</div></div>
+    <div class="kpi vt"><div class="kpi-lb">申込中</div><div class="kpi-vl">4件</div><div class="kpi-sb">今月目標 20件</div></div>
+    <div class="kpi em"><div class="kpi-lb">今月成約</div><div class="kpi-vl">8件</div><div class="kpi-sb">先月比 ↑2件</div></div>
+    <div class="kpi gd"><div class="kpi-lb">今月ボーナス計</div><div class="kpi-vl">¥312K</div><div class="kpi-sb">AG+PT合計</div></div>
+  </div>
+  <div class="pipeline">
+    ${cols.map(col=>`
+      <div class="pl-col">
+        <div class="pl-head" style="background:${col.bg};color:${col.color};border:1px solid ${col.bg}">
+          <span>${col.label}</span>
+          <span style="font-family:'DM Mono',monospace;font-size:10px;opacity:.7">${col.cards.length}件</span>
+        </div>
+        <div class="pl-body">
+          ${col.cards.map(c=>`
+            <div class="pl-card" onclick="alert('案件詳細 ${c.meta}')">
+              <div class="pl-cname">${c.name}</div>
+              <div class="pl-cmeta">${c.meta}</div>
+              <div class="pl-ctag">
+                ${c.svcs.map(s=>`<span class="pl-sv ${svMap[s].cls}">${svMap[s].lb}</span>`).join('')}
+                ${c.from.startsWith('PT')?`<span class="pt-from">PT紹介</span>`:''}
+              </div>
+            </div>`).join('')}
+          <div style="border:1.5px dashed var(--bd2);border-radius:var(--r-sm);padding:10px;text-align:center;font-size:11px;color:var(--faint);cursor:pointer" onclick="switchTab('new',document.querySelectorAll('.tab')[2])">＋ 追加</div>
+        </div>
+      </div>`).join('')}
+  </div>`;}
+
+// ── LIST ──
+function listPage(){
+  const cases=[
+    ['UTL-0095','中村 義雄','電力・回線','リード受付','AG-0042','PT-0022','am','¥—'],
+    ['UTL-0090','山田 一郎','ガス・回線','初回連絡済み','AG-0042','PT-0015','sk','¥—'],
+    ['UTL-0088','鈴木 美咲','電力・回線','初回連絡済み','AG-0042','—','sk','¥—'],
+    ['UTL-0085','佐々木 恵','電力','申込中','AG-0088','—','vt','¥—'],
+    ['UTL-0081','渡辺 陽子','電力・回線','申込中','AG-0042','—','vt','¥—'],
+    ['UTL-0076','田中 博','光回線','開通待ち','AG-0071','PT-0015','b','¥—'],
+    ['UTL-0091','木村 陽子','電力','開通完了','AG-0088','—','em','¥18,000'],
+    ['UTL-0080','岡田 恵','電力・回線','開通完了','AG-0042','—','em','¥45,000'],
+  ];
+  return`
+  <div class="card">
+    <div class="card-head"><div class="card-title">⚡ 光通信案件一覧</div>
+      <div style="display:flex;gap:8px">
+        <select class="btn btn-g btn-sm" style="cursor:pointer" onchange="">
+          <option>全ステータス</option><option>リード受付</option><option>申込中</option><option>開通完了</option>
+        </select>
+        <input style="padding:5px 10px;border:1px solid var(--bd);border-radius:var(--r-sm);font-size:11px;background:var(--cream);outline:none;font-family:'Outfit',sans-serif" placeholder="🔍 案件番号・氏名">
+      </div>
+    </div>
+    <table>
+      <thead><tr><th>番号</th><th>お客様</th><th>サービス</th><th>ステータス</th><th>担当AG</th><th>投げ元</th><th>報酬</th><th></th></tr></thead>
+      <tbody>${cases.map(r=>`<tr onclick="alert('案件詳細 ${r[0]}')">
+        <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--faint)">${r[0]}</td>
+        <td><div class="td-name">${r[1]} 様</div></td>
+        <td><div style="font-size:12px">${r[2]}</div></td>
+        <td><span class="badge b-${r[6]==='b'?'nt':r[6]}">${r[3]}</span></td>
+        <td style="font-family:'DM Mono',monospace;font-size:11px">${r[4]}</td>
+        <td>${r[5]==='—'?'<span style="color:var(--faint)">—</span>':'<span class="pt-from">'+r[5]+'</span>'}</td>
+        <td style="font-weight:700;font-family:\'Cormorant Garamond\',serif;font-size:14px;color:${r[7]==='¥—'?'var(--faint)':'var(--em)'}">${r[7]}</td>
+        <td><button class="btn btn-g btn-sm" onclick="event.stopPropagation()">詳細</button></td>
+      </tr>`).join('')}</tbody>
+    </table>
+  </div>`;}
+
+// ── NEW CASE ──
+function newPage(){return`
+  <div style="max-width:680px">
+    <div style="background:var(--white);border:1px solid var(--bd);border-radius:var(--r);padding:26px;box-shadow:var(--sh)">
+      <div style="font-size:16px;font-weight:700;color:var(--ink);font-family:'Cormorant Garamond',serif;margin-bottom:4px">⚡ 新規 光通信案件登録</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:22px">AG・HQから直接登録、またはPT投げ案件の引き継ぎ</div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+        <div>
+          <label style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">お客様名 *</label>
+          <input style="width:100%;padding:9px 12px;background:var(--cream);border:1.5px solid var(--bd);border-radius:var(--r-sm);font-size:13px;font-family:'Outfit','Noto Sans JP',sans-serif;outline:none;color:var(--ink);transition:.15s" placeholder="田中 優子" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--bd)'">
+        </div>
+        <div>
+          <label style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">電話番号 *</label>
+          <input type="tel" style="width:100%;padding:9px 12px;background:var(--cream);border:1.5px solid var(--bd);border-radius:var(--r-sm);font-size:13px;font-family:'Outfit',sans-serif;outline:none;color:var(--ink);transition:.15s" placeholder="090-0000-0000" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--bd)'">
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+        <div>
+          <label style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">担当AG *</label>
+          <select style="width:100%;padding:9px 12px;background:var(--cream);border:1.5px solid var(--bd);border-radius:var(--r-sm);font-size:13px;font-family:'Outfit',sans-serif;outline:none;cursor:pointer">
+            <option>AG-0042 山田 誠</option>
+            <option>AG-0088 田中 花子</option>
+            <option>AG-0071 中村 陽子</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">投げ元（PT / インターン）</label>
+          <select style="width:100%;padding:9px 12px;background:var(--cream);border:1.5px solid var(--bd);border-radius:var(--r-sm);font-size:13px;font-family:'Outfit',sans-serif;outline:none;cursor:pointer">
+            <option value="">AG直接 / HQ登録</option>
+            <option>PT-0015 佐藤 健一</option>
+            <option>PT-0022 高橋 美咲</option>
+            <option>PT-0031 加藤 健</option>
+            <option>INT-0007 渡辺 大輝（インターン）</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="margin-bottom:16px">
+        <label style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:10px">切り替え希望サービス * （複数可）</label>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          ${[
+            {id:'n-elec',icon:'⚡',label:'電力',cls:'sv-e'},
+            {id:'n-gas', icon:'🔥',label:'ガス',cls:'sv-g'},
+            {id:'n-net', icon:'📡',label:'光回線',cls:'sv-n'},
+          ].map(s=>`<label style="display:flex;align-items:center;gap:8px;padding:9px 16px;border:1.5px solid var(--bd);border-radius:var(--r-sm);cursor:pointer;font-size:13px;font-weight:500;color:var(--ink)">
+            <input type="checkbox" style="accent-color:var(--navy);width:14px;height:14px">
+            <span>${s.icon}</span> ${s.label}
+          </label>`).join('')}
+        </div>
+      </div>
+
+      <div style="margin-bottom:16px">
+        <label style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">現住所</label>
+        <input style="width:100%;padding:9px 12px;background:var(--cream);border:1.5px solid var(--bd);border-radius:var(--r-sm);font-size:13px;font-family:'Outfit','Noto Sans JP',sans-serif;outline:none;color:var(--ink);transition:.15s" placeholder="港区三田" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--bd)'">
+      </div>
+
+      <div style="margin-bottom:22px">
+        <label style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">温度感・メモ</label>
+        <textarea rows="3" style="width:100%;padding:9px 12px;background:var(--cream);border:1.5px solid var(--bd);border-radius:var(--r-sm);font-size:13px;font-family:'Outfit','Noto Sans JP',sans-serif;outline:none;color:var(--ink);resize:vertical;line-height:1.5;transition:.15s" placeholder="例：来月末に引越し予定、前向き" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--bd)'"></textarea>
+      </div>
+
+      <button onclick="registerCase()" style="width:100%;padding:13px;background:var(--navy);color:var(--gold);border:none;border-radius:var(--r-sm);font-size:14px;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif;letter-spacing:.5px">
+        ⚡ 案件を登録する
+      </button>
+    </div>
+  </div>`;}
+
+// ── STATS ──
+function statsPage(){return`
+  <div class="kpi-row">
+    <div class="kpi gd"><div class="kpi-lb">今月成約（AG）</div><div class="kpi-vl">8件</div><div class="kpi-sb">先月 6件 ↑2</div></div>
+    <div class="kpi em"><div class="kpi-lb">PT投げ→成約</div><div class="kpi-vl">3件</div><div class="kpi-sb">PT経由率 37.5%</div></div>
+    <div class="kpi am"><div class="kpi-lb">インターン紹介→成約</div><div class="kpi-vl">1件</div><div class="kpi-sb">転換率 14%</div></div>
+    <div class="kpi sk"><div class="kpi-lb">平均成約日数</div><div class="kpi-vl">18日</div><div class="kpi-sb">リード受付から開通まで</div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+    <div class="card" style="padding:20px">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:16px">📊 AG別成約数（今月）</div>
+      ${[
+        ['AG-0042 山田 誠','RE-AG',5,8],
+        ['AG-0088 田中 花子','HR-AG',2,8],
+        ['AG-0071 中村 陽子','RE-AG',3,8],
+        ['AG-0055 井上 誠','HR-AG',1,8],
+      ].map(r=>`<div style="margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+          <span style="font-weight:600;color:var(--ink)">${r[0]}</span>
+          <span style="font-family:'DM Mono',monospace;color:var(--em);font-weight:700">${r[2]}件</span>
+        </div>
+        <div style="height:6px;background:var(--cream2);border-radius:3px;overflow:hidden">
+          <div style="height:100%;width:${r[2]/r[3]*100}%;background:var(--gold);border-radius:3px"></div>
+        </div>
+      </div>`).join('')}
+    </div>
+    <div class="card" style="padding:20px">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:16px">⚡ サービス別成約内訳</div>
+      ${[
+        ['電力のみ',3,'var(--am)'],['光回線のみ',2,'var(--sk)'],['電力＋回線',2,'var(--vt)'],['ガスのみ',1,'var(--em)'],
+      ].map(r=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--bd)">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:8px;height:8px;border-radius:50%;background:${r[2]}"></div>
+          <span style="font-size:12px;color:var(--ink)">${r[0]}</span>
+        </div>
+        <span style="font-weight:700;font-family:'Cormorant Garamond',serif;font-size:15px;color:${r[2]}">${r[1]}件</span>
+      </div>`).join('')}
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0 0;margin-top:6px">
+        <span style="font-size:13px;font-weight:700;color:var(--ink)">合計</span>
+        <span style="font-size:18px;font-weight:700;font-family:'Cormorant Garamond',serif;color:var(--navy)">8件</span>
+      </div>
+    </div>
+  </div>`;}
+
+function registerCase(){
+  if(confirm('案件を登録しますか？\n\n担当AGにLINE通知が送信されます。')){
+    switchTab('pipeline',document.querySelectorAll('.tab')[0]);
+    setTimeout(()=>alert('✅ 案件を登録しました。\n担当AGにLINE通知を送信しました。'),200);
+  }
+}
+
+renderTab('pipeline');
+</script>
+</body>
+</html>
