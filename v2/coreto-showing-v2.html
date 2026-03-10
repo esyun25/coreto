@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>内見管理 — COREBLDG</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0D1A2D;--navy-l:#1E3252;--gold:#C8A951;--gold-dim:rgba(200,169,81,.15);--cream:#F7F4EE;--cream2:#EFECE4;--white:#FFFFFF;--ink:#1A1A2E;--muted:#6B7280;--faint:#9CA3AF;--em:#059669;--em-bg:#ECFDF5;--am:#D97706;--am-bg:#FFFBEB;--rd:#DC2626;--rd-bg:#FEF2F2;--sk:#0284C7;--sk-bg:#F0F9FF;--vt:#7C3AED;--vt-bg:#F5F3FF;--bd:#E5E0D5;--bd2:#D4CFC4;--sw:240px;--r:10px;--r-sm:7px;--sh:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04)}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:var(--cream)}
+.shell{display:flex;height:100vh}
+.sb{width:var(--sw);background:var(--navy);display:flex;flex-direction:column;flex-shrink:0;position:relative}
+.sb::after{content:'';position:absolute;top:0;right:0;width:1px;height:100%;background:linear-gradient(180deg,rgba(200,169,81,.25) 0%,rgba(200,169,81,.06) 50%,transparent 100%)}
+.sb-head{padding:24px 20px 18px;border-bottom:1px solid rgba(255,255,255,.06)}
+.sb-logo{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;letter-spacing:5px;color:var(--gold)}
+.sb-ver{font-size:9px;letter-spacing:2px;color:rgba(200,169,81,.3);font-family:'DM Mono',monospace;margin-top:2px}
+.sb-user{margin:14px 14px 10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:9px 11px;display:flex;align-items:center;gap:9px}
+.sb-av{width:28px;height:28px;border-radius:50%;background:var(--gold-dim);border:1px solid rgba(200,169,81,.25);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--gold);flex-shrink:0}
+.sb-un{font-size:11px;font-weight:600;color:rgba(255,255,255,.8)}
+.sb-ur{font-size:9px;color:rgba(255,255,255,.3);font-family:'DM Mono',monospace}
+.sb-nav{flex:1;overflow-y:auto;padding:6px 10px}
+.nsl{font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.18);padding:10px 8px 4px;font-family:'DM Mono',monospace}
+.ni{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:7px;cursor:pointer;transition:.13s;margin-bottom:1px}
+.ni:hover{background:rgba(255,255,255,.06)}.ni.active{background:rgba(200,169,81,.1)}
+.ni-ic{width:22px;text-align:center;font-size:14px}
+.ni-lb{font-size:11px;font-weight:500;color:rgba(255,255,255,.55)}.ni.active .ni-lb{color:var(--gold)}
+.sf{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;cursor:pointer;font-size:11px;color:rgba(255,255,255,.3);transition:.13s}
+.sf:hover{background:rgba(255,255,255,.05);color:rgba(255,255,255,.6)}
+.sb-foot{padding:10px 14px 18px;border-top:1px solid rgba(255,255,255,.05)}
+.content{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:58px;background:var(--white);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 24px;gap:14px;flex-shrink:0;box-shadow:var(--sh)}
+.tb-title{font-size:16px;font-weight:600;color:var(--ink);font-family:'Cormorant Garamond',serif;letter-spacing:.5px}
+.tb-crumb{font-size:11px;color:var(--faint)}
+.tb-crumb a{color:var(--muted);text-decoration:none}
+.tb-act{margin-left:auto;display:flex;gap:9px;align-items:center}
+.btn{padding:7px 16px;border-radius:var(--r-sm);font-size:12px;font-weight:600;cursor:pointer;transition:.15s;font-family:'Outfit',sans-serif;border:none}
+.btn-p{background:var(--navy);color:var(--gold)}.btn-p:hover{background:var(--navy-l)}
+.btn-g{background:transparent;color:var(--muted);border:1px solid var(--bd)}.btn-g:hover{background:var(--cream);color:var(--ink)}
+.btn-em{background:var(--em-bg);color:var(--em);border:1px solid rgba(5,150,105,.2)}.btn-em:hover{background:var(--em);color:#fff}
+.btn-sm{padding:5px 12px;font-size:11px}
+.tab-bar{padding:0 24px;background:var(--white);border-bottom:1px solid var(--bd);display:flex}
+.tab{padding:12px 18px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:.15s}
+.tab:hover{color:var(--ink)}.tab.active{color:var(--navy);border-bottom-color:var(--gold)}
+.page{flex:1;overflow-y:auto;padding:24px}
+.page::-webkit-scrollbar{width:5px}.page::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:3px}
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;font-family:'Outfit',sans-serif}
+.b-em{background:var(--em-bg);color:var(--em)}.b-am{background:var(--am-bg);color:var(--am)}.b-rd{background:var(--rd-bg);color:var(--rd)}.b-sk{background:var(--sk-bg);color:var(--sk)}.b-nt{background:var(--cream2);color:var(--muted)}.b-vt{background:var(--vt-bg);color:var(--vt)}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.kpi{background:var(--white);border:1px solid var(--bd);border-radius:var(--r);padding:16px 18px;box-shadow:var(--sh);position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.kpi.gd::before{background:var(--gold)}.kpi.em::before{background:var(--em)}.kpi.sk::before{background:var(--sk)}.kpi.am::before{background:var(--am)}
+.kpi-lb{font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+.kpi-vl{font-size:24px;font-weight:700;color:var(--ink);font-family:'Cormorant Garamond',serif}
+.kpi-sb{font-size:10px;color:var(--faint);margin-top:4px}
+.card{background:var(--white);border:1px solid var(--bd);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden;margin-bottom:18px}
+.card-head{padding:14px 20px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;background:var(--cream)}
+.card-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--ink)}
+.tbl{width:100%;border-collapse:collapse;font-size:12px}
+.tbl th{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--faint);padding:9px 14px;border-bottom:2px solid var(--bd);text-align:left;background:var(--cream)}
+.tbl td{padding:11px 14px;border-bottom:1px solid var(--bd);color:var(--ink);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:rgba(200,169,81,.03)}
+/* showing card */
+.sh-card{background:var(--white);border:1px solid var(--bd);border-radius:var(--r);box-shadow:var(--sh);padding:16px 20px;margin-bottom:12px;display:flex;align-items:flex-start;gap:16px;transition:.13s;cursor:pointer}
+.sh-card:hover{border-color:var(--gold);box-shadow:0 4px 16px rgba(200,169,81,.12)}
+.sh-date-box{width:52px;height:52px;background:var(--navy);border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0}
+.sh-date-d{font-size:20px;font-weight:700;color:var(--gold);font-family:'Cormorant Garamond',serif;line-height:1}
+.sh-date-m{font-size:9px;color:rgba(255,255,255,.4);letter-spacing:1px;text-transform:uppercase}
+.sh-info{flex:1}
+.sh-prop{font-size:13px;font-weight:700;color:var(--ink);margin-bottom:3px}
+.sh-meta{font-size:11px;color:var(--muted);line-height:1.7}
+.sh-actions{display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex-shrink:0}
+/* form */
+.form-wrap{max-width:680px}
+.form-card{background:var(--white);border:1px solid var(--bd);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden;margin-bottom:18px}
+.form-head{padding:14px 22px;border-bottom:1px solid var(--bd);background:var(--cream);display:flex;align-items:center;gap:10px}
+.form-head-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--ink)}
+.form-body{padding:20px 22px}
+.field{margin-bottom:16px}
+.field:last-child{margin-bottom:0}
+.field label{display:block;font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
+.field input,.field select,.field textarea{width:100%;padding:9px 12px;background:var(--cream);border:1.5px solid var(--bd);border-radius:var(--r-sm);font-size:13px;color:var(--ink);font-family:'Outfit','Noto Sans JP',sans-serif;outline:none;transition:.15s;-webkit-appearance:none}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--gold);background:var(--white)}
+.field textarea{min-height:70px;resize:vertical;line-height:1.6}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.required::after{content:' *';color:var(--rd);font-size:11px}
+/* result options */
+.result-options{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.result-opt{padding:10px;border:2px solid var(--bd);border-radius:var(--r-sm);text-align:center;cursor:pointer;transition:.15s;font-size:12px;font-weight:600}
+.result-opt:hover{border-color:var(--gold)}
+.result-opt.selected{border-color:var(--navy);background:var(--navy);color:var(--gold)}
+/* MOBILE */
+.mob-ham{display:none;flex-direction:column;align-items:center;justify-content:center;width:36px;height:36px;background:transparent;border:none;cursor:pointer;border-radius:7px;flex-shrink:0}
+.mob-ham span{display:block;width:18px;height:2px;background:rgba(255,255,255,.72);margin:3px 0;border-radius:1px}
+.mob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:199}
+@media(max-width:768px){
+  .mob-ham{display:flex}.mob-overlay.show{display:block}
+  .sb{position:fixed;left:calc(-1 * var(--sw));top:0;height:100vh;z-index:200;transition:left .25s ease}.sb.open{left:0}
+  .shell{overflow:hidden}.content{width:100vw;min-width:0}
+  .topbar{padding:0 12px;gap:8px}.tb-crumb{display:none}
+  .page{padding:12px}.form-wrap{max-width:100%}
+  .field-row{grid-template-columns:1fr}.kpi-row{grid-template-columns:1fr 1fr!important}
+  .result-options{grid-template-columns:1fr 1fr}
+  .sh-card{flex-wrap:wrap}.sh-actions{flex-direction:row;flex-wrap:wrap}
+  table{display:block;overflow-x:auto}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+<nav class="sb" id="sb">
+  <div class="sb-head">
+    <div class="sb-logo">CORE<br>BLDG</div>
+    <div class="sb-ver">v2.0 — CORETO</div>
+  </div>
+  <div class="sb-user">
+    <div class="sb-av">AG</div>
+    <div><div class="sb-un">山田 誠</div><div class="sb-ur">AG-0042 / Gold</div></div>
+  </div>
+  <div class="sb-nav" id="sb-nav"></div>
+  <div class="sb-foot"><div class="sf" onclick="window.location.href='coreto-hub-v2.html'">⬅ ダッシュボードへ</div></div>
+</nav>
+<div class="content">
+  <div class="topbar">
+    <button class="mob-ham" onclick="toggleSb()"><span></span><span></span><span></span></button>
+    <div>
+      <div class="tb-title">内見管理</div>
+      <div class="tb-crumb"><a href="coreto-hub-v2.html">COREBLDG</a> › <span>内見管理</span></div>
+    </div>
+    <div class="tb-act">
+      <button class="btn btn-p btn-sm" onclick="switchTab('new',document.getElementById('tab-new'))">＋ 内見を登録</button>
+    </div>
+  </div>
+  <div class="tab-bar">
+    <div class="tab active" id="tab-list" onclick="switchTab('list',this)">内見一覧</div>
+    <div class="tab" id="tab-new" onclick="switchTab('new',this)">内見登録</div>
+    <div class="tab" id="tab-report" onclick="switchTab('report',this)">内見後報告</div>
+  </div>
+  <div class="page" id="pg"></div>
+</div>
+</div>
+<div class="mob-overlay" onclick="toggleSb()"></div>
+<script src="coreto-nav-v2.js"></script>
+<script>
+function toggleSb(){document.querySelector('.sb').classList.toggle('open');document.querySelector('.mob-overlay').classList.toggle('show');}
+
+const SHOWINGS = [
+  {id:'SHW-0021', case:'RENT-0194', client:'田中 優子', prop:'パークタワー三田 302', addr:'港区三田3丁目', date:'3/12', dateNum:12, time:'14:00', ag:'山田 誠', status:'確定', result:null},
+  {id:'SHW-0022', case:'RENT-0201', client:'鈴木 健太', prop:'白金ハウス 201',     addr:'港区白金1丁目', date:'3/13', dateNum:13, time:'11:00', ag:'山田 誠', status:'確定', result:null},
+  {id:'SHW-0020', case:'RENT-0188', client:'渡辺 誠',   prop:'品川フラッツ 501',   addr:'品川区大崎2丁目', date:'3/08', dateNum:8, time:'15:30', ag:'山田 誠', status:'完了', result:'申込意向あり'},
+  {id:'SHW-0019', case:'RENT-0182', client:'伊藤 花子', prop:'目黒レジデンス 103',  addr:'目黒区目黒3丁目', date:'3/05', dateNum:5, time:'10:00', ag:'山田 誠', status:'完了', result:'検討中'},
+  {id:'SHW-0018', case:'RENT-0175', client:'高橋 美咲', prop:'恵比寿ガーデン 401',  addr:'渋谷区恵比寿1丁目', date:'2/28', dateNum:28, time:'13:00', ag:'山田 誠', status:'完了', result:'見送り'},
+];
+
+let selectedResult = '';
+function selectResult(val, el){
+  selectedResult = val;
+  document.querySelectorAll('.result-opt').forEach(x=>x.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+let currentTab = 'list';
+function switchTab(t, el){
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  if(el) el.classList.add('active');
+  currentTab = t;
+  if(t==='list')   renderList();
+  if(t==='new')    renderNew();
+  if(t==='report') renderReport();
+}
+
+function renderList(){
+  const upcoming = SHOWINGS.filter(s=>s.status==='確定');
+  const done     = SHOWINGS.filter(s=>s.status==='完了');
+  const rateNo   = done.filter(s=>s.result==='見送り').length;
+  const rateYes  = done.filter(s=>s.result==='申込意向あり').length;
+  document.getElementById('pg').innerHTML = `
+  <div class="kpi-row">
+    <div class="kpi gd"><div class="kpi-lb">今月の内見</div><div class="kpi-vl">${SHOWINGS.length}件</div></div>
+    <div class="kpi sk"><div class="kpi-lb">確定（予定）</div><div class="kpi-vl">${upcoming.length}件</div></div>
+    <div class="kpi em"><div class="kpi-lb">申込意向</div><div class="kpi-vl">${rateYes}件</div><div class="kpi-sb">完了${done.length}件中</div></div>
+    <div class="kpi am"><div class="kpi-lb">見送り</div><div class="kpi-vl">${rateNo}件</div></div>
+  </div>
+
+  <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:10px">予定</div>
+  ${upcoming.map(s=>`
+  <div class="sh-card" onclick="switchTab('report',document.getElementById('tab-report'))">
+    <div class="sh-date-box"><div class="sh-date-d">${s.dateNum}</div><div class="sh-date-m">MAR</div></div>
+    <div class="sh-info">
+      <div class="sh-prop">${s.prop}</div>
+      <div class="sh-meta">
+        ${s.addr} ／ ${s.time} ／ クライアント：<strong>${s.client}</strong>
+        <span style="font-family:'DM Mono',monospace;color:var(--faint);margin-left:6px">${s.case}</span>
+      </div>
+    </div>
+    <div class="sh-actions">
+      <span class="badge b-sk">確定</span>
+      <button class="btn btn-g btn-sm" onclick="event.stopPropagation();cancelShowing('${s.id}')">キャンセル</button>
+      <button class="btn btn-p btn-sm" onclick="event.stopPropagation();switchTab('report',document.getElementById('tab-report'))">報告入力</button>
+    </div>
+  </div>`).join('')}
+
+  <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin:16px 0 10px">完了</div>
+  ${done.map(s=>`
+  <div class="sh-card" style="opacity:.75">
+    <div class="sh-date-box" style="background:var(--cream2)"><div class="sh-date-d" style="color:var(--ink)">${s.dateNum}</div><div class="sh-date-m" style="color:var(--faint)">MAR</div></div>
+    <div class="sh-info">
+      <div class="sh-prop">${s.prop}</div>
+      <div class="sh-meta">${s.addr} ／ ${s.time} ／ ${s.client}</div>
+    </div>
+    <div class="sh-actions">
+      <span class="badge ${s.result==='申込意向あり'?'b-em':s.result==='検討中'?'b-am':'b-nt'}">${s.result}</span>
+    </div>
+  </div>`).join('')}`;
+}
+
+function cancelShowing(id){ if(confirm(`内見 ${id} をキャンセルしますか？`)) alert('キャンセルしました。クライアントへ通知します。'); }
+
+function renderNew(){
+  document.getElementById('pg').innerHTML = `
+  <div class="form-wrap">
+    <div class="form-card">
+      <div class="form-head"><div class="form-head-title">📅 内見登録</div></div>
+      <div class="form-body">
+        <div class="field-row">
+          <div class="field"><label class="required">案件ID</label><input placeholder="RENT-0000"></div>
+          <div class="field"><label class="required">クライアント</label><input placeholder="田中 優子"></div>
+        </div>
+        <div class="field"><label class="required">物件名・部屋番号</label><input placeholder="パークタワー三田 302"></div>
+        <div class="field"><label class="required">物件住所</label><input placeholder="港区三田3丁目XX-XX"></div>
+        <div class="field-row">
+          <div class="field"><label class="required">内見日</label><input type="date"></div>
+          <div class="field"><label class="required">時間</label><input type="time" value="14:00"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>同行者</label><input placeholder="なし / 管理会社担当など"></div>
+          <div class="field"><label>内見方法</label>
+            <select>
+              <option>現地案内（AG同行）</option>
+              <option>セルフ内見（鍵貸出）</option>
+              <option>オンライン内見</option>
+            </select>
+          </div>
+        </div>
+        <div class="field"><label>備考</label><textarea placeholder="駐車場の有無、集合場所など"></textarea></div>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:10px">
+      <button class="btn btn-g" onclick="switchTab('list',document.getElementById('tab-list'))">キャンセル</button>
+      <button class="btn btn-p" onclick="registerShowing()">内見を登録する →</button>
+    </div>
+  </div>`;
+}
+
+function registerShowing(){
+  alert('✅ 内見を登録しました。');
+  switchTab('list', document.getElementById('tab-list'));
+}
+
+function renderReport(){
+  document.getElementById('pg').innerHTML = `
+  <div class="form-wrap">
+    <div class="form-card">
+      <div class="form-head"><div class="form-head-title">📝 内見後報告</div></div>
+      <div class="form-body">
+        <div class="field-row">
+          <div class="field"><label class="required">内見ID</label>
+            <select>
+              <option>SHW-0021 — 田中 優子 / パークタワー三田 3/12</option>
+              <option>SHW-0022 — 鈴木 健太 / 白金ハウス 3/13</option>
+            </select>
+          </div>
+          <div class="field"><label class="required">内見日</label><input type="date" value="2026-03-12"></div>
+        </div>
+
+        <div class="field">
+          <label class="required">内見結果</label>
+          <div class="result-options" style="margin-top:6px">
+            <div class="result-opt" onclick="selectResult('interested',this)">申込意向あり</div>
+            <div class="result-opt" onclick="selectResult('considering',this)">検討中</div>
+            <div class="result-opt" onclick="selectResult('pass',this)">見送り</div>
+            <div class="result-opt" onclick="selectResult('rescheduled',this)">再内見希望</div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>クライアントの反応・コメント</label>
+          <textarea placeholder="「日当たりが良くて気に入っています。収納が少し心配です。」など"></textarea>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label>次のアクション</label>
+            <select>
+              <option>申込書を送付する</option>
+              <option>別物件を提案する</option>
+              <option>再内見を設定する</option>
+              <option>条件交渉を行う</option>
+              <option>様子を見る</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>フォローアップ予定日</label>
+            <input type="date" value="2026-03-14">
+          </div>
+        </div>
+
+        <div class="field">
+          <label>物件の印象メモ（内部用）</label>
+          <textarea placeholder="クライアントが特に気に入った点、懸念点など（HQとの共有用）"></textarea>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:10px">
+      <button class="btn btn-g" onclick="switchTab('list',document.getElementById('tab-list'))">キャンセル</button>
+      <button class="btn btn-p" onclick="submitReport()">報告を提出する →</button>
+    </div>
+  </div>`;
+}
+
+function submitReport(){
+  alert('✅ 内見後報告を提出しました。案件ステータスを更新します。');
+  switchTab('list', document.getElementById('tab-list'));
+}
+
+window.addEventListener('DOMContentLoaded', ()=>{
+  CNAV.init('showing');
+  renderList();
+});
+</script>
+</body>
+</html>
