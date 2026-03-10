@@ -232,31 +232,31 @@ function openSettings() {
       <button id="cnav-s-close" style="background:rgba(255,255,255,.1);border:none;width:28px;height:28px;border-radius:50%;color:rgba(255,255,255,.6);font-size:16px;cursor:pointer;line-height:1">✕</button>
     </div>
     <div style="padding:20px 22px">
-      <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#6B7280;margin-bottom:10px">表示設定</div>
+      <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#5F6368;margin-bottom:10px">表示設定</div>
       <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px">
-        <label style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#F7F4EE;border-radius:8px;cursor:pointer;font-size:13px;color:#1A1A2E">
+        <label style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#F8F9FA;border-radius:8px;cursor:pointer;font-size:13px;color:#202124">
           デスクトップ通知
           <input type="checkbox" checked style="accent-color:#0D1A2D;width:14px;height:14px">
         </label>
-        <label style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#F7F4EE;border-radius:8px;cursor:pointer;font-size:13px;color:#9CA3AF">
+        <label style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#F8F9FA;border-radius:8px;cursor:pointer;font-size:13px;color:#80868B">
           ダークモード（開発中）
           <input type="checkbox" disabled style="width:14px;height:14px">
         </label>
       </div>
-      <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#6B7280;margin-bottom:10px">アカウント</div>
+      <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#5F6368;margin-bottom:10px">アカウント</div>
       <div style="display:flex;flex-direction:column;gap:8px">
-        <div style="padding:10px 14px;background:#F7F4EE;border-radius:8px;display:flex;justify-content:space-between;font-size:13px">
-          <span style="color:#6B7280">ログイン中</span>
-          <span style="font-weight:600;color:#1A1A2E">${user.name}</span>
+        <div style="padding:10px 14px;background:#F8F9FA;border-radius:8px;display:flex;justify-content:space-between;font-size:13px">
+          <span style="color:#5F6368">ログイン中</span>
+          <span style="font-weight:600;color:#202124">${user.name}</span>
         </div>
-        <div style="padding:10px 14px;background:#F7F4EE;border-radius:8px;display:flex;justify-content:space-between;font-size:13px">
-          <span style="color:#6B7280">バージョン</span>
-          <span style="font-family:'DM Mono',monospace;color:#9CA3AF">COREBLDG v2.0</span>
+        <div style="padding:10px 14px;background:#F8F9FA;border-radius:8px;display:flex;justify-content:space-between;font-size:13px">
+          <span style="color:#5F6368">バージョン</span>
+          <span style="font-family:'DM Mono',monospace;color:#80868B">COREBLDG v2.0</span>
         </div>
       </div>
     </div>
     <div style="padding:0 22px 22px;display:flex;gap:8px">
-      <button id="cnav-s-btn-close" style="flex:1;padding:11px;background:#F7F4EE;border:1px solid #E5E0D5;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:#6B7280">閉じる</button>
+      <button id="cnav-s-btn-close" style="flex:1;padding:11px;background:#F8F9FA;border:1px solid #E8EAED;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:#5F6368">閉じる</button>
       <button id="cnav-s-btn-logout" style="flex:1;padding:11px;background:#DC2626;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;color:#fff">ログアウト</button>
     </div>`;
 
