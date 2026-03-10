@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>権限管理 — COREBLDG</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+
+:root{--navy:#0D1A2D;--navy-l:#1E3252;--gold:#C8A951;--gold-dim:rgba(200,169,81,.15);--cream:#FFFFFF;--cream2:#F8F9FA;--white:#FFFFFF;--ink:#202124;--muted:#5F6368;--faint:#80868B;--em:#059669;--em-bg:#ECFDF5;--am:#D97706;--am-bg:#FFFBEB;--rd:#DC2626;--rd-bg:#FEF2F2;--sk:#0284C7;--sk-bg:#F0F9FF;--vt:#7C3AED;--vt-bg:#F5F3FF;--bd:#E8EAED;--bd2:#DADCE0;--sw:240px;--r:10px;--r-sm:7px;--sh:0 1px 2px rgba(60,64,67,.1),0 1px 3px rgba(60,64,67,.06)}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:#FFFFFF}
+.shell{display:flex;height:100vh}
+.sb{width:var(--sw);background:var(--navy);display:flex;flex-direction:column;flex-shrink:0;position:relative}
+.sb::after{content:'';position:absolute;top:0;right:0;width:1px;height:100%;background:linear-gradient(180deg,rgba(200,169,81,.25) 0%,rgba(200,169,81,.06) 50%,transparent 100%)}
+.sb-head{padding:24px 20px 18px;border-bottom:1px solid rgba(255,255,255,.06)}
+.sb-logo{font-family: 'Cormorant Garamond', serif;font-size:20px;font-weight:600;letter-spacing:5px;color:var(--gold)}
+.sb-ver{font-size:9px;letter-spacing:2px;color:rgba(200,169,81,.3);font-family:'DM Mono',monospace;margin-top:2px}
+.sb-user{margin:14px 14px 10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:9px 11px;display:flex;align-items:center;gap:9px}
+.sb-av{width:28px;height:28px;border-radius:50%;background:var(--gold-dim);border:1px solid rgba(200,169,81,.25);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--gold);flex-shrink:0}
+.sb-un{font-size:11px;font-weight:600;color:rgba(255,255,255,.8)}
+.sb-ur{font-size:9px;color:rgba(255,255,255,.3);font-family:'DM Mono',monospace}
+.sb-nav{flex:1;overflow-y:auto;padding:6px 10px}
+.nsl{font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.18);padding:10px 8px 4px;font-family:'DM Mono',monospace}
+.ni{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:7px;cursor:pointer;transition:.13s;margin-bottom:1px}
+.ni:hover{background:rgba(255,255,255,.06)}
+.ni.active{background:rgba(200,169,81,.1)}
+.ni-ic{width:22px;text-align:center;font-size:14px}
+.ni-lb{font-size:11px;font-weight:500;color:rgba(255,255,255,.55)}
+.ni.active .ni-lb{color:var(--gold)}
+.sf{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;cursor:pointer;font-size:11px;color:rgba(255,255,255,.3);transition:.13s}
+.sf:hover{background:rgba(255,255,255,.05);color:rgba(255,255,255,.6)}
+.sb-foot{padding:10px 14px 18px;border-top:1px solid rgba(255,255,255,.05)}
+.content{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:58px;background:var(--white);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 24px;gap:14px;flex-shrink:0;box-shadow:var(--sh)}
+.tb-title{font-size:16px;font-weight:600;color:var(--ink);letter-spacing:.5px}
+.tb-crumb{font-size:11px;color:var(--faint)}
+.tb-crumb a{color:var(--muted);text-decoration:none}
+.tb-act{margin-left:auto;display:flex;gap:9px;align-items:center}
+.btn{padding:7px 16px;border-radius:var(--r-sm);font-size:12px;font-weight:600;cursor:pointer;transition:.15s;font-family:'Outfit',sans-serif;border:none}
+.btn-p{background:var(--navy);color:var(--gold)}.btn-p:hover{background:var(--navy-l)}
+.btn-g{background:transparent;color:var(--muted);border:1px solid var(--bd)}.btn-g:hover{background:var(--cream);color:var(--ink)}
+.btn-rd{background:var(--rd-bg);color:var(--rd);border:1px solid rgba(220,38,38,.2)}.btn-rd:hover{background:var(--rd);color:#fff}
+.btn-sm{padding:5px 12px;font-size:11px}
+.tab-bar{padding:0 24px;background:var(--white);border-bottom:1px solid var(--bd);display:flex;gap:0}
+.tab{padding:12px 18px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:.15s}
+.tab:hover{color:var(--ink)}.tab.active{color:var(--navy);border-bottom-color:var(--gold)}
+.page{flex:1;overflow-y:auto;padding:24px}
+.page::-webkit-scrollbar{width:5px}.page::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:3px}
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;font-family:'Outfit',sans-serif}
+.b-em{background:var(--em-bg);color:var(--em)}.b-am{background:var(--am-bg);color:var(--am)}.b-rd{background:var(--rd-bg);color:var(--rd)}.b-sk{background:var(--sk-bg);color:var(--sk)}.b-vt{background:var(--vt-bg);color:var(--vt)}.b-nt{background:var(--cream2);color:var(--muted)}.b-gd{background:var(--gold-dim);color:var(--am)}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.kpi{background:var(--white);border:1px solid var(--bd);border-radius:var(--r);padding:16px 18px;box-shadow:var(--sh);position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.kpi.gd::before{background:var(--gold)}.kpi.em::before{background:var(--em)}.kpi.sk::before{background:var(--sk)}.kpi.am::before{background:var(--am)}
+.kpi-lb{font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+.kpi-vl{font-size:24px;font-weight:700;color:var(--ink);font-family:'Outfit','Noto Sans JP',sans-serif;font-variant-numeric:tabular-nums lining-nums;color:var(--ink);margin-top:4px}
+.card{background:var(--white);border:1px solid var(--bd);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden;margin-bottom:18px}
+.card-head{padding:14px 20px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;background:var(--cream)}
+.card-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--ink)}
+.tbl{width:100%;border-collapse:collapse;font-size:12px}
+.tbl th{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--faint);padding:9px 14px;border-bottom:2px solid var(--bd);text-align:left;background:var(--cream)}
+.tbl td{padding:11px 14px;border-bottom:1px solid var(--bd);color:var(--ink);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:rgba(200,169,81,.03)}
+/* Settings */
+.set-section{margin-bottom:22px}
+.set-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--bd)}
+.set-row{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--white);border:1px solid var(--bd);border-radius:var(--r-sm);margin-bottom:6px}
+.set-info{flex:1}
+.set-label{font-size:13px;font-weight:600;color:var(--ink);margin-bottom:2px}
+.set-desc{font-size:11px;color:var(--muted)}
+.toggle{width:42px;height:24px;background:var(--bd2);border-radius:12px;position:relative;cursor:pointer;transition:.2s;flex-shrink:0}
+.toggle.on{background:var(--em)}
+.toggle::after{content:'';position:absolute;width:18px;height:18px;background:#fff;border-radius:50%;top:3px;left:3px;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.toggle.on::after{left:21px}
+.set-input{padding:7px 12px;background:var(--cream);border:1.5px solid var(--bd);border-radius:var(--r-sm);font-size:13px;color:var(--ink);font-family:'Outfit',sans-serif;min-width:160px;outline:none}
+.set-input:focus{border-color:var(--gold)}
+/* modal */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:500;align-items:center;justify-content:center}
+.modal-bg.show{display:flex}
+.modal{background:var(--white);border-radius:12px;width:520px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal-head{padding:18px 22px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-size:14px;font-weight:700;color:var(--ink)}
+.modal-close{background:none;border:none;font-size:18px;cursor:pointer;color:var(--muted)}
+.modal-body{padding:20px 22px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
+.field input,.field select{width:100%;padding:9px 12px;background:var(--cream);border:1.5px solid var(--bd);border-radius:var(--r-sm);font-size:13px;color:var(--ink);font-family:'Outfit','Noto Sans JP',sans-serif;outline:none;transition:.15s}
+.field input:focus,.field select:focus{border-color:var(--gold)}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.modal-foot{padding:14px 22px;border-top:1px solid var(--bd);display:flex;justify-content:flex-end;gap:8px}
+/* permission matrix */
+.perm-table{width:100%;border-collapse:collapse;font-size:11px}
+.perm-table th{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--faint);padding:8px 10px;border-bottom:2px solid var(--bd);text-align:center;background:var(--cream)}
+.perm-table th:first-child{text-align:left}
+.perm-table td{padding:10px;border-bottom:1px solid var(--bd);text-align:center;vertical-align:middle}
+.perm-table td:first-child{text-align:left;font-size:12px;font-weight:600;color:var(--ink)}
+.perm-table tr:last-child td{border-bottom:none}
+.perm-check{width:18px;height:18px;border-radius:4px;border:none;cursor:default}
+.perm-check.allow{background:var(--em-bg);color:var(--em);display:inline-flex;align-items:center;justify-content:center;font-size:11px}
+.perm-check.deny{background:var(--rd-bg);color:var(--rd);display:inline-flex;align-items:center;justify-content:center;font-size:11px}
+.perm-check.partial{background:var(--am-bg);color:var(--am);display:inline-flex;align-items:center;justify-content:center;font-size:11px}
+/* MOBILE */
+.mob-ham{display:none;flex-direction:column;align-items:center;justify-content:center;width:36px;height:36px;background:transparent;border:none;cursor:pointer;border-radius:7px;flex-shrink:0}
+.mob-ham span{display:block;width:18px;height:2px;background:rgba(255,255,255,.72);margin:3px 0;border-radius:1px}
+.mob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:199}
+@media(max-width:768px){
+  .mob-ham{display:flex}
+  .mob-overlay.show{display:block}
+  .sb{position:fixed;left:calc(-1 * var(--sw));top:0;height:100vh;z-index:200;transition:left .25s ease}
+  .sb.open{left:0}
+  .shell{overflow:hidden}.content{width:100vw;min-width:0}
+  .topbar{padding:0 12px;gap:8px}.tb-crumb{display:none}
+  .page{padding:12px}
+}  .kpi-row{grid-template-columns:1fr 1fr!important}
+  .field-row{grid-template-columns:1fr}
+  table,tbl{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+  .tb-title,
+.brand-logo,
+.sb-logo,
+.login-title,
+.mod-title,
+.page-title        {  font-weight:600; letter-spacing:.3px; }
+
+/* Section headings inside content */
+.section-title     {  font-size:12px;
+                     font-weight:700; text-transform:uppercase; letter-spacing:1px;
+                     color:var(--label); }
+
+/* KPI numbers — large display (24px+): Outfit tabular */
+.kpi-value, .kpi-vl, .stat-val { 
+  font-family:'Outfit','Noto Sans JP',sans-serif;
+  font-weight:300;
+  font-variant-numeric:tabular-nums lining-nums;
+  letter-spacing:-.5px;   /* tight for large numbers */
+  color:var(--ink);        /* always maximum contrast */
+}
+
+/* Inline amounts in tables/lists */
+.amt { font-family:'Outfit','Noto Sans JP',sans-serif;
+       font-weight:600; font-variant-numeric:tabular-nums;
+       color:var(--ink); }
+
+/* Positive delta only */
+.delta-up { color:var(--em); font-weight:600; font-size:.9em; }
+.delta-dn { color:var(--rd); font-weight:600; font-size:.9em; }
+
+/* IDs and codes */
+.mono, [class*="-id"], [class*="-code"] { font-family:'DM Mono',monospace; font-size:.92em; }
+
+/* Badge system — 4 states only */
+.badge { display:inline-flex; align-items:center; padding:2px 8px; border-radius:20px;
+         font-size:10px; font-weight:600; letter-spacing:.3px;
+         font-family:'Outfit',sans-serif; white-space:nowrap; }
+.b-em, .badge.emerald, .badge.em { background:var(--em-bg); color:var(--em); }
+.b-am, .badge.amber,   .badge.am { background:var(--am-bg); color:var(--am); }
+.b-rd, .badge.red,     .badge.rd { background:var(--rd-bg); color:var(--rd); }
+.b-nt, .badge.muted,   .badge.nt { background:var(--cream2); color:var(--label); }
+/* Legacy aliases → neutral */
+.b-sk, .badge.sky    { background:#F0F9FF; color:#0369A1; }
+.b-vt, .badge.violet { background:var(--cream2); color:var(--label); }
+.b-gd, .badge.gold   { background:var(--gold-dim); color:#92740A; }
+
+
+
+
+/* Brand — Cormorant only here */
+.sb-logo, .brand-logo {
+  font-family:'Cormorant Garamond',serif !important;
+  letter-spacing:5px;
+}
+/* Everything else: Outfit */
+body, input, select, textarea, button {
+  font-family:'Outfit','Noto Sans JP',sans-serif;
+}
+
+/* ── Page structure ── */
+.tb-title {
+  font-family:'Outfit','Noto Sans JP',sans-serif;
+  font-size:18px; font-weight:600; color:var(--ink);
+  letter-spacing:-.2px;
+}
+.login-title {
+  font-family:'Outfit','Noto Sans JP',sans-serif;
+  font-size:24px; font-weight:600; color:var(--ink);
+  letter-spacing:-.3px;
+}
+.section-title {
+  
+  font-size:11px; font-weight:700;
+  text-transform:uppercase; letter-spacing:1.2px;
+  color:var(--label);
+}
+
+/* ── Numbers & Amounts — always --ink, always Outfit ── */
+.kpi-value, .kpi-vl {
+  font-family:'Outfit','Noto Sans JP',sans-serif;
+  font-weight:300 !important;
+  font-variant-numeric:tabular-nums lining-nums !important;
+  color:var(--ink);
+  letter-spacing:-.5px;
+}
+.stat-val {
+  font-family:'Outfit','Noto Sans JP',sans-serif !important;
+  font-weight:300 !important;
+  font-variant-numeric:tabular-nums !important;
+  color:var(--ink) !important;
+}
+.kpi-label, .stat-label, .kpi-sub {
+  color:var(--label) !important;
+  font-weight:500;
+}
+
+/* ── Delta (the ONE exception: direction of change) ── */
+.delta-up { color:var(--em) !important; }
+.delta-dn { color:var(--rd) !important; }
+
+/* ── IDs / codes ── */
+.id-mono, .ag-id, .case-id {
+  font-family:'DM Mono',monospace;
+  font-size:.88em; color:var(--label);
+}
+
+/* ── Badge system: 4 states only ── */
+.badge {
+  display:inline-flex; align-items:center;
+  padding:2px 8px; border-radius:20px;
+  font-size:10px; font-weight:600; letter-spacing:.3px;
+  font-family:'Outfit',sans-serif; white-space:nowrap;
+  font-variant-numeric:tabular-nums;
+}
+.badge.emerald, .badge.em { background:#ECFDF5; color:#059669; }
+.badge.amber,   .badge.am { background:#FFFBEB; color:#D97706; }
+.badge.red,     .badge.rd { background:#FEF2F2; color:#DC2626; }
+.badge.muted,   .badge.nt,
+.badge.sky,     .badge.violet,
+.badge.gold               { background:var(--cream2); color:var(--label); }
+
+
+/* ═══════════════════════════════════════════════════════════════
+   COREBLDG — Google-style Typography System
+   ─────────────────────────────────────────────────────────────
+   大きな数値は weight:300 でサイズで存在感を出す
+   Bold はラベル・ボタン・UIに使い、数値には使わない
+   背景は白。装飾は最小限。余白で呼吸する。
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Page background */
+html, body { background:#FFFFFF !important; }
+
+/* ── Brand (Cormorant only here) ── */
+.sb-logo, .brand-logo {
+  font-family: 'Cormorant Garamond', serif !important;
+  letter-spacing: 5px;
+}
+
+/* ── Base ── */
+body, input, select, textarea, button {
+  font-family: 'Outfit', 'Noto Sans JP', sans-serif;
+}
+
+/* ── KPI / メトリクス数値
+   Google Analytics の大型数値と同じアプローチ:
+   weight 300、大きなサイズ、tight letter-spacing ── */
+.kpi-value, .kpi-vl {
+  font-family: 'Outfit', 'Noto Sans JP', sans-serif !important;
+  font-weight: 300 !important;
+  font-variant-numeric: tabular-nums lining-nums !important;
+  letter-spacing: -1px !important;
+  color: var(--ink) !important;
+  line-height: 1 !important;
+}
+/* KPIカードのサイズを少し大きく（軽いweightを補う） */
+.kpi-value { font-size: 32px !important;font-variant-numeric:tabular-nums}
+.kpi-vl   { font-size: 28px !important; }
+
+/* ── 中型数値（stat-val, テーブル内金額） ── */
+.stat-val {
+  font-family: 'Outfit', 'Noto Sans JP', sans-serif !important;
+  font-weight: 400 !important;
+  font-variant-numeric: tabular-nums !important;
+  color: var(--ink) !important;
+}
+
+/* ── ラベル系 ── */
+.kpi-label, .kpi-sub, .stat-label {
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  letter-spacing: .5px !important;
+  color: var(--label) !important;
+  text-transform: none;
+}
+
+/* ── Page title ── */
+.tb-title {
+  font-family: 'Outfit', 'Noto Sans JP', sans-serif;
+  font-size: 16px; font-weight: 400; color: var(--ink);
+  letter-spacing: 0;
+}
+
+/* ── Section title — Google style: small, spaced, gray ── */
+.section-title {
+  font-family: 'Outfit', 'Noto Sans JP', sans-serif;
+  font-size: 11px; font-weight: 500;
+  letter-spacing: .8px;
+  color: var(--label);
+  text-transform: uppercase;
+}
+
+/* ── Card: white bg, very light border, minimal shadow ── */
+.card {
+  background: #FFFFFF;
+  border: 1px solid var(--bd);
+  border-radius: 8px;
+  box-shadow: var(--sh);
+}
+
+/* ── KPI Card ── */
+.kpi-card {
+  background: #FFFFFF !important;
+  border: 1px solid var(--bd) !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+  padding: 20px 24px !important;
+}
+.kpi-card.gold   { border-top: 3px solid var(--gold) !important; }
+.kpi-card.emerald{ border-top: 3px solid var(--em)   !important; }
+.kpi-card.amber  { border-top: 3px solid var(--am)   !important; }
+.kpi-card.red    { border-top: 3px solid var(--rd)   !important; }
+.kpi-card.sky    { border-top: 3px solid #1A73E8     !important; }
+
+/* ── 入金監視・大型パネル ── */
+.kpi { border-radius: 8px; border: 1px solid var(--bd); }
+
+/* ── Badge — flat style ── */
+.badge {
+  border-radius: 4px !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  padding: 2px 7px !important;
+  letter-spacing: 0 !important;
+}
+
+/* ── Buttons ── */
+.btn-primary {
+  background: var(--navy) !important;
+  border-radius: 6px !important;
+  font-weight: 500 !important;
+  letter-spacing: .2px !important;
+}
+.btn-ghost {
+  border-radius: 6px !important;
+  font-weight: 500 !important;
+}
+
+/* ── Delta (増減のみ色付き) ── */
+.delta-up, .kpi-delta.up { color: var(--em) !important; font-weight: 500; font-size: .82em; }
+.delta-dn, .kpi-delta.dn { color: var(--rd) !important; font-weight: 500; font-size: .82em; }
+
+/* ── IDs ── */
+[class*="-id"], [class*="-code"], .pipe-ag, .task-meta [class*="ag-"],
+.id-mono { font-family: 'DM Mono', monospace; font-size: .88em; color: var(--label); }
+
+/* ── Form inputs — Google style ── */
+.form-input, .form-select {
+  border: 1px solid var(--bd) !important;
+  border-radius: 4px !important;
+  background: #FFFFFF !important;
+  font-family: 'Outfit', 'Noto Sans JP', sans-serif !important;
+  font-size: 14px !important;
+  color: var(--ink) !important;
+  padding: 8px 12px !important;
+}
+.form-input:focus, .form-select:focus {
+  border-color: #1A73E8 !important;
+  outline: none !important;
+}
+
+/* ── Section separator ── */
+
+.section-title::before { display: none; }
+/* ── Google-style 数値原則 (DS v2.3) ── */
+.kpi-value, .kpi-vl, .kpi-val,
+.stat-val, .qs-val, .count-val,
+.td-amt, .bc-vl, .bc-total-vl,
+.rr-amount, .amount-val, .srv,
+.visit-reward, .lb-val,
+.mf-kpi-vl, .mf-reward {
+  font-family:'Outfit','Noto Sans JP',sans-serif !important;
+  font-weight:300 !important;
+  font-variant-numeric:tabular-nums !important;
+}
+.kpi-value { font-size:32px !important; }
+.kpi-vl    { font-size:28px !important; }
+
+
+/* ── ページ固有 ── */
+.tab-bar{display:flex;gap:0;border-bottom:2px solid var(--bd);margin-bottom:24px}
+.tab-btn{padding:10px 20px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;
+  border:none;background:none;border-bottom:2px solid transparent;margin-bottom:-2px;transition:.15s}
+.tab-btn.active{color:var(--navy);border-bottom-color:var(--navy)}
+
+/* ユーザー行 */
+.user-row{background:#fff;border:1px solid var(--bd);border-radius:10px;
+  padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:14px;
+  transition:.15s}
+.user-row:hover{box-shadow:var(--sh2)}
+.u-av{width:38px;height:38px;border-radius:9px;display:flex;align-items:center;
+  justify-content:center;font-size:13px;font-weight:700;flex-shrink:0}
+.u-av.hq{background:var(--navy);color:var(--gold)}
+.u-av.re{background:#EFF6FF;color:#1D4ED8}
+.u-av.hr{background:#F0FDF4;color:#15803D}
+.u-av.pt{background:var(--gold-dim);color:#92400E}
+.u-name{font-size:13px;font-weight:700;color:var(--ink)}
+.u-meta{font-size:10px;color:var(--muted);margin-top:2px}
+.u-id{font-family:'DM Mono',monospace;font-size:10px;color:var(--faint)}
+.u-right{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+
+/* バッジ */
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;
+  font-size:9px;font-weight:700;letter-spacing:.5px}
+.badge-exec{background:#FEF3C7;color:#92400E;border:1px solid #FCD34D}
+.badge-manager{background:#EFF6FF;color:#1D4ED8;border:1px solid #BFDBFE}
+.badge-staff{background:#F3F4F6;color:#6B7280;border:1px solid #E5E7EB}
+.badge-re{background:#EFF6FF;color:#1D4ED8}
+.badge-hr{background:#F0FDF4;color:#15803D}
+.badge-pt{background:var(--gold-dim);color:#92400E}
+.badge-active{background:var(--em-bg);color:var(--em)}
+.badge-suspended{background:var(--rd-bg);color:var(--rd)}
+.badge-sennin{background:#FEF9C3;color:#854D0E;border:1px solid #FDE68A}
+.badge-override{background:#EDE9FE;color:#5B21B6;border:1px solid #C4B5FD}
+
+/* ロールセレクト */
+.role-select{padding:5px 10px;border:1.5px solid var(--bd);border-radius:7px;
+  font-family:'Outfit',sans-serif;font-size:11px;font-weight:600;color:var(--ink);
+  background:#fff;cursor:pointer;outline:none;transition:.15s}
+.role-select:focus{border-color:var(--navy)}
+
+/* アクションボタン */
+.act-btn{padding:6px 12px;border-radius:7px;font-size:10px;font-weight:700;
+  cursor:pointer;border:none;display:flex;align-items:center;gap:4px;transition:.15s}
+.act-primary{background:var(--navy);color:#fff}
+.act-primary:hover{background:var(--navy-l)}
+.act-ghost{background:transparent;border:1px solid var(--bd);color:var(--muted)}
+.act-ghost:hover{color:var(--ink);border-color:var(--bd2)}
+.act-danger{background:var(--rd-bg);color:var(--rd);border:1px solid rgba(220,38,38,.2)}
+.act-warn{background:var(--am-bg);color:var(--am);border:1px solid rgba(217,119,6,.25)}
+
+/* セクションヘッダ */
+.sec-head{display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:14px;flex-wrap:wrap;gap:8px}
+.sec-title{font-size:13px;font-weight:700;color:var(--navy)}
+.sec-count{font-size:10px;color:var(--muted)}
+
+/* メンターフィーモーダル */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;
+  display:flex;align-items:center;justify-content:center;padding:20px}
+.modal{background:#fff;border-radius:14px;padding:28px;max-width:440px;width:100%;
+  box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal-title{font-size:15px;font-weight:700;color:var(--navy);margin-bottom:4px}
+.modal-desc{font-size:11px;color:var(--muted);margin-bottom:20px;line-height:1.7}
+
+/* スライダー */
+.fee-slider-wrap{margin:16px 0}
+.fee-slider{width:100%;-webkit-appearance:none;height:6px;border-radius:3px;
+  background:linear-gradient(to right,var(--navy) 0%,var(--navy) 50%,var(--bd2) 50%,var(--bd2) 100%);
+  outline:none;cursor:pointer}
+.fee-slider::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;
+  border-radius:50%;background:var(--navy);border:3px solid var(--gold);
+  box-shadow:0 2px 6px rgba(0,0,0,.2);cursor:pointer}
+.fee-display{text-align:center;margin:12px 0}
+.fee-val{font-size:36px;font-weight:700;color:var(--navy);font-family:'DM Mono',monospace}
+.fee-unit{font-size:16px;color:var(--muted);margin-left:2px}
+.fee-compare{display:flex;justify-content:center;gap:20px;font-size:10px;color:var(--muted);margin-top:4px}
+
+/* Stripe管理 */
+.stripe-row{display:flex;align-items:center;justify-content:space-between;
+  padding:10px 0;border-bottom:1px solid var(--bd);font-size:12px}
+.stripe-row:last-child{border-bottom:none}
+
+/* exec限定バナー */
+.exec-only-banner{background:linear-gradient(135deg,#1a1040,#2d1b69);
+  border-radius:10px;padding:14px 18px;display:flex;align-items:center;gap:12px;
+  margin-bottom:20px}
+.exec-only-icon{font-size:22px;flex-shrink:0}
+.exec-only-text{font-size:11px;color:rgba(255,255,255,.8);line-height:1.7}
+.exec-only-title{font-size:13px;font-weight:700;color:#C4B5FD;margin-bottom:2px}
+
+/* フィルター */
+.filter-row{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.filter-inp{padding:7px 12px;border:1.5px solid var(--bd);border-radius:8px;
+  font-size:11px;outline:none;font-family:'Outfit',sans-serif;width:200px;transition:.15s}
+.filter-inp:focus{border-color:var(--navy)}
+.filter-chip{padding:5px 12px;border-radius:20px;font-size:10px;font-weight:700;
+  cursor:pointer;border:1.5px solid var(--bd);background:#fff;color:var(--muted);transition:.15s}
+.filter-chip.on{border-color:var(--navy);background:var(--navy);color:#fff}
+
+/* 統計カード */
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+@media(max-width:680px){.stat-grid{grid-template-columns:repeat(2,1fr)}}
+.stat-card{background:#fff;border:1px solid var(--bd);border-radius:10px;padding:14px;text-align:center}
+.stat-val{font-size:26px;font-weight:700;color:var(--navy)}
+.stat-lbl{font-size:9px;color:var(--muted);margin-top:3px;font-weight:600;letter-spacing:.5px}
+</style>
+</head>
+<body>
+<div class="shell">
+<nav class="sb" id="sb">
+  <div class="sb-head">
+    <div class="sb-logo">CORE<br>BLDG</div>
+    <div class="sb-ver">v2.0 — CORETO</div>
+  </div>
+  <div class="sb-user">
+    <div class="sb-av">HQ</div>
+    <div>
+      <div class="sb-un">田中 誠一</div>
+      <div class="sb-ur">HQ / exec</div>
+    </div>
+  </div>
+  <div class="sb-nav" id="sb-nav"></div>
+  <div class="sb-foot">
+    <div class="sf" onclick="CNAV.openSettings()">⚙️ 設定</div>
+    <div class="sf" onclick="CNAV.logout()">🚪 ログアウト</div>
+  </div>
+</nav>
+<div class="mob-overlay" onclick="toggleSb()"></div>
+
+<div class="content">
+  <div class="topbar">
+    <button class="mob-ham" onclick="toggleSb()"><span></span><span></span><span></span></button>
+    <div>
+      <div class="tb-title">権限管理・メンターフィー設定</div>
+      <div class="tb-crumb"><a href="coreto-hub-v2.html">COREBLDG</a> › <span>権限管理</span></div>
+    </div>
+  </div>
+  <div class="page">
+
+    <!-- exec限定バナー -->
+    <div class="exec-only-banner">
+      <div class="exec-only-icon">👑</div>
+      <div class="exec-only-text">
+        <div class="exec-only-title">経営者（exec）専用ページ</div>
+        このページはHQ経営者のみアクセスできます。HQロール変更・メンターフィー個別設定・
+        Stripeサブスク管理など、重要な権限操作を行います。
+      </div>
+    </div>
+
+    <!-- 統計 -->
+    <div class="stat-grid" id="stat-grid"></div>
+
+    <!-- タブ -->
+    <div class="tab-bar">
+      <button class="tab-btn active" id="tab-hq"     onclick="switchTab('hq')">🏢 HQメンバー</button>
+      <button class="tab-btn"        id="tab-agents"  onclick="switchTab('agents')">👥 AG / PT</button>
+      <button class="tab-btn"        id="tab-mentor"  onclick="switchTab('mentor')">💰 メンターフィー</button>
+      <button class="tab-btn"        id="tab-stripe"  onclick="switchTab('stripe')">💳 Stripe管理</button>
+    </div>
+
+    <div id="tab-content"></div>
+  </div>
+</div>
+</div>
+
+<!-- メンターフィーモーダル -->
+<div class="modal-bg" id="mentor-modal" style="display:none" onclick="closeMentorModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-title" id="mm-title">メンターフィー個別設定</div>
+    <div class="modal-desc" id="mm-desc"></div>
+
+    <div class="fee-display">
+      <span class="fee-val" id="mm-val">5</span>
+      <span class="fee-unit">%</span>
+    </div>
+
+    <div class="fee-slider-wrap">
+      <input type="range" class="fee-slider" id="mm-slider"
+        min="0" max="10" step="0.5" value="5"
+        oninput="updateFeeSlider(this.value)">
+      <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--faint);margin-top:4px">
+        <span>0%</span><span>5%</span><span>10%（上限）</span>
+      </div>
+    </div>
+
+    <div class="fee-compare" id="mm-compare"></div>
+
+    <div style="background:#F8F9FA;border-radius:8px;padding:12px;margin:16px 0;font-size:10px;
+      color:var(--muted);line-height:1.8">
+      <strong style="color:var(--ink)">適用ルール</strong><br>
+      • override設定値はランクデフォルト率より<strong>優先</strong>される<br>
+      • 0%に設定するとメンターフィーが発生しなくなる<br>
+      • 変更はKintone <code>mentor_fee_override</code> フィールドに保存される<br>
+      • 変更通知はエージェント・パートナーには<strong>送られない</strong>
+    </div>
+
+    <div style="display:flex;gap:8px">
+      <button class="act-btn act-primary" style="flex:1;justify-content:center" onclick="saveMentorFee()">
+        💾 保存する
+      </button>
+      <button class="act-btn act-ghost" onclick="clearMentorFee()" title="overrideを削除してランクデフォルトに戻す">
+        🔄 デフォルトに戻す
+      </button>
+      <button class="act-btn act-ghost" onclick="closeMentorModal()">キャンセル</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="coreto-nav-v2.js"></script>
+<script>
+// ════════════════════════════════════════════════════
+// デモデータ
+// ════════════════════════════════════════════════════
+const RANK_DEFAULTS = {bronze:5, silver:6, gold:7, platinum:8};
+const RANK_LABEL    = {bronze:'Bronze', silver:'Silver', gold:'Gold', platinum:'Platinum'};
+const RANK_COLOR    = {bronze:'#92400E', silver:'#374151', gold:'#B45309', platinum:'#5B21B6'};
+const RANK_BG       = {bronze:'#FEF3C7', silver:'#F3F4F6', gold:'#FFFBEB', platinum:'#EDE9FE'};
+
+let HQ_MEMBERS = [
+  {id:'HQ-001', name:'田中 誠一', kana:'タナカ セイイチ', email:'s-tanaka@coreto.co.jp', role:'exec',   joinedAt:'2025-01-01', status:'active'},
+  {id:'HQ-002', name:'木下 大輔', kana:'キノシタ ダイスケ', email:'d-kinoshita@coreto.co.jp', role:'manager', joinedAt:'2025-03-01', status:'active'},
+  {id:'HQ-003', name:'大橋 さくら', kana:'オオハシ サクラ', email:'s-ohashi@coreto.co.jp', role:'manager', joinedAt:'2025-03-15', status:'active'},
+  {id:'HQ-004', name:'山本 太郎',   kana:'ヤマモト タロウ',  email:'t-yamamoto@coreto.co.jp', role:'staff',   joinedAt:'2025-06-01', status:'active'},
+  {id:'HQ-005', name:'佐藤 美里',   kana:'サトウ ミサト',   email:'m-sato@coreto.co.jp',     role:'staff',   joinedAt:'2025-08-01', status:'active'},
+];
+
+let AGENTS = [
+  {id:'AG-10001', name:'木下 大輔',   type:'re', subtype:'専任宅建士', rank:'gold',     pts:22.5, email:'kinoshita10001@coreto.co.jp', phone:'090-1111-2222', feeOverride:null,  monthlyFree:false, status:'active'},
+  {id:'AG-10002', name:'大橋 さくら', type:'re', subtype:'一般AG',     rank:'silver',   pts:14.0, email:'ohashi10002@coreto.co.jp',    phone:'090-2222-3333', feeOverride:8,     monthlyFree:false, status:'active'},
+  {id:'AG-10003', name:'田中 優子',   type:'re', subtype:'専任宅建士', rank:'bronze',   pts:3.5,  email:'tanaka10003@coreto.co.jp',    phone:'090-3333-4444', feeOverride:null,  monthlyFree:true,  status:'active'},
+  {id:'AG-20001', name:'渡辺 直樹',   type:'hr', subtype:'HRエージェント', rank:'platinum', pts:32.0, email:'watanabe20001@coreto.co.jp',  phone:'090-4444-5555', feeOverride:null,  monthlyFree:false, status:'active'},
+  {id:'AG-20002', name:'鈴木 健太',   type:'hr', subtype:'HRエージェント', rank:'bronze',   pts:5.0,  email:'suzuki20002@coreto.co.jp',    phone:'090-5555-6666', feeOverride:null,  monthlyFree:false, status:'suspended'},
+  {id:'PT-30001', name:'中村 企画',   type:'pt', subtype:'法人PT',     rank:'silver',   pts:11.0, email:'nakamura30001@coreto.co.jp',  phone:'03-1234-5678',  feeOverride:null,  monthlyFree:false, status:'active'},
+  {id:'PT-30002', name:'高橋 美咲',   type:'pt', subtype:'個人PT',     rank:'bronze',   pts:1.5,  email:'takahashi30002@coreto.co.jp', phone:'080-6666-7777', feeOverride:3,     monthlyFree:false, status:'active'},
+];
+
+let _modalTarget = null;
+let _agentFilter = {q:'', type:'all', status:'all'};
+
+// ════════════════════════════════════════════════════
+// ユーティリティ
+// ════════════════════════════════════════════════════
+function toggleSb(){
+  document.querySelector('.sb').classList.toggle('open');
+  document.querySelector('.mob-overlay').classList.toggle('show');
+}
+
+function showToast(msg, type=''){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = type === 'warn' ? 'var(--am)' : type === 'ok' ? 'var(--em)' : 'var(--navy)';
+  t.style.opacity = '1'; t.style.transform = 'translateX(-50%) translateY(0)';
+  setTimeout(() => { t.style.opacity='0'; t.style.transform='translateX(-50%) translateY(10px)'; }, 3000);
+}
+
+function effectiveFee(ag) {
+  if (ag.feeOverride !== null && ag.feeOverride !== undefined) return ag.feeOverride;
+  return RANK_DEFAULTS[ag.rank] || 5;
+}
+
+function rankBadge(rank) {
+  const l = RANK_LABEL[rank] || rank;
+  return `<span class="badge" style="background:${RANK_BG[rank]};color:${RANK_COLOR[rank]}">${l}</span>`;
+}
+
+// ════════════════════════════════════════════════════
+// 統計カード
+// ════════════════════════════════════════════════════
+function renderStats(){
+  const overrides = AGENTS.filter(a => a.feeOverride !== null).length;
+  const suspended = AGENTS.filter(a => a.status === 'suspended').length;
+  const freeMonth = AGENTS.filter(a => a.monthlyFree).length;
+  document.getElementById('stat-grid').innerHTML = [
+    {val: HQ_MEMBERS.length,              lbl: 'HQメンバー',       color: 'var(--navy)'},
+    {val: AGENTS.filter(a=>a.type!=='pt').length, lbl: 'AG総数', color: 'var(--em)'},
+    {val: overrides,                      lbl: 'フィー個別設定中', color: '#6D28D9'},
+    {val: suspended,                      lbl: '停止中',           color: 'var(--rd)'},
+  ].map(s => `
+    <div class="stat-card">
+      <div class="stat-val" style="color:${s.color}">${s.val}</div>
+      <div class="stat-lbl">${s.lbl}</div>
+    </div>`).join('');
+}
+
+// ════════════════════════════════════════════════════
+// タブ切替
+// ════════════════════════════════════════════════════
+function switchTab(tab){
+  ['hq','agents','mentor','stripe'].forEach(t => {
+    document.getElementById('tab-'+t).classList.toggle('active', t===tab);
+  });
+  const TAB_MAP = {hq: renderHQ, agents: renderAgents, mentor: renderMentor, stripe: renderStripe};
+  TAB_MAP[tab]?.();
+}
+
+// ════════════════════════════════════════════════════
+// TAB 1: HQメンバー管理
+// ════════════════════════════════════════════════════
+function renderHQ(){
+  const el = document.getElementById('tab-content');
+  el.innerHTML = `
+    <div class="sec-head">
+      <div>
+        <div class="sec-title">HQメンバー</div>
+        <div class="sec-count">${HQ_MEMBERS.length} 名</div>
+      </div>
+      <button class="act-btn act-primary" onclick="showToast('📨 招待メール送信UI（本番実装予定）')">
+        ➕ メンバーを招待
+      </button>
+    </div>
+    <div style="background:var(--am-bg);border:1px solid rgba(217,119,6,.25);border-radius:8px;
+      padding:10px 14px;font-size:10px;color:var(--am);margin-bottom:16px;line-height:1.7">
+      ⚠️ <strong>exec（経営者）ロールの変更は慎重に。</strong>
+      execロールのメンバーはこのページへのフルアクセス・全設定の変更が可能です。
+    </div>
+    ${HQ_MEMBERS.map(m => {
+      const roleBadge = {
+        exec:    '<span class="badge badge-exec">👑 exec</span>',
+        manager: '<span class="badge badge-manager">🔑 manager</span>',
+        staff:   '<span class="badge badge-staff">👤 staff</span>',
+      }[m.role] || m.role;
+      return `
+      <div class="user-row">
+        <div class="u-av hq">${m.name.slice(0,1)}</div>
+        <div>
+          <div class="u-name">${m.name}</div>
+          <div class="u-meta">${m.kana} ／ 入社: ${m.joinedAt}</div>
+          <div class="u-id">${m.email}</div>
+        </div>
+        <div class="u-right">
+          ${roleBadge}
+          <select class="role-select" onchange="changeHQRole('${m.id}', this.value)"
+            ${m.id === 'HQ-001' ? 'disabled title="自分自身のロールは変更できません"' : ''}>
+            <option value="exec"    ${m.role==='exec'   ?'selected':''}>👑 exec</option>
+            <option value="manager" ${m.role==='manager'?'selected':''}>🔑 manager</option>
+            <option value="staff"   ${m.role==='staff'  ?'selected':''}>👤 staff</option>
+          </select>
+          ${m.id !== 'HQ-001' ? `
+          <button class="act-btn ${m.status==='active'?'act-warn':'act-primary'}"
+            onclick="toggleHQStatus('${m.id}')">
+            ${m.status==='active' ? '⏸ 停止' : '▶ 有効化'}
+          </button>` : ''}
+        </div>
+      </div>`;
+    }).join('')}`;
+}
+
+function changeHQRole(id, newRole){
+  const m = HQ_MEMBERS.find(x => x.id === id);
+  if (!m) return;
+  const oldRole = m.role;
+  m.role = newRole;
+  showToast(`✅ ${m.name} のロールを ${oldRole} → ${newRole} に変更しました`, 'ok');
+  renderHQ();
+  renderStats();
+}
+
+function toggleHQStatus(id){
+  const m = HQ_MEMBERS.find(x => x.id === id);
+  if (!m) return;
+  m.status = m.status === 'active' ? 'suspended' : 'active';
+  showToast(`${m.status==='active'?'✅ 有効化':'⏸ 停止'}: ${m.name}`);
+  renderHQ();
+}
+
+// ════════════════════════════════════════════════════
+// TAB 2: AG / PT 管理
+// ════════════════════════════════════════════════════
+function renderAgents(){
+  const el = document.getElementById('tab-content');
+  const filtered = AGENTS.filter(a => {
+    const q = _agentFilter.q.toLowerCase();
+    const matchQ = !q || a.name.includes(_agentFilter.q) ||
+      a.id.toLowerCase().includes(q) || a.email.toLowerCase().includes(q);
+    const matchType = _agentFilter.type === 'all' || a.type === _agentFilter.type;
+    const matchStatus = _agentFilter.status === 'all' || a.status === _agentFilter.status;
+    return matchQ && matchType && matchStatus;
+  });
+
+  el.innerHTML = `
+    <div class="filter-row">
+      <input type="text" class="filter-inp" placeholder="名前・ID・メールで検索"
+        value="${_agentFilter.q}" oninput="_agentFilter.q=this.value;renderAgents()">
+      ${['all','re','hr','pt'].map(t => `
+        <button class="filter-chip ${_agentFilter.type===t?'on':''}"
+          onclick="_agentFilter.type='${t}';renderAgents()">
+          ${{all:'全員',re:'🏠 RE',hr:'👤 HR',pt:'🤝 PT'}[t]}
+        </button>`).join('')}
+      ${['all','active','suspended'].map(s => `
+        <button class="filter-chip ${_agentFilter.status===s?'on':''}"
+          onclick="_agentFilter.status='${s}';renderAgents()">
+          ${{all:'全ステータス',active:'✅ 有効',suspended:'⏸ 停止中'}[s]}
+        </button>`).join('')}
+    </div>
+    <div class="sec-count" style="margin-bottom:12px">${filtered.length} 件</div>
+    ${filtered.map(ag => {
+      const typeClass = {re:'re',hr:'hr',pt:'pt'}[ag.type]||'re';
+      const typeLabel = {re:'🏠 RE',hr:'👤 HR',pt:'🤝 PT'}[ag.type];
+      const fee = effectiveFee(ag);
+      const isOverride = ag.feeOverride !== null && ag.feeOverride !== undefined;
+      const isSennin = ag.subtype === '専任宅建士';
+      return `
+      <div class="user-row" style="${ag.status==='suspended'?'opacity:.6':''}">
+        <div class="u-av ${typeClass}">${ag.name.slice(0,1)}</div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <div class="u-name">${ag.name}</div>
+            <span class="badge badge-${typeClass}">${typeLabel}</span>
+            ${rankBadge(ag.rank)}
+            ${ag.status==='suspended' ? '<span class="badge badge-suspended">停止中</span>' : '<span class="badge badge-active">有効</span>'}
+            ${isSennin ? '<span class="badge badge-sennin">専任宅建士</span>' : ''}
+          </div>
+          <div class="u-meta">${ag.subtype} ／ ${ag.pts}pt ／ ${ag.email}</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap">
+            <span style="font-size:10px;color:var(--muted)">メンターフィー:</span>
+            <span style="font-size:12px;font-weight:700;color:${isOverride?'#6D28D9':'var(--navy)'}">
+              ${fee}%
+            </span>
+            ${isOverride ? `<span class="badge badge-override">個別設定</span>` : `<span style="font-size:9px;color:var(--faint)">ランクデフォルト</span>`}
+            ${ag.monthlyFree ? '<span class="badge" style="background:#D1FAE5;color:#065F46">月会費免除</span>' : ''}
+          </div>
+        </div>
+        <div class="u-right">
+          <button class="act-btn act-primary" onclick="openMentorModal('${ag.id}')">
+            💰 フィー設定
+          </button>
+          <button class="act-btn ${ag.status==='active'?'act-warn':'act-primary'}"
+            onclick="toggleAgentStatus('${ag.id}')">
+            ${ag.status==='active' ? '⏸ 停止' : '▶ 有効化'}
+          </button>
+        </div>
+      </div>`;
+    }).join('')}`;
+}
+
+function toggleAgentStatus(id){
+  const ag = AGENTS.find(a => a.id === id);
+  if (!ag) return;
+  ag.status = ag.status === 'active' ? 'suspended' : 'active';
+  showToast(`${ag.status==='active'?'✅ 有効化':'⏸ 停止'}: ${ag.name}`);
+  renderAgents();
+  renderStats();
+}
+
+// ════════════════════════════════════════════════════
+// TAB 3: メンターフィー一覧
+// ════════════════════════════════════════════════════
+function renderMentor(){
+  const overrides = AGENTS.filter(a => a.feeOverride !== null && a.feeOverride !== undefined);
+  const defaults  = AGENTS.filter(a => a.feeOverride === null || a.feeOverride === undefined);
+  const el = document.getElementById('tab-content');
+
+  el.innerHTML = `
+    <div class="exec-only-banner" style="background:linear-gradient(135deg,#1e3a5f,#2d4e7a)">
+      <div class="exec-only-icon">💰</div>
+      <div class="exec-only-text">
+        <div class="exec-only-title">メンターフィー個別設定</div>
+        デフォルト率はランクで決まります（Bronze:5% / Silver:6% / Gold:7% / Platinum:8%）。
+        個別設定（override）はデフォルトより優先されます。変更通知は送信されません。
+      </div>
+    </div>
+
+    <!-- override設定中 -->
+    <div class="sec-head" style="margin-top:8px">
+      <div>
+        <div class="sec-title">🔵 個別設定中（override）</div>
+        <div class="sec-count">${overrides.length} 名</div>
+      </div>
+    </div>
+    ${overrides.length ? overrides.map(ag => renderMentorRow(ag, true)).join('') :
+      '<div style="font-size:12px;color:var(--faint);padding:16px;text-align:center">個別設定なし</div>'}
+
+    <hr style="border:none;border-top:1px solid var(--bd);margin:20px 0">
+
+    <!-- デフォルト -->
+    <div class="sec-head">
+      <div>
+        <div class="sec-title">⚪ ランクデフォルト</div>
+        <div class="sec-count">${defaults.length} 名</div>
+      </div>
+    </div>
+    ${defaults.map(ag => renderMentorRow(ag, false)).join('')}`;
+}
+
+function renderMentorRow(ag, isOverride){
+  const fee = effectiveFee(ag);
+  const defaultFee = RANK_DEFAULTS[ag.rank] || 5;
+  const typeClass = {re:'re',hr:'hr',pt:'pt'}[ag.type]||'re';
+  return `
+  <div class="user-row">
+    <div class="u-av ${typeClass}">${ag.name.slice(0,1)}</div>
+    <div style="flex:1">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <div class="u-name">${ag.name}</div>
+        ${rankBadge(ag.rank)}
+        ${isOverride ? '<span class="badge badge-override">override</span>' : ''}
+      </div>
+      <div class="u-meta">${ag.id} ／ ${ag.email}</div>
+    </div>
+    <div style="text-align:right;margin-right:12px">
+      <div style="font-size:20px;font-weight:700;color:${isOverride?'#6D28D9':'var(--navy)'}">${fee}%</div>
+      <div style="font-size:9px;color:var(--faint)">
+        ${isOverride ? `デフォルト ${defaultFee}% → override ${fee}%` : `ランクデフォルト`}
+      </div>
+    </div>
+    <button class="act-btn act-primary" onclick="openMentorModal('${ag.id}')">✏️ 変更</button>
+  </div>`;
+}
+
+// ════════════════════════════════════════════════════
+// メンターフィーモーダル
+// ════════════════════════════════════════════════════
+function openMentorModal(agId){
+  const ag = AGENTS.find(a => a.id === agId);
+  if (!ag) return;
+  _modalTarget = ag;
+
+  const currentFee = effectiveFee(ag);
+  const defaultFee = RANK_DEFAULTS[ag.rank] || 5;
+  const isOverride = ag.feeOverride !== null && ag.feeOverride !== undefined;
+
+  document.getElementById('mm-title').textContent = `メンターフィー設定 — ${ag.name}`;
+  document.getElementById('mm-desc').innerHTML =
+    `<span class="badge" style="background:${RANK_BG[ag.rank]};color:${RANK_COLOR[ag.rank]}">${RANK_LABEL[ag.rank]}</span>
+     ランクデフォルト: <strong>${defaultFee}%</strong>
+     ${isOverride ? `／ 現在のoverride: <strong style="color:#6D28D9">${ag.feeOverride}%</strong>` : ''}`;
+
+  const slider = document.getElementById('mm-slider');
+  slider.value = currentFee;
+  updateFeeSlider(currentFee);
+
+  document.getElementById('mentor-modal').style.display = 'flex';
+}
+
+function updateFeeSlider(val){
+  const v = parseFloat(val);
+  document.getElementById('mm-val').textContent = v % 1 === 0 ? v : v.toFixed(1);
+  const slider = document.getElementById('mm-slider');
+  const pct = (v / 10 * 100).toFixed(1);
+  slider.style.background =
+    `linear-gradient(to right,var(--navy) 0%,var(--navy) ${pct}%,var(--bd2) ${pct}%,var(--bd2) 100%)`;
+
+  if (_modalTarget) {
+    const def = RANK_DEFAULTS[_modalTarget.rank] || 5;
+    const diff = v - def;
+    document.getElementById('mm-compare').innerHTML =
+      `<span>ランクデフォルト: ${def}%</span>
+       <span style="color:${diff>0?'var(--em)':diff<0?'var(--rd)':'var(--faint)'}">
+         ${diff > 0 ? '▲' : diff < 0 ? '▼' : '='} ${Math.abs(diff).toFixed(1)}%
+       </span>`;
+  }
+}
+
+function saveMentorFee(){
+  if (!_modalTarget) return;
+  const val = parseFloat(document.getElementById('mm-slider').value);
+  _modalTarget.feeOverride = val;
+  closeMentorModal();
+  showToast(`✅ ${_modalTarget.name} のメンターフィーを ${val}% に設定しました`, 'ok');
+  renderStats();
+  // 現在のタブを再描画
+  const activeTab = document.querySelector('.tab-btn.active')?.id?.replace('tab-','');
+  if (activeTab === 'mentor') renderMentor();
+  else if (activeTab === 'agents') renderAgents();
+}
+
+function clearMentorFee(){
+  if (!_modalTarget) return;
+  const def = RANK_DEFAULTS[_modalTarget.rank] || 5;
+  _modalTarget.feeOverride = null;
+  closeMentorModal();
+  showToast(`🔄 ${_modalTarget.name} をランクデフォルト（${def}%）に戻しました`);
+  renderStats();
+  const activeTab = document.querySelector('.tab-btn.active')?.id?.replace('tab-','');
+  if (activeTab === 'mentor') renderMentor();
+  else if (activeTab === 'agents') renderAgents();
+}
+
+function closeMentorModal(e){
+  if (e && e.target !== document.getElementById('mentor-modal')) return;
+  document.getElementById('mentor-modal').style.display = 'none';
+  _modalTarget = null;
+}
+
+// ════════════════════════════════════════════════════
+// TAB 4: Stripe サブスク管理
+// ════════════════════════════════════════════════════
+function renderStripe(){
+  const el = document.getElementById('tab-content');
+  const billable = AGENTS.filter(a =>
+    a.type !== 'pt' && a.subtype !== '専任宅建士' && a.rank === 'bronze' && !a.monthlyFree
+  );
+
+  el.innerHTML = `
+    <div style="background:var(--em-bg);border:1px solid rgba(5,150,105,.2);border-radius:8px;
+      padding:12px 16px;font-size:11px;color:var(--em);margin-bottom:20px;line-height:1.8">
+      💳 <strong>Stripe サブスク課金対象：</strong>
+      Bronze一般AG（月会費¥980/月）のみ。
+      専任宅建士・Silver以上・月会費免除者は課金対象外。
+    </div>
+
+    <!-- 月会費免除管理 -->
+    <div class="sec-head">
+      <div class="sec-title">月会費免除管理</div>
+    </div>
+    <div style="background:#fff;border:1px solid var(--bd);border-radius:10px;padding:16px;margin-bottom:20px">
+      ${AGENTS.filter(a => a.type !== 'pt').map(ag => `
+        <div class="stripe-row">
+          <div>
+            <div style="font-weight:600;font-size:12px">${ag.name}</div>
+            <div style="font-size:10px;color:var(--muted)">${ag.id} ／ ${ag.subtype} ／ ${RANK_LABEL[ag.rank]}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            ${ag.subtype === '専任宅建士'
+              ? '<span style="font-size:10px;color:var(--muted)">専任宅建士（元々無料）</span>'
+              : ag.rank !== 'bronze'
+              ? `<span style="font-size:10px;color:var(--muted)">${RANK_LABEL[ag.rank]}（月会費${ag.rank==='silver'?'¥490':'¥0'}）</span>`
+              : `<label style="display:flex;align-items:center;gap:7px;cursor:pointer">
+                   <input type="checkbox" ${ag.monthlyFree?'checked':''} style="accent-color:var(--navy);width:14px;height:14px"
+                     onchange="toggleMonthlyFree('${ag.id}',this.checked)">
+                   <span style="font-size:11px;font-weight:600;color:${ag.monthlyFree?'var(--em)':'var(--muted)'}">
+                     ${ag.monthlyFree ? '✅ 免除中（¥0）' : '❌ 課金中（¥980/月）'}
+                   </span>
+                 </label>`
+            }
+          </div>
+        </div>`).join('')}
+    </div>
+
+    <!-- 特別紹介コード -->
+    <div class="sec-head">
+      <div class="sec-title">特別紹介コード</div>
+      <button class="act-btn act-primary" onclick="genReferralCode()">➕ 新規発行</button>
+    </div>
+    <div style="background:#fff;border:1px solid var(--bd);border-radius:10px;padding:16px;margin-bottom:20px">
+      <div class="stripe-row">
+        <div>
+          <div style="font-weight:700;font-family:'DM Mono',monospace;font-size:12px;color:var(--navy)">CORETO-VIP-2026</div>
+          <div style="font-size:10px;color:var(--muted)">発行日: 2026-01-01 ／ 使用回数: 3回 ／ 有効期限: 無制限</div>
+        </div>
+        <span class="badge badge-active">有効</span>
+      </div>
+      <div class="stripe-row">
+        <div>
+          <div style="font-weight:700;font-family:'DM Mono',monospace;font-size:12px;color:var(--navy)">CORETO-PARTNER-ELITE</div>
+          <div style="font-size:10px;color:var(--muted)">発行日: 2026-02-15 ／ 使用回数: 1回 ／ 有効期限: 2026-12-31</div>
+        </div>
+        <span class="badge badge-active">有効</span>
+      </div>
+    </div>
+
+    <!-- 課金対象サマリー -->
+    <div class="sec-head">
+      <div class="sec-title">今月の課金対象</div>
+      <div class="sec-count">${billable.length} 名 × ¥980 = ¥${(billable.length * 980).toLocaleString()}</div>
+    </div>
+    <div style="background:#fff;border:1px solid var(--bd);border-radius:10px;overflow:hidden">
+      ${billable.length ? billable.map(ag => `
+        <div class="stripe-row" style="padding:10px 16px">
+          <div>
+            <div style="font-weight:600;font-size:12px">${ag.name}</div>
+            <div style="font-size:10px;color:var(--muted)">${ag.id} ／ ${ag.email}</div>
+          </div>
+          <div style="font-weight:700;color:var(--navy)">¥980/月</div>
+        </div>`).join('')
+      : '<div style="padding:20px;text-align:center;font-size:12px;color:var(--faint)">課金対象者なし</div>'}
+    </div>`;
+}
+
+function toggleMonthlyFree(id, val){
+  const ag = AGENTS.find(a => a.id === id);
+  if (!ag) return;
+  ag.monthlyFree = val;
+  showToast(`${val ? '✅ 月会費免除を設定' : '❌ 月会費免除を解除'}: ${ag.name}`);
+  renderStripe();
+}
+
+function genReferralCode(){
+  const code = 'CORETO-' + Math.random().toString(36).substr(2,6).toUpperCase();
+  showToast(`✅ 特別紹介コード発行: ${code}`);
+}
+
+// ════════════════════════════════════════════════════
+// 初期化
+// ════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  CNAV.init('admin_rbac');
+  renderStats();
+  renderHQ();
+});
+</script>
+</body>
+</html>
