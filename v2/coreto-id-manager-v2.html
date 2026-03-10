@@ -653,21 +653,10 @@ function statusBadge(s){
 }
 
 // メールアドレス生成（ヘボン式・重複フォールバック）
-function genEmail(romaFirst, romaLast, existingEmails=[]){
+function genEmail(romaFirst, romaLast, idStr){
   const last = romaLast.toLowerCase().replace(/[^a-z]/g,'');
-  const first = romaFirst.toLowerCase().replace(/[^a-z]/g,'');
-  const existing = new Set(existingEmails.map(e=>e.split('@')[0]));
-  let addr;
-  for (let len=1; len<=first.length; len++){
-    addr = `${first.slice(0,len)}-${last}`;
-    if (!existing.has(addr)) return addr + '@coreto.co.jp';
-  }
-  // 数字サフィックス
-  for (let n=2; n<=99; n++){
-    addr = `${first.slice(0,1)}-${last}${n}`;
-    if (!existing.has(addr)) return addr + '@coreto.co.jp';
-  }
-  return `${first}-${last}@coreto.co.jp`;
+  const num  = (idStr||'').replace(/[^0-9]/g,'');
+  return `${last}${num}@coreto.co.jp`;
 }
 
 function nextIdStr(type){
@@ -837,9 +826,8 @@ function openKycModal(appId){
     </div>`;
 
   // メールアドレスプレビュー
-  const existingEmails = ISSUED.map(i=>i.email);
   const newEmail = app.romaFirst
-    ? genEmail(app.romaFirst, app.romaLast, existingEmails)
+    ? genEmail(app.romaFirst, app.romaLast, newId)
     : '（ローマ字未登録のため手動設定が必要）';
   document.getElementById('email-issue-preview').innerHTML = `
     <div style="background:#F8F9FA;border:1px solid var(--bd);border-radius:8px;padding:12px 14px">
@@ -858,9 +846,8 @@ function finalApprove(){
   if (!app) return;
 
   const newId    = nextIdStr(app.type);
-  const existingEmails = ISSUED.map(i=>i.email);
   const newEmail = app.romaFirst
-    ? genEmail(app.romaFirst, app.romaLast, existingEmails)
+    ? genEmail(app.romaFirst, app.romaLast, newId)
     : `contact-${app.id}@coreto.co.jp`;
 
   // 発行済みリストに追加
