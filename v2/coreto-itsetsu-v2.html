@@ -356,44 +356,46 @@ body, input, select, textarea, button { font-family:'Outfit','Noto Sans JP',sans
 function toggleSb(){ document.querySelector('.sb').classList.toggle('open'); document.querySelector('.mob-overlay').classList.toggle('show'); }
 function showToast(msg,type=''){const t=document.getElementById('ip-toast');t.textContent=msg;t.className='toast '+type;t.style.opacity='1';setTimeout(()=>t.style.opacity='0',3200);}
 
-// ── フロー定義 ────────────────────────────────────────────
+// ── フロー定義（スキャン先行フロー） ────────────────────
 const FLOW_STEPS = [
-  {id:'register', label:'案件\n登録',    icon:'📋'},
-  {id:'scan',     label:'書類\nスキャン',icon:'📄'},
-  {id:'ai',       label:'AI\n解析',      icon:'✨'},
-  {id:'stamp',    label:'仲介印\n捺印',  icon:'🔴'},
-  {id:'label',    label:'ラベル\n印刷',  icon:'🖨️'},
-  {id:'ship',     label:'発送\n完了',    icon:'📮'},
+  {id:'scan',    label:'スキャン',  icon:'📄'},
+  {id:'ai',      label:'AI案件\n特定', icon:'✨'},
+  {id:'confirm', label:'確認',      icon:'✅'},
+  {id:'stamp',   label:'仲介印\n捺印', icon:'🔴'},
+  {id:'label',   label:'ラベル\n印刷', icon:'🖨️'},
+  {id:'ship',    label:'発送\n完了',   icon:'📮'},
 ];
 
-// ── アプリ状態 ────────────────────────────────────────────
+// ── アプリ状態 ─────────────────────────────────────────
 let STATE = {
-  step:         'register',   // 現在のフローステップ
-  selectedCase: null,         // 選択した案件
-  scannedFile:  null,         // アップロードファイル
-  scannedDataUrl: null,       // プレビュー用DataURL
-  aiResult:     null,         // AI解析結果
-  stampChecks:  {},           // { itemId: true/false }
-  trackingNo:   '',
-  shippedAt:    null,
+  step:           'scan',
+  scannedFile:    null,
+  scannedDataUrl: null,
+  aiResult:       null,   // { summary, customer_signs, chukkai_stamps, notes, matched_cases }
+  selectedCase:   null,
+  docType:        '',
+  stampChecks:    {},
+  stampedAt:      null,
+  trackingNo:     '',
+  shippedAt:      null,
 };
 
-// ── デモ案件データ ────────────────────────────────────────
+// ── デモ案件データ ─────────────────────────────────────
 const DEMO_CASES = [
-  {id:'RENT-0194',name:'田中 優子 様',sub:'港区三田3丁目 2LDK ¥198,000',ag:'AG-0021 木下',type:'rental'},
-  {id:'RENT-0193',name:'鈴木 健太 様',sub:'渋谷区代々木 1LDK ¥155,000',ag:'AG-0021 木下',type:'rental'},
-  {id:'RENT-0192',name:'高橋 美咲 様',sub:'新宿区西新宿 2LDK ¥175,000',ag:'AG-0034 大橋',type:'rental'},
-  {id:'SALE-0041',name:'伊藤 誠 様',  sub:'品川区大崎 3LDK ¥62,000,000',ag:'AG-0021 木下',type:'sale'},
+  {id:'RENT-0194',name:'田中 優子',  kana:'タナカ ユウコ', sub:'港区三田3丁目 2LDK ¥198,000', ag:'AG-0021 木下', type:'rental'},
+  {id:'RENT-0193',name:'鈴木 健太',  kana:'スズキ ケンタ', sub:'渋谷区代々木 1LDK ¥155,000', ag:'AG-0021 木下', type:'rental'},
+  {id:'RENT-0192',name:'高橋 美咲',  kana:'タカハシ ミサキ',sub:'新宿区西新宿 2LDK ¥175,000', ag:'AG-0034 大橋', type:'rental'},
+  {id:'SALE-0041',name:'伊藤 誠',    kana:'イトウ マコト', sub:'品川区大崎 3LDK ¥62,000,000',ag:'AG-0021 木下', type:'sale'},
+  {id:'RENT-0191',name:'渡辺 直樹',  kana:'ワタナベ ナオキ',sub:'目黒区自由が丘 1K ¥95,000',  ag:'AG-0034 大橋', type:'rental'},
 ];
 
-// ── フロー進捗バー描画 ─────────────────────────────────────
+// ── フロー進捗バー ─────────────────────────────────────
 function renderFlowBar() {
   const stepIds = FLOW_STEPS.map(s=>s.id);
   const cur = stepIds.indexOf(STATE.step);
   document.getElementById('flow-steps').innerHTML = FLOW_STEPS.map((s,i) => {
     const cls = i < cur ? 'done' : i === cur ? 'active' : 'todo';
-    const arrow = i < FLOW_STEPS.length-1
-      ? `<div class="fs-arrow ${i<cur?'done':''}"></div>` : '';
+    const arrow = i < FLOW_STEPS.length-1 ? `<div class="fs-arrow ${i<cur?'done':''}"></div>` : '';
     const icon = i < cur ? '✓' : s.icon;
     return `<div class="fs-item">
       <div class="fs-dot ${cls}">${icon}</div>
@@ -402,116 +404,38 @@ function renderFlowBar() {
   }).join('');
 }
 
-// ── STEP 1: 案件登録 ──────────────────────────────────────
-function renderRegister() {
-  document.getElementById('cs-left').innerHTML = `
-    <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:12px;letter-spacing:.5px">📋 STEP 1 — 案件を選択</div>
-    <div class="case-search-box">
-      <input type="text" id="case-search" placeholder="クライアント名・物件名・案件IDで検索..."
-        style="width:100%;padding:8px 12px;border:1px solid var(--bd);border-radius:8px;font-size:12px;box-sizing:border-box"
-        oninput="searchCases(this.value)">
-    </div>
-    <div id="case-results"></div>
-  `;
-  document.getElementById('cs-right').innerHTML = `
-    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:300px;gap:12px;color:var(--faint)">
-      <div style="font-size:36px">📋</div>
-      <div style="font-size:13px">左の検索から案件を選択してください</div>
-      <div style="font-size:11px">管理会社から届いた書類の対象案件を登録します</div>
-    </div>
-  `;
-  searchCases('');
-}
-
-function searchCases(q) {
-  const results = DEMO_CASES.filter(c =>
-    !q || c.name.includes(q) || c.sub.includes(q) || c.id.includes(q.toUpperCase())
-  );
-  document.getElementById('case-results').innerHTML = results.length
-    ? results.map(c => `
-        <div class="case-result ${STATE.selectedCase?.id===c.id?'selected':''}" onclick="selectCase('${c.id}')">
-          <div class="cr-id">${c.id}</div>
-          <div class="cr-name">${c.name}</div>
-          <div class="cr-sub">${c.sub}</div>
-          <div style="font-size:10px;color:var(--muted);margin-top:4px">👤 ${c.ag}</div>
-        </div>`).join('')
-    : '<div style="font-size:12px;color:var(--faint);padding:12px;text-align:center">該当案件なし</div>';
-
-  if (STATE.selectedCase) renderSelectedCase();
-}
-
-function selectCase(id) {
-  STATE.selectedCase = DEMO_CASES.find(c=>c.id===id);
-  searchCases(document.getElementById('case-search')?.value||'');
-  renderSelectedCase();
-}
-
-function renderSelectedCase() {
-  const c = STATE.selectedCase;
-  if (!c) return;
-  document.getElementById('cs-right').innerHTML = `
-    <div style="background:var(--em-bg);border:1px solid rgba(5,150,105,.2);border-radius:10px;padding:16px;margin-bottom:16px">
-      <div style="font-size:10px;font-weight:700;color:var(--em);margin-bottom:8px">✅ 選択中の案件</div>
-      <div style="font-size:14px;font-weight:700;color:var(--ink)">${c.name}</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:3px">${c.sub}</div>
-      <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--faint);margin-top:4px">${c.id}</div>
-    </div>
-    <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:10px">📂 書類種別を選択</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
-      ${[['賃貸契約書','📃'],['重要事項説明書','📋'],['売買契約書','🏢'],['その他','📄']].map(([label,icon])=>
-        `<div class="case-result" onclick="selectDocType('${label}')" id="dt-${label}"
-          style="text-align:center;padding:12px 8px">
-          <div style="font-size:20px;margin-bottom:4px">${icon}</div>
-          <div style="font-size:11px;font-weight:600">${label}</div>
-        </div>`).join('')}
-    </div>
-    <div id="confirm-register" style="display:none">
-      <button class="btn btn-primary" onclick="confirmRegister()" style="width:100%">
-        📋 案件登録してスキャンへ進む
-      </button>
-    </div>
-  `;
-}
-
-let selectedDocType = '';
-function selectDocType(type) {
-  selectedDocType = type;
-  document.querySelectorAll('[id^="dt-"]').forEach(el=>{
-    el.style.borderColor = el.id === 'dt-'+type ? 'var(--navy)' : '';
-    el.style.background  = el.id === 'dt-'+type ? 'rgba(13,26,45,.04)' : '';
-  });
-  document.getElementById('confirm-register').style.display='block';
-}
-
-function confirmRegister() {
-  if (!STATE.selectedCase || !selectedDocType) return;
-  STATE.docType = selectedDocType;
-  showToast(`✅ 案件登録完了：${STATE.selectedCase.name} / ${selectedDocType}`);
-  goStep('scan');
-}
-
-// ── STEP 2: スキャン ─────────────────────────────────────
+// ══ STEP 1: スキャン ══════════════════════════════════════
 function renderScan() {
   document.getElementById('cs-left').innerHTML = `
-    <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:12px">📄 STEP 2 — 書類をスキャン・アップロード</div>
-    <div style="background:var(--cream2);border:1px solid var(--bd);border-radius:8px;padding:12px;margin-bottom:14px;font-size:11px;color:var(--muted);line-height:1.8">
-      📌 スキャナーまたはスマートフォンで書類を撮影し、画像またはPDFをアップロードしてください。
-      AIが署名・捺印・仲介印が必要な箇所を自動で検出します。
+    <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:10px">📄 書類をスキャン・アップロード</div>
+    <div style="background:var(--cream2);border:1px solid var(--bd);border-radius:8px;padding:11px 13px;margin-bottom:14px;font-size:11px;color:var(--muted);line-height:1.8">
+      📌 スキャナーまたはスマートフォンで書類を撮影してアップロードしてください。<br>
+      <strong style="color:var(--ink)">AIが契約者名・物件名を読み取り、案件を自動で特定します。</strong>
     </div>
-    <div class="scan-drop" id="scan-drop" onclick="document.getElementById('scan-file').click()"
+    <div class="scan-drop" id="scan-drop"
+      onclick="document.getElementById('scan-file').click()"
       ondragover="event.preventDefault();this.classList.add('drag')"
+      ondragleave="this.classList.remove('drag')"
       ondrop="handleDrop(event)">
-      <div style="font-size:32px;margin-bottom:8px">📄</div>
-      <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:4px">ファイルをドロップ または クリックして選択</div>
-      <div style="font-size:10px;color:var(--muted)">JPEG / PNG / PDF に対応</div>
-      <input type="file" id="scan-file" accept="image/*,application/pdf" style="display:none" onchange="handleFileSelect(event)">
+      <div style="font-size:36px;margin-bottom:8px">📄</div>
+      <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:4px">
+        ファイルをドロップ または クリックして選択
+      </div>
+      <div style="font-size:10px;color:var(--muted)">JPEG / PNG / PDF 対応</div>
+      <input type="file" id="scan-file" accept="image/*,application/pdf"
+        style="display:none" onchange="handleFileSelect(event)">
     </div>
-    <div id="scan-preview-mini" style="margin-top:12px"></div>
   `;
   document.getElementById('cs-right').innerHTML = `
-    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:300px;gap:12px;color:var(--faint)">
-      <div style="font-size:36px">🖼️</div>
-      <div style="font-size:13px">ファイルをアップロードするとプレビューが表示されます</div>
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;
+      height:320px;gap:14px;color:var(--faint);text-align:center">
+      <div style="font-size:48px">🤖</div>
+      <div style="font-size:13px;font-weight:600;color:var(--muted)">
+        アップロードするとAIが自動で読み取ります
+      </div>
+      <div style="font-size:11px;color:var(--faint);max-width:260px;line-height:1.7">
+        契約者名・物件名・書類種別を検出して<br>一致する案件を提案します
+      </div>
     </div>
   `;
 }
@@ -532,113 +456,311 @@ function processFile(file) {
   const reader = new FileReader();
   reader.onload = e => {
     STATE.scannedDataUrl = e.target.result;
+    // スキャンドロップを完了表示
     document.getElementById('scan-drop').classList.add('has-file');
     document.getElementById('scan-drop').innerHTML = `
-      <div style="font-size:24px;margin-bottom:6px">✅</div>
+      <div style="font-size:22px;margin-bottom:6px">✅</div>
       <div style="font-size:12px;font-weight:700;color:var(--em)">${file.name}</div>
-      <div style="font-size:10px;color:var(--muted);">${(file.size/1024).toFixed(0)}KB</div>
+      <div style="font-size:10px;color:var(--muted)">${(file.size/1024).toFixed(0)} KB</div>
     `;
-    // プレビュー
-    if (file.type.startsWith('image/')) {
-      document.getElementById('cs-right').innerHTML = `
-        <div style="margin-bottom:12px;font-size:12px;font-weight:700;color:var(--navy)">プレビュー</div>
-        <img src="${STATE.scannedDataUrl}" style="max-width:100%;border:1px solid var(--bd);border-radius:8px">
-        <div style="margin-top:16px">
-          <button class="btn btn-primary" onclick="goStep('ai')" style="width:100%">
-            ✨ AIで署名・捺印箇所を解析する
-          </button>
-        </div>
-      `;
-    } else {
-      document.getElementById('cs-right').innerHTML = `
-        <div style="background:var(--em-bg);border:1px solid rgba(5,150,105,.2);border-radius:8px;padding:16px;text-align:center">
-          <div style="font-size:24px">📄</div>
-          <div style="font-size:12px;font-weight:600;color:var(--em);margin-top:6px">${file.name} をアップロード済み</div>
-        </div>
-        <div style="margin-top:16px">
-          <button class="btn btn-primary" onclick="goStep('ai')" style="width:100%">
-            ✨ AIで署名・捺印箇所を解析する
-          </button>
-        </div>
-      `;
-    }
+    // プレビュー表示
+    const rightContent = file.type.startsWith('image/')
+      ? `<img src="${STATE.scannedDataUrl}" style="max-width:100%;border:1px solid var(--bd);border-radius:8px;margin-bottom:14px">`
+      : `<div style="background:var(--em-bg);border:1px solid rgba(5,150,105,.2);border-radius:8px;padding:20px;text-align:center;margin-bottom:14px">
+           <div style="font-size:28px">📄</div>
+           <div style="font-size:12px;font-weight:600;color:var(--em);margin-top:6px">${file.name}</div>
+         </div>`;
+    document.getElementById('cs-right').innerHTML = `
+      ${rightContent}
+      <button class="btn btn-primary" onclick="goStep('ai')" style="width:100%">
+        ✨ AIで案件を自動特定する
+      </button>
+    `;
   };
   reader.readAsDataURL(file);
 }
 
-// ── STEP 3: AI解析 ───────────────────────────────────────
+// ══ STEP 2: AI解析 ═══════════════════════════════════════
 async function renderAI() {
+  STATE.step = 'ai';
+  renderFlowBar();
+
   document.getElementById('cs-left').innerHTML = `
-    <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:12px">✨ STEP 3 — AI解析中</div>
-    <div style="text-align:center;padding:40px 0">
-      <div style="font-size:40px;animation:spin .8s linear infinite;display:inline-block">✨</div>
-      <div style="font-size:13px;font-weight:600;color:var(--ink);margin-top:12px">AIが書類を解析しています...</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:6px">署名・捺印・仲介印の必要箇所を検出中</div>
+    <div style="text-align:center;padding:48px 0">
+      <div style="font-size:44px;animation:pulse 1.2s ease-in-out infinite">✨</div>
+      <div style="font-size:13px;font-weight:600;color:var(--ink);margin-top:14px">AIが書類を解析中...</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.8">
+        ・契約者名・物件名を読み取り中<br>
+        ・書類種別を判定中<br>
+        ・署名・捺印箇所を検出中
+      </div>
     </div>
   `;
-  document.getElementById('cs-right').innerHTML = `<div style="padding:40px;text-align:center;color:var(--faint)">解析結果を待っています...</div>`;
+  document.getElementById('cs-right').innerHTML = `
+    <div style="padding:40px;text-align:center;color:var(--faint)">解析結果を準備しています...</div>
+  `;
 
-  // AI解析実行
   const isImage = STATE.scannedFile?.type?.startsWith('image/');
-  const cas = STATE.selectedCase;
-  const docType = STATE.docType || '賃貸契約書';
 
   try {
     const messages = [{
       role: 'user',
       content: isImage && STATE.scannedDataUrl ? [
-        { type: 'image', source: { type: 'base64', media_type: STATE.scannedFile.type, data: STATE.scannedDataUrl.split(',')[1] } },
-        { type: 'text', text: buildAIPrompt(cas, docType) }
+        {
+          type: 'image',
+          source: { type: 'base64', media_type: STATE.scannedFile.type, data: STATE.scannedDataUrl.split(',')[1] }
+        },
+        { type: 'text', text: AI_PROMPT_IMAGE() }
       ] : [
-        { type: 'text', text: buildAIPromptText(cas, docType) }
+        { type: 'text', text: AI_PROMPT_TEXT() }
       ]
     }];
 
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1000, messages })
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:1000, messages })
     });
     const data = await resp.json();
     const text = data.content?.find(b=>b.type==='text')?.text || '{}';
-    STATE.aiResult = JSON.parse(text.replace(/```json|```/g,'').trim());
+    STATE.aiResult = JSON.parse(text.replace(/```json[\s\S]*?```|```/g,'').trim());
   } catch(e) {
-    // フォールバック: デモデータ
-    STATE.aiResult = buildDemoAIResult(cas, docType);
+    STATE.aiResult = DEMO_AI_RESULT();
   }
 
-  renderAIResult();
+  // 案件マッチング
+  STATE.aiResult.matched_cases = matchCases(STATE.aiResult);
+  renderAIConfirm();
 }
 
-function buildAIPrompt(cas, docType) {
-  return `この${docType}を解析してください。クライアント名：${cas?.name||'不明'}、物件：${cas?.sub||'不明'}。\n以下をJSONのみで回答（前置き不要）：\n{"summary":{"client":"クライアント名","property":"物件名","docType":"書類種別"},"customer_signs":[{"id":"cs1","location":"ページ/箇所の説明","type":"sign/hanko","instruction":"クライアントへの指示（記名・押印の別、確認事項）"}],"chukkai_stamps":[{"id":"ck1","location":"仲介印が必要な箇所","reason":"理由"}],"notes":"全体的な注意点"}`;
+function AI_PROMPT_IMAGE() {
+  return `この書類画像を解析してください。以下のJSONのみを返してください（前置き・説明不要）:
+{
+  "extracted": {
+    "client_name": "契約者（借主/買主）のフルネーム。複数いれば最初の人",
+    "property_address": "物件住所または物件名（できるだけ詳しく）",
+    "doc_type": "賃貸借契約書 / 重要事項説明書 / 売買契約書 / その他 のいずれか",
+    "contract_date": "契約日（読み取れれば）",
+    "management_company": "管理会社名（読み取れれば）"
+  },
+  "customer_signs": [
+    {"id":"cs1","location":"ページ・箇所の説明","type":"sign または hanko","instruction":"クライアントへの具体的な指示"}
+  ],
+  "chukkai_stamps": [
+    {"id":"ck1","location":"仲介印が必要な箇所","reason":"理由"}
+  ],
+  "notes": "仲介業者として注意すべき点（割印・ページ割れ等）"
+}`;
 }
-function buildAIPromptText(cas, docType) {
-  return `${docType}の書類処理について。クライアント名：${cas?.name||'不明'}、物件：${cas?.sub||'不明'}。\n一般的な${docType}の署名・捺印・仲介印の必要箇所を想定して回答してください。\nJSONのみ（前置き不要）：\n{"summary":{"client":"クライアント名","property":"物件名","docType":"書類種別"},"customer_signs":[{"id":"cs1","location":"箇所の説明","type":"sign/hanko","instruction":"クライアントへの指示"}],"chukkai_stamps":[{"id":"ck1","location":"仲介印箇所","reason":"理由"}],"notes":"注意点"}`;
+
+function AI_PROMPT_TEXT() {
+  return `賃貸借契約書の処理についてデモデータで回答してください（実際の画像はありません）。
+以下JSONのみ返してください（前置き不要）:
+{"extracted":{"client_name":"田中 優子","property_address":"東京都港区三田3丁目2-5 グランドハイツ三田 203号室","doc_type":"賃貸借契約書","contract_date":"2026年3月15日","management_company":"株式会社グローバル管理"},"customer_signs":[{"id":"cs1","location":"1ページ目 借主署名欄（右下）","type":"sign","instruction":"借主として自署してください。印鑑登録証明書と同一の印鑑が必要です"},{"id":"cs2","location":"1ページ目 借主捺印欄","type":"hanko","instruction":"実印を押印してください（朱肉使用）"},{"id":"cs3","location":"2ページ目 連帯保証人署名欄","type":"sign","instruction":"連帯保証人の自署が必要です"},{"id":"cs4","location":"2ページ目 連帯保証人捺印欄","type":"hanko","instruction":"連帯保証人の実印を押印してください"},{"id":"cs5","location":"最終ページ 受領確認欄","type":"sign","instruction":"受取日・署名・捺印が必要です"}],"chukkai_stamps":[{"id":"ck1","location":"1ページ目 仲介業者欄（右下）","reason":"仲介会社として契約に関与したことの証明"},{"id":"ck2","location":"重説ページ 宅地建物取引士記名欄の隣","reason":"宅建士証番号と同一の仲介印が必要"}],"notes":"ページ割れ箇所に割印が必要な場合があります。管理会社フォーマットを事前確認してください。"}`;
 }
-function buildDemoAIResult(cas, docType) {
+
+function DEMO_AI_RESULT() {
   return {
-    summary: { client: cas?.name||'田中 優子 様', property: cas?.sub||'港区三田3丁目 2LDK', docType },
+    extracted: {
+      client_name: '田中 優子',
+      property_address: '東京都港区三田3丁目2-5 グランドハイツ三田 203号室',
+      doc_type: '賃貸借契約書',
+      contract_date: '2026年3月15日',
+      management_company: '株式会社グローバル管理'
+    },
     customer_signs: [
-      {id:'cs1',location:'1ページ目 — 借主署名欄（右下）',type:'sign',instruction:'【借主】署名欄に自署してください。印鑑登録証明書と同一の印鑑が必要です。'},
-      {id:'cs2',location:'1ページ目 — 借主捺印欄',type:'hanko',instruction:'【借主】実印を押印してください（朱肉使用）'},
-      {id:'cs3',location:'2ページ目 — 連帯保証人署名欄',type:'sign',instruction:'【連帯保証人】自署が必要です。連帯保証人の印鑑証明書と照合します。'},
-      {id:'cs4',location:'2ページ目 — 連帯保証人捺印欄',type:'hanko',instruction:'【連帯保証人】実印を押印してください'},
-      {id:'cs5',location:'最終ページ — 受領確認欄',type:'sign',instruction:'【借主】受取日・署名・捺印が必要です'},
+      {id:'cs1',location:'1ページ目 借主署名欄（右下）',type:'sign',instruction:'借主として自署してください。印鑑登録証明書と同一の印鑑が必要です'},
+      {id:'cs2',location:'1ページ目 借主捺印欄',type:'hanko',instruction:'実印を押印してください（朱肉使用）'},
+      {id:'cs3',location:'2ページ目 連帯保証人署名欄',type:'sign',instruction:'連帯保証人の自署が必要です'},
+      {id:'cs4',location:'2ページ目 連帯保証人捺印欄',type:'hanko',instruction:'連帯保証人の実印を押印してください'},
+      {id:'cs5',location:'最終ページ 受領確認欄',type:'sign',instruction:'受取日・署名・捺印が必要です'},
     ],
     chukkai_stamps: [
-      {id:'ck1',location:'1ページ目 — 仲介業者欄（右下コーナー）',reason:'仲介会社として契約に関与したことの証明'},
-      {id:'ck2',location:'重説ページ — 宅地建物取引士記名欄の隣',reason:'宅建士証番号と同一の仲介印が必要'},
+      {id:'ck1',location:'1ページ目 仲介業者欄（右下）',reason:'仲介会社として契約に関与したことの証明'},
+      {id:'ck2',location:'重説ページ 宅地建物取引士記名欄の隣',reason:'宅建士証番号と同一の仲介印が必要'},
     ],
-    notes: 'ページ割れ（1枚目と2枚目の間）に割印が必要な場合があります。管理会社のフォーマットを事前に確認してください。'
+    notes: 'ページ割れ箇所に割印が必要な場合があります。'
   };
 }
 
-function renderAIResult() {
-  const r = STATE.aiResult;
-  if (!r) return;
+// 案件マッチング（AIが読み取った名前・住所でDEMO_CASESを検索）
+function matchCases(aiResult) {
+  const ex = aiResult?.extracted || {};
+  const nameRaw  = (ex.client_name || '').replace(/\s/g,'').replace(/様/g,'');
+  const addrRaw  = ex.property_address || '';
 
-  // 左パネル: サマリー + 仲介印チェックリスト
+  // スコアリング
+  return DEMO_CASES.map(cas => {
+    let score = 0;
+    const casName = cas.name.replace(/\s/g,'');
+    const casSub  = cas.sub;
+    // 名前の一致（部分一致含む）
+    if (nameRaw && (casName.includes(nameRaw) || nameRaw.includes(casName))) score += 60;
+    // 住所の部分一致
+    const addrTokens = addrRaw.replace(/[都道府県市区町村]/g,' ').split(/\s+/).filter(t=>t.length>1);
+    addrTokens.forEach(tok => { if (casSub.includes(tok)) score += 15; });
+    return {...cas, score};
+  }).filter(c=>c.score>0).sort((a,b)=>b.score-a.score);
+}
+
+// ══ STEP 3: AI結果確認 ═══════════════════════════════════
+function renderAIConfirm() {
+  STATE.step = 'confirm';
+  renderFlowBar();
+
+  const ex = STATE.aiResult?.extracted || {};
+  const matched = STATE.aiResult?.matched_cases || [];
+
+  // 左: AI読み取り結果 + 案件候補
+  const matchedHtml = matched.length
+    ? matched.slice(0,3).map(cas => `
+        <div class="case-result ${STATE.selectedCase?.id===cas.id?'selected':''}"
+          onclick="selectMatchedCase('${cas.id}')" style="cursor:pointer">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+            <span class="cr-id">${cas.id}</span>
+            <span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;
+              background:${cas.score>=60?'var(--em-bg)':'var(--am-bg)'};
+              color:${cas.score>=60?'var(--em)':'var(--am)'}">
+              一致度 ${cas.score}%
+            </span>
+          </div>
+          <div class="cr-name">${cas.name} 様</div>
+          <div class="cr-sub">${cas.sub}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:3px">👤 ${cas.ag}</div>
+        </div>`).join('')
+    : `<div style="background:var(--am-bg);border:1px solid rgba(217,119,6,.2);border-radius:8px;
+        padding:12px;font-size:11px;color:var(--am);margin-bottom:10px">
+        ⚠️ 一致する案件が見つかりませんでした。手動で検索してください。
+      </div>`;
+
+  const searchHtml = `
+    <div style="margin-top:12px;border-top:1px solid var(--bd);padding-top:12px">
+      <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:6px">候補にない場合は手動検索</div>
+      <input type="text" id="manual-search" placeholder="名前・物件名・案件IDで検索"
+        style="width:100%;padding:8px 10px;border:1px solid var(--bd);border-radius:7px;font-size:11px;box-sizing:border-box;margin-bottom:8px"
+        oninput="renderManualSearch(this.value)">
+      <div id="manual-results"></div>
+    </div>`;
+
+  document.getElementById('cs-left').innerHTML = `
+    <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:12px">✅ AI読み取り結果を確認</div>
+
+    <div class="ai-panel" style="margin-bottom:14px">
+      <div class="ai-panel-head">
+        <div style="width:26px;height:26px;background:rgba(200,169,81,.2);border-radius:6px;
+          display:flex;align-items:center;justify-content:center;font-size:12px">✨</div>
+        <div style="font-size:11px;font-weight:700;color:var(--gold)">AIが書類から読み取った情報</div>
+      </div>
+      <div class="ai-panel-body" style="font-size:11px;line-height:2">
+        <div><span style="color:var(--muted);min-width:80px;display:inline-block">契約者名</span>
+          <strong>${ex.client_name || '読み取り不可'}</strong></div>
+        <div><span style="color:var(--muted);min-width:80px;display:inline-block">物件</span>
+          <strong>${ex.property_address || '読み取り不可'}</strong></div>
+        <div><span style="color:var(--muted);min-width:80px;display:inline-block">書類種別</span>
+          <strong>${ex.doc_type || '不明'}</strong></div>
+        ${ex.contract_date ? `<div><span style="color:var(--muted);min-width:80px;display:inline-block">契約日</span><strong>${ex.contract_date}</strong></div>` : ''}
+        ${ex.management_company ? `<div><span style="color:var(--muted);min-width:80px;display:inline-block">管理会社</span><strong>${ex.management_company}</strong></div>` : ''}
+      </div>
+    </div>
+
+    <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.8px;margin-bottom:8px">
+      📋 一致する案件の候補
+    </div>
+    ${matchedHtml}
+    ${searchHtml}
+  `;
+
+  // 右: 確認ボタン（案件選択後に有効化）
+  renderConfirmRight();
+}
+
+function renderConfirmRight() {
+  const cas = STATE.selectedCase;
+  const ex  = STATE.aiResult?.extracted || {};
+  const r   = STATE.aiResult || {};
+
+  if (!cas) {
+    document.getElementById('cs-right').innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;
+        height:280px;gap:12px;color:var(--faint);text-align:center">
+        <div style="font-size:36px">👈</div>
+        <div style="font-size:12px;color:var(--muted)">左のリストから案件を選択してください</div>
+      </div>
+    `;
+    return;
+  }
+
+  // 署名・捺印サマリー
+  const sigCount   = (r.customer_signs||[]).length;
+  const stampCount = (r.chukkai_stamps||[]).length;
+
+  document.getElementById('cs-right').innerHTML = `
+    <div style="background:var(--em-bg);border:1px solid rgba(5,150,105,.2);border-radius:10px;
+      padding:14px 16px;margin-bottom:16px">
+      <div style="font-size:10px;font-weight:700;color:var(--em);margin-bottom:8px">✅ 紐付け先の案件</div>
+      <div style="font-size:14px;font-weight:700;color:var(--ink)">${cas.name} 様</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px">${cas.sub}</div>
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--faint);margin-top:3px">${cas.id} ／ 担当: ${cas.ag}</div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+      <div style="background:#fff;border:1px solid var(--bd);border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:22px;font-weight:700;color:var(--rd)">${sigCount}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px">顧客署名・捺印箇所</div>
+      </div>
+      <div style="background:#fff;border:1px solid var(--bd);border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:22px;font-weight:700;color:var(--em)">${stampCount}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px">仲介印 捺印箇所</div>
+      </div>
+    </div>
+
+    ${r.notes ? `<div style="background:var(--am-bg);border:1px solid rgba(217,119,6,.2);border-radius:8px;
+      padding:10px 12px;font-size:11px;color:var(--am);line-height:1.7;margin-bottom:14px">
+      ⚠️ ${r.notes}</div>` : ''}
+
+    <button class="btn btn-primary" onclick="confirmCase()" style="width:100%;font-size:13px;padding:12px">
+      ✅ この案件で確定 → 仲介印捺印へ
+    </button>
+    <button class="btn" onclick="STATE.selectedCase=null;renderConfirmRight()"
+      style="width:100%;margin-top:8px;background:transparent;border:1px solid var(--bd);color:var(--muted)">
+      ✏️ 案件を変更する
+    </button>
+  `;
+}
+
+function selectMatchedCase(id) {
+  STATE.selectedCase = DEMO_CASES.find(c=>c.id===id) || null;
+  renderAIConfirm();
+}
+
+function renderManualSearch(q) {
+  if (!q) { document.getElementById('manual-results').innerHTML=''; return; }
+  const hits = DEMO_CASES.filter(c =>
+    c.name.includes(q) || c.sub.includes(q) || c.id.includes(q.toUpperCase())
+  );
+  document.getElementById('manual-results').innerHTML = hits.length
+    ? hits.map(c=>`
+        <div class="case-result" onclick="selectMatchedCase('${c.id}')" style="cursor:pointer">
+          <div class="cr-id">${c.id}</div>
+          <div class="cr-name">${c.name} 様</div>
+          <div class="cr-sub">${c.sub}</div>
+        </div>`).join('')
+    : '<div style="font-size:11px;color:var(--faint);padding:6px">該当なし</div>';
+}
+
+function confirmCase() {
+  if (!STATE.selectedCase) return;
+  STATE.docType = STATE.aiResult?.extracted?.doc_type || '賃貸借契約書';
+  showToast(`✅ ${STATE.selectedCase.name} 様の案件に登録しました`);
+  goStep('stamp');
+}
+
+// ══ STEP 4: 仲介印捺印 ═══════════════════════════════════
+function renderStamp() {
+  STATE.step = 'stamp';
+  const r   = STATE.aiResult || {};
+  const cas = STATE.selectedCase;
+
   const stampsHtml = (r.chukkai_stamps||[]).map(s => {
     const checked = STATE.stampChecks[s.id];
     return `<div class="stamp-check-item ${checked?'done':''}" id="sci-${s.id}">
@@ -653,33 +775,36 @@ function renderAIResult() {
     </div>`;
   }).join('');
 
-  const allStampsDone = (r.chukkai_stamps||[]).every(s=>STATE.stampChecks[s.id]);
+  const allDone = (r.chukkai_stamps||[]).length > 0 &&
+                  (r.chukkai_stamps||[]).every(s=>STATE.stampChecks[s.id]);
 
   document.getElementById('cs-left').innerHTML = `
-    <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:12px">🔴 STEP 4 — 仲介印の捺印</div>
-    <div style="background:var(--am-bg);border:1px solid rgba(217,119,6,.25);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:11px;color:var(--am);font-weight:600">
-      ⚠️ 以下の箇所に仲介印（CORETOの角印）を押印してください
+    <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:10px">🔴 仲介印の捺印</div>
+    <div style="background:var(--am-bg);border:1px solid rgba(217,119,6,.25);border-radius:8px;
+      padding:10px 12px;margin-bottom:12px;font-size:11px;color:var(--am);font-weight:600">
+      ⚠️ 以下の箇所にCORETOの仲介印（角印）を捺印してください
     </div>
-    <div class="stamp-checklist" id="stamp-checklist">${stampsHtml}</div>
-    ${r.notes ? `<div style="background:var(--cream2);border:1px solid var(--bd);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--muted);line-height:1.7;margin-bottom:14px">
+    <div id="stamp-checklist" class="stamp-checklist">${stampsHtml}</div>
+    ${r.notes ? `<div style="background:var(--cream2);border:1px solid var(--bd);border-radius:8px;
+      padding:10px 12px;font-size:11px;color:var(--muted);line-height:1.7;margin-bottom:12px">
       💬 ${r.notes}</div>` : ''}
-    <button class="btn btn-primary" id="stamp-done-btn"
-      onclick="confirmStampDone()"
-      style="width:100%;${allStampsDone?'':'opacity:.5'}"
-      ${allStampsDone?'':'disabled'}>
+    <button class="btn btn-primary" id="stamp-done-btn" onclick="confirmStampDone()"
+      style="width:100%;${allDone?'':'opacity:.5'}" ${allDone?'':'disabled'}>
       ✅ 仲介印 捺印完了 → ラベル印刷へ
     </button>
   `;
 
-  // 右パネル: 顧客への署名指示
-  const signsHtml = (r.customer_signs||[]).map((s,i) => {
-    const typeIcon = s.type === 'sign' ? '✍️' : '🔴';
-    const typeLabel = s.type === 'sign' ? '署名（自署）' : '捺印（実印）';
-    const typeCls = s.type === 'sign' ? 'rd' : 'am';
-    return `<div style="background:#fff;border:1px solid var(--bd);border-radius:8px;padding:12px 14px;margin-bottom:8px">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-        <span style="background:var(--navy);color:var(--gold);width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">${i+1}</span>
-        <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--${typeCls}-bg);color:var(--${typeCls})">${typeIcon} ${typeLabel}</span>
+  // 右: 顧客向け署名指示
+  const signsHtml = (r.customer_signs||[]).map((s,i)=>{
+    const typeIcon  = s.type==='sign'?'✍️':'🔴';
+    const typeLabel = s.type==='sign'?'署名（自署）':'捺印（実印）';
+    const typeCls   = s.type==='sign'?'rd':'am';
+    return `<div style="background:#fff;border:1px solid var(--bd);border-radius:8px;padding:11px 13px;margin-bottom:8px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+        <span style="background:var(--navy);color:var(--gold);width:20px;height:20px;border-radius:50%;
+          display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">${i+1}</span>
+        <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;
+          background:var(--${typeCls}-bg);color:var(--${typeCls})">${typeIcon} ${typeLabel}</span>
         <span style="font-size:10px;color:var(--muted)">${s.location}</span>
       </div>
       <div style="font-size:11px;color:var(--ink);line-height:1.7;padding-left:28px">${s.instruction}</div>
@@ -687,16 +812,19 @@ function renderAIResult() {
   }).join('');
 
   document.getElementById('cs-right').innerHTML = `
-    <div class="ai-panel" style="margin-bottom:16px">
+    <div class="ai-panel" style="margin-bottom:14px">
       <div class="ai-panel-head">
-        <div style="width:28px;height:28px;background:rgba(200,169,81,.2);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px">✨</div>
+        <div style="width:26px;height:26px;background:rgba(200,169,81,.2);border-radius:6px;
+          display:flex;align-items:center;justify-content:center;font-size:12px">✨</div>
         <div>
-          <div style="font-size:11px;font-weight:700;color:var(--gold)">AI解析完了 — 顧客への署名・捺印指示</div>
-          <div style="font-size:9px;color:rgba(255,255,255,.4);margin-top:1px">${r.summary?.docType||''} / ${r.summary?.client||''}</div>
+          <div style="font-size:11px;font-weight:700;color:var(--gold)">顧客への署名・捺印指示</div>
+          <div style="font-size:9px;color:rgba(255,255,255,.35);margin-top:1px">${cas?.name||''} 様 ／ ${STATE.docType||''}</div>
         </div>
       </div>
       <div class="ai-panel-body">
-        <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.8px;margin-bottom:10px">クライアントに伝える署名・捺印箇所（${(r.customer_signs||[]).length}箇所）</div>
+        <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.8px;margin-bottom:10px">
+          ${(r.customer_signs||[]).length}箇所に署名・捺印が必要です
+        </div>
         ${signsHtml}
         <button class="btn btn-sm" onclick="printCustomerGuide()"
           style="margin-top:8px;width:100%;background:var(--navy);color:#fff;border:none">
@@ -709,15 +837,14 @@ function renderAIResult() {
 
 function toggleStamp(id) {
   STATE.stampChecks[id] = !STATE.stampChecks[id];
-  renderAIResult();
-  const all = STATE.aiResult?.chukkai_stamps?.every(s=>STATE.stampChecks[s.id]);
-  if (all) showToast('✅ 全箇所の捺印が完了しました！');
+  renderStamp();
+  const allDone = STATE.aiResult?.chukkai_stamps?.every(s=>STATE.stampChecks[s.id]);
+  if (allDone) showToast('✅ 全箇所の捺印が完了しました！');
 }
 
 function confirmStampDone() {
-  const r = STATE.aiResult;
-  if (!r?.chukkai_stamps?.every(s=>STATE.stampChecks[s.id])) {
-    showToast('⚠️ 未チェックの仲介印箇所があります','warn'); return;
+  if (!STATE.aiResult?.chukkai_stamps?.every(s=>STATE.stampChecks[s.id])) {
+    showToast('⚠️ 未チェックの捺印箇所があります','warn'); return;
   }
   STATE.stampedAt = new Date().toISOString();
   showToast('✅ 仲介印 捺印完了を記録しました');
@@ -725,21 +852,22 @@ function confirmStampDone() {
 }
 
 function printCustomerGuide() {
-  const r = STATE.aiResult;
-  if (!r) return;
+  const r   = STATE.aiResult;
   const cas = STATE.selectedCase;
+  if (!r) return;
   const w = window.open('','_blank','width=700,height=900');
   w.document.write(`<html><head><title>署名・捺印のご案内</title>
   <style>body{font-family:'Noto Sans JP',sans-serif;padding:40px;font-size:13px;line-height:2}
   h2{font-size:16px;border-bottom:2px solid #0D1A2D;padding-bottom:8px}
   .item{border:1px solid #ddd;border-radius:6px;padding:12px;margin-bottom:10px}
-  .num{display:inline-block;background:#0D1A2D;color:#C8A951;width:22px;height:22px;border-radius:50%;text-align:center;line-height:22px;font-size:11px;font-weight:700;margin-right:8px}
+  .num{display:inline-block;background:#0D1A2D;color:#C8A951;width:22px;height:22px;border-radius:50%;
+    text-align:center;line-height:22px;font-size:11px;font-weight:700;margin-right:8px}
   @media print{button{display:none}}</style></head><body>
   <h2>署名・捺印のご案内</h2>
   <p>【${cas?.name||''}】様<br>以下の箇所にご署名・ご捺印をお願いいたします。</p>
   ${(r.customer_signs||[]).map((s,i)=>`<div class="item">
-    <span class="num">${i+1}</span><strong>${s.type==='sign'?'✍️ 署名（自署）':'🔴 捺印（実印）'}</strong>
-    — ${s.location}<br>
+    <span class="num">${i+1}</span>
+    <strong>${s.type==='sign'?'✍️ 署名（自署）':'🔴 捺印（実印）'}</strong> — ${s.location}<br>
     <span style="margin-left:30px;font-size:12px;color:#666">${s.instruction}</span>
   </div>`).join('')}
   <p style="margin-top:20px;font-size:12px;color:#666">ご不明な点はCORETOまでお問い合わせください。</p>
@@ -748,36 +876,38 @@ function printCustomerGuide() {
   w.document.close();
 }
 
-// ── STEP 5: ラベル印刷 ────────────────────────────────────
+// ══ STEP 5: ラベル印刷 ═══════════════════════════════════
 function renderLabel() {
+  STATE.step = 'label';
+  renderFlowBar();
   const cas = STATE.selectedCase;
   const now = new Date();
-  const dateStr = `${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')}`;
+  const dateStr = now.toLocaleDateString('ja-JP');
 
   document.getElementById('cs-left').innerHTML = `
-    <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:12px">🖨️ STEP 5 — ラベル印刷</div>
-    <div style="background:var(--em-bg);border:1px solid rgba(5,150,105,.2);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:11px;color:var(--em)">
+    <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:10px">🖨️ ラベル印刷</div>
+    <div style="background:var(--em-bg);border:1px solid rgba(5,150,105,.2);border-radius:8px;
+      padding:10px 12px;margin-bottom:12px;font-size:11px;color:var(--em)">
       ✅ 仲介印捺印完了 — ${STATE.stampedAt ? new Date(STATE.stampedAt).toLocaleString('ja-JP') : dateStr}
     </div>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:14px;line-height:1.7">
-      レターパックに貼付するラベルを印刷します。<br>
-      A4用紙に印刷してラベルを切り取って貼付してください。
+    <div style="font-size:11px;color:var(--muted);margin-bottom:14px;line-height:1.8">
+      レターパックに貼付するラベルを印刷します。
     </div>
     <div style="display:flex;flex-direction:column;gap:10px">
       <button class="btn btn-primary" onclick="printLabel()" style="width:100%">🖨️ 送付ラベルを印刷</button>
-      <button class="btn" onclick="goStep('ship')" style="width:100%;background:var(--navy);color:#fff;border:none">
+      <button class="btn" onclick="goStep('ship')"
+        style="width:100%;background:var(--navy);color:#fff;border:none">
         📮 印刷完了 → 発送登録へ
       </button>
     </div>
   `;
-
   document.getElementById('cs-right').innerHTML = `
     <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:12px">ラベルプレビュー</div>
-    <div class="label-preview" id="label-preview">
+    <div class="label-preview">
       <div class="lp-title">CORETO 書類送付</div>
-      <div class="lp-main">${cas?.name || '—'}</div>
-      <div class="lp-sub">${cas?.sub?.split(' ')[0] || '—'}</div>
-      <div class="lp-sub">${cas?.id || '—'} / ${STATE.docType||'書類'}</div>
+      <div class="lp-main">${cas?.name||'—'} 様</div>
+      <div class="lp-sub">${cas?.sub?.split(' ')[0]||'—'}</div>
+      <div class="lp-sub">${cas?.id||'—'} ／ ${STATE.docType||'書類'}</div>
       <div style="margin-top:8px;padding-top:8px;border-top:1px dashed #ccc;font-size:9px;color:#666">
         発行日：${dateStr} ／ 担当：${cas?.ag||'—'}
       </div>
@@ -787,67 +917,69 @@ function renderLabel() {
 
 function printLabel() {
   const cas = STATE.selectedCase;
-  const now = new Date();
-  const dateStr = now.toLocaleDateString('ja-JP');
+  const dateStr = new Date().toLocaleDateString('ja-JP');
   const w = window.open('','_blank','width=600,height=500');
   w.document.write(`<html><head><title>送付ラベル</title>
-  <style>
-    body{font-family:'Noto Sans JP',sans-serif;padding:20px}
-    .label{border:3px solid #000;padding:16px 20px;width:280px;line-height:2}
-    .title{font-size:9px;font-weight:700;letter-spacing:2px;color:#666;margin-bottom:4px}
-    .main{font-size:18px;font-weight:700}
-    .sub{font-size:11px;color:#555}
-    .barcode-area{margin-top:12px;padding-top:12px;border-top:1px dashed #ccc;font-size:10px;font-family:monospace}
-    @media print{button{display:none}}
-  </style></head><body>
+  <style>body{font-family:'Noto Sans JP',sans-serif;padding:20px}
+  .label{border:3px solid #000;padding:16px 20px;width:280px;line-height:2}
+  .title{font-size:9px;font-weight:700;letter-spacing:2px;color:#666;margin-bottom:4px}
+  .main{font-size:18px;font-weight:700}.sub{font-size:11px;color:#555}
+  .code{margin-top:12px;padding-top:12px;border-top:1px dashed #ccc;font-size:10px;font-family:monospace}
+  @media print{button{display:none}}</style></head><body>
   <div class="label">
     <div class="title">CORETO 書類送付</div>
-    <div class="main">${cas?.name||'—'}</div>
+    <div class="main">${cas?.name||'—'} 様</div>
     <div class="sub">${cas?.sub?.split(' ')[0]||'—'}</div>
-    <div class="sub">${cas?.id||'—'} / ${STATE.docType||'書類'}</div>
-    <div class="barcode-area">発行：${dateStr}<br>担当：${cas?.ag||'—'}<br>ID: ${cas?.id||'—'}</div>
+    <div class="sub">${cas?.id||'—'} ／ ${STATE.docType||'書類'}</div>
+    <div class="code">発行：${dateStr}<br>担当：${cas?.ag||'—'}<br>ID: ${cas?.id||'—'}</div>
   </div>
-  <br><button onclick="window.print()" style="padding:8px 20px;background:#0D1A2D;color:#fff;border:none;border-radius:6px;cursor:pointer">印刷する</button>
-  </body></html>`);
+  <br><button onclick="window.print()"
+    style="padding:8px 20px;background:#0D1A2D;color:#fff;border:none;border-radius:6px;cursor:pointer">
+    印刷する
+  </button></body></html>`);
   w.document.close();
 }
 
-// ── STEP 6: 発送完了 ──────────────────────────────────────
+// ══ STEP 6: 発送完了 ══════════════════════════════════════
 function renderShip() {
+  STATE.step = 'ship';
+  renderFlowBar();
   const cas = STATE.selectedCase;
+
   document.getElementById('cs-left').innerHTML = `
-    <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:12px">📮 STEP 6 — 発送登録</div>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:14px;line-height:1.7">
+    <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:10px">📮 発送登録</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:14px;line-height:1.8">
       レターパックに書類を封入し、追跡番号を入力してください。
     </div>
-    <div class="field" style="margin-bottom:14px">
-      <label style="font-size:10px;font-weight:700;color:var(--muted);display:block;margin-bottom:6px">レターパック追跡番号</label>
+    <div style="margin-bottom:12px">
+      <label style="font-size:10px;font-weight:700;color:var(--muted);display:block;margin-bottom:6px">
+        レターパック追跡番号 <span style="color:var(--rd)">*</span>
+      </label>
       <input type="text" id="tracking-no" placeholder="例：1234-5678-9012" maxlength="20"
-        style="width:100%;padding:9px 12px;border:1px solid var(--bd);border-radius:8px;font-size:13px;font-family:'DM Mono',monospace;box-sizing:border-box">
+        style="width:100%;padding:9px 12px;border:1px solid var(--bd);border-radius:8px;
+        font-size:13px;font-family:'DM Mono',monospace;box-sizing:border-box">
     </div>
-    <div class="field" style="margin-bottom:16px">
-      <label style="font-size:10px;font-weight:700;color:var(--muted);display:block;margin-bottom:6px">送付先</label>
-      <input type="text" id="ship-dest" placeholder="クライアント住所（省略可）"
+    <div style="margin-bottom:16px">
+      <label style="font-size:10px;font-weight:700;color:var(--muted);display:block;margin-bottom:6px">送付先住所（省略可）</label>
+      <input type="text" id="ship-dest" placeholder="クライアント住所"
         style="width:100%;padding:9px 12px;border:1px solid var(--bd);border-radius:8px;font-size:12px;box-sizing:border-box">
     </div>
-    <button class="btn btn-primary" onclick="completeShip()" style="width:100%">
-      📮 発送完了を登録
-    </button>
+    <button class="btn btn-primary" onclick="completeShip()" style="width:100%">📮 発送完了を登録</button>
   `;
 
   document.getElementById('cs-right').innerHTML = `
-    <div style="background:var(--cream2);border:1px solid var(--bd);border-radius:10px;padding:20px;font-size:11px;line-height:2">
-      <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:12px">📦 発送前チェックリスト</div>
-      ${[
-        '契約書一式の枚数を確認した',
-        '仲介印の押印箇所をすべて確認した',
-        'クライアントへの署名・捺印案内を同封した',
-        'レターパックの宛名・差出人を記入した',
-        '追跡番号シールをレターパックに貼付した',
-      ].map((item,i) => `<div style="display:flex;align-items:center;gap:10px;padding:4px 0">
-        <input type="checkbox" id="pre-ship-${i}" style="width:16px;height:16px;cursor:pointer">
-        <label for="pre-ship-${i}" style="cursor:pointer;font-size:11px">${item}</label>
-      </div>`).join('')}
+    <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:10px">📦 発送前チェックリスト</div>
+    <div style="background:var(--cream2);border:1px solid var(--bd);border-radius:10px;padding:16px">
+      ${['契約書一式の枚数を確認した',
+         '仲介印の全捺印箇所を目視確認した',
+         '顧客向け署名・捺印案内を同封した',
+         'レターパックの宛名・差出人を記入した',
+         '追跡番号シールをレターパックに貼付した'].map((item,i)=>`
+        <div style="display:flex;align-items:center;gap:10px;padding:5px 0">
+          <input type="checkbox" id="psc-${i}"
+            style="width:16px;height:16px;cursor:pointer;accent-color:var(--em)">
+          <label for="psc-${i}" style="cursor:pointer;font-size:11px;color:var(--ink)">${item}</label>
+        </div>`).join('')}
     </div>
   `;
 }
@@ -856,70 +988,65 @@ function completeShip() {
   const no = document.getElementById('tracking-no')?.value.trim();
   if (!no) { showToast('⚠️ 追跡番号を入力してください','warn'); return; }
   STATE.trackingNo = no;
-  STATE.shippedAt = new Date().toISOString();
-
+  STATE.shippedAt  = new Date().toISOString();
   const cas = STATE.selectedCase;
+
   document.getElementById('cs-left').innerHTML = `
-    <div style="text-align:center;padding:32px 0">
-      <div style="font-size:48px;margin-bottom:12px">📮</div>
+    <div style="text-align:center;padding:32px 16px">
+      <div style="font-size:52px;margin-bottom:14px">📮</div>
       <div style="font-size:16px;font-weight:700;color:var(--em);margin-bottom:6px">発送完了</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:16px">${cas?.name||''} / ${STATE.docType||''}</div>
-      <div style="font-family:'DM Mono',monospace;font-size:13px;background:var(--cream2);border:1px solid var(--bd);border-radius:8px;padding:10px;margin-bottom:16px">
-        追跡番号：${no}
-      </div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:16px">${cas?.name||''} 様 ／ ${STATE.docType||''}</div>
+      <div style="font-family:'DM Mono',monospace;font-size:13px;background:var(--cream2);
+        border:1px solid var(--bd);border-radius:8px;padding:10px;margin-bottom:20px">${no}</div>
       <button class="btn btn-primary" onclick="resetFlow()" style="width:100%">
         🔄 次の書類を処理する
       </button>
     </div>
   `;
   document.getElementById('cs-right').innerHTML = `
-    <div style="background:var(--em-bg);border:1px solid rgba(5,150,105,.25);border-radius:10px;padding:20px">
+    <div style="background:var(--em-bg);border:1px solid rgba(5,150,105,.25);border-radius:10px;padding:18px">
       <div style="font-size:12px;font-weight:700;color:var(--em);margin-bottom:12px">✅ 発送記録</div>
-      <div style="font-size:11px;line-height:2.2;color:var(--ink)">
-        <div>案件ID：<span style="font-family:'DM Mono',monospace">${cas?.id||'—'}</span></div>
-        <div>クライアント：${cas?.name||'—'}</div>
-        <div>書類種別：${STATE.docType||'—'}</div>
-        <div>仲介印捺印：${STATE.stampedAt ? new Date(STATE.stampedAt).toLocaleString('ja-JP') : '—'}</div>
-        <div>発送日時：${new Date(STATE.shippedAt).toLocaleString('ja-JP')}</div>
-        <div>追跡番号：<span style="font-family:'DM Mono',monospace">${no}</span></div>
+      <div style="font-size:11px;line-height:2.4;color:var(--ink)">
+        <div>案件ID<span style="float:right;font-family:'DM Mono',monospace;font-size:10px">${cas?.id||'—'}</span></div>
+        <div>クライアント<span style="float:right">${cas?.name||'—'} 様</span></div>
+        <div>書類種別<span style="float:right">${STATE.docType||'—'}</span></div>
+        <div>担当AG<span style="float:right">${cas?.ag||'—'}</span></div>
+        <div>仲介印捺印<span style="float:right;font-size:10px">${STATE.stampedAt ? new Date(STATE.stampedAt).toLocaleString('ja-JP') : '—'}</span></div>
+        <div>発送日時<span style="float:right;font-size:10px">${new Date(STATE.shippedAt).toLocaleString('ja-JP')}</span></div>
+        <div>追跡番号<span style="float:right;font-family:'DM Mono',monospace;font-size:10px">${no}</span></div>
       </div>
     </div>
   `;
   showToast('📮 発送完了を登録しました');
+  STATE.step = 'ship';
   renderFlowBar();
 }
 
-// ── フロー制御 ────────────────────────────────────────────
-const STEP_RENDERS = {
-  register: renderRegister,
-  scan:     renderScan,
-  ai:       ()=>renderAI(),
-  stamp:    renderAIResult,
-  label:    renderLabel,
-  ship:     renderShip,
-};
-
+// ══ フロー制御 ════════════════════════════════════════════
 function goStep(step) {
-  // ai→stamp は同じレンダラ（renderAIResultがstampも兼ねる）
-  if (step === 'ai') STATE.step = 'ai';
-  else if (step === 'stamp') STATE.step = 'stamp';
-  else STATE.step = step;
+  STATE.step = step;
   renderFlowBar();
-  const fn = STEP_RENDERS[step] || STEP_RENDERS[STATE.step];
-  if (fn) fn();
+  ({
+    scan:    renderScan,
+    ai:      ()=>renderAI(),
+    confirm: renderAIConfirm,
+    stamp:   renderStamp,
+    label:   renderLabel,
+    ship:    renderShip,
+  })[step]?.();
 }
 
 function resetFlow() {
-  STATE = { step:'register', selectedCase:null, scannedFile:null, scannedDataUrl:null,
-            aiResult:null, stampChecks:{}, trackingNo:'', shippedAt:null };
+  STATE = {step:'scan',scannedFile:null,scannedDataUrl:null,aiResult:null,
+           selectedCase:null,docType:'',stampChecks:{},stampedAt:null,trackingNo:'',shippedAt:null};
   renderFlowBar();
-  renderRegister();
+  renderScan();
 }
 
 window.addEventListener('DOMContentLoaded', () => {
   CNAV.init('itsetsu');
   renderFlowBar();
-  renderRegister();
+  renderScan();
 });
 </script>
 
