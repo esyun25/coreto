@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>士業連携管理 — COREBLDG</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0D1A2D;--navy-l:#1E3252;--gold:#C8A951;--gold-dim:rgba(200,169,81,.15);--cream:#F7F4EE;--cream2:#EFECE4;--white:#FFFFFF;--ink:#1A1A2E;--muted:#6B7280;--faint:#9CA3AF;--em:#059669;--em-bg:#ECFDF5;--am:#D97706;--am-bg:#FFFBEB;--rd:#DC2626;--rd-bg:#FEF2F2;--sk:#0284C7;--sk-bg:#F0F9FF;--vt:#7C3AED;--vt-bg:#F5F3FF;--bd:#E5E0D5;--bd2:#D4CFC4;--sw:240px;--r:10px;--r-sm:7px;--sh:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04)}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:var(--cream)}
+.shell{display:flex;height:100vh}
+.sb{width:var(--sw);background:var(--navy);display:flex;flex-direction:column;flex-shrink:0;position:relative}
+.sb::after{content:'';position:absolute;top:0;right:0;width:1px;height:100%;background:linear-gradient(180deg,rgba(200,169,81,.25) 0%,rgba(200,169,81,.06) 50%,transparent 100%)}
+.sb-head{padding:24px 20px 18px;border-bottom:1px solid rgba(255,255,255,.06)}
+.sb-logo{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;letter-spacing:5px;color:var(--gold)}
+.sb-ver{font-size:9px;letter-spacing:2px;color:rgba(200,169,81,.3);font-family:'DM Mono',monospace;margin-top:2px}
+.sb-user{margin:14px 14px 10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:9px 11px;display:flex;align-items:center;gap:9px}
+.sb-av{width:28px;height:28px;border-radius:50%;background:var(--gold-dim);border:1px solid rgba(200,169,81,.25);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--gold);flex-shrink:0}
+.sb-un{font-size:11px;font-weight:600;color:rgba(255,255,255,.8)}
+.sb-ur{font-size:9px;color:rgba(255,255,255,.3);font-family:'DM Mono',monospace}
+.sb-nav{flex:1;overflow-y:auto;padding:6px 10px}
+.nsl{font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.18);padding:10px 8px 4px;font-family:'DM Mono',monospace}
+.ni{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:7px;cursor:pointer;transition:.13s;margin-bottom:1px}
+.ni:hover{background:rgba(255,255,255,.06)}
+.ni.active{background:rgba(200,169,81,.1)}
+.ni-ic{width:22px;text-align:center;font-size:14px}
+.ni-lb{font-size:11px;font-weight:500;color:rgba(255,255,255,.55)}
+.ni.active .ni-lb{color:var(--gold)}
+.sf{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;cursor:pointer;font-size:11px;color:rgba(255,255,255,.3);transition:.13s}
+.sf:hover{background:rgba(255,255,255,.05);color:rgba(255,255,255,.6)}
+.sb-foot{padding:10px 14px 18px;border-top:1px solid rgba(255,255,255,.05)}
+.content{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:58px;background:var(--white);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 24px;gap:14px;flex-shrink:0;box-shadow:var(--sh)}
+.tb-title{font-size:16px;font-weight:600;color:var(--ink);font-family:'Cormorant Garamond',serif;letter-spacing:.5px}
+.tb-crumb{font-size:11px;color:var(--faint)}
+.tb-crumb a{color:var(--muted);text-decoration:none}
+.tb-act{margin-left:auto;display:flex;gap:9px;align-items:center}
+.btn{padding:7px 16px;border-radius:var(--r-sm);font-size:12px;font-weight:600;cursor:pointer;transition:.15s;font-family:'Outfit',sans-serif;border:none}
+.btn-p{background:var(--navy);color:var(--gold)}.btn-p:hover{background:var(--navy-l)}
+.btn-g{background:transparent;color:var(--muted);border:1px solid var(--bd)}.btn-g:hover{background:var(--cream);color:var(--ink)}
+.btn-sm{padding:5px 12px;font-size:11px}
+.btn-rd{background:var(--rd-bg);color:var(--rd);border:1px solid rgba(220,38,38,.2)}.btn-rd:hover{background:var(--rd);color:#fff}
+.tab-bar{padding:0 24px;background:var(--white);border-bottom:1px solid var(--bd);display:flex;gap:0}
+.tab{padding:12px 18px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:.15s}
+.tab:hover{color:var(--ink)}.tab.active{color:var(--navy);border-bottom-color:var(--gold)}
+.page{flex:1;overflow-y:auto;padding:24px}
+.page::-webkit-scrollbar{width:5px}.page::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:3px}
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;font-family:'Outfit',sans-serif;font-feature-settings:'tnum'}
+.b-em{background:var(--em-bg);color:var(--em)}.b-am{background:var(--am-bg);color:var(--am)}.b-rd{background:var(--rd-bg);color:var(--rd)}.b-sk{background:var(--sk-bg);color:var(--sk)}.b-nt{background:var(--cream2);color:var(--muted)}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.kpi{background:var(--white);border:1px solid var(--bd);border-radius:var(--r);padding:16px 18px;box-shadow:var(--sh);position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.kpi.gd::before{background:var(--gold)}.kpi.em::before{background:var(--em)}.kpi.am::before{background:var(--am)}.kpi.rd::before{background:var(--rd)}
+.kpi-lb{font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+.kpi-vl{font-size:24px;font-weight:700;color:var(--ink);font-family:'Cormorant Garamond',serif;font-variant-numeric:tabular-nums}
+.kpi-sb{font-size:10px;color:var(--faint);margin-top:4px}
+.card{background:var(--white);border:1px solid var(--bd);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden;margin-bottom:18px}
+.card-head{padding:14px 20px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;background:var(--cream)}
+.card-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--ink)}
+.tbl{width:100%;border-collapse:collapse;font-size:12px}
+.tbl th{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--faint);padding:9px 14px;border-bottom:2px solid var(--bd);text-align:left;background:var(--cream)}
+.tbl td{padding:12px 14px;border-bottom:1px solid var(--bd);color:var(--ink);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:rgba(200,169,81,.03)}
+/* Judicial card */
+.jd-card{background:var(--white);border:1px solid var(--bd);border-radius:var(--r);padding:18px 20px;box-shadow:var(--sh);margin-bottom:14px;display:flex;align-items:flex-start;gap:16px}
+.jd-av{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;border:2px solid var(--bd)}
+.jd-av.takken{background:rgba(200,169,81,.12);border-color:rgba(200,169,81,.3)}
+.jd-av.shiho{background:var(--sk-bg);border-color:rgba(2,132,199,.2)}
+.jd-info{flex:1}
+.jd-name{font-size:14px;font-weight:700;color:var(--ink);margin-bottom:2px}
+.jd-meta{font-size:11px;color:var(--muted);line-height:1.8}
+.jd-actions{display:flex;flex-direction:column;gap:6px;flex-shrink:0}
+/* assign table */
+.assign-row{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--bd);transition:.13s}
+.assign-row:last-child{border-bottom:none}
+.assign-row:hover{background:rgba(200,169,81,.03)}
+.assign-case{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);width:90px;flex-shrink:0}
+.assign-client{flex:1;font-size:12px;color:var(--ink)}
+.assign-type{width:60px;text-align:center}
+/* modal */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:500;align-items:center;justify-content:center}
+.modal-bg.show{display:flex}
+.modal{background:var(--white);border-radius:12px;width:480px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal-head{padding:18px 22px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-size:14px;font-weight:700;color:var(--ink)}
+.modal-close{background:none;border:none;font-size:18px;cursor:pointer;color:var(--muted);line-height:1}
+.modal-body{padding:20px 22px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
+.field input,.field select,.field textarea{width:100%;padding:9px 12px;background:var(--cream);border:1.5px solid var(--bd);border-radius:var(--r-sm);font-size:13px;color:var(--ink);font-family:'Outfit','Noto Sans JP',sans-serif;outline:none;transition:.15s}
+.field input:focus,.field select:focus{border-color:var(--gold)}
+.modal-foot{padding:14px 22px;border-top:1px solid var(--bd);display:flex;justify-content:flex-end;gap:8px}
+.al{padding:10px 14px;border-radius:var(--r-sm);font-size:12px;line-height:1.6;margin-bottom:14px}
+.al-warn{background:var(--am-bg);border:1px solid rgba(217,119,6,.2);color:var(--am)}
+/* MOBILE */
+.mob-ham{display:none;flex-direction:column;align-items:center;justify-content:center;width:36px;height:36px;background:transparent;border:none;cursor:pointer;border-radius:7px;flex-shrink:0}
+.mob-ham span{display:block;width:18px;height:2px;background:rgba(255,255,255,.72);margin:3px 0;border-radius:1px}
+.mob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:199}
+@media(max-width:768px){
+  .mob-ham{display:flex}
+  .mob-overlay.show{display:block}
+  .sb{position:fixed;left:calc(-1 * var(--sw));top:0;height:100vh;z-index:200;transition:left .25s ease}
+  .sb.open{left:0}
+  .shell{overflow:hidden}.content{width:100vw;min-width:0}
+  .topbar{padding:0 12px;gap:8px}.tb-crumb{display:none}
+  .page{padding:12px}
+  .kpi-row{grid-template-columns:1fr 1fr!important}
+  .jd-card{flex-wrap:wrap}
+  table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+<nav class="sb" id="sb">
+  <div class="sb-head">
+    <div class="sb-logo">CORE<br>BLDG</div>
+    <div class="sb-ver">v2.0 — CORETO</div>
+  </div>
+  <div class="sb-user">
+    <div class="sb-av">HQ</div>
+    <div>
+      <div class="sb-un">田中 誠一</div>
+      <div class="sb-ur">HQ / exec</div>
+    </div>
+  </div>
+  <div class="sb-nav" id="sb-nav"></div>
+  <div class="sb-foot">
+    <div class="sf" onclick="window.location.href='coreto-hub-v2.html'">⬅ ダッシュボードへ</div>
+  </div>
+</nav>
+
+<div class="content">
+  <div class="topbar">
+    <button class="mob-ham" onclick="toggleSb()"><span></span><span></span><span></span></button>
+    <div>
+      <div class="tb-title">士業連携管理</div>
+      <div class="tb-crumb"><a href="coreto-hub-v2.html">COREBLDG</a> › <span>士業連携管理</span></div>
+    </div>
+    <div class="tb-act">
+      <button class="btn btn-g btn-sm" onclick="openAddModal()">＋ 士業者を追加</button>
+    </div>
+  </div>
+  <div class="tab-bar">
+    <div class="tab active" onclick="switchTab('list',this)">士業者一覧</div>
+    <div class="tab" onclick="switchTab('assign',this)">案件割当</div>
+    <div class="tab" onclick="switchTab('license',this)">免許・資格管理</div>
+  </div>
+  <div class="page" id="pg"></div>
+</div>
+</div>
+
+<!-- 追加モーダル -->
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">士業者を追加</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field"><label>氏名</label><input placeholder="山田 太郎"></div>
+      <div class="field"><label>種別</label>
+        <select>
+          <option>宅地建物取引士</option>
+          <option>司法書士</option>
+          <option>行政書士</option>
+        </select>
+      </div>
+      <div class="field"><label>資格登録番号</label><input placeholder="東京都知事(X)第XXXXXX号"></div>
+      <div class="field"><label>電話番号</label><input placeholder="03-0000-0000" type="tel"></div>
+      <div class="field"><label>メールアドレス</label><input placeholder="name@example.com" type="email"></div>
+      <div class="field"><label>対応エリア</label><input placeholder="港区・渋谷区・新宿区"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-g btn-sm" onclick="closeModal()">キャンセル</button>
+      <button class="btn btn-p btn-sm" onclick="closeModal();alert('✅ 士業者を追加しました')">追加する</button>
+    </div>
+  </div>
+</div>
+
+<div class="mob-overlay" onclick="toggleSb()"></div>
+<script src="coreto-nav-v2.js"></script>
+<script>
+function toggleSb(){document.querySelector('.sb').classList.toggle('open');document.querySelector('.mob-overlay').classList.toggle('show');}
+function openAddModal(){document.getElementById('modal').classList.add('show');}
+function closeModal(){document.getElementById('modal').classList.remove('show');}
+
+const JUDICIAL = [
+  {id:'TK-001', type:'宅建士', name:'佐藤 健二', license:'東京都知事(3)第112345号', area:'港区・渋谷区・新宿区', cases:3, available:true, phone:'090-1111-2222', email:'sato@example.com'},
+  {id:'TK-002', type:'宅建士', name:'鈴木 美咲', license:'東京都知事(2)第098765号', area:'品川区・目黒区・大田区', cases:1, available:true, phone:'090-3333-4444', email:'suzuki@example.com'},
+  {id:'TK-003', type:'宅建士', name:'高橋 誠', license:'東京都知事(4)第054321号', area:'千代田区・中央区・台東区', cases:4, available:false, phone:'090-5555-6666', email:'takahashi@example.com'},
+  {id:'SH-001', type:'司法書士', name:'伊藤 雄介', license:'東京司法書士会 第4567号', area:'都内全域', cases:2, available:true, phone:'03-1234-5678', email:'ito@shiho.com'},
+];
+
+const ASSIGN_CASES = [
+  {id:'RENT-0194', client:'田中 優子', type:'IT重説', status:'割当済み', assignee:'佐藤 健二', deadline:'2026/04/10'},
+  {id:'RENT-0201', client:'鈴木 健太', type:'IT重説', status:'割当待ち', assignee:null, deadline:'2026/04/12'},
+  {id:'SALE-0043', client:'山本 大輔', type:'売買立会', status:'割当済み', assignee:'伊藤 雄介', deadline:'2026/04/20'},
+  {id:'RENT-0215', client:'渡辺 誠', type:'IT重説', status:'割当待ち', assignee:null, deadline:'2026/04/14'},
+];
+
+let currentTab='list';
+function switchTab(t,el){
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  if(el)el.classList.add('active');
+  currentTab=t; renderTab(t);
+}
+function renderTab(t){
+  const pg=document.getElementById('pg');
+  if(t==='list')    pg.innerHTML=renderList();
+  if(t==='assign')  pg.innerHTML=renderAssign();
+  if(t==='license') pg.innerHTML=renderLicense();
+}
+
+function renderList(){
+  const takken = JUDICIAL.filter(j=>j.type==='宅建士');
+  const shiho  = JUDICIAL.filter(j=>j.type==='司法書士');
+  function cards(arr){
+    return arr.map(j=>`
+    <div class="jd-card">
+      <div class="jd-av ${j.type==='宅建士'?'takken':'shiho'}">${j.type==='宅建士'?'🏠':'⚖️'}</div>
+      <div class="jd-info">
+        <div class="jd-name">${j.name} <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--faint);margin-left:6px">${j.id}</span></div>
+        <div class="jd-meta">
+          ${j.license}<br>
+          対応エリア：${j.area}<br>
+          担当案件数：<strong>${j.cases}件</strong>　電話：${j.phone}
+        </div>
+      </div>
+      <div class="jd-actions">
+        <span class="badge ${j.available?'b-em':'b-am'}">${j.available?'対応可':'対応中'}</span>
+        <button class="btn btn-g btn-sm" style="margin-top:4px" onclick="alert('案件割当画面に移動します')">案件割当</button>
+      </div>
+    </div>`).join('');
+  }
+  const pending = ASSIGN_CASES.filter(c=>!c.assignee).length;
+  return `
+  <div class="kpi-row">
+    <div class="kpi gd"><div class="kpi-lb">宅建士（登録）</div><div class="kpi-vl">${takken.length}名</div><div class="kpi-sb">対応可 ${takken.filter(j=>j.available).length}名</div></div>
+    <div class="kpi sk"><div class="kpi-lb">司法書士（登録）</div><div class="kpi-vl">${shiho.length}名</div><div class="kpi-sb">対応可 ${shiho.filter(j=>j.available).length}名</div></div>
+    <div class="kpi em"><div class="kpi-lb">今月対応案件</div><div class="kpi-vl">8件</div></div>
+    <div class="kpi ${pending>0?'am':'em'}"><div class="kpi-lb">割当待ち</div><div class="kpi-vl">${pending}件</div><div class="kpi-sb">${pending>0?'要対応':'問題なし'}</div></div>
+  </div>
+  <div class="card"><div class="card-head"><div class="card-title">🏠 宅地建物取引士</div><span style="font-size:11px;color:var(--muted)">${takken.length}名登録</span></div><div style="padding:14px 6px">${cards(takken)}</div></div>
+  <div class="card"><div class="card-head"><div class="card-title">⚖️ 司法書士</div><span style="font-size:11px;color:var(--muted)">${shiho.length}名登録</span></div><div style="padding:14px 6px">${cards(shiho)}</div></div>`;
+}
+
+function renderAssign(){
+  const rows = ASSIGN_CASES.map(c=>`
+    <tr>
+      <td style="font-family:'DM Mono',monospace;font-size:11px">${c.id}</td>
+      <td style="font-size:12px">${c.client}</td>
+      <td><span class="badge ${c.type==='IT重説'?'b-sk':'b-vt'}">${c.type}</span></td>
+      <td>${c.assignee ? `<span style="font-size:12px;font-weight:600">${c.assignee}</span>` : `<button class="btn btn-p btn-sm" onclick="assignCase('${c.id}')">割当する</button>`}</td>
+      <td style="font-size:12px">${c.deadline}</td>
+      <td><span class="badge ${c.assignee?'b-em':'b-am'}">${c.status}</span></td>
+    </tr>`).join('');
+  const pending = ASSIGN_CASES.filter(c=>!c.assignee);
+  return `
+  ${pending.length>0?`<div class="al al-warn">⚠️ 割当待ちの案件が<strong>${pending.length}件</strong>あります。期限前に宅建士を割り当ててください。</div>`:''}
+  <div class="card">
+    <div class="card-head"><div class="card-title">案件割当状況</div></div>
+    <table class="tbl">
+      <thead><tr><th>案件ID</th><th>クライアント</th><th>種別</th><th>担当士業者</th><th>期限</th><th>状態</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
+}
+
+function assignCase(id){
+  const avail = JUDICIAL.filter(j=>j.available).map(j=>j.name).join(' / ');
+  alert(`案件 ${id} への割当\n\n対応可能：${avail}\n\n（実装時：担当者選択→通知送信）`);
+}
+
+function renderLicense(){
+  const rows = JUDICIAL.map(j=>{
+    const expDate = j.type==='宅建士'?'2027/08/31':'2028/03/31';
+    const daysLeft = Math.floor((new Date(expDate)-new Date())/86400000);
+    const status = daysLeft<90?'b-am':'b-em';
+    return `<tr>
+      <td style="font-family:'DM Mono',monospace;font-size:11px">${j.id}</td>
+      <td style="font-size:12px;font-weight:600">${j.name}</td>
+      <td><span class="badge b-nt" style="font-size:10px">${j.type}</span></td>
+      <td style="font-size:11px;color:var(--muted)">${j.license}</td>
+      <td style="font-size:12px">${expDate}</td>
+      <td><span class="badge ${status}">${daysLeft}日後</span></td>
+      <td><button class="btn btn-g btn-sm">更新登録</button></td>
+    </tr>`;
+  }).join('');
+  return `
+  <div class="card">
+    <div class="card-head"><div class="card-title">資格・免許 有効期限管理</div></div>
+    <table class="tbl">
+      <thead><tr><th>ID</th><th>氏名</th><th>種別</th><th>登録番号</th><th>有効期限</th><th>残日数</th><th></th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
+}
+
+window.addEventListener('DOMContentLoaded', ()=>{
+  CNAV.init('judicial');
+  renderTab('list');
+});
+</script>
+</body>
+</html>

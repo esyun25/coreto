@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>月次報酬レポート — COREBLDG</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0D1A2D;--navy-l:#1E3252;--gold:#C8A951;--gold-dim:rgba(200,169,81,.15);--cream:#F7F4EE;--cream2:#EFECE4;--white:#FFFFFF;--ink:#1A1A2E;--muted:#6B7280;--faint:#9CA3AF;--em:#059669;--em-bg:#ECFDF5;--am:#D97706;--am-bg:#FFFBEB;--rd:#DC2626;--rd-bg:#FEF2F2;--sk:#0284C7;--sk-bg:#F0F9FF;--vt:#7C3AED;--vt-bg:#F5F3FF;--bd:#E5E0D5;--bd2:#D4CFC4;--sw:240px;--r:10px;--r-sm:7px;--sh:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04)}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:var(--cream)}
+.shell{display:flex;height:100vh}
+.sb{width:var(--sw);background:var(--navy);display:flex;flex-direction:column;flex-shrink:0;position:relative}
+.sb::after{content:'';position:absolute;top:0;right:0;width:1px;height:100%;background:linear-gradient(180deg,rgba(200,169,81,.25) 0%,rgba(200,169,81,.06) 50%,transparent 100%)}
+.sb-head{padding:24px 20px 18px;border-bottom:1px solid rgba(255,255,255,.06)}
+.sb-logo{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;letter-spacing:5px;color:var(--gold)}
+.sb-ver{font-size:9px;letter-spacing:2px;color:rgba(200,169,81,.3);font-family:'DM Mono',monospace;margin-top:2px}
+.sb-user{margin:14px 14px 10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:9px 11px;display:flex;align-items:center;gap:9px}
+.sb-av{width:28px;height:28px;border-radius:50%;background:var(--gold-dim);border:1px solid rgba(200,169,81,.25);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--gold);flex-shrink:0}
+.sb-un{font-size:11px;font-weight:600;color:rgba(255,255,255,.8)}
+.sb-ur{font-size:9px;color:rgba(255,255,255,.3);font-family:'DM Mono',monospace}
+.sb-nav{flex:1;overflow-y:auto;padding:6px 10px}
+.nsl{font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.18);padding:10px 8px 4px;font-family:'DM Mono',monospace}
+.ni{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:7px;cursor:pointer;transition:.13s;margin-bottom:1px}
+.ni:hover{background:rgba(255,255,255,.06)}
+.ni.active{background:rgba(200,169,81,.1)}
+.ni.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:16px;background:var(--gold);border-radius:0 2px 2px 0}
+.ni-ic{width:22px;text-align:center;font-size:14px}
+.ni-lb{font-size:11px;font-weight:500;color:rgba(255,255,255,.55)}
+.ni.active .ni-lb{color:var(--gold)}
+.sf{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;cursor:pointer;font-size:11px;color:rgba(255,255,255,.3);transition:.13s}
+.sf:hover{background:rgba(255,255,255,.05);color:rgba(255,255,255,.6)}
+.sb-foot{padding:10px 14px 18px;border-top:1px solid rgba(255,255,255,.05)}
+.content{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:58px;background:var(--white);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 24px;gap:14px;flex-shrink:0;box-shadow:var(--sh)}
+.tb-title{font-size:16px;font-weight:600;color:var(--ink);font-family:'Cormorant Garamond',serif;letter-spacing:.5px}
+.tb-crumb{font-size:11px;color:var(--faint)}
+.tb-crumb a{color:var(--muted);text-decoration:none}
+.tb-act{margin-left:auto;display:flex;gap:9px;align-items:center}
+.btn{padding:7px 16px;border-radius:var(--r-sm);font-size:12px;font-weight:600;cursor:pointer;transition:.15s;font-family:'Outfit',sans-serif;border:none}
+.btn-p{background:var(--navy);color:var(--gold)}.btn-p:hover{background:var(--navy-l)}
+.btn-g{background:transparent;color:var(--muted);border:1px solid var(--bd)}.btn-g:hover{background:var(--cream);color:var(--ink)}
+.btn-sm{padding:5px 12px;font-size:11px}
+.tab-bar{padding:0 24px;background:var(--white);border-bottom:1px solid var(--bd);display:flex;gap:0;align-items:center}
+.tab{padding:12px 18px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:.15s}
+.tab:hover{color:var(--ink)}.tab.active{color:var(--navy);border-bottom-color:var(--gold)}
+.page{flex:1;overflow-y:auto;padding:24px}
+.page::-webkit-scrollbar{width:5px}.page::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:3px}
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;font-family:'Outfit',sans-serif;font-feature-settings:'tnum'}
+.b-em{background:var(--em-bg);color:var(--em)}.b-am{background:var(--am-bg);color:var(--am)}.b-sk{background:var(--sk-bg);color:var(--sk)}.b-nt{background:var(--cream2);color:var(--muted)}
+/* KPI */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.kpi{background:var(--white);border:1px solid var(--bd);border-radius:var(--r);padding:16px 18px;box-shadow:var(--sh);position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.kpi.gd::before{background:var(--gold)}.kpi.em::before{background:var(--em)}.kpi.sk::before{background:var(--sk)}.kpi.vt::before{background:var(--vt)}
+.kpi-lb{font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+.kpi-vl{font-size:24px;font-weight:700;color:var(--ink);font-family:'Cormorant Garamond',serif;font-variant-numeric:tabular-nums}
+.kpi-sb{font-size:10px;color:var(--faint);margin-top:4px}
+/* Card */
+.card{background:var(--white);border:1px solid var(--bd);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden;margin-bottom:18px}
+.card-head{padding:14px 20px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;background:var(--cream)}
+.card-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--ink)}
+.card-body{padding:18px 20px}
+/* Table */
+.tbl{width:100%;border-collapse:collapse;font-size:12px}
+.tbl th{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--faint);padding:9px 12px;border-bottom:2px solid var(--bd);text-align:left;background:var(--cream)}
+.tbl td{padding:11px 12px;border-bottom:1px solid var(--bd);color:var(--ink);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:rgba(200,169,81,.03)}
+.num{font-variant-numeric:tabular-nums}
+/* Month selector */
+.month-sel{display:flex;align-items:center;gap:10px}
+.month-btn{width:28px;height:28px;border:1px solid var(--bd);border-radius:6px;background:var(--white);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:.13s}
+.month-btn:hover{background:var(--cream2)}
+.month-label{font-size:14px;font-weight:600;color:var(--ink);min-width:90px;text-align:center}
+/* breakdown bar */
+.bk-row{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--bd)}
+.bk-row:last-child{border-bottom:none}
+.bk-label{font-size:12px;color:var(--ink);width:120px;flex-shrink:0}
+.bk-bar-wrap{flex:1;height:6px;background:var(--cream2);border-radius:3px;overflow:hidden}
+.bk-bar{height:100%;border-radius:3px;transition:width .4s}
+.bk-val{font-size:12px;font-weight:700;color:var(--ink);width:90px;text-align:right;font-variant-numeric:tabular-nums}
+/* alert */
+.al{padding:10px 14px;border-radius:var(--r-sm);font-size:12px;line-height:1.6;margin-bottom:14px}
+.al-info{background:var(--sk-bg);border:1px solid rgba(2,132,199,.2);color:var(--sk)}
+.al-warn{background:var(--am-bg);border:1px solid rgba(217,119,6,.2);color:var(--am)}
+/* Rank badge */
+.rank-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.rank-pl{background:rgba(124,58,237,.1);color:#7C3AED}
+.rank-go{background:rgba(217,119,6,.1);color:#D97706}
+.rank-sv{background:rgba(107,114,128,.1);color:#6B7280}
+.rank-br{background:rgba(146,64,14,.1);color:#92400E}
+/* MOBILE */
+.mob-ham{display:none;flex-direction:column;align-items:center;justify-content:center;width:36px;height:36px;background:transparent;border:none;cursor:pointer;border-radius:7px;transition:.13s;flex-shrink:0}
+.mob-ham span{display:block;width:18px;height:2px;background:rgba(255,255,255,.72);margin:3px 0;border-radius:1px}
+.mob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:199}
+@media(max-width:768px){
+  .mob-ham{display:flex}
+  .mob-overlay.show{display:block}
+  .sb{position:fixed;left:calc(-1 * var(--sw));top:0;height:100vh;z-index:200;transition:left .25s ease;box-shadow:4px 0 24px rgba(0,0,0,.25)}
+  .sb.open{left:0}
+  .shell{overflow:hidden}
+  .content{width:100vw;min-width:0}
+  .topbar{padding:0 12px;gap:8px}
+  .tb-crumb{display:none}
+  .page{padding:12px}
+  .kpi-row{grid-template-columns:1fr 1fr!important}
+  table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- SIDEBAR -->
+<nav class="sb" id="sb">
+  <div class="sb-head">
+    <div class="sb-logo">CORE<br>BLDG</div>
+    <div class="sb-ver">v2.0 — CORETO</div>
+  </div>
+  <div class="sb-user">
+    <div class="sb-av" id="sb-av">AG</div>
+    <div>
+      <div class="sb-un" id="sb-un">山田 誠</div>
+      <div class="sb-ur" id="sb-ur">AG-0042 / Gold</div>
+    </div>
+  </div>
+  <div class="sb-nav" id="sb-nav"></div>
+  <div class="sb-foot">
+    <div class="sf" onclick="window.location.href='coreto-hub-v2.html'">⬅ ダッシュボードへ</div>
+  </div>
+</nav>
+
+<!-- CONTENT -->
+<div class="content">
+  <div class="topbar">
+    <button class="mob-ham" onclick="toggleSb()"><span></span><span></span><span></span></button>
+    <div>
+      <div class="tb-title" id="pg-title">月次報酬レポート</div>
+      <div class="tb-crumb"><a href="coreto-hub-v2.html">COREBLDG</a> › <span>月次報酬レポート</span></div>
+    </div>
+    <div class="tb-act">
+      <div class="month-sel">
+        <button class="month-btn" onclick="changeMonth(-1)">‹</button>
+        <div class="month-label" id="month-label">2026年3月</div>
+        <button class="month-btn" onclick="changeMonth(1)">›</button>
+      </div>
+      <button class="btn btn-g btn-sm" onclick="window.print()">🖨 PDF保存</button>
+    </div>
+  </div>
+
+  <div class="tab-bar">
+    <div class="tab active" onclick="switchTab('summary',this)">サマリー</div>
+    <div class="tab" onclick="switchTab('detail',this)">案件別明細</div>
+    <div class="tab" onclick="switchTab('history',this)">過去12ヶ月</div>
+  </div>
+
+  <div class="page" id="pg"></div>
+</div>
+</div>
+
+<div class="mob-overlay" onclick="toggleSb()"></div>
+<script src="coreto-nav-v2.js"></script>
+<script>
+function toggleSb(){document.querySelector('.sb').classList.toggle('open');document.querySelector('.mob-overlay').classList.toggle('show');}
+
+let currentMonth = 3, currentYear = 2026;
+const MONTHS = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+
+function changeMonth(d){
+  currentMonth += d;
+  if(currentMonth > 12){currentMonth=1;currentYear++;}
+  if(currentMonth < 1){currentMonth=12;currentYear--;}
+  document.getElementById('month-label').textContent = `${currentYear}年${MONTHS[currentMonth-1]}`;
+  renderTab(currentTab);
+}
+
+// ── DATA ────────────────────────────────────────
+const DATA = {
+  summary: {
+    total: 748000,
+    re_rental: 396000,
+    re_sale: 0,
+    hr: 0,
+    util: 192000,
+    pt_bonus: 160000,
+    cases: 4,
+    rank: 'Gold',
+    rate: 80,
+    paid: true
+  },
+  cases: [
+    {id:'RENT-0194', client:'田中 優子', type:'賃貸', fee:495000, rate:80, reward:396000, status:'支払済み', date:'2026/03/15'},
+    {id:'UTL-0088',  client:'田中 優子', type:'光通信', fee:240000, rate:80, reward:192000, status:'支払済み', date:'2026/03/20'},
+    {id:'PT-REF-022',client:'（PT紹介案件）', type:'PT紹介ボーナス', fee:'-', rate:'-', reward:160000, status:'支払済み', date:'2026/03/25'},
+  ]
+};
+
+// ── TABS ────────────────────────────────────────
+let currentTab = 'summary';
+function switchTab(t, el){
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  if(el) el.classList.add('active');
+  currentTab = t;
+  renderTab(t);
+}
+function renderTab(t){
+  const pg = document.getElementById('pg');
+  if(t==='summary') pg.innerHTML = renderSummary();
+  if(t==='detail')  pg.innerHTML = renderDetail();
+  if(t==='history') pg.innerHTML = renderHistory();
+}
+
+function renderSummary(){
+  const d = DATA.summary;
+  return `
+  <div class="kpi-row">
+    <div class="kpi gd">
+      <div class="kpi-lb">今月報酬合計</div>
+      <div class="kpi-vl">¥${d.total.toLocaleString()}</div>
+      <div class="kpi-sb">支払済み ✓</div>
+    </div>
+    <div class="kpi em">
+      <div class="kpi-lb">不動産報酬</div>
+      <div class="kpi-vl">¥${d.re_rental.toLocaleString()}</div>
+      <div class="kpi-sb">賃貸 1件</div>
+    </div>
+    <div class="kpi sk">
+      <div class="kpi-lb">光通信報酬</div>
+      <div class="kpi-vl">¥${d.util.toLocaleString()}</div>
+      <div class="kpi-sb">1件成約</div>
+    </div>
+    <div class="kpi vt">
+      <div class="kpi-lb">PT紹介ボーナス</div>
+      <div class="kpi-vl">¥${d.pt_bonus.toLocaleString()}</div>
+      <div class="kpi-sb">2件紹介成約</div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px">
+    <div class="card" style="margin-bottom:0">
+      <div class="card-head"><div class="card-title">事業別内訳</div></div>
+      <div class="card-body">
+        <div class="bk-row">
+          <div class="bk-label">不動産（賃貸）</div>
+          <div class="bk-bar-wrap"><div class="bk-bar" style="width:53%;background:var(--em)"></div></div>
+          <div class="bk-val">¥396,000</div>
+        </div>
+        <div class="bk-row">
+          <div class="bk-label">光通信</div>
+          <div class="bk-bar-wrap"><div class="bk-bar" style="width:26%;background:var(--sk)"></div></div>
+          <div class="bk-val">¥192,000</div>
+        </div>
+        <div class="bk-row">
+          <div class="bk-label">PT紹介ボーナス</div>
+          <div class="bk-bar-wrap"><div class="bk-bar" style="width:21%;background:var(--vt)"></div></div>
+          <div class="bk-val">¥160,000</div>
+        </div>
+        <div class="bk-row">
+          <div class="bk-label">人材紹介</div>
+          <div class="bk-bar-wrap"><div class="bk-bar" style="width:0%;background:var(--gold)"></div></div>
+          <div class="bk-val" style="color:var(--faint)">¥0</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:0">
+      <div class="card-head"><div class="card-title">ランク・報酬率</div></div>
+      <div class="card-body">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding:14px;background:var(--cream);border-radius:8px">
+          <div>
+            <div style="font-size:10px;color:var(--faint);margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px">現在のランク</div>
+            <span class="rank-chip rank-go">🥇 Gold</span>
+          </div>
+          <div style="width:1px;height:36px;background:var(--bd)"></div>
+          <div>
+            <div style="font-size:10px;color:var(--faint);margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px">不動産報酬率</div>
+            <div style="font-size:22px;font-weight:700;color:var(--em);font-family:'Cormorant Garamond',serif">80%</div>
+          </div>
+          <div style="width:1px;height:36px;background:var(--bd)"></div>
+          <div>
+            <div style="font-size:10px;color:var(--faint);margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px">光通信報酬率</div>
+            <div style="font-size:22px;font-weight:700;color:var(--sk);font-family:'Cormorant Garamond',serif">80%</div>
+          </div>
+        </div>
+        <div class="al al-info">ℹ️ Platinumランクへの昇格まで あと<strong>120pt</strong>。来月の成約件数が鍵です。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div class="card-title">支払い状況</div>
+      <span class="badge b-em">✓ 支払済み</span>
+    </div>
+    <div class="card-body">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">
+        <div><div style="font-size:10px;color:var(--faint);margin-bottom:3px">支払日</div><div style="font-size:13px;font-weight:600;color:var(--ink)">2026/03/25</div></div>
+        <div><div style="font-size:10px;color:var(--faint);margin-bottom:3px">振込先</div><div style="font-size:13px;font-weight:600;color:var(--ink)">三菱UFJ / 1234567</div></div>
+        <div><div style="font-size:10px;color:var(--faint);margin-bottom:3px">振込名義</div><div style="font-size:13px;font-weight:600;font-family:'DM Mono',monospace">ヤマダ マコト</div></div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderDetail(){
+  const rows = DATA.cases.map(c=>`
+    <tr>
+      <td class="num" style="font-family:'DM Mono',monospace;font-size:11px">${c.id}</td>
+      <td>${c.client}</td>
+      <td><span class="badge ${c.type==='賃貸'?'b-em':c.type==='光通信'?'b-sk':'b-vt'}">${c.type}</span></td>
+      <td class="num" style="text-align:right">${typeof c.fee==='number'?'¥'+c.fee.toLocaleString():c.fee}</td>
+      <td style="text-align:center">${c.rate}%</td>
+      <td class="num" style="text-align:right;font-weight:700;color:var(--em)">¥${c.reward.toLocaleString()}</td>
+      <td>${c.date}</td>
+      <td><span class="badge b-em">${c.status}</span></td>
+    </tr>`).join('');
+  return `
+  <div class="card">
+    <div class="card-head"><div class="card-title">案件別報酬明細 — 2026年3月</div></div>
+    <table class="tbl">
+      <thead><tr><th>案件ID</th><th>クライアント</th><th>種別</th><th style="text-align:right">仲介料</th><th style="text-align:center">報酬率</th><th style="text-align:right">報酬額</th><th>成約日</th><th>状態</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div style="padding:14px 20px;border-top:1px solid var(--bd);display:flex;justify-content:flex-end;align-items:center;gap:20px;background:var(--cream)">
+      <div style="font-size:12px;color:var(--muted)">合計報酬額</div>
+      <div style="font-size:22px;font-weight:700;color:var(--ink);font-family:'Cormorant Garamond',serif;font-variant-numeric:tabular-nums">¥748,000</div>
+    </div>
+  </div>`;
+}
+
+function renderHistory(){
+  const months = ['2025/04','2025/05','2025/06','2025/07','2025/08','2025/09','2025/10','2025/11','2025/12','2026/01','2026/02','2026/03'];
+  const amounts = [320000,480000,290000,610000,450000,380000,720000,560000,490000,630000,510000,748000];
+  const max = Math.max(...amounts);
+  const rows = months.map((m,i)=>`
+    <tr>
+      <td style="font-size:12px;color:var(--muted)">${m}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="flex:1;height:6px;background:var(--cream2);border-radius:3px;overflow:hidden">
+            <div style="height:100%;width:${Math.round(amounts[i]/max*100)}%;background:${i===11?'var(--gold)':'var(--em)'};border-radius:3px"></div>
+          </div>
+        </div>
+      </td>
+      <td class="num" style="text-align:right;font-weight:${i===11?700:400};color:${i===11?'var(--ink)':'var(--muted)'}">¥${amounts[i].toLocaleString()}</td>
+      <td style="text-align:center"><span class="badge b-em" style="font-size:9px">支払済み</span></td>
+    </tr>`).join('');
+  const total = amounts.reduce((a,b)=>a+b,0);
+  const avg = Math.round(total/12);
+  return `
+  <div class="kpi-row" style="grid-template-columns:repeat(3,1fr)">
+    <div class="kpi gd"><div class="kpi-lb">12ヶ月合計</div><div class="kpi-vl">¥${total.toLocaleString()}</div></div>
+    <div class="kpi em"><div class="kpi-lb">月平均</div><div class="kpi-vl">¥${avg.toLocaleString()}</div></div>
+    <div class="kpi sk"><div class="kpi-lb">最高月</div><div class="kpi-vl">¥748,000</div><div class="kpi-sb">2026年3月</div></div>
+  </div>
+  <div class="card">
+    <div class="card-head"><div class="card-title">過去12ヶ月 報酬推移</div></div>
+    <table class="tbl">
+      <thead><tr><th>月</th><th>グラフ</th><th style="text-align:right">報酬額</th><th style="text-align:center">状態</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
+}
+
+// ── INIT ────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', ()=>{
+  CNAV.init('monthly_report');
+  renderTab('summary');
+});
+</script>
+</body>
+</html>
