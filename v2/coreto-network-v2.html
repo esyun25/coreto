@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>紹介ネットワーク — COREBLDG</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0D1A2D;--navy-l:#1E3252;--gold:#C8A951;--gold-dim:rgba(200,169,81,.15);--cream:#F7F4EE;--cream2:#EFECE4;--white:#FFFFFF;--ink:#1A1A2E;--muted:#6B7280;--faint:#9CA3AF;--em:#059669;--em-bg:#ECFDF5;--am:#D97706;--am-bg:#FFFBEB;--rd:#DC2626;--rd-bg:#FEF2F2;--sk:#0284C7;--sk-bg:#F0F9FF;--vt:#7C3AED;--vt-bg:#F5F3FF;--bd:#E5E0D5;--bd2:#D4CFC4;--sw:240px;--r:10px;--r-sm:7px;--sh:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04)}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:var(--cream)}
+.shell{display:flex;height:100vh}
+.sb{width:var(--sw);background:var(--navy);display:flex;flex-direction:column;flex-shrink:0;position:relative}
+.sb::after{content:'';position:absolute;top:0;right:0;width:1px;height:100%;background:linear-gradient(180deg,rgba(200,169,81,.25) 0%,rgba(200,169,81,.06) 50%,transparent 100%)}
+.sb-head{padding:24px 20px 18px;border-bottom:1px solid rgba(255,255,255,.06)}
+.sb-logo{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;letter-spacing:5px;color:var(--gold)}
+.sb-ver{font-size:9px;letter-spacing:2px;color:rgba(200,169,81,.3);font-family:'DM Mono',monospace;margin-top:2px}
+.sb-user{margin:14px 14px 10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:9px 11px;display:flex;align-items:center;gap:9px}
+.sb-av{width:28px;height:28px;border-radius:50%;background:var(--gold-dim);border:1px solid rgba(200,169,81,.25);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--gold);flex-shrink:0}
+.sb-un{font-size:11px;font-weight:600;color:rgba(255,255,255,.8)}
+.sb-ur{font-size:9px;color:rgba(255,255,255,.3);font-family:'DM Mono',monospace}
+.sb-nav{flex:1;overflow-y:auto;padding:6px 10px}
+.nsl{font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.18);padding:10px 8px 4px;font-family:'DM Mono',monospace}
+.ni{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:7px;cursor:pointer;transition:.13s;margin-bottom:1px}
+.ni:hover{background:rgba(255,255,255,.06)}.ni.active{background:rgba(200,169,81,.1)}
+.ni-ic{width:22px;text-align:center;font-size:14px}
+.ni-lb{font-size:11px;font-weight:500;color:rgba(255,255,255,.55)}.ni.active .ni-lb{color:var(--gold)}
+.sf{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;cursor:pointer;font-size:11px;color:rgba(255,255,255,.3);transition:.13s}
+.sf:hover{background:rgba(255,255,255,.05);color:rgba(255,255,255,.6)}
+.sb-foot{padding:10px 14px 18px;border-top:1px solid rgba(255,255,255,.05)}
+.content{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:58px;background:var(--white);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 24px;gap:14px;flex-shrink:0;box-shadow:var(--sh)}
+.tb-title{font-size:16px;font-weight:600;color:var(--ink);font-family:'Cormorant Garamond',serif;letter-spacing:.5px}
+.tb-crumb{font-size:11px;color:var(--faint)}
+.tb-crumb a{color:var(--muted);text-decoration:none}
+.tb-act{margin-left:auto;display:flex;gap:9px;align-items:center}
+.btn{padding:7px 16px;border-radius:var(--r-sm);font-size:12px;font-weight:600;cursor:pointer;transition:.15s;font-family:'Outfit',sans-serif;border:none}
+.btn-p{background:var(--navy);color:var(--gold)}.btn-p:hover{background:var(--navy-l)}
+.btn-g{background:transparent;color:var(--muted);border:1px solid var(--bd)}.btn-g:hover{background:var(--cream);color:var(--ink)}
+.btn-sm{padding:5px 12px;font-size:11px}
+.tab-bar{padding:0 24px;background:var(--white);border-bottom:1px solid var(--bd);display:flex}
+.tab{padding:12px 18px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:.15s}
+.tab:hover{color:var(--ink)}.tab.active{color:var(--navy);border-bottom-color:var(--gold)}
+/* main layout */
+.main-wrap{flex:1;display:flex;overflow:hidden}
+.canvas-wrap{flex:1;position:relative;overflow:hidden;background:radial-gradient(ellipse at center, #f0ede6 0%, var(--cream) 100%)}
+canvas{display:block;width:100%;height:100%}
+/* side panel */
+.side-panel{width:300px;flex-shrink:0;background:var(--white);border-left:1px solid var(--bd);display:flex;flex-direction:column;overflow:hidden}
+.side-head{padding:16px 18px;border-bottom:1px solid var(--bd);background:var(--cream)}
+.side-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--ink)}
+.side-body{flex:1;overflow-y:auto;padding:14px}
+.side-body::-webkit-scrollbar{width:4px}.side-body::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:2px}
+/* node detail */
+.nd-av{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;margin:0 auto 12px;border:2px solid}
+.nd-name{font-size:15px;font-weight:700;text-align:center;color:var(--ink);margin-bottom:4px;font-family:'Cormorant Garamond',serif}
+.nd-id{font-size:11px;text-align:center;color:var(--faint);font-family:'DM Mono',monospace;margin-bottom:14px}
+.nd-stat{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.nd-stat-item{background:var(--cream);border-radius:6px;padding:8px 10px;text-align:center}
+.nd-stat-label{font-size:9px;color:var(--faint);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.nd-stat-val{font-size:14px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+/* list */
+.ref-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bd)}
+.ref-item:last-child{border-bottom:none}
+.ref-av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
+.ref-name{font-size:12px;font-weight:600;color:var(--ink)}
+.ref-sub{font-size:10px;color:var(--faint);font-family:'DM Mono',monospace}
+/* kpi strip */
+.kpi-strip{display:flex;gap:0;border-bottom:1px solid var(--bd);background:var(--white)}
+.kpi-s{flex:1;padding:12px 16px;border-right:1px solid var(--bd);text-align:center}
+.kpi-s:last-child{border-right:none}
+.kpi-s-lb{font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:var(--faint);margin-bottom:4px}
+.kpi-s-vl{font-size:18px;font-weight:700;color:var(--ink);font-family:'Cormorant Garamond',serif;font-variant-numeric:tabular-nums}
+/* legend */
+.legend{position:absolute;top:14px;left:14px;background:rgba(255,255,255,.9);border:1px solid var(--bd);border-radius:var(--r-sm);padding:10px 14px;backdrop-filter:blur(4px)}
+.leg-item{display:flex;align-items:center;gap:7px;font-size:10px;color:var(--muted);margin-bottom:5px}
+.leg-item:last-child{margin-bottom:0}
+.leg-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+/* MOBILE */
+.mob-ham{display:none;flex-direction:column;align-items:center;justify-content:center;width:36px;height:36px;background:transparent;border:none;cursor:pointer;border-radius:7px;flex-shrink:0}
+.mob-ham span{display:block;width:18px;height:2px;background:rgba(255,255,255,.72);margin:3px 0;border-radius:1px}
+.mob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:199}
+@media(max-width:900px){
+  .side-panel{width:240px}
+}
+@media(max-width:680px){
+  .mob-ham{display:flex}.mob-overlay.show{display:block}
+  .sb{position:fixed;left:calc(-1 * var(--sw));top:0;height:100vh;z-index:200;transition:left .25s ease}.sb.open{left:0}
+  .shell{overflow:hidden}.content{width:100vw;min-width:0}
+  .topbar{padding:0 12px;gap:8px}.tb-crumb{display:none}
+  .side-panel{display:none}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+<nav class="sb" id="sb">
+  <div class="sb-head">
+    <div class="sb-logo">CORE<br>BLDG</div>
+    <div class="sb-ver">v2.0 — CORETO</div>
+  </div>
+  <div class="sb-user">
+    <div class="sb-av">HQ</div>
+    <div><div class="sb-un">田中 誠一</div><div class="sb-ur">HQ / exec</div></div>
+  </div>
+  <div class="sb-nav" id="sb-nav"></div>
+  <div class="sb-foot"><div class="sf" onclick="window.location.href='coreto-hub-v2.html'">⬅ ダッシュボードへ</div></div>
+</nav>
+
+<div class="content">
+  <div class="topbar">
+    <button class="mob-ham" onclick="toggleSb()"><span></span><span></span><span></span></button>
+    <div>
+      <div class="tb-title">紹介ネットワーク</div>
+      <div class="tb-crumb"><a href="coreto-hub-v2.html">COREBLDG</a> › <span>紹介ネットワーク</span></div>
+    </div>
+    <div class="tb-act">
+      <select id="filter-sel" onchange="applyFilter()" style="padding:5px 10px;background:var(--cream);border:1px solid var(--bd);border-radius:6px;font-size:12px;font-family:'Outfit',sans-serif;outline:none">
+        <option value="all">全ロール</option>
+        <option value="ag">AG のみ</option>
+        <option value="pt">PT のみ</option>
+      </select>
+      <button class="btn btn-g btn-sm" onclick="resetView()">リセット</button>
+    </div>
+  </div>
+  <div class="tab-bar">
+    <div class="tab active" id="tab-graph" onclick="switchTab('graph',this)">ネットワーク図</div>
+    <div class="tab" id="tab-list" onclick="switchTab('list',this)">紹介一覧</div>
+  </div>
+
+  <!-- KPI strip -->
+  <div class="kpi-strip">
+    <div class="kpi-s"><div class="kpi-s-lb">総ノード</div><div class="kpi-s-vl">14</div></div>
+    <div class="kpi-s"><div class="kpi-s-lb">紹介リンク</div><div class="kpi-s-vl">11</div></div>
+    <div class="kpi-s"><div class="kpi-s-lb">経由成約</div><div class="kpi-s-vl">9件</div></div>
+    <div class="kpi-s"><div class="kpi-s-lb">PT紹介報酬</div><div class="kpi-s-vl">¥620,000</div></div>
+  </div>
+
+  <div class="main-wrap" id="main-wrap">
+    <!-- graph view -->
+    <div class="canvas-wrap" id="canvas-wrap">
+      <canvas id="network-canvas"></canvas>
+      <div class="legend">
+        <div class="leg-item"><div class="leg-dot" style="background:#C8A951"></div>HQ</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#059669"></div>不動産AG</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#0284C7"></div>人材AG</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#7C3AED"></div>パートナー（PT）</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#D97706"></div>クライアント</div>
+      </div>
+    </div>
+    <!-- side panel -->
+    <div class="side-panel">
+      <div class="side-head"><div class="side-title">ノード詳細</div></div>
+      <div class="side-body" id="side-body">
+        <div style="color:var(--faint);font-size:12px;text-align:center;padding:40px 0">
+          ノードをクリックして<br>詳細を表示
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<div class="mob-overlay" onclick="toggleSb()"></div>
+<script src="coreto-nav-v2.js"></script>
+<script>
+function toggleSb(){document.querySelector('.sb').classList.toggle('open');document.querySelector('.mob-overlay').classList.toggle('show');}
+
+// ── DATA ────────────────────────────────────────
+const NODES = [
+  {id:'HQ',      label:'HQ', name:'田中 誠一（HQ）',  type:'hq',  color:'#C8A951', r:28, cases:0,  revenue:0},
+  {id:'AG-0042', label:'山田', name:'山田 誠',         type:'re_ag', color:'#059669', r:22, cases:4,  revenue:748000},
+  {id:'AG-0088', label:'鈴木', name:'鈴木 花子',        type:'hr_ag', color:'#0284C7', r:20, cases:3,  revenue:420000},
+  {id:'AG-0055', label:'井上', name:'井上 健',         type:'re_ag', color:'#059669', r:22, cases:4,  revenue:610000},
+  {id:'AG-0033', label:'中島', name:'中島 翔',         type:'re_ag', color:'#059669', r:26, cases:4,  revenue:1240000},
+  {id:'PT-0015', label:'佐藤', name:'佐藤 健一（PT）', type:'pt',  color:'#7C3AED', r:18, cases:2,  revenue:80000},
+  {id:'PT-0021', label:'田村', name:'田村 奈々（PT）', type:'pt',  color:'#7C3AED', r:16, cases:1,  revenue:40000},
+  {id:'PT-0033', label:'橋本', name:'橋本 光（PT）',   type:'pt',  color:'#7C3AED', r:16, cases:1,  revenue:30000},
+  {id:'CLI-001', label:'田中', name:'田中 優子',        type:'cli', color:'#D97706', r:14, cases:1,  revenue:0},
+  {id:'CLI-002', label:'鈴木', name:'鈴木 健太',        type:'cli', color:'#D97706', r:14, cases:1,  revenue:0},
+  {id:'CLI-003', label:'高橋', name:'高橋 美咲',        type:'cli', color:'#D97706', r:14, cases:1,  revenue:0},
+  {id:'CLI-004', label:'山本', name:'山本 大輔',        type:'cli', color:'#D97706', r:14, cases:1,  revenue:0},
+  {id:'CLI-005', label:'渡辺', name:'渡辺 誠',         type:'cli', color:'#D97706', r:14, cases:1,  revenue:0},
+  {id:'CLI-006', label:'伊藤', name:'伊藤 花子',        type:'cli', color:'#D97706', r:14, cases:1,  revenue:0},
+];
+
+const EDGES = [
+  {from:'HQ',      to:'AG-0042', type:'belong'},
+  {from:'HQ',      to:'AG-0088', type:'belong'},
+  {from:'HQ',      to:'AG-0055', type:'belong'},
+  {from:'HQ',      to:'AG-0033', type:'belong'},
+  {from:'PT-0015', to:'AG-0042', type:'refer'},
+  {from:'PT-0021', to:'AG-0042', type:'refer'},
+  {from:'PT-0033', to:'AG-0055', type:'refer'},
+  {from:'AG-0042', to:'CLI-001', type:'case'},
+  {from:'AG-0042', to:'CLI-002', type:'case'},
+  {from:'AG-0055', to:'CLI-003', type:'case'},
+  {from:'AG-0033', to:'CLI-004', type:'case'},
+  {from:'AG-0033', to:'CLI-005', type:'case'},
+  {from:'AG-0088', to:'CLI-006', type:'case'},
+];
+
+// ── LAYOUT (force-directed simple) ─────────────
+const canvas = document.getElementById('network-canvas');
+const ctx = canvas.getContext('2d');
+let positions = {};
+let selectedNode = null;
+let animFrame = null;
+let filterVal = 'all';
+
+function initPositions(){
+  const W = canvas.offsetWidth, H = canvas.offsetHeight;
+  const cx = W/2, cy = H/2;
+  // place HQ center
+  positions['HQ'] = {x:cx, y:cy, vx:0, vy:0};
+  const ags = NODES.filter(n=>n.type==='re_ag'||n.type==='hr_ag');
+  const pts = NODES.filter(n=>n.type==='pt');
+  const cli = NODES.filter(n=>n.type==='cli');
+  ags.forEach((n,i)=>{ const a=i/ags.length*Math.PI*2; positions[n.id]={x:cx+140*Math.cos(a),y:cy+120*Math.sin(a),vx:0,vy:0}; });
+  pts.forEach((n,i)=>{ const a=i/pts.length*Math.PI*2+0.5; positions[n.id]={x:cx+240*Math.cos(a),y:cy+200*Math.sin(a),vx:0,vy:0}; });
+  cli.forEach((n,i)=>{ const a=i/cli.length*Math.PI*2; positions[n.id]={x:cx+340*Math.cos(a),y:cy+280*Math.sin(a),vx:0,vy:0}; });
+}
+
+function visibleNodes(){
+  if(filterVal==='ag') return NODES.filter(n=>n.type!=='pt');
+  if(filterVal==='pt') return NODES.filter(n=>n.type!=='re_ag'&&n.type!=='hr_ag');
+  return NODES;
+}
+
+function draw(){
+  const W = canvas.width = canvas.offsetWidth;
+  const H = canvas.height = canvas.offsetHeight;
+  ctx.clearRect(0,0,W,H);
+
+  const vnids = new Set(visibleNodes().map(n=>n.id));
+
+  // edges
+  EDGES.forEach(e=>{
+    if(!vnids.has(e.from)||!vnids.has(e.to)) return;
+    const a = positions[e.from], b = positions[e.to];
+    if(!a||!b) return;
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
+    ctx.strokeStyle = e.type==='belong'?'rgba(200,169,81,.25)': e.type==='refer'?'rgba(124,58,237,.3)':'rgba(200,200,200,.35)';
+    ctx.lineWidth = e.type==='refer'?2:1.5;
+    if(e.type==='refer'){ ctx.setLineDash([4,3]); }
+    ctx.stroke(); ctx.setLineDash([]);
+    // arrow
+    const ang = Math.atan2(b.y-a.y, b.x-a.x);
+    const nr = NODES.find(n=>n.id===e.to)?.r||14;
+    const tx = b.x - Math.cos(ang)*(nr+4);
+    const ty = b.y - Math.sin(ang)*(nr+4);
+    ctx.beginPath();
+    ctx.moveTo(tx, ty);
+    ctx.lineTo(tx-8*Math.cos(ang-0.4), ty-8*Math.sin(ang-0.4));
+    ctx.lineTo(tx-8*Math.cos(ang+0.4), ty-8*Math.sin(ang+0.4));
+    ctx.closePath();
+    ctx.fillStyle = e.type==='refer'?'rgba(124,58,237,.4)':'rgba(180,175,165,.4)';
+    ctx.fill();
+  });
+
+  // nodes
+  visibleNodes().forEach(n=>{
+    const p = positions[n.id]; if(!p) return;
+    const isSel = selectedNode===n.id;
+    // glow
+    if(isSel){
+      ctx.beginPath(); ctx.arc(p.x,p.y,n.r+8,0,Math.PI*2);
+      ctx.fillStyle='rgba(200,169,81,.18)'; ctx.fill();
+    }
+    // circle
+    ctx.beginPath(); ctx.arc(p.x,p.y,n.r,0,Math.PI*2);
+    ctx.fillStyle = n.color;
+    ctx.shadowColor = isSel?'rgba(200,169,81,.5)':'rgba(0,0,0,.12)';
+    ctx.shadowBlur = isSel?12:6;
+    ctx.fill();
+    ctx.shadowBlur=0;
+    // border
+    ctx.beginPath(); ctx.arc(p.x,p.y,n.r,0,Math.PI*2);
+    ctx.strokeStyle = isSel?'#C8A951':'rgba(255,255,255,.5)';
+    ctx.lineWidth = isSel?2.5:1.5; ctx.stroke();
+    // label
+    ctx.fillStyle='#fff';
+    ctx.font=`${n.r>20?'700 11px':'600 9px'} Outfit,sans-serif`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(n.label, p.x, p.y);
+    // name below
+    ctx.fillStyle='var(--ink)';
+    ctx.font='9px Outfit,sans-serif'; ctx.fillStyle=isSel?'#1A1A2E':'#9CA3AF';
+    ctx.fillText(n.name.split('（')[0].split(' ')[0]+(n.type==='cli'?' 様':''), p.x, p.y+n.r+9);
+  });
+}
+
+function physicsStep(){
+  const vnids = new Set(visibleNodes().map(n=>n.id));
+  const W = canvas.offsetWidth, H = canvas.offsetHeight;
+  visibleNodes().forEach(n=>{
+    const p = positions[n.id]; if(!p) return;
+    let fx=0, fy=0;
+    // repulsion
+    visibleNodes().forEach(m=>{
+      if(m.id===n.id) return;
+      const q = positions[m.id]; if(!q) return;
+      const dx=p.x-q.x, dy=p.y-q.y, d=Math.sqrt(dx*dx+dy*dy)||1;
+      const f=1800/(d*d);
+      fx+=dx/d*f; fy+=dy/d*f;
+    });
+    // attraction along edges
+    EDGES.forEach(e=>{
+      if(!vnids.has(e.from)||!vnids.has(e.to)) return;
+      if(e.from!==n.id&&e.to!==n.id) return;
+      const other = e.from===n.id?e.to:e.from;
+      const q = positions[other]; if(!q) return;
+      const dx=q.x-p.x, dy=q.y-p.y, d=Math.sqrt(dx*dx+dy*dy)||1;
+      const ideal = n.type==='hq'?160:n.type==='pt'?220:120;
+      const f=(d-ideal)*0.035;
+      fx+=dx/d*f; fy+=dy/d*f;
+    });
+    // center gravity
+    fx += (W/2-p.x)*0.008; fy += (H/2-p.y)*0.008;
+    p.vx = (p.vx+fx)*0.7; p.vy = (p.vy+fy)*0.7;
+    p.x = Math.max(40, Math.min(W-40, p.x+p.vx));
+    p.y = Math.max(40, Math.min(H-40, p.y+p.vy));
+  });
+  draw();
+  animFrame = requestAnimationFrame(physicsStep);
+}
+
+function startSim(){
+  if(animFrame) cancelAnimationFrame(animFrame);
+  physicsStep();
+  setTimeout(()=>{ cancelAnimationFrame(animFrame); draw(); }, 3000);
+}
+
+canvas.addEventListener('click', e=>{
+  const rect = canvas.getBoundingClientRect();
+  const mx = (e.clientX-rect.left)*(canvas.width/rect.width);
+  const my = (e.clientY-rect.top)*(canvas.height/rect.height);
+  let hit = null;
+  visibleNodes().forEach(n=>{
+    const p = positions[n.id]; if(!p) return;
+    if(Math.sqrt((mx-p.x)**2+(my-p.y)**2)<n.r+4) hit=n;
+  });
+  selectedNode = hit?.id||null;
+  draw();
+  showNodeDetail(hit);
+});
+
+function showNodeDetail(n){
+  const sb = document.getElementById('side-body');
+  if(!n){ sb.innerHTML=`<div style="color:var(--faint);font-size:12px;text-align:center;padding:40px 0">ノードをクリックして<br>詳細を表示</div>`; return; }
+  const typeLabel = {hq:'HQ統括',re_ag:'不動産AG',hr_ag:'人材AG',pt:'パートナー（PT）',cli:'クライアント'}[n.type]||'';
+  const refs = EDGES.filter(e=>e.to===n.id||e.from===n.id);
+  const referrals = EDGES.filter(e=>e.from===n.id&&e.type==='refer');
+  sb.innerHTML = `
+    <div style="text-align:center;padding-bottom:14px;border-bottom:1px solid var(--bd);margin-bottom:14px">
+      <div class="nd-av" style="background:${n.color};border-color:${n.color}60;color:#fff">${n.label}</div>
+      <div class="nd-name">${n.name}</div>
+      <div class="nd-id">${n.id}</div>
+      <span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:600;background:${n.color}18;color:${n.color}">${typeLabel}</span>
+    </div>
+    ${n.type!=='hq'&&n.type!=='cli'?`
+    <div class="nd-stat">
+      <div class="nd-stat-item"><div class="nd-stat-label">担当案件</div><div class="nd-stat-val">${n.cases}件</div></div>
+      <div class="nd-stat-item"><div class="nd-stat-label">今月報酬</div><div class="nd-stat-val" style="font-size:12px">¥${(n.revenue/10000).toFixed(0)}万</div></div>
+    </div>`:''}
+    ${referrals.length?`
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px">紹介先AG</div>
+    ${referrals.map(e=>{
+      const target = NODES.find(x=>x.id===e.to);
+      return `<div class="ref-item">
+        <div class="ref-av" style="background:${target.color}20;color:${target.color}">${target.label}</div>
+        <div><div class="ref-name">${target.name}</div><div class="ref-sub">${target.id}</div></div>
+      </div>`;
+    }).join('')}`:''}
+    ${n.type==='re_ag'||n.type==='hr_ag'?`
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin:12px 0 8px">担当クライアント</div>
+    ${EDGES.filter(e=>e.from===n.id&&e.type==='case').map(e=>{
+      const cli = NODES.find(x=>x.id===e.to);
+      return cli?`<div class="ref-item">
+        <div class="ref-av" style="background:#D9770620;color:#D97706">${cli.label}</div>
+        <div><div class="ref-name">${cli.name} 様</div><div class="ref-sub">${cli.id}</div></div>
+      </div>`:'';
+    }).join('')}`:''}`;
+}
+
+function applyFilter(){
+  filterVal = document.getElementById('filter-sel').value;
+  startSim();
+}
+
+function resetView(){
+  selectedNode = null;
+  filterVal = 'all';
+  document.getElementById('filter-sel').value='all';
+  initPositions();
+  startSim();
+  showNodeDetail(null);
+}
+
+// ── LIST TAB ────────────────────────────────────
+function switchTab(t, el){
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  if(el) el.classList.add('active');
+  const wrap = document.getElementById('main-wrap');
+  if(t==='graph'){
+    wrap.innerHTML=`
+    <div class="canvas-wrap" id="canvas-wrap">
+      <canvas id="network-canvas"></canvas>
+      <div class="legend">
+        <div class="leg-item"><div class="leg-dot" style="background:#C8A951"></div>HQ</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#059669"></div>不動産AG</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#0284C7"></div>人材AG</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#7C3AED"></div>パートナー（PT）</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#D97706"></div>クライアント</div>
+      </div>
+    </div>
+    <div class="side-panel">
+      <div class="side-head"><div class="side-title">ノード詳細</div></div>
+      <div class="side-body" id="side-body"><div style="color:var(--faint);font-size:12px;text-align:center;padding:40px 0">ノードをクリックして<br>詳細を表示</div></div>
+    </div>`;
+    const c = document.getElementById('network-canvas');
+    c.getContext('2d');
+    document.getElementById('network-canvas').addEventListener('click', e=>{
+      const rect=c.getBoundingClientRect();
+      const mx=(e.clientX-rect.left)*(c.width/rect.width);
+      const my=(e.clientY-rect.top)*(c.height/rect.height);
+      let hit=null;
+      visibleNodes().forEach(n=>{const p=positions[n.id];if(!p)return;if(Math.sqrt((mx-p.x)**2+(my-p.y)**2)<n.r+4)hit=n;});
+      selectedNode=hit?.id||null; draw(); showNodeDetail(hit);
+    });
+    initCanvas();
+  } else {
+    wrap.innerHTML=renderListHTML();
+  }
+}
+
+function renderListHTML(){
+  const rows = EDGES.filter(e=>e.type==='refer').map(e=>{
+    const from = NODES.find(n=>n.id===e.from);
+    const to   = NODES.find(n=>n.id===e.to);
+    return `<tr>
+      <td><div style="font-weight:600;font-size:13px">${from.name}</div><div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--faint)">${from.id}</div></td>
+      <td style="text-align:center;font-size:18px">→</td>
+      <td><div style="font-weight:600;font-size:13px">${to.name}</div><div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--faint)">${to.id}</div></td>
+      <td><span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;background:#7C3AED18;color:#7C3AED">PT紹介</span></td>
+      <td style="font-size:12px;font-weight:700;color:var(--em)">¥${(40000+Math.floor(Math.random()*60000)).toLocaleString()}</td>
+    </tr>`;
+  }).join('');
+  return `<div style="flex:1;overflow-y:auto;padding:20px">
+  <div style="background:var(--white);border:1px solid var(--bd);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden">
+    <div style="padding:14px 20px;border-bottom:1px solid var(--bd);background:var(--cream);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">紹介リンク一覧</div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead><tr>
+        <th style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--faint);padding:9px 14px;border-bottom:2px solid var(--bd);text-align:left;background:var(--cream)">紹介元（PT）</th>
+        <th style="background:var(--cream);border-bottom:2px solid var(--bd)"></th>
+        <th style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--faint);padding:9px 14px;border-bottom:2px solid var(--bd);text-align:left;background:var(--cream)">紹介先（AG）</th>
+        <th style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--faint);padding:9px 14px;border-bottom:2px solid var(--bd);text-align:left;background:var(--cream)">種別</th>
+        <th style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--faint);padding:9px 14px;border-bottom:2px solid var(--bd);text-align:left;background:var(--cream)">PT報酬</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div></div>`;
+}
+
+function initCanvas(){
+  const c = document.getElementById('network-canvas');
+  if(!c) return;
+  initPositions();
+  startSim();
+}
+
+window.addEventListener('DOMContentLoaded', ()=>{
+  CNAV.init('network');
+  initCanvas();
+  // re-bind after CNAV
+  setTimeout(()=>{
+    const c = document.getElementById('network-canvas');
+    if(c){ c.addEventListener('click', e=>{
+      const rect=c.getBoundingClientRect();
+      const mx=(e.clientX-rect.left)*(c.width/rect.width);
+      const my=(e.clientY-rect.top)*(c.height/rect.height);
+      let hit=null;
+      visibleNodes().forEach(n=>{const p=positions[n.id];if(!p)return;if(Math.sqrt((mx-p.x)**2+(my-p.y)**2)<n.r+4)hit=n;});
+      selectedNode=hit?.id||null; draw(); showNodeDetail(hit);
+    });}
+  },100);
+});
+
+window.addEventListener('resize', ()=>{ draw(); });
+</script>
+</body>
+</html>
