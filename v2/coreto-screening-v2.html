@@ -616,10 +616,7 @@ async function runAIDocAnalysis() {
       role: 'user',
       content: [
         { type: 'image', source: { type: 'base64', media_type: idFile.type || 'image/jpeg', data: idB64 } },
-        { type: 'text', text:
-          '身分証明書の画像を解析してください。以下をJSONのみで回答（前置き不要）:
-' +
-          '{"name":"抽出した氏名","expiry":"有効期限(YYYY/MM/DDまたは不明)","doc_type":"書類種別","is_valid":true/false,"issues":["問題点リスト"],"memo":"総合所見"}' }
+        { type: 'text', text: '身分証明書の画像を解析してください。以下をJSONのみで回答（前置き不要）:\n{"name":"抽出した氏名","expiry":"有効期限(YYYY/MM/DDまたは不明)","doc_type":"書類種別","is_valid":true/false,"issues":["問題点リスト"],"memo":"総合所見"}' }
       ]
     }];
 
@@ -629,9 +626,7 @@ async function runAIDocAnalysis() {
         { type: 'image', source: { type: 'base64', media_type: tkFile.type || 'image/jpeg', data: tkB64 } }
       );
       messages[0].content[messages[0].content.length - 1].text =
-        '2枚の画像を解析してください。1枚目が身分証、2枚目が宅建士証です。以下をJSONのみで回答（前置き不要）:
-' +
-        '{"name":"氏名","id_expiry":"身分証有効期限","id_valid":true/false,"tk_no":"宅建士登録番号","tk_expiry":"宅建士証有効期限","tk_valid":true/false,"issues":["問題点"],"memo":"総合所見"}';
+        '2枚の画像を解析してください。1枚目が身分証、2枚目が宅建士証です。以下をJSONのみで回答（前置き不要）:\n{"name":"氏名","id_expiry":"身分証有効期限","id_valid":true/false,"tk_no":"宅建士登録番号","tk_expiry":"宅建士証有効期限","tk_valid":true/false,"issues":["問題点"],"memo":"総合所見"}';
     }
 
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
@@ -645,26 +640,48 @@ async function runAIDocAnalysis() {
     const res = JSON.parse(clean);
 
     // 結果表示
-    const isOk = v => `<span class="badge ${v ? 'b-em' : 'b-rd'}">${v ? '✅ OK' : '⚠️ 要確認'}</span>`;
-    const issueHtml = (res.issues?.length ? res.issues : []).map(i =>
-      `<div style="font-size:10px;color:var(--am);padding:3px 0">⚠️ ${i}</div>`).join('');
+    const hasIssues = res.issues?.length > 0;
+    const overallOk = !hasIssues && (res.is_valid ?? res.id_valid ?? true);
+    const statusBg = overallOk ? 'var(--em-bg)' : 'var(--am-bg)';
+    const statusBd = overallOk ? 'rgba(5,150,105,.25)' : 'rgba(217,119,6,.25)';
+    const statusColor = overallOk ? 'var(--em)' : 'var(--am)';
+    const statusIcon = overallOk ? '✅' : '⚠️';
+    const statusText = overallOk ? '問題なし — チェックシートに反映可' : '懸念事項あり — 内容を確認してください';
 
-    let html = `
-      <div style="background:var(--em-bg);border:1px solid rgba(5,150,105,.2);border-radius:8px;padding:14px">
-        <div style="font-size:11px;font-weight:700;color:var(--em);margin-bottom:10px">✨ AI解析結果</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11px;margin-bottom:10px">
-          <div><span style="color:var(--muted)">氏名：</span><strong>${res.name || res.id_name || '—'}</strong></div>
-          <div><span style="color:var(--muted)">身分証有効期限：</span>${res.expiry || res.id_expiry || '—'} ${isOk(res.is_valid ?? res.id_valid ?? true)}</div>`;
-    if (res.tk_no) {
-      html += `
-          <div><span style="color:var(--muted)">宅建士番号：</span><strong class="mono">${res.tk_no}</strong></div>
-          <div><span style="color:var(--muted)">宅建士証有効期限：</span>${res.tk_expiry || '—'} ${isOk(res.tk_valid ?? true)}</div>`;
-    }
-    html += `
-        </div>
-        ${issueHtml}
-        <div style="font-size:10px;color:var(--muted);margin-top:8px;border-top:1px solid rgba(5,150,105,.15);padding-top:8px">💬 ${res.memo || '問題なし'}</div>
+    const fieldBox = (label, value, ok) => {
+      const badgeBg = ok ? 'var(--em-bg)' : 'var(--rd-bg)';
+      const badgeColor = ok ? 'var(--em)' : 'var(--rd)';
+      return `<div style="background:#fff;border:1px solid var(--bd);border-radius:8px;padding:12px 14px">
+        <div style="font-size:9px;font-weight:700;color:var(--muted);letter-spacing:.8px;margin-bottom:6px;text-transform:uppercase">${label}</div>
+        <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:6px;word-break:break-all">${value || '—'}</div>
+        <span style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:20px;background:${badgeBg};color:${badgeColor}">${ok ? '✅ OK' : '⚠️ 要確認'}</span>
       </div>`;
+    };
+
+    let html = `<div style="border:1px solid ${statusBd};border-radius:10px;overflow:hidden;margin-top:8px">
+      <div style="background:${statusBg};padding:12px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid ${statusBd}">
+        <span style="font-size:20px">${statusIcon}</span>
+        <div>
+          <div style="font-size:11px;font-weight:700;color:${statusColor}">AI解析完了</div>
+          <div style="font-size:10px;color:${statusColor};opacity:.85">${statusText}</div>
+        </div>
+      </div>
+      <div style="padding:16px;background:#fff">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px">
+          ${fieldBox('氏名', res.name || res.id_name, true)}
+          ${fieldBox('身分証 有効期限', res.expiry || res.id_expiry, res.is_valid ?? res.id_valid ?? true)}
+          ${res.tk_no ? fieldBox('宅建士登録番号', res.tk_no, true) : ''}
+          ${res.tk_no ? fieldBox('宅建士証 有効期限', res.tk_expiry, res.tk_valid ?? true) : ''}
+        </div>
+        ${hasIssues ? `<div style="background:var(--am-bg);border:1px solid rgba(217,119,6,.2);border-radius:8px;padding:12px;margin-bottom:10px">
+          <div style="font-size:10px;font-weight:700;color:var(--am);margin-bottom:6px">⚠️ 懸念事項</div>
+          ${res.issues.map(i => `<div style="font-size:11px;color:var(--ink);padding:4px 0;border-bottom:1px solid rgba(217,119,6,.1);display:flex;gap:8px;align-items:flex-start"><span style="color:var(--am);flex-shrink:0">•</span>${i}</div>`).join('')}
+        </div>` : ''}
+        <div style="font-size:11px;color:var(--muted);background:var(--cream2);border-radius:6px;padding:10px 12px;line-height:1.7">
+          💬 <span style="color:var(--ink)">${res.memo || '特記事項なし'}</span>
+        </div>
+      </div>
+    </div>`;
 
     result.innerHTML = html;
     result.style.display = 'block';
@@ -689,25 +706,32 @@ async function runAIDocAnalysis() {
 
 <!-- AI書類解析パネル（審査対象選択後に表示） -->
 <div id="ai-doc-panel" style="max-width:860px;margin:0 auto 16px;padding:0 16px">
-  <div class="card" style="border-color:rgba(200,169,81,.3)">
-    <div class="card-head" style="background:rgba(200,169,81,.04)">
-      <div class="card-title" style="color:var(--gold)">✨ AI書類解析</div>
+  <div class="card" style="border-color:rgba(200,169,81,.35);grid-column:1/-1">
+    <div class="card-head" style="background:linear-gradient(135deg,rgba(13,26,45,.97),rgba(21,34,56,.97));padding:16px 20px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:32px;height:32px;background:rgba(200,169,81,.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px">✨</div>
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--gold);letter-spacing:.5px">AI書類解析</div>
+          <div style="font-size:10px;color:rgba(255,255,255,.45);margin-top:1px">身分証・宅建士証を自動チェック</div>
+        </div>
+      </div>
       <button id="ai-doc-btn" class="btn btn-sm"
-        style="background:var(--gold);color:var(--navy);border:none;font-weight:700"
+        style="background:var(--gold);color:var(--navy);border:none;font-weight:700;padding:8px 16px;border-radius:8px;font-size:11px;cursor:pointer"
         onclick="runAIDocAnalysis()">✨ AI自動チェック実行</button>
     </div>
-    <div class="card-body">
-      <div style="font-size:11px;color:var(--muted);margin-bottom:12px">
-        身分証・宅建士証の画像をアップロードすると、AIが自動で有効期限・番号形式・懸念点を解析し、チェックシートの参考情報として表示します。
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
-        <div>
-          <label style="font-size:10px;font-weight:600;color:var(--muted);margin-bottom:6px;display:block">身分証（免許証・マイナンバー等）</label>
-          <input type="file" id="ai-id-file" accept="image/*" style="font-size:11px;width:100%;padding:6px 8px;border:1px solid var(--bd);border-radius:6px;background:var(--cream2)">
+    <div class="card-body" style="padding:20px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <div style="background:var(--cream2);border:1px solid var(--bd);border-radius:8px;padding:14px">
+          <div style="font-size:10px;font-weight:700;color:var(--navy);margin-bottom:8px;letter-spacing:.5px">📋 身分証</div>
+          <div style="font-size:10px;color:var(--muted);margin-bottom:8px">免許証・マイナンバーカード等</div>
+          <input type="file" id="ai-id-file" accept="image/*"
+            style="font-size:11px;width:100%;padding:7px 10px;border:1px solid var(--bd);border-radius:6px;background:#fff;cursor:pointer;box-sizing:border-box">
         </div>
-        <div>
-          <label style="font-size:10px;font-weight:600;color:var(--muted);margin-bottom:6px;display:block">宅建士証（不動産AG審査時のみ）</label>
-          <input type="file" id="ai-tk-file" accept="image/*" style="font-size:11px;width:100%;padding:6px 8px;border:1px solid var(--bd);border-radius:6px;background:var(--cream2)">
+        <div style="background:var(--cream2);border:1px solid var(--bd);border-radius:8px;padding:14px">
+          <div style="font-size:10px;font-weight:700;color:var(--navy);margin-bottom:8px;letter-spacing:.5px">🏅 宅建士証</div>
+          <div style="font-size:10px;color:var(--muted);margin-bottom:8px">不動産AG審査時のみ（任意）</div>
+          <input type="file" id="ai-tk-file" accept="image/*"
+            style="font-size:11px;width:100%;padding:7px 10px;border:1px solid var(--bd);border-radius:6px;background:#fff;cursor:pointer;box-sizing:border-box">
         </div>
       </div>
       <div id="ai-doc-result" style="display:none"></div>

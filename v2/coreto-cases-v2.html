@@ -479,9 +479,35 @@ function switchView(v) {
   document.getElementById('btn-kanban').classList.toggle('active', v==='kanban');
 }
 
+let currentTabType = 'all';
+
 function switchTab(type, el) {
+  currentTabType = type;
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
+  if (el) el.classList.add('active');
+  // 案件行のフィルタリング（list view）
+  const rows = document.querySelectorAll('tr[data-type]');
+  rows.forEach(row => {
+    const rtype = row.getAttribute('data-type') || '';
+    if (type === 'all') {
+      row.style.display = '';
+    } else if (type === 'hr') {
+      row.style.display = rtype === 'hr' ? '' : 'none';
+    } else if (type === 'rental') {
+      row.style.display = rtype === 'rental' ? '' : 'none';
+    } else if (type === 'sale') {
+      row.style.display = rtype === 'sale' ? '' : 'none';
+    } else if (type === 'utility') {
+      row.style.display = rtype === 'utility' ? '' : 'none';
+    }
+  });
+  // kanban view のフィルタ
+  const kanbanCards = document.querySelectorAll('[data-case-type]');
+  kanbanCards.forEach(card => {
+    const ctype = card.getAttribute('data-case-type') || '';
+    card.closest('.kb-card') && (card.closest('.kb-card').style.display =
+      type === 'all' || ctype === type ? '' : 'none');
+  });
 }
 
 function newCase() {
@@ -548,6 +574,13 @@ JSONのみ（前置き不要）:
 <script>
 window.addEventListener('DOMContentLoaded', function() {
   CNAV.init('cases');
+  // URLパラメータでタブ自動切替（?type=hr など）
+  const params = new URLSearchParams(window.location.search);
+  const typeParam = params.get('type');
+  if (typeParam) {
+    const targetTab = document.querySelector(`.tab[onclick*="'${typeParam}'"]`);
+    if (targetTab) switchTab(typeParam, targetTab);
+  }
 });
 </script>
 <div class="mob-overlay" onclick="toggleSb()"></div>

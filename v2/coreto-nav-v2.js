@@ -79,7 +79,7 @@ const NAV = {
     { section:'CRM / 案件', items:[
       { icon:'👥', label:'クライアント管理',       href:'coreto-crm-v2.html',          key:'crm' },
       { icon:'🏘️', label:'不動産案件（全体）',     href:'coreto-cases-v2.html',        key:'cases',    badge:'8' },
-      { icon:'👤', label:'人材案件（全体）',       href:'coreto-cases-v2.html',        key:'hr_cases_all', badge:'4' },
+      { icon:'👤', label:'人材案件（全体）',       href:'coreto-cases-v2.html?type=hr',key:'hr_cases_all', badge:'4' },
       { icon:'💰', label:'入金監視',               href:'coreto-remittance-v2.html',   key:'remit',    badge:'3', badgeColor:'amber' },
       { icon:'📋', label:'書類審査',               href:'coreto-screening-v2.html',    key:'screening',badge:'5', badgeColor:'amber' },
       { icon:'🔑', label:'IT重説管理',             href:'coreto-itsetsu-v2.html',      key:'itsetsu',  badge:'2', badgeColor:'amber' },
@@ -88,10 +88,12 @@ const NAV = {
     ]},
     { section:'財務・報酬', items:[
       { icon:'💴', label:'月次報酬確定・振込',       href:'coreto-payroll-v2.html',      key:'payroll' },
+      { icon:'📋', label:'月次報酬レポート',         href:'coreto-monthly-report-v2.html',key:'monthly_report' },
       { icon:'🧾', label:'請求書・領収書発行',       href:'coreto-hq-receipt-v2.html',   key:'receipt' },
+      { icon:'⚠️', label:'早期退職アラート',         href:'coreto-early-quit-v2.html',    key:'early_quit' },
     ]},
     { section:'スタッフ管理', items:[
-      { icon:'🏢', label:'AG管理',                 href:'coreto-hub-v2.html#agents',   key:'agents' },
+      { icon:'🏢', label:'AG管理（権限・育成）',   href:'coreto-hq-admin-v2.html',     key:'hq_admin' },
       { icon:'🤝', label:'PT管理',                 href:'coreto-hub-v2.html#pt_mgmt',  key:'pt_mgmt' },
       { icon:'🎓', label:'インターン管理',          href:'coreto-intern-v2.html',       key:'intern' },
     ]},
@@ -104,6 +106,7 @@ const NAV = {
     ]},
     { section:'事業SFA', items:[
       { icon:'⚡', label:'光通信SFA（全体）',      href:'coreto-utility-v2.html',      key:'utility' },
+      { icon:'👔', label:'士業連携管理',           href:'coreto-judicial-v2.html',     key:'judicial' },
     ]},
     { section:'システム', items:[
       { icon:'🔐', label:'ユーザー管理',           href:'coreto-hub-v2.html#users',    key:'users' },
@@ -131,7 +134,10 @@ const NAV = {
     { section:'人材（PT扱い・閲覧のみ）', items:[
       { icon:'🔒', label:'人材紹介 進捗確認',      href:'coreto-hub-v2.html#hr_ref',   key:'hr_ref',   note:'PT扱い' },
     ]},
-    { section:'ツール', items:[
+    { section:'マイアカウント', items:[
+      { icon:'🏅', label:'ランク・コミッション',   href:'coreto-rank-v2.html',         key:'rank' },
+      { icon:'📃', label:'業務委託契約書',         href:'coreto-contract-v2.html',     key:'contract' },
+      { icon:'🪪', label:'eKYC・口座登録',         href:'coreto-kyc-v2.html',          key:'kyc' },
       { icon:'📚', label:'マニュアル・FAQ',       href:'coreto-faq-v2.html',          key:'faq' },
       { icon:'📲', label:'LINE再連携',             href:'coreto-hub-v2.html#line_relink', key:'line_relink' },
     ]},
