@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>月次報酬確定・振込 — COREBLDG</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+
+:root{
+  --navy:#0D1A2D;--navy-m:#152238;--navy-l:#1E3252;
+  --gold:#C8A951;--gold-dim:rgba(200,169,81,.15);
+  --cream:#FFFFFF;--cream2:#F8F9FA;--white:#FFFFFF;
+  --ink:#202124;--ink2:#2D3748;--muted:#5F6368;--faint:#80868B;
+  --em:#059669;--em-bg:#ECFDF5;--am:#D97706;--am-bg:#FFFBEB;
+  --rd:#DC2626;--rd-bg:#FEF2F2;--sk:#0284C7;--sk-bg:#F0F9FF;
+  --vt:#7C3AED;--vt-bg:#F5F3FF;--bd:#E8EAED;--bd2:#DADCE0;
+  --sw:240px;--r:10px;--r-sm:7px;
+  --sh:0 1px 2px rgba(60,64,67,.1),0 1px 3px rgba(60,64,67,.06);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:var(--cream)}
+.shell{display:flex;height:100vh}
+.sb{width:var(--sw);background:var(--navy);display:flex;flex-direction:column;flex-shrink:0;position:relative}
+.sb::after{content:'';position:absolute;top:0;right:0;width:1px;height:100%;background:linear-gradient(180deg,rgba(200,169,81,.25) 0%,rgba(200,169,81,.06) 50%,transparent 100%)}
+.sb-head{padding:24px 20px 18px;border-bottom:1px solid rgba(255,255,255,.06)}
+.sb-logo{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;letter-spacing:5px;color:var(--gold)}
+.sb-ver{font-size:9px;letter-spacing:2px;color:rgba(200,169,81,.3);font-family:'DM Mono',monospace;margin-top:2px}
+.sb-user{margin:14px 14px 10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:9px 11px;display:flex;align-items:center;gap:9px}
+.sb-av{width:28px;height:28px;border-radius:50%;background:var(--gold-dim);border:1px solid rgba(200,169,81,.25);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--gold);flex-shrink:0}
+.sb-uname{font-size:11px;font-weight:600;color:rgba(255,255,255,.8)}
+.sb-urole{font-size:9px;color:rgba(255,255,255,.3);font-family:'DM Mono',monospace}
+.sb-nav{flex:1;overflow-y:auto;padding:6px 10px}
+.sb-nav::-webkit-scrollbar{width:3px}
+.sb-nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:2px}
+.nav-sec-label{font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.18);padding:10px 8px 4px;font-family:'DM Mono',monospace}
+.nav-item{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:7px;cursor:pointer;transition:all .13s;text-decoration:none;position:relative;margin-bottom:1px}
+.nav-item:hover{background:rgba(255,255,255,.06)}
+.nav-item.active{background:rgba(200,169,81,.1)}
+.nav-item.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:16px;background:var(--gold);border-radius:0 2px 2px 0}
+.nav-icon{width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:13px;border-radius:6px;background:rgba(255,255,255,.04);flex-shrink:0}
+.nav-item.active .nav-icon{background:rgba(200,169,81,.12)}
+.nav-label{font-size:11px;font-weight:500;color:rgba(255,255,255,.55);flex:1}
+.nav-item.active .nav-label,.nav-item:hover .nav-label{color:var(--gold)}
+.nav-item:hover .nav-label{color:rgba(255,255,255,.82)}
+.nav-badge{font-size:9px;font-weight:700;padding:1px 6px;border-radius:10px;background:var(--rd);color:#fff;font-family:'Outfit',sans-serif}
+.nav-badge.amber{background:var(--am)}
+.sb-foot{padding:10px 14px 18px;border-top:1px solid rgba(255,255,255,.05)}
+.sb-foot-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;cursor:pointer;font-size:11px;color:rgba(255,255,255,.3);transition:.13s}
+.sb-foot-item:hover{background:rgba(255,255,255,.05);color:rgba(255,255,255,.6)}
+.content{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:58px;background:var(--white);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 24px;gap:14px;flex-shrink:0;box-shadow:var(--sh)}
+.tb-title{font-size:16px;font-weight:600;color:var(--ink);font-family:'Outfit','Noto Sans JP',sans-serif;letter-spacing:.2px}
+.tb-crumb{font-size:11px;color:var(--faint);display:flex;align-items:center;gap:5px;margin-top:1px}
+.tb-crumb a{color:var(--muted);text-decoration:none}
+.tb-crumb a:hover{color:var(--am)}
+.tb-actions{margin-left:auto;display:flex;gap:9px;align-items:center}
+.btn{padding:7px 16px;border-radius:var(--r-sm);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;font-family:'Outfit',sans-serif;border:none}
+.btn-primary{background:var(--navy);color:var(--gold)}
+.btn-primary:hover{background:var(--navy-l)}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--bd)}
+.btn-ghost:hover{background:var(--cream);color:var(--ink)}
+.btn-sm{padding:5px 12px;font-size:11px}
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;font-family:'Outfit',sans-serif;font-feature-settings:'tnum'}
+.badge-em{background:var(--em-bg);color:var(--em)}
+.badge-am{background:var(--am-bg);color:var(--am)}
+.badge-rd{background:var(--rd-bg);color:var(--rd)}
+.badge-sk{background:var(--sk-bg);color:var(--sk)}
+.badge-vt{background:var(--vt-bg);color:var(--vt)}
+.badge-gd{background:var(--gold-dim);color:var(--am)}
+.badge-nt{background:var(--cream2);color:var(--muted)}
+
+/* TABS */
+.tab-bar{padding:0 24px;background:var(--white);border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:0}
+.tab{padding:12px 18px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:.15s;white-space:nowrap;display:flex;align-items:center;gap:7px}
+.tab:hover{color:var(--ink)}
+.tab.active{color:var(--navy);border-bottom-color:var(--gold)}
+.tab-count{font-size:10px;padding:1px 6px;border-radius:10px;background:var(--cream2);font-family:'DM Mono',monospace}
+.tab.active .tab-count{background:var(--gold-dim);color:var(--am)}
+.view-toggle{margin-left:auto;display:flex;gap:4px}
+.view-btn{width:30px;height:30px;border:1px solid var(--bd);border-radius:6px;background:var(--white);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;transition:.13s}
+.view-btn.active{background:var(--navy);border-color:var(--navy)}
+.view-btn:hover:not(.active){background:var(--cream)}
+
+/* FILTER */
+.filter-bar{display:flex;align-items:center;gap:10px;padding:14px 24px;background:var(--cream);border-bottom:1px solid var(--bd);flex-wrap:wrap}
+.search-wrap{position:relative;flex:1;min-width:200px}
+.search-wrap input{width:100%;padding:8px 12px 8px 34px;background:var(--white);border:1.5px solid var(--bd);border-radius:var(--r-sm);font-size:12px;color:var(--ink);outline:none;font-family:'Outfit','Noto Sans JP',sans-serif;transition:.15s}
+.search-wrap input:focus{border-color:var(--gold)}
+.search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--faint)}
+.fsel{padding:7px 11px;background:var(--white);border:1.5px solid var(--bd);border-radius:var(--r-sm);font-size:12px;color:var(--ink);outline:none;cursor:pointer;font-family:'Outfit',sans-serif}
+
+/* LIST VIEW */
+.page{flex:1;overflow-y:auto;padding:20px 24px}
+.page::-webkit-scrollbar{width:5px}
+.page::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:3px}
+.case-list{display:flex;flex-direction:column;gap:8px}
+.case-row{background:var(--white);border:1px solid var(--bd);border-radius:var(--r);padding:14px 18px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:all .15s;box-shadow:var(--sh)}
+.case-row:hover{border-color:rgba(200,169,81,.4);transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,0,0,.08)}
+.case-type-pill{padding:4px 10px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;font-family:'DM Mono',monospace;flex-shrink:0}
+.type-rental{background:var(--sk-bg);color:var(--sk)}
+.type-sale{background:var(--em-bg);color:var(--em)}
+.type-hr{background:var(--vt-bg);color:var(--vt)}
+.type-utility{background:var(--am-bg);color:var(--am)}
+.case-id{font-size:10px;font-family:'DM Mono',monospace;color:var(--faint);margin-bottom:2px}
+.case-name{font-size:14px;font-weight:600;color:var(--ink)}
+.case-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.case-info{flex:1;min-width:0}
+.case-meta{display:flex;gap:16px;align-items:center;flex-shrink:0}
+.case-meta-item{text-align:right}
+.case-meta-label{font-size:9px;color:var(--faint);font-family:'DM Mono',monospace;letter-spacing:.5px}
+.case-meta-val{font-size:12px;font-weight:600;color:var(--ink);margin-top:1px}
+.case-arrow{font-size:16px;color:var(--faint);flex-shrink:0;transition:.15s}
+.case-row:hover .case-arrow{color:var(--am);transform:translateX(2px)}
+
+/* KANBAN */
+.kanban{display:flex;gap:14px;overflow-x:auto;padding-bottom:16px;height:100%}
+.kanban::-webkit-scrollbar{height:5px}
+.kanban::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:3px}
+.kanban-col{flex-shrink:0;width:240px;display:flex;flex-direction:column;gap:8px}
+.kanban-head{padding:10px 14px;border-radius:var(--r-sm);display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.kh-title{font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase}
+.kh-count{font-size:10px;font-family:'DM Mono',monospace;padding:2px 7px;border-radius:10px;font-weight:700}
+.kanban-card{background:var(--white);border:1px solid var(--bd);border-radius:var(--r-sm);padding:12px 13px;cursor:pointer;transition:all .15s;box-shadow:var(--sh)}
+.kanban-card:hover{border-color:rgba(200,169,81,.4);transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.08)}
+.kc-id{font-size:9px;font-family:'DM Mono',monospace;color:var(--faint);margin-bottom:4px}
+.kc-name{font-size:12px;font-weight:700;color:var(--ink);margin-bottom:3px}
+.kc-prop{font-size:11px;color:var(--muted);margin-bottom:8px}
+.kc-footer{display:flex;align-items:center;justify-content:space-between}
+.kc-ag{font-size:9px;font-family:'DM Mono',monospace;color:var(--faint)}
+.kc-flag{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:700}
+
+/* ════════════════════════════════════════════
+   数値フォント統一 — Outfit + Tabular Nums
+   (DM Monoはコード/ID系のみ維持)
+   ════════════════════════════════════════════ */
+
+/* バッジ・カウント系 */
+.nb, .nav-badge, .cnav-badge,
+.tab-count, .kh-count, .kc-count,
+.badge, .score-num {
+  font-family: 'Outfit', sans-serif !important;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+  letter-spacing: 0 !important;
+}
+
+/* KPI大数値 */
+.qs-val, .kpi-val, .kpi-value,
+.stat-val, .count-val {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum', 'lnum';
+}
+
+/* 日時・タイムスタンプ */
+.tl-time, .remit-deadline, .check-meta,
+.ic-date, .pipe-date {
+  font-family: 'Outfit', sans-serif !important;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+
+/* テーブル金額セル */
+td.num, .bc-vl, .slip-meta,
+.it-step-num, .pg-btn, .pg-info {
+  font-family: 'Outfit', sans-serif !important;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+
+/* 金額入力フィールド（Outfit で統一） */
+.amount-input {
+  font-family: 'Outfit', sans-serif !important;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ══ MOBILE RESPONSIVE ══════════════════════════════════════════ */
+.mob-ham{display:none;flex-direction:column;align-items:center;justify-content:center;width:36px;height:36px;background:transparent;border:none;cursor:pointer;border-radius:7px;transition:.13s;flex-shrink:0}
+.mob-ham:hover{background:rgba(255,255,255,.08)}
+.mob-ham span{display:block;width:18px;height:2px;background:rgba(255,255,255,.72);margin:3px 0;border-radius:1px;transition:.2s}
+.mob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:199}
+@media(max-width:768px){
+  .mob-ham{display:flex}
+  .mob-overlay.show{display:block}
+  .sb{position:fixed;left:calc(-1 * var(--sw));top:0;height:100vh;z-index:200;transition:left .25s ease;box-shadow:4px 0 24px rgba(0,0,0,.25)}
+  .sb.open{left:0}
+  .shell{overflow:hidden}
+  .content{width:100vw;min-width:0}
+  .topbar{padding:0 12px;gap:8px}
+  .tb-crumb{display:none}
+  .tb-actions{gap:6px}
+  .page,.detail-wrap{padding:12px}
+  .detail-wrap{flex-direction:column;overflow-y:auto}
+  .detail-main{overflow-y:visible;min-height:0}
+  .detail-side{width:100%!important;overflow-y:visible}
+  table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;font-size:11px}
+  .kpi-row,.qs-row{grid-template-columns:1fr 1fr!important}
+  .g2,.form-grid{grid-template-columns:1fr!important}
+  .pipeline{padding-bottom:8px}
+  .step-label{font-size:9px}
+  .tb-title{font-size:14px}
+}
+
+
+/* ── Google-style Design System ── */
+html, body { background:#FFFFFF !important; }
+.sb-logo, .brand-logo { font-family:'Cormorant Garamond',serif !important; }
+body, input, select, textarea, button { font-family:'Outfit','Noto Sans JP',sans-serif; }
+.kpi-value, .kpi-vl {
+  font-family:'Outfit','Noto Sans JP',sans-serif !important;
+  font-weight:300 !important;
+  font-variant-numeric:tabular-nums lining-nums !important;
+  letter-spacing:-1px !important;
+  color:var(--ink) !important;
+}
+.kpi-value { font-size:32px !important;font-variant-numeric:tabular-nums}
+.kpi-vl   { font-size:28px !important; }
+.stat-val {
+  font-family:'Outfit','Noto Sans JP',sans-serif !important;
+  font-weight:400 !important;
+  font-variant-numeric:tabular-nums !important;
+  color:var(--ink) !important;
+}
+.kpi-label, .kpi-sub, .stat-label { font-size:11px !important; font-weight:500 !important; color:var(--muted) !important; }
+.section-title { font-size:11px !important; font-weight:600 !important; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); }
+.section-title::before { display:none; }
+.card { background:#FFFFFF; border:1px solid var(--bd); border-radius:8px; box-shadow:var(--sh); }
+.kpi-card { background:#FFFFFF !important; border:1px solid var(--bd) !important; border-radius:8px !important; box-shadow:none !important; }
+.badge { border-radius:4px !important; font-size:11px !important; font-weight:500 !important; }
+.delta-up, .kpi-delta.up { color:var(--em) !important; }
+.delta-dn, .kpi-delta.dn { color:var(--rd) !important; }
+/* ── Google-style 数値原則 (DS v2.3) ── */
+.kpi-value, .kpi-vl, .kpi-val,
+.stat-val, .qs-val, .count-val,
+.td-amt, .bc-vl, .bc-total-vl,
+.rr-amount, .amount-val, .srv,
+.visit-reward, .lb-val,
+.mf-kpi-vl, .mf-reward {
+  font-family:'Outfit','Noto Sans JP',sans-serif !important;
+  font-weight:300 !important;
+  font-variant-numeric:tabular-nums !important;
+}
+.kpi-value { font-size:32px !important; }
+.kpi-vl    { font-size:28px !important; }
+</style>
+.month-steps{display:flex;align-items:stretch;gap:0;margin-bottom:24px;overflow-x:auto}
+.ms-item{flex:1;min-width:120px;padding:14px 16px;background:var(--cream2);border:1px solid var(--bd);display:flex;flex-direction:column;gap:4px;position:relative}
+.ms-item:first-child{border-radius:10px 0 0 10px}
+.ms-item:last-child{border-radius:0 10px 10px 0}
+.ms-item + .ms-item{border-left:none}
+.ms-item.done{background:var(--em-bg);border-color:rgba(5,150,105,.2)}
+.ms-item.active{background:rgba(200,169,81,.06);border-color:rgba(200,169,81,.3)}
+.ms-date{font-size:10px;font-family:'DM Mono',monospace;color:var(--muted)}
+.ms-label{font-size:12px;font-weight:700;color:var(--ink)}
+.ms-status{font-size:9px;color:var(--em)}
+.checklist-grid{display:grid;gap:8px;margin-bottom:20px}
+.check-item{display:flex;align-items:center;gap:12px;padding:12px 16px;background:#fff;border:1px solid var(--bd);border-radius:8px}
+.check-item.pass{border-color:rgba(5,150,105,.2);background:var(--em-bg)}
+.check-item.fail{border-color:rgba(220,38,38,.2);background:var(--rd-bg)}
+.check-icon{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.check-label{flex:1;font-size:12px;font-weight:600;color:var(--ink)}
+.check-detail{font-size:10px;color:var(--muted)}
+.payout-table{width:100%;border-collapse:collapse}
+.payout-table th{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);padding:8px 12px;border-bottom:2px solid var(--bd2);text-align:left}
+.payout-table td{font-size:12px;padding:10px 12px;border-bottom:1px solid var(--bd)}
+.payout-table tr:hover td{background:var(--cream2)}
+.payout-table .mono{font-family:'DM Mono',monospace;font-size:11px}
+.payout-table .amt{text-align:right;font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<div class="shell" id="shell" style="display:none">
+  <div class="sb" id="sb"></div>
+  <div class="content">
+    <div class="topbar">
+      <button class="mob-ham" onclick="toggleSb()"><span></span><span></span><span></span></button>
+      <div>
+        <div class="tb-title">月次報酬確定・振込</div>
+        <div class="tb-crumb"><a href="coreto-hub-v2.html">COREBLDG</a> &#x203A; 月次報酬確定・振込</div>
+      </div>
+      <div class="tb-act" style="margin-left:auto;display:flex;gap:8px;align-items:center">
+        <select class="form-input" id="target-month" style="font-size:11px;padding:6px 10px;border:1px solid var(--bd);border-radius:7px">
+          <option value="2026-02">2026年2月分</option>
+          <option value="2026-01">2026年1月分</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="runBatchCheck()">🔄 8項目チェック実行</button>
+        <button class="btn btn-sm" style="background:var(--em);color:#fff;border:none" onclick="exportCSV()">📥 GMO振込CSVエクスポート</button>
+      </div>
+    </div>
+    <div class="page" style="overflow-y:auto">
+
+      <!-- 月次スケジュール -->
+      <div class="card">
+        <div class="card-head"><div class="card-title">📅 月次スケジュール（2月分）</div></div>
+        <div class="card-body">
+          <div class="month-steps">
+            <div class="ms-item done"><div class="ms-date">月末日</div><div class="ms-label">月次締め</div><div class="ms-status">✅ 完了</div></div>
+            <div class="ms-item done"><div class="ms-date">翌月1日</div><div class="ms-label">ランク判定</div><div class="ms-status">✅ 完了</div></div>
+            <div class="ms-item active"><div class="ms-date">〜10日</div><div class="ms-label">HQ最終承認</div><div class="ms-status">🔵 対応中</div></div>
+            <div class="ms-item"><div class="ms-date">15日</div><div class="ms-label">支払明細発行</div></div>
+            <div class="ms-item"><div class="ms-date">20日</div><div class="ms-label">CSVデータ確認</div></div>
+            <div class="ms-item"><div class="ms-date">25日</div><div class="ms-label">振込実行</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 8項目自動チェック -->
+      <div class="card" id="batch-check-card">
+        <div class="card-head">
+          <div class="card-title">✅ 月末8項目自動チェック</div>
+          <span class="badge b-am" id="check-overall-badge">未実行</span>
+        </div>
+        <div class="card-body">
+          <div class="checklist-grid" id="check-list">
+            <div style="text-align:center;color:var(--faint);padding:24px">「8項目チェック実行」ボタンで自動チェックを開始します</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 振込データ一覧 -->
+      <div class="card" id="payout-card">
+        <div class="card-head">
+          <div class="card-title">💴 振込対象者一覧（2026年2月分）</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <span class="badge b-em">合計 ¥<span id="total-payout">—</span></span>
+            <span class="badge b-sk">Kyash: <span id="kyash-count">—</span>件</span>
+            <span class="badge b-am">GMO銀行: <span id="gmo-count">—</span>件</span>
+          </div>
+        </div>
+        <div class="card-body" style="padding:0">
+          <table class="payout-table">
+            <thead><tr>
+              <th>AG/PT ID</th><th>氏名</th><th>ランク</th><th>種別</th>
+              <th class="amt">報酬額</th><th class="amt">システム利用料</th>
+              <th class="amt">源泉徴収</th><th class="amt">即時払控除</th>
+              <th class="amt" style="color:var(--em)">振込額</th>
+              <th>振込方法</th><th>状態</th>
+            </tr></thead>
+            <tbody id="payout-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+<div class="mob-overlay" onclick="toggleSb()"></div>
+<div id="ip-toast" class="toast"></div>
+
+<script>
+function toggleSb(){ document.querySelector('.sb').classList.toggle('open'); document.querySelector('.mob-overlay').classList.toggle('show'); }
+function showToast(msg,type){ const t=document.getElementById('ip-toast'); t.textContent=msg; t.className='toast '+(type||''); t.style.opacity='1'; setTimeout(()=>t.style.opacity='0',3200); }
+
+// ── データ ──
+const RANKS = { bronze:{rate:.65,fee:980}, silver:{rate:.675,fee:490}, gold:{rate:.70,fee:0}, platinum:{rate:.75,fee:0} };
+const PAYOUTS = [
+  {id:'AG-0042',name:'中村 陽子',rank:'platinum',type:'RE',cases:[{fee:900000,sys:20000,pt:false},{fee:450000,sys:20000,pt:true}],instantPay:0,legal:true},
+  {id:'AG-0038',name:'田中 誠一',rank:'gold',type:'RE',cases:[{fee:335000,sys:20000,pt:false},{fee:198000,sys:10000,pt:false}],instantPay:80000,legal:true},
+  {id:'AG-0021',name:'鈴木 健太',rank:'silver',type:'RE',cases:[{fee:175000,sys:10000,pt:false}],instantPay:0,legal:true},
+  {id:'AG-0055',name:'伊藤 真理',rank:'bronze',type:'HR',cases:[{fee:693000,sys:0,pt:false,hrSplit:0.5}],instantPay:0,legal:true},
+  {id:'PT-0015',name:'佐藤 美咲',rank:'gold',type:'PT',cases:[{fee:335000,ptShare:0.25,sys:10000}],instantPay:0,legal:true},
+  {id:'PT-0007',name:'林 浩二 (法人)',rank:'silver',type:'PT-corp',cases:[{fee:450000,ptShare:0.25,sys:20000}],instantPay:0,legal:false},
+];
+
+function calcPayout(p) {
+  let totalReward = 0, totalSys = 0;
+  p.cases.forEach(c => {
+    if (p.type === 'PT') {
+      totalReward += Math.round(c.fee * (c.ptShare || 0.25));
+      totalSys += (c.sys || 0) / 2;
+    } else if (p.type === 'PT-corp') {
+      totalReward += Math.round(c.fee * (c.ptShare || 0.25));
+      totalSys += (c.sys || 0) / 2;
+    } else if (c.pt) {
+      totalReward += Math.round(c.fee * 0.25);
+      totalSys += (c.sys || 0) / 2;
+    } else {
+      const rate = RANKS[p.rank]?.rate || 0.65;
+      const split = c.hrSplit || 1;
+      totalReward += Math.round(c.fee * rate * split);
+      totalSys += c.sys || 0;
+    }
+  });
+  const taxable = totalReward - totalSys;
+  const wtax = p.legal ? 0 : Math.floor(taxable <= 1000000 ? taxable * 0.1021 : 1000000 * 0.1021 + (taxable - 1000000) * 0.2042);
+  const monthlyFee = p.type.startsWith('PT') ? 0 : (RANKS[p.rank]?.fee || 0);
+  const payout = taxable - wtax - p.instantPay;
+  return { totalReward, totalSys, taxable, wtax, monthlyFee, payout };
+}
+
+function renderPayoutTable() {
+  let totalPayout = 0, kyashCount = 0, gmoCount = 0;
+  const rows = PAYOUTS.map(p => {
+    const calc = calcPayout(p);
+    const method = calc.payout >= 1000000 ? '🏦 GMO銀行' : '📲 Kyash';
+    if (calc.payout >= 1000000) gmoCount++; else kyashCount++;
+    totalPayout += calc.payout;
+    const fmt = v => v > 0 ? `¥${v.toLocaleString()}` : '—';
+    const rankBadge = {platinum:'b-vt',gold:'b-em',silver:'b-sk',bronze:'b-nt'}[p.rank] || 'b-nt';
+    return `<tr>
+      <td class="mono">${p.id}</td>
+      <td style="font-weight:600">${p.name}${p.type==='PT-corp'?'<span class="badge b-nt" style="margin-left:4px;font-size:9px">法人</span>':''}</td>
+      <td><span class="badge ${rankBadge}" style="font-size:9px">${p.rank}</span></td>
+      <td><span class="badge b-nt" style="font-size:9px">${p.type}</span></td>
+      <td class="amt">¥${calc.totalReward.toLocaleString()}</td>
+      <td class="amt" style="color:var(--am)">${fmt(calc.totalSys)}</td>
+      <td class="amt" style="color:var(--rd)">${p.legal?'法人-なし':fmt(calc.wtax)}</td>
+      <td class="amt" style="color:var(--muted)">${fmt(p.instantPay)}</td>
+      <td class="amt" style="font-weight:700;color:var(--em)">¥${calc.payout.toLocaleString()}</td>
+      <td><span class="badge ${calc.payout>=1000000?'b-am':'b-sk'}">${method}</span></td>
+      <td><span class="badge b-nt" id="pay-status-${p.id}">承認待ち</span></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('payout-tbody').innerHTML = rows;
+  document.getElementById('total-payout').textContent = totalPayout.toLocaleString();
+  document.getElementById('kyash-count').textContent = kyashCount;
+  document.getElementById('gmo-count').textContent = gmoCount;
+}
+
+// 8項目チェック
+function runBatchCheck() {
+  const items = [
+    {no:'①',label:'全額入金確認（全件入金済み）',pass:true,detail:'23件すべて入金確認済み'},
+    {no:'②',label:'未報告案件の有無',pass:true,detail:'未報告案件なし'},
+    {no:'③',label:'報酬額の異常値検出',pass:true,detail:'±50%超の異常値なし'},
+    {no:'④',label:'源泉徴収計算の正確性',pass:true,detail:'全件10.21%・100万超 20.42%で計算済み'},
+    {no:'⑤',label:'重複成約チェック',pass:true,detail:'重複なし'},
+    {no:'⑥',label:'成約日の妥当性',pass:true,detail:'全件成約日が当月内'},
+    {no:'⑦',label:'HR第2回報酬の保証期間確認',pass:false,detail:'AG-0055: HR-0089 の在籍確認がまだ完了していません'},
+    {no:'⑧',label:'振込先口座確認（登録済み・有効）',pass:true,detail:'GMO振込対象: 1件（AG-0042）口座登録済み'},
+  ];
+  const html = items.map(it => `
+    <div class="check-item ${it.pass?'pass':'fail'}">
+      <div class="check-icon" style="background:${it.pass?'var(--em-bg)':'var(--rd-bg)'}">${it.pass?'✅':'❌'}</div>
+      <div style="flex:1">
+        <div class="check-label">${it.no} ${it.label}</div>
+        <div class="check-detail">${it.detail}</div>
+      </div>
+      <span class="badge ${it.pass?'b-em':'b-rd'}">${it.pass?'OK':'要対応'}</span>
+    </div>`).join('');
+  document.getElementById('check-list').innerHTML = html;
+  const allPass = items.every(i => i.pass);
+  document.getElementById('check-overall-badge').textContent = allPass ? '全項目OK ✅' : '要対応あり ⚠️';
+  document.getElementById('check-overall-badge').className = 'badge ' + (allPass ? 'b-em' : 'b-rd');
+  showToast(allPass ? '✅ 全8項目チェック完了' : '⚠️ 要対応項目があります');
+}
+
+// GMO振込CSVエクスポート
+function exportCSV() {
+  const gmo = PAYOUTS.filter(p => calcPayout(p).payout >= 1000000);
+  const header = '振込先銀行コード,支店コード,口座種別,口座番号,受取人名,振込金額
+';
+  const rows = gmo.map(p => {
+    const c = calcPayout(p);
+    return `0001,001,普通,1234567,${p.name},${c.payout}`;
+  }).join('\n');
+  const blob = new Blob([header + rows], {type:'text/csv'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'gmo_furikomi_202602.csv'; a.click();
+  showToast('📥 GMO振込CSVをダウンロードしました');
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  renderPayoutTable();
+  CNAV.init('payment');
+});
+</script>
+<script src="coreto-nav-v2.js"></script>
+</body>
+</html>

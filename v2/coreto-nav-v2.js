@@ -83,6 +83,12 @@ const NAV = {
       { icon:'💰', label:'入金監視',               href:'coreto-remittance-v2.html',   key:'remit',    badge:'3', badgeColor:'amber' },
       { icon:'📋', label:'書類審査',               href:'coreto-screening-v2.html',    key:'screening',badge:'5', badgeColor:'amber' },
       { icon:'🔑', label:'IT重説管理',             href:'coreto-itsetsu-v2.html',      key:'itsetsu',  badge:'2', badgeColor:'amber' },
+      { icon:'📊', label:'案件パイプライン',         href:'coreto-pipeline-v2.html',     key:'pipeline' },
+      { icon:'🔗', label:'PTマッチング',             href:'coreto-matching-v2.html',     key:'matching', badge:'3', badgeColor:'red' },
+    ]},
+    { section:'財務・報酬', items:[
+      { icon:'💴', label:'月次報酬確定・振込',       href:'coreto-payroll-v2.html',      key:'payroll' },
+      { icon:'🧾', label:'請求書・領収書発行',       href:'coreto-hq-receipt-v2.html',   key:'receipt' },
     ]},
     { section:'スタッフ管理', items:[
       { icon:'🏢', label:'AG管理',                 href:'coreto-hub-v2.html#agents',   key:'agents' },
@@ -113,6 +119,7 @@ const NAV = {
       { icon:'🏘️', label:'担当案件',               href:'coreto-cases-v2.html',        key:'cases',    badge:'4' },
       { icon:'👥', label:'クライアント管理',       href:'coreto-crm-v2.html',          key:'crm' },
       { icon:'📝', label:'成約報告',               href:'coreto-contract-report-v2.html', key:'contract_report' },
+      { icon:'⚠️', label:'早期退職アラート',         href:'coreto-early-quit-v2.html',   key:'early_quit' },
       { icon:'🏠', label:'内見管理',               href:'coreto-showing-v2.html',      key:'showing' },
       { icon:'🔑', label:'IT重説チェック',         href:'coreto-itsetsu-v2.html',      key:'itsetsu' },
       { icon:'💰', label:'入金確認',               href:'coreto-remittance-v2.html',   key:'remit' },

@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>請求書・領収書発行 — COREBLDG</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+
+:root{
+  --navy:#0D1A2D;--navy-m:#152238;--navy-l:#1E3252;
+  --gold:#C8A951;--gold-dim:rgba(200,169,81,.15);
+  --cream:#FFFFFF;--cream2:#F8F9FA;--white:#FFFFFF;
+  --ink:#202124;--ink2:#2D3748;--muted:#5F6368;--faint:#80868B;
+  --em:#059669;--em-bg:#ECFDF5;--am:#D97706;--am-bg:#FFFBEB;
+  --rd:#DC2626;--rd-bg:#FEF2F2;--sk:#0284C7;--sk-bg:#F0F9FF;
+  --vt:#7C3AED;--vt-bg:#F5F3FF;--bd:#E8EAED;--bd2:#DADCE0;
+  --sw:240px;--r:10px;--r-sm:7px;
+  --sh:0 1px 2px rgba(60,64,67,.1),0 1px 3px rgba(60,64,67,.06);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:var(--cream)}
+.shell{display:flex;height:100vh}
+.sb{width:var(--sw);background:var(--navy);display:flex;flex-direction:column;flex-shrink:0;position:relative}
+.sb::after{content:'';position:absolute;top:0;right:0;width:1px;height:100%;background:linear-gradient(180deg,rgba(200,169,81,.25) 0%,rgba(200,169,81,.06) 50%,transparent 100%)}
+.sb-head{padding:24px 20px 18px;border-bottom:1px solid rgba(255,255,255,.06)}
+.sb-logo{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;letter-spacing:5px;color:var(--gold)}
+.sb-ver{font-size:9px;letter-spacing:2px;color:rgba(200,169,81,.3);font-family:'DM Mono',monospace;margin-top:2px}
+.sb-user{margin:14px 14px 10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:9px 11px;display:flex;align-items:center;gap:9px}
+.sb-av{width:28px;height:28px;border-radius:50%;background:var(--gold-dim);border:1px solid rgba(200,169,81,.25);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--gold);flex-shrink:0}
+.sb-uname{font-size:11px;font-weight:600;color:rgba(255,255,255,.8)}
+.sb-urole{font-size:9px;color:rgba(255,255,255,.3);font-family:'DM Mono',monospace}
+.sb-nav{flex:1;overflow-y:auto;padding:6px 10px}
+.sb-nav::-webkit-scrollbar{width:3px}
+.sb-nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:2px}
+.nav-sec-label{font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.18);padding:10px 8px 4px;font-family:'DM Mono',monospace}
+.nav-item{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:7px;cursor:pointer;transition:all .13s;text-decoration:none;position:relative;margin-bottom:1px}
+.nav-item:hover{background:rgba(255,255,255,.06)}
+.nav-item.active{background:rgba(200,169,81,.1)}
+.nav-item.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:16px;background:var(--gold);border-radius:0 2px 2px 0}
+.nav-icon{width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:13px;border-radius:6px;background:rgba(255,255,255,.04);flex-shrink:0}
+.nav-item.active .nav-icon{background:rgba(200,169,81,.12)}
+.nav-label{font-size:11px;font-weight:500;color:rgba(255,255,255,.55);flex:1}
+.nav-item.active .nav-label,.nav-item:hover .nav-label{color:var(--gold)}
+.nav-item:hover .nav-label{color:rgba(255,255,255,.82)}
+.nav-badge{font-size:9px;font-weight:700;padding:1px 6px;border-radius:10px;background:var(--rd);color:#fff;font-family:'Outfit',sans-serif}
+.nav-badge.amber{background:var(--am)}
+.sb-foot{padding:10px 14px 18px;border-top:1px solid rgba(255,255,255,.05)}
+.sb-foot-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;cursor:pointer;font-size:11px;color:rgba(255,255,255,.3);transition:.13s}
+.sb-foot-item:hover{background:rgba(255,255,255,.05);color:rgba(255,255,255,.6)}
+.content{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:58px;background:var(--white);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 24px;gap:14px;flex-shrink:0;box-shadow:var(--sh)}
+.tb-title{font-size:16px;font-weight:600;color:var(--ink);font-family:'Outfit','Noto Sans JP',sans-serif;letter-spacing:.2px}
+.tb-crumb{font-size:11px;color:var(--faint);display:flex;align-items:center;gap:5px;margin-top:1px}
+.tb-crumb a{color:var(--muted);text-decoration:none}
+.tb-crumb a:hover{color:var(--am)}
+.tb-actions{margin-left:auto;display:flex;gap:9px;align-items:center}
+.btn{padding:7px 16px;border-radius:var(--r-sm);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;font-family:'Outfit',sans-serif;border:none}
+.btn-primary{background:var(--navy);color:var(--gold)}
+.btn-primary:hover{background:var(--navy-l)}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--bd)}
+.btn-ghost:hover{background:var(--cream);color:var(--ink)}
+.btn-sm{padding:5px 12px;font-size:11px}
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;font-family:'Outfit',sans-serif;font-feature-settings:'tnum'}
+.badge-em{background:var(--em-bg);color:var(--em)}
+.badge-am{background:var(--am-bg);color:var(--am)}
+.badge-rd{background:var(--rd-bg);color:var(--rd)}
+.badge-sk{background:var(--sk-bg);color:var(--sk)}
+.badge-vt{background:var(--vt-bg);color:var(--vt)}
+.badge-gd{background:var(--gold-dim);color:var(--am)}
+.badge-nt{background:var(--cream2);color:var(--muted)}
+
+/* TABS */
+.tab-bar{padding:0 24px;background:var(--white);border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:0}
+.tab{padding:12px 18px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:.15s;white-space:nowrap;display:flex;align-items:center;gap:7px}
+.tab:hover{color:var(--ink)}
+.tab.active{color:var(--navy);border-bottom-color:var(--gold)}
+.tab-count{font-size:10px;padding:1px 6px;border-radius:10px;background:var(--cream2);font-family:'DM Mono',monospace}
+.tab.active .tab-count{background:var(--gold-dim);color:var(--am)}
+.view-toggle{margin-left:auto;display:flex;gap:4px}
+.view-btn{width:30px;height:30px;border:1px solid var(--bd);border-radius:6px;background:var(--white);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;transition:.13s}
+.view-btn.active{background:var(--navy);border-color:var(--navy)}
+.view-btn:hover:not(.active){background:var(--cream)}
+
+/* FILTER */
+.filter-bar{display:flex;align-items:center;gap:10px;padding:14px 24px;background:var(--cream);border-bottom:1px solid var(--bd);flex-wrap:wrap}
+.search-wrap{position:relative;flex:1;min-width:200px}
+.search-wrap input{width:100%;padding:8px 12px 8px 34px;background:var(--white);border:1.5px solid var(--bd);border-radius:var(--r-sm);font-size:12px;color:var(--ink);outline:none;font-family:'Outfit','Noto Sans JP',sans-serif;transition:.15s}
+.search-wrap input:focus{border-color:var(--gold)}
+.search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--faint)}
+.fsel{padding:7px 11px;background:var(--white);border:1.5px solid var(--bd);border-radius:var(--r-sm);font-size:12px;color:var(--ink);outline:none;cursor:pointer;font-family:'Outfit',sans-serif}
+
+/* LIST VIEW */
+.page{flex:1;overflow-y:auto;padding:20px 24px}
+.page::-webkit-scrollbar{width:5px}
+.page::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:3px}
+.case-list{display:flex;flex-direction:column;gap:8px}
+.case-row{background:var(--white);border:1px solid var(--bd);border-radius:var(--r);padding:14px 18px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:all .15s;box-shadow:var(--sh)}
+.case-row:hover{border-color:rgba(200,169,81,.4);transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,0,0,.08)}
+.case-type-pill{padding:4px 10px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;font-family:'DM Mono',monospace;flex-shrink:0}
+.type-rental{background:var(--sk-bg);color:var(--sk)}
+.type-sale{background:var(--em-bg);color:var(--em)}
+.type-hr{background:var(--vt-bg);color:var(--vt)}
+.type-utility{background:var(--am-bg);color:var(--am)}
+.case-id{font-size:10px;font-family:'DM Mono',monospace;color:var(--faint);margin-bottom:2px}
+.case-name{font-size:14px;font-weight:600;color:var(--ink)}
+.case-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.case-info{flex:1;min-width:0}
+.case-meta{display:flex;gap:16px;align-items:center;flex-shrink:0}
+.case-meta-item{text-align:right}
+.case-meta-label{font-size:9px;color:var(--faint);font-family:'DM Mono',monospace;letter-spacing:.5px}
+.case-meta-val{font-size:12px;font-weight:600;color:var(--ink);margin-top:1px}
+.case-arrow{font-size:16px;color:var(--faint);flex-shrink:0;transition:.15s}
+.case-row:hover .case-arrow{color:var(--am);transform:translateX(2px)}
+
+/* KANBAN */
+.kanban{display:flex;gap:14px;overflow-x:auto;padding-bottom:16px;height:100%}
+.kanban::-webkit-scrollbar{height:5px}
+.kanban::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:3px}
+.kanban-col{flex-shrink:0;width:240px;display:flex;flex-direction:column;gap:8px}
+.kanban-head{padding:10px 14px;border-radius:var(--r-sm);display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.kh-title{font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase}
+.kh-count{font-size:10px;font-family:'DM Mono',monospace;padding:2px 7px;border-radius:10px;font-weight:700}
+.kanban-card{background:var(--white);border:1px solid var(--bd);border-radius:var(--r-sm);padding:12px 13px;cursor:pointer;transition:all .15s;box-shadow:var(--sh)}
+.kanban-card:hover{border-color:rgba(200,169,81,.4);transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.08)}
+.kc-id{font-size:9px;font-family:'DM Mono',monospace;color:var(--faint);margin-bottom:4px}
+.kc-name{font-size:12px;font-weight:700;color:var(--ink);margin-bottom:3px}
+.kc-prop{font-size:11px;color:var(--muted);margin-bottom:8px}
+.kc-footer{display:flex;align-items:center;justify-content:space-between}
+.kc-ag{font-size:9px;font-family:'DM Mono',monospace;color:var(--faint)}
+.kc-flag{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:700}
+
+/* ════════════════════════════════════════════
+   数値フォント統一 — Outfit + Tabular Nums
+   (DM Monoはコード/ID系のみ維持)
+   ════════════════════════════════════════════ */
+
+/* バッジ・カウント系 */
+.nb, .nav-badge, .cnav-badge,
+.tab-count, .kh-count, .kc-count,
+.badge, .score-num {
+  font-family: 'Outfit', sans-serif !important;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+  letter-spacing: 0 !important;
+}
+
+/* KPI大数値 */
+.qs-val, .kpi-val, .kpi-value,
+.stat-val, .count-val {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum', 'lnum';
+}
+
+/* 日時・タイムスタンプ */
+.tl-time, .remit-deadline, .check-meta,
+.ic-date, .pipe-date {
+  font-family: 'Outfit', sans-serif !important;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+
+/* テーブル金額セル */
+td.num, .bc-vl, .slip-meta,
+.it-step-num, .pg-btn, .pg-info {
+  font-family: 'Outfit', sans-serif !important;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+
+/* 金額入力フィールド（Outfit で統一） */
+.amount-input {
+  font-family: 'Outfit', sans-serif !important;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ══ MOBILE RESPONSIVE ══════════════════════════════════════════ */
+.mob-ham{display:none;flex-direction:column;align-items:center;justify-content:center;width:36px;height:36px;background:transparent;border:none;cursor:pointer;border-radius:7px;transition:.13s;flex-shrink:0}
+.mob-ham:hover{background:rgba(255,255,255,.08)}
+.mob-ham span{display:block;width:18px;height:2px;background:rgba(255,255,255,.72);margin:3px 0;border-radius:1px;transition:.2s}
+.mob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:199}
+@media(max-width:768px){
+  .mob-ham{display:flex}
+  .mob-overlay.show{display:block}
+  .sb{position:fixed;left:calc(-1 * var(--sw));top:0;height:100vh;z-index:200;transition:left .25s ease;box-shadow:4px 0 24px rgba(0,0,0,.25)}
+  .sb.open{left:0}
+  .shell{overflow:hidden}
+  .content{width:100vw;min-width:0}
+  .topbar{padding:0 12px;gap:8px}
+  .tb-crumb{display:none}
+  .tb-actions{gap:6px}
+  .page,.detail-wrap{padding:12px}
+  .detail-wrap{flex-direction:column;overflow-y:auto}
+  .detail-main{overflow-y:visible;min-height:0}
+  .detail-side{width:100%!important;overflow-y:visible}
+  table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;font-size:11px}
+  .kpi-row,.qs-row{grid-template-columns:1fr 1fr!important}
+  .g2,.form-grid{grid-template-columns:1fr!important}
+  .pipeline{padding-bottom:8px}
+  .step-label{font-size:9px}
+  .tb-title{font-size:14px}
+}
+
+
+/* ── Google-style Design System ── */
+html, body { background:#FFFFFF !important; }
+.sb-logo, .brand-logo { font-family:'Cormorant Garamond',serif !important; }
+body, input, select, textarea, button { font-family:'Outfit','Noto Sans JP',sans-serif; }
+.kpi-value, .kpi-vl {
+  font-family:'Outfit','Noto Sans JP',sans-serif !important;
+  font-weight:300 !important;
+  font-variant-numeric:tabular-nums lining-nums !important;
+  letter-spacing:-1px !important;
+  color:var(--ink) !important;
+}
+.kpi-value { font-size:32px !important;font-variant-numeric:tabular-nums}
+.kpi-vl   { font-size:28px !important; }
+.stat-val {
+  font-family:'Outfit','Noto Sans JP',sans-serif !important;
+  font-weight:400 !important;
+  font-variant-numeric:tabular-nums !important;
+  color:var(--ink) !important;
+}
+.kpi-label, .kpi-sub, .stat-label { font-size:11px !important; font-weight:500 !important; color:var(--muted) !important; }
+.section-title { font-size:11px !important; font-weight:600 !important; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); }
+.section-title::before { display:none; }
+.card { background:#FFFFFF; border:1px solid var(--bd); border-radius:8px; box-shadow:var(--sh); }
+.kpi-card { background:#FFFFFF !important; border:1px solid var(--bd) !important; border-radius:8px !important; box-shadow:none !important; }
+.badge { border-radius:4px !important; font-size:11px !important; font-weight:500 !important; }
+.delta-up, .kpi-delta.up { color:var(--em) !important; }
+.delta-dn, .kpi-delta.dn { color:var(--rd) !important; }
+/* ── Google-style 数値原則 (DS v2.3) ── */
+.kpi-value, .kpi-vl, .kpi-val,
+.stat-val, .qs-val, .count-val,
+.td-amt, .bc-vl, .bc-total-vl,
+.rr-amount, .amount-val, .srv,
+.visit-reward, .lb-val,
+.mf-kpi-vl, .mf-reward {
+  font-family:'Outfit','Noto Sans JP',sans-serif !important;
+  font-weight:300 !important;
+  font-variant-numeric:tabular-nums !important;
+}
+.kpi-value { font-size:32px !important; }
+.kpi-vl    { font-size:28px !important; }
+</style>
+.inv-doc{background:#fff;border:1px solid var(--bd);border-radius:12px;max-width:800px;margin:0 auto;box-shadow:var(--sh)}
+.inv-head{padding:28px 36px;border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:flex-start}
+.inv-body{padding:28px 36px}
+.inv-table{width:100%;border-collapse:collapse;margin-bottom:20px}
+.inv-table th{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);padding:8px 12px;border-bottom:2px solid var(--bd2);text-align:left}
+.inv-table td{font-size:12px;padding:10px 12px;border-bottom:1px solid var(--bd)}
+.inv-total{background:var(--navy);color:#fff;border-radius:8px;padding:16px 20px;display:flex;justify-content:space-between;align-items:center}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.form-label{font-size:10px;font-weight:600;color:var(--muted);margin-bottom:4px}
+.form-input-inv{width:100%;padding:8px 10px;border:1px solid var(--bd);border-radius:7px;font-size:12px;font-family:'Outfit',sans-serif}
+</style>
+</head>
+<body>
+<div class="shell" id="shell" style="display:none">
+  <div class="sb" id="sb"></div>
+  <div class="content">
+    <div class="topbar">
+      <button class="mob-ham" onclick="toggleSb()"><span></span><span></span><span></span></button>
+      <div>
+        <div class="tb-title">請求書・領収書発行</div>
+        <div class="tb-crumb"><a href="coreto-hub-v2.html">COREBLDG</a> &#x203A; 請求書発行</div>
+      </div>
+      <div class="tb-act" style="margin-left:auto;display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" onclick="switchMode('receipt')">領収書</button>
+        <button class="btn btn-primary btn-sm" onclick="switchMode('invoice')">請求書</button>
+        <button class="btn btn-sm" style="background:var(--em);color:#fff;border:none" onclick="window.print()">🖨️ 印刷・PDF</button>
+      </div>
+    </div>
+    <div class="page" style="overflow-y:auto">
+
+      <!-- 入力フォーム -->
+      <div class="card" style="max-width:600px">
+        <div class="card-head"><div class="card-title">📝 発行情報入力</div></div>
+        <div class="card-body">
+          <div class="form-row">
+            <div><div class="form-label">書類種別</div>
+              <select class="form-input-inv" id="doc-type" onchange="generateDoc()">
+                <option value="invoice">請求書</option>
+                <option value="receipt">領収書</option>
+              </select>
+            </div>
+            <div><div class="form-label">発行日</div><input type="date" class="form-input-inv" id="doc-date" value="2026-03-10" oninput="generateDoc()"></div>
+          </div>
+          <div class="form-row">
+            <div><div class="form-label">宛先（クライアント名）</div><input class="form-input-inv" id="doc-to" placeholder="田中 優子 様" value="田中 優子 様" oninput="generateDoc()"></div>
+            <div><div class="form-label">案件ID</div><input class="form-input-inv" id="doc-case" placeholder="RENT-0194" value="RENT-0194" oninput="generateDoc()"></div>
+          </div>
+          <div id="items-area">
+            <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:6px">明細行</div>
+            <div id="item-rows">
+              <div class="form-row" style="margin-bottom:8px">
+                <input class="form-input-inv" placeholder="摘要（例：仲介手数料）" id="item-desc-0" value="仲介手数料" oninput="generateDoc()">
+                <input type="number" class="form-input-inv" placeholder="金額" id="item-amt-0" value="198000" oninput="generateDoc()">
+              </div>
+            </div>
+            <button class="btn btn-ghost btn-sm" onclick="addItem()">＋ 行追加</button>
+          </div>
+          <div style="margin-top:12px">
+            <div class="form-label">備考</div>
+            <textarea class="form-input-inv" id="doc-note" rows="2" placeholder="支払期限: 2026年4月10日" oninput="generateDoc()">支払期限: 2026年4月10日
+振込先: 株式会社CORETO / GMOあおぞらネット銀行</textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- プレビュー -->
+      <div class="inv-doc" id="invoice-preview">
+        <!-- generateDoc()で描画 -->
+      </div>
+    </div>
+  </div>
+</div>
+<div class="mob-overlay" onclick="toggleSb()"></div>
+<div id="ip-toast" class="toast"></div>
+<script>
+function toggleSb(){ document.querySelector('.sb').classList.toggle('open'); document.querySelector('.mob-overlay').classList.toggle('show'); }
+function showToast(msg,type){ const t=document.getElementById('ip-toast'); t.textContent=msg; t.className='toast '+(type||''); t.style.opacity='1'; setTimeout(()=>t.style.opacity='0',3200); }
+
+let itemCount = 1;
+
+function addItem() {
+  const area = document.getElementById('item-rows');
+  const row = document.createElement('div');
+  row.className = 'form-row';
+  row.style.marginBottom = '8px';
+  row.innerHTML = `<input class="form-input-inv" placeholder="摘要" id="item-desc-${itemCount}" oninput="generateDoc()"><input type="number" class="form-input-inv" placeholder="金額" id="item-amt-${itemCount}" oninput="generateDoc()">`;
+  area.appendChild(row);
+  itemCount++;
+  generateDoc();
+}
+
+function getItems() {
+  const items = [];
+  for (let i = 0; i < itemCount; i++) {
+    const desc = document.getElementById('item-desc-'+i)?.value || '';
+    const amt = parseInt(document.getElementById('item-amt-'+i)?.value) || 0;
+    if (desc || amt) items.push({desc, amt});
+  }
+  return items;
+}
+
+function generateDoc() {
+  const type = document.getElementById('doc-type').value;
+  const date = document.getElementById('doc-date').value;
+  const to = document.getElementById('doc-to').value || '—';
+  const caseId = document.getElementById('doc-case').value || '—';
+  const note = document.getElementById('doc-note').value || '';
+  const items = getItems();
+  const subtotal = items.reduce((s, i) => s + i.amt, 0);
+  const tax = Math.round(subtotal * 0.1);
+  const total = subtotal + tax;
+  const docNo = type === 'invoice' ? `INV-${Date.now().toString().slice(-6)}` : `REC-${Date.now().toString().slice(-6)}`;
+  const title = type === 'invoice' ? '請　求　書' : '領　収　書';
+
+  const itemRows = items.map(i => `
+    <tr><td>${i.desc}</td><td style="text-align:right;font-variant-numeric:tabular-nums">¥${i.amt.toLocaleString()}</td></tr>`).join('');
+
+  document.getElementById('invoice-preview').innerHTML = `
+    <div class="inv-head">
+      <div>
+        <div style="font-size:9px;letter-spacing:3px;color:var(--muted);margin-bottom:6px">COREBLDG OFFICIAL</div>
+        <div style="font-size:26px;font-weight:300;letter-spacing:4px;color:var(--ink)">${title}</div>
+        <div style="font-size:11px;color:var(--faint);margin-top:4px">No. <span style="font-family:'DM Mono',monospace">${docNo}</span></div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;letter-spacing:4px;color:var(--gold)">CORETO</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">株式会社CORETO</div>
+        <div style="font-size:10px;color:var(--faint)">発行日: ${date}</div>
+      </div>
+    </div>
+    <div class="inv-body">
+      <div style="font-size:16px;font-weight:600;color:var(--ink);margin-bottom:4px">${to}</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:20px">案件番号: <span style="font-family:'DM Mono',monospace">${caseId}</span></div>
+      <table class="inv-table">
+        <thead><tr><th>摘要</th><th style="text-align:right">金額</th></tr></thead>
+        <tbody>
+          ${itemRows}
+          <tr style="background:var(--cream2)"><td style="font-size:11px;color:var(--muted)">小計</td><td style="text-align:right;font-variant-numeric:tabular-nums">¥${subtotal.toLocaleString()}</td></tr>
+          <tr style="background:var(--cream2)"><td style="font-size:11px;color:var(--muted)">消費税（10%）</td><td style="text-align:right;font-variant-numeric:tabular-nums">¥${tax.toLocaleString()}</td></tr>
+        </tbody>
+      </table>
+      <div class="inv-total">
+        <div style="font-size:12px;letter-spacing:.5px">合計金額（税込）</div>
+        <div style="font-size:24px;font-weight:300;font-variant-numeric:tabular-nums">¥${total.toLocaleString()}</div>
+      </div>
+      ${note ? `<div style="margin-top:16px;font-size:11px;color:var(--muted);white-space:pre-line;line-height:2">${note}</div>` : ''}
+    </div>`;
+}
+
+function switchMode(mode) {
+  document.getElementById('doc-type').value = mode;
+  generateDoc();
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  generateDoc();
+  CNAV.init('hq-admin');
+});
+</script>
+<script src="coreto-nav-v2.js"></script>
+</body>
+</html>

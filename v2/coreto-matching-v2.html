@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PT→AGマッチング — COREBLDG</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+
+:root{
+  --navy:#0D1A2D;--navy-m:#152238;--navy-l:#1E3252;
+  --gold:#C8A951;--gold-dim:rgba(200,169,81,.15);
+  --cream:#FFFFFF;--cream2:#F8F9FA;--white:#FFFFFF;
+  --ink:#202124;--ink2:#2D3748;--muted:#5F6368;--faint:#80868B;
+  --em:#059669;--em-bg:#ECFDF5;--am:#D97706;--am-bg:#FFFBEB;
+  --rd:#DC2626;--rd-bg:#FEF2F2;--sk:#0284C7;--sk-bg:#F0F9FF;
+  --vt:#7C3AED;--vt-bg:#F5F3FF;--bd:#E8EAED;--bd2:#DADCE0;
+  --sw:240px;--r:10px;--r-sm:7px;
+  --sh:0 1px 2px rgba(60,64,67,.1),0 1px 3px rgba(60,64,67,.06);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:var(--cream)}
+.shell{display:flex;height:100vh}
+.sb{width:var(--sw);background:var(--navy);display:flex;flex-direction:column;flex-shrink:0;position:relative}
+.sb::after{content:'';position:absolute;top:0;right:0;width:1px;height:100%;background:linear-gradient(180deg,rgba(200,169,81,.25) 0%,rgba(200,169,81,.06) 50%,transparent 100%)}
+.sb-head{padding:24px 20px 18px;border-bottom:1px solid rgba(255,255,255,.06)}
+.sb-logo{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;letter-spacing:5px;color:var(--gold)}
+.sb-ver{font-size:9px;letter-spacing:2px;color:rgba(200,169,81,.3);font-family:'DM Mono',monospace;margin-top:2px}
+.sb-user{margin:14px 14px 10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:9px 11px;display:flex;align-items:center;gap:9px}
+.sb-av{width:28px;height:28px;border-radius:50%;background:var(--gold-dim);border:1px solid rgba(200,169,81,.25);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--gold);flex-shrink:0}
+.sb-uname{font-size:11px;font-weight:600;color:rgba(255,255,255,.8)}
+.sb-urole{font-size:9px;color:rgba(255,255,255,.3);font-family:'DM Mono',monospace}
+.sb-nav{flex:1;overflow-y:auto;padding:6px 10px}
+.sb-nav::-webkit-scrollbar{width:3px}
+.sb-nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:2px}
+.nav-sec-label{font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.18);padding:10px 8px 4px;font-family:'DM Mono',monospace}
+.nav-item{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:7px;cursor:pointer;transition:all .13s;text-decoration:none;position:relative;margin-bottom:1px}
+.nav-item:hover{background:rgba(255,255,255,.06)}
+.nav-item.active{background:rgba(200,169,81,.1)}
+.nav-item.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:16px;background:var(--gold);border-radius:0 2px 2px 0}
+.nav-icon{width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:13px;border-radius:6px;background:rgba(255,255,255,.04);flex-shrink:0}
+.nav-item.active .nav-icon{background:rgba(200,169,81,.12)}
+.nav-label{font-size:11px;font-weight:500;color:rgba(255,255,255,.55);flex:1}
+.nav-item.active .nav-label,.nav-item:hover .nav-label{color:var(--gold)}
+.nav-item:hover .nav-label{color:rgba(255,255,255,.82)}
+.nav-badge{font-size:9px;font-weight:700;padding:1px 6px;border-radius:10px;background:var(--rd);color:#fff;font-family:'Outfit',sans-serif}
+.nav-badge.amber{background:var(--am)}
+.sb-foot{padding:10px 14px 18px;border-top:1px solid rgba(255,255,255,.05)}
+.sb-foot-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;cursor:pointer;font-size:11px;color:rgba(255,255,255,.3);transition:.13s}
+.sb-foot-item:hover{background:rgba(255,255,255,.05);color:rgba(255,255,255,.6)}
+.content{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:58px;background:var(--white);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 24px;gap:14px;flex-shrink:0;box-shadow:var(--sh)}
+.tb-title{font-size:16px;font-weight:600;color:var(--ink);font-family:'Outfit','Noto Sans JP',sans-serif;letter-spacing:.2px}
+.tb-crumb{font-size:11px;color:var(--faint);display:flex;align-items:center;gap:5px;margin-top:1px}
+.tb-crumb a{color:var(--muted);text-decoration:none}
+.tb-crumb a:hover{color:var(--am)}
+.tb-actions{margin-left:auto;display:flex;gap:9px;align-items:center}
+.btn{padding:7px 16px;border-radius:var(--r-sm);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;font-family:'Outfit',sans-serif;border:none}
+.btn-primary{background:var(--navy);color:var(--gold)}
+.btn-primary:hover{background:var(--navy-l)}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--bd)}
+.btn-ghost:hover{background:var(--cream);color:var(--ink)}
+.btn-sm{padding:5px 12px;font-size:11px}
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;font-family:'Outfit',sans-serif;font-feature-settings:'tnum'}
+.badge-em{background:var(--em-bg);color:var(--em)}
+.badge-am{background:var(--am-bg);color:var(--am)}
+.badge-rd{background:var(--rd-bg);color:var(--rd)}
+.badge-sk{background:var(--sk-bg);color:var(--sk)}
+.badge-vt{background:var(--vt-bg);color:var(--vt)}
+.badge-gd{background:var(--gold-dim);color:var(--am)}
+.badge-nt{background:var(--cream2);color:var(--muted)}
+
+/* TABS */
+.tab-bar{padding:0 24px;background:var(--white);border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:0}
+.tab{padding:12px 18px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:.15s;white-space:nowrap;display:flex;align-items:center;gap:7px}
+.tab:hover{color:var(--ink)}
+.tab.active{color:var(--navy);border-bottom-color:var(--gold)}
+.tab-count{font-size:10px;padding:1px 6px;border-radius:10px;background:var(--cream2);font-family:'DM Mono',monospace}
+.tab.active .tab-count{background:var(--gold-dim);color:var(--am)}
+.view-toggle{margin-left:auto;display:flex;gap:4px}
+.view-btn{width:30px;height:30px;border:1px solid var(--bd);border-radius:6px;background:var(--white);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;transition:.13s}
+.view-btn.active{background:var(--navy);border-color:var(--navy)}
+.view-btn:hover:not(.active){background:var(--cream)}
+
+/* FILTER */
+.filter-bar{display:flex;align-items:center;gap:10px;padding:14px 24px;background:var(--cream);border-bottom:1px solid var(--bd);flex-wrap:wrap}
+.search-wrap{position:relative;flex:1;min-width:200px}
+.search-wrap input{width:100%;padding:8px 12px 8px 34px;background:var(--white);border:1.5px solid var(--bd);border-radius:var(--r-sm);font-size:12px;color:var(--ink);outline:none;font-family:'Outfit','Noto Sans JP',sans-serif;transition:.15s}
+.search-wrap input:focus{border-color:var(--gold)}
+.search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--faint)}
+.fsel{padding:7px 11px;background:var(--white);border:1.5px solid var(--bd);border-radius:var(--r-sm);font-size:12px;color:var(--ink);outline:none;cursor:pointer;font-family:'Outfit',sans-serif}
+
+/* LIST VIEW */
+.page{flex:1;overflow-y:auto;padding:20px 24px}
+.page::-webkit-scrollbar{width:5px}
+.page::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:3px}
+.case-list{display:flex;flex-direction:column;gap:8px}
+.case-row{background:var(--white);border:1px solid var(--bd);border-radius:var(--r);padding:14px 18px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:all .15s;box-shadow:var(--sh)}
+.case-row:hover{border-color:rgba(200,169,81,.4);transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,0,0,.08)}
+.case-type-pill{padding:4px 10px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;font-family:'DM Mono',monospace;flex-shrink:0}
+.type-rental{background:var(--sk-bg);color:var(--sk)}
+.type-sale{background:var(--em-bg);color:var(--em)}
+.type-hr{background:var(--vt-bg);color:var(--vt)}
+.type-utility{background:var(--am-bg);color:var(--am)}
+.case-id{font-size:10px;font-family:'DM Mono',monospace;color:var(--faint);margin-bottom:2px}
+.case-name{font-size:14px;font-weight:600;color:var(--ink)}
+.case-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.case-info{flex:1;min-width:0}
+.case-meta{display:flex;gap:16px;align-items:center;flex-shrink:0}
+.case-meta-item{text-align:right}
+.case-meta-label{font-size:9px;color:var(--faint);font-family:'DM Mono',monospace;letter-spacing:.5px}
+.case-meta-val{font-size:12px;font-weight:600;color:var(--ink);margin-top:1px}
+.case-arrow{font-size:16px;color:var(--faint);flex-shrink:0;transition:.15s}
+.case-row:hover .case-arrow{color:var(--am);transform:translateX(2px)}
+
+/* KANBAN */
+.kanban{display:flex;gap:14px;overflow-x:auto;padding-bottom:16px;height:100%}
+.kanban::-webkit-scrollbar{height:5px}
+.kanban::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:3px}
+.kanban-col{flex-shrink:0;width:240px;display:flex;flex-direction:column;gap:8px}
+.kanban-head{padding:10px 14px;border-radius:var(--r-sm);display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.kh-title{font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase}
+.kh-count{font-size:10px;font-family:'DM Mono',monospace;padding:2px 7px;border-radius:10px;font-weight:700}
+.kanban-card{background:var(--white);border:1px solid var(--bd);border-radius:var(--r-sm);padding:12px 13px;cursor:pointer;transition:all .15s;box-shadow:var(--sh)}
+.kanban-card:hover{border-color:rgba(200,169,81,.4);transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.08)}
+.kc-id{font-size:9px;font-family:'DM Mono',monospace;color:var(--faint);margin-bottom:4px}
+.kc-name{font-size:12px;font-weight:700;color:var(--ink);margin-bottom:3px}
+.kc-prop{font-size:11px;color:var(--muted);margin-bottom:8px}
+.kc-footer{display:flex;align-items:center;justify-content:space-between}
+.kc-ag{font-size:9px;font-family:'DM Mono',monospace;color:var(--faint)}
+.kc-flag{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:700}
+
+/* ════════════════════════════════════════════
+   数値フォント統一 — Outfit + Tabular Nums
+   (DM Monoはコード/ID系のみ維持)
+   ════════════════════════════════════════════ */
+
+/* バッジ・カウント系 */
+.nb, .nav-badge, .cnav-badge,
+.tab-count, .kh-count, .kc-count,
+.badge, .score-num {
+  font-family: 'Outfit', sans-serif !important;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+  letter-spacing: 0 !important;
+}
+
+/* KPI大数値 */
+.qs-val, .kpi-val, .kpi-value,
+.stat-val, .count-val {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum', 'lnum';
+}
+
+/* 日時・タイムスタンプ */
+.tl-time, .remit-deadline, .check-meta,
+.ic-date, .pipe-date {
+  font-family: 'Outfit', sans-serif !important;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+
+/* テーブル金額セル */
+td.num, .bc-vl, .slip-meta,
+.it-step-num, .pg-btn, .pg-info {
+  font-family: 'Outfit', sans-serif !important;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+
+/* 金額入力フィールド（Outfit で統一） */
+.amount-input {
+  font-family: 'Outfit', sans-serif !important;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ══ MOBILE RESPONSIVE ══════════════════════════════════════════ */
+.mob-ham{display:none;flex-direction:column;align-items:center;justify-content:center;width:36px;height:36px;background:transparent;border:none;cursor:pointer;border-radius:7px;transition:.13s;flex-shrink:0}
+.mob-ham:hover{background:rgba(255,255,255,.08)}
+.mob-ham span{display:block;width:18px;height:2px;background:rgba(255,255,255,.72);margin:3px 0;border-radius:1px;transition:.2s}
+.mob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:199}
+@media(max-width:768px){
+  .mob-ham{display:flex}
+  .mob-overlay.show{display:block}
+  .sb{position:fixed;left:calc(-1 * var(--sw));top:0;height:100vh;z-index:200;transition:left .25s ease;box-shadow:4px 0 24px rgba(0,0,0,.25)}
+  .sb.open{left:0}
+  .shell{overflow:hidden}
+  .content{width:100vw;min-width:0}
+  .topbar{padding:0 12px;gap:8px}
+  .tb-crumb{display:none}
+  .tb-actions{gap:6px}
+  .page,.detail-wrap{padding:12px}
+  .detail-wrap{flex-direction:column;overflow-y:auto}
+  .detail-main{overflow-y:visible;min-height:0}
+  .detail-side{width:100%!important;overflow-y:visible}
+  table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;font-size:11px}
+  .kpi-row,.qs-row{grid-template-columns:1fr 1fr!important}
+  .g2,.form-grid{grid-template-columns:1fr!important}
+  .pipeline{padding-bottom:8px}
+  .step-label{font-size:9px}
+  .tb-title{font-size:14px}
+}
+
+
+/* ── Google-style Design System ── */
+html, body { background:#FFFFFF !important; }
+.sb-logo, .brand-logo { font-family:'Cormorant Garamond',serif !important; }
+body, input, select, textarea, button { font-family:'Outfit','Noto Sans JP',sans-serif; }
+.kpi-value, .kpi-vl {
+  font-family:'Outfit','Noto Sans JP',sans-serif !important;
+  font-weight:300 !important;
+  font-variant-numeric:tabular-nums lining-nums !important;
+  letter-spacing:-1px !important;
+  color:var(--ink) !important;
+}
+.kpi-value { font-size:32px !important;font-variant-numeric:tabular-nums}
+.kpi-vl   { font-size:28px !important; }
+.stat-val {
+  font-family:'Outfit','Noto Sans JP',sans-serif !important;
+  font-weight:400 !important;
+  font-variant-numeric:tabular-nums !important;
+  color:var(--ink) !important;
+}
+.kpi-label, .kpi-sub, .stat-label { font-size:11px !important; font-weight:500 !important; color:var(--muted) !important; }
+.section-title { font-size:11px !important; font-weight:600 !important; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); }
+.section-title::before { display:none; }
+.card { background:#FFFFFF; border:1px solid var(--bd); border-radius:8px; box-shadow:var(--sh); }
+.kpi-card { background:#FFFFFF !important; border:1px solid var(--bd) !important; border-radius:8px !important; box-shadow:none !important; }
+.badge { border-radius:4px !important; font-size:11px !important; font-weight:500 !important; }
+.delta-up, .kpi-delta.up { color:var(--em) !important; }
+.delta-dn, .kpi-delta.dn { color:var(--rd) !important; }
+/* ── Google-style 数値原則 (DS v2.3) ── */
+.kpi-value, .kpi-vl, .kpi-val,
+.stat-val, .qs-val, .count-val,
+.td-amt, .bc-vl, .bc-total-vl,
+.rr-amount, .amount-val, .srv,
+.visit-reward, .lb-val,
+.mf-kpi-vl, .mf-reward {
+  font-family:'Outfit','Noto Sans JP',sans-serif !important;
+  font-weight:300 !important;
+  font-variant-numeric:tabular-nums !important;
+}
+.kpi-value { font-size:32px !important; }
+.kpi-vl    { font-size:28px !important; }
+</style>
+.match-layout{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:800px){.match-layout{grid-template-columns:1fr}}
+.match-card{background:#fff;border:1px solid var(--bd);border-radius:10px;padding:16px;cursor:pointer;transition:.13s;box-shadow:var(--sh)}
+.match-card:hover{border-color:rgba(200,169,81,.4);transform:translateY(-1px)}
+.match-card.selected{border-color:var(--gold);box-shadow:0 0 0 3px rgba(200,169,81,.12)}
+.mc-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px}
+.mc-id{font-family:'DM Mono',monospace;font-size:10px;color:var(--faint)}
+.mc-type{padding:3px 9px;border-radius:20px;font-size:9px;font-weight:700;font-family:'DM Mono',monospace}
+.mc-title{font-size:14px;font-weight:600;color:var(--ink);margin-bottom:3px}
+.mc-sub{font-size:11px;color:var(--muted)}
+.mc-pt{display:flex;align-items:center;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid var(--bd)}
+.mc-pt-av{width:24px;height:24px;border-radius:50%;background:var(--am-bg);border:1px solid rgba(217,119,6,.2);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--am)}
+.mc-method{margin-top:10px}
+.method-tag{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:600}
+.method-board{background:var(--sk-bg);color:var(--sk)}
+.method-direct{background:var(--vt-bg);color:var(--vt)}
+.ag-card{background:var(--cream2);border:1px solid var(--bd);border-radius:10px;padding:14px;cursor:pointer;transition:.13s;margin-bottom:8px}
+.ag-card:hover{border-color:rgba(200,169,81,.4);background:rgba(200,169,81,.04)}
+.ag-card.matched{border-color:var(--em);background:var(--em-bg)}
+.ag-name{font-size:13px;font-weight:600;color:var(--ink)}
+.ag-meta{font-size:10px;color:var(--muted);margin-top:2px}
+.ag-rank-bar{display:flex;gap:4px;margin-top:8px;flex-wrap:wrap}
+.match-panel{background:#fff;border:1px solid var(--bd);border-radius:12px;overflow:hidden;box-shadow:var(--sh)}
+.mp-head{background:var(--navy);color:#fff;padding:18px 22px}
+.mp-body{padding:20px}
+</style>
+</head>
+<body>
+<div class="shell" id="shell" style="display:none">
+  <div class="sb" id="sb"></div>
+  <div class="content">
+    <div class="topbar">
+      <button class="mob-ham" onclick="toggleSb()"><span></span><span></span><span></span></button>
+      <div>
+        <div class="tb-title">PT→AG マッチング管理</div>
+        <div class="tb-crumb"><a href="coreto-hub-v2.html">COREBLDG</a> &#x203A; PTマッチング</div>
+      </div>
+      <div class="tb-act" style="margin-left:auto;display:flex;gap:8px;align-items:center">
+        <span class="badge b-rd" id="pending-count-badge">未マッチ 3件</span>
+      </div>
+    </div>
+    <div class="page" style="overflow-y:auto">
+
+      <!-- タブ -->
+      <div style="display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--bd);padding-bottom:0">
+        <div class="ptype-tab active" id="tab-unmatched" onclick="switchTab('unmatched')" style="padding:8px 18px;border-radius:8px 8px 0 0;font-size:12px;font-weight:600;cursor:pointer;color:var(--ink);border:1px solid var(--bd);border-bottom:1px solid #fff;margin-bottom:-1px">🔔 未マッチ（3）</div>
+        <div class="ptype-tab" id="tab-matched" onclick="switchTab('matched')" style="padding:8px 18px;border-radius:8px 8px 0 0;font-size:12px;font-weight:600;cursor:pointer;color:var(--muted)">✅ マッチ済み（12）</div>
+        <div class="ptype-tab" id="tab-board" onclick="switchTab('board')" style="padding:8px 18px;border-radius:8px 8px 0 0;font-size:12px;font-weight:600;cursor:pointer;color:var(--muted)">📋 案件ボード</div>
+      </div>
+
+      <div class="match-layout">
+        <!-- 左: 案件リスト -->
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px" id="list-label">未マッチング案件</div>
+          <div id="case-list"></div>
+        </div>
+
+        <!-- 右: マッチングパネル -->
+        <div id="match-panel">
+          <div style="background:var(--cream2);border:1px dashed var(--bd2);border-radius:12px;padding:40px;text-align:center;color:var(--faint)">
+            <div style="font-size:28px;margin-bottom:10px">🔗</div>
+            <div style="font-size:13px">左の案件を選択してAGにアサインします</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+<div class="mob-overlay" onclick="toggleSb()"></div>
+<div id="ip-toast" class="toast"></div>
+
+<script>
+function toggleSb(){ document.querySelector('.sb').classList.toggle('open'); document.querySelector('.mob-overlay').classList.toggle('show'); }
+function showToast(msg,type){ const t=document.getElementById('ip-toast'); t.textContent=msg; t.className='toast '+(type||''); t.style.opacity='1'; setTimeout(()=>t.style.opacity='0',3200); }
+
+const UNMATCHED = [
+  {id:'PT-MTH-094',ptId:'PT-30007',ptName:'佐藤 美咲',type:'rental',title:'渋谷区代々木 1LDK',sub:'¥155,000/月 / 3月末入居希望',fee:155000,method:'board',daysAgo:1},
+  {id:'PT-MTH-093',ptId:'PT-30015',ptName:'林 浩二',type:'hr',title:'IT企業営業職',sub:'年収400〜500万 / 都内勤務 / 30代前半',fee:540000,method:'board',daysAgo:2},
+  {id:'PT-MTH-092',ptId:'PT-30022',ptName:'田村 明子',type:'rental',title:'目黒区碑文谷 2LDK',sub:'¥210,000/月 / ペット可',fee:210000,method:'direct',targetAg:'AG-0042',daysAgo:0},
+];
+
+const AGENTS = [
+  {id:'AG-0042',name:'中村 陽子',rank:'Platinum',type:'RE',area:'都内全域',successRate:94,activeCases:6},
+  {id:'AG-0038',name:'田中 誠一',rank:'Gold',type:'RE',area:'渋谷・目黒・港',successRate:88,activeCases:4},
+  {id:'AG-0021',name:'鈴木 健太',rank:'Silver',type:'RE',area:'新宿・渋谷・中野',successRate:81,activeCases:3},
+  {id:'HR-0012',name:'吉田 さくら',rank:'Gold',type:'HR',area:'都内IT・営業職',successRate:79,activeCases:5},
+  {id:'HR-0008',name:'松本 達也',rank:'Silver',type:'HR',area:'全国・エンジニア職',successRate:72,activeCases:2},
+];
+
+let selectedCase = null;
+let currentTab = 'unmatched';
+
+function switchTab(tab) {
+  currentTab = tab;
+  ['unmatched','matched','board'].forEach(t => {
+    document.getElementById('tab-'+t).style.color = t===tab ? 'var(--ink)' : 'var(--muted)';
+  });
+  renderList();
+  document.getElementById('match-panel').innerHTML = `<div style="background:var(--cream2);border:1px dashed var(--bd2);border-radius:12px;padding:40px;text-align:center;color:var(--faint)"><div style="font-size:28px;margin-bottom:10px">🔗</div><div style="font-size:13px">左の案件を選択してAGにアサインします</div></div>`;
+}
+
+function renderList() {
+  const label = currentTab==='unmatched' ? '未マッチング案件' : currentTab==='matched' ? 'マッチング済み案件' : '案件ボード（全公開中）';
+  document.getElementById('list-label').textContent = label;
+  if (currentTab === 'unmatched') {
+    document.getElementById('case-list').innerHTML = UNMATCHED.map(c => `
+      <div class="match-card ${selectedCase?.id===c.id?'selected':''}" onclick="selectCase('${c.id}')">
+        <div class="mc-head">
+          <div><div class="mc-id">${c.id}</div><div class="mc-type type-${c.type}" style="display:inline-block;margin-top:3px">${c.type==='rental'?'賃貸':'人材'}</div></div>
+          <span class="badge b-rd">未マッチ ${c.daysAgo}日</span>
+        </div>
+        <div class="mc-title">${c.title}</div>
+        <div class="mc-sub">${c.sub}</div>
+        <div class="mc-pt">
+          <div class="mc-pt-av">${c.ptName.charAt(0)}</div>
+          <div style="font-size:11px;color:var(--muted)"><span style="font-family:'DM Mono',monospace">${c.ptId}</span> ${c.ptName}</div>
+        </div>
+        <div class="mc-method">
+          ${c.method==='board'
+            ? '<span class="method-tag method-board">📋 ボード掲載（先着）</span>'
+            : `<span class="method-tag method-direct">🎯 指名: ${c.targetAg}</span>`}
+        </div>
+      </div>`).join('');
+  } else if (currentTab === 'board') {
+    document.getElementById('case-list').innerHTML = UNMATCHED.map(c => `
+      <div class="match-card" onclick="selectCase('${c.id}')">
+        <div class="mc-head">
+          <div class="mc-type type-${c.type}" style="display:inline-block">${c.type==='rental'?'賃貸':'人材'}</div>
+          <span style="font-size:11px;color:var(--muted)">仲介料 ¥${c.fee.toLocaleString()}</span>
+        </div>
+        <div class="mc-title">${c.title}</div>
+        <div class="mc-sub">${c.sub}</div>
+        <div style="font-size:10px;color:var(--faint);margin-top:8px">※クライアント情報は担当AG決定後に開示</div>
+        <button class="btn btn-primary btn-sm" style="margin-top:10px" onclick="event.stopPropagation();assignSelf('${c.id}')">対応する（先着）</button>
+      </div>`).join('');
+  } else {
+    document.getElementById('case-list').innerHTML = '<div style="text-align:center;padding:32px;color:var(--faint)">マッチング済み案件はcoreto-cases-v2.html で確認できます</div>';
+  }
+}
+
+function selectCase(caseId) {
+  selectedCase = UNMATCHED.find(c => c.id === caseId);
+  renderList();
+  renderMatchPanel(selectedCase);
+}
+
+function renderMatchPanel(c) {
+  const compatAgs = AGENTS.filter(a =>
+    (c.type==='rental' && (a.type==='RE' || a.type==='RE/HR')) ||
+    (c.type==='hr' && (a.type==='HR' || a.type==='RE/HR'))
+  );
+  const isDirect = c.method === 'direct';
+  const targetAg = isDirect ? AGENTS.find(a => a.id === c.targetAg) : null;
+  const rankColor = {Platinum:'b-vt',Gold:'b-em',Silver:'b-sk',Bronze:'b-nt'};
+
+  const agList = compatAgs.map(a => `
+    <div class="ag-card ${isDirect && a.id===c.targetAg ? 'matched' : ''}" onclick="matchCase('${c.id}','${a.id}','${a.name}')">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--faint)">${a.id}</div>
+        <span class="badge ${rankColor[a.rank]||'b-nt'}" style="font-size:9px">${a.rank}</span>
+        ${isDirect && a.id===c.targetAg ? '<span class="badge b-em" style="font-size:9px">🎯 指名先</span>' : ''}
+      </div>
+      <div class="ag-name">${a.name}</div>
+      <div class="ag-meta">エリア: ${a.area}</div>
+      <div class="ag-rank-bar">
+        <span style="font-size:10px;color:var(--muted)">成約率 <strong style="color:var(--em)">${a.successRate}%</strong></span>
+        <span style="font-size:10px;color:var(--muted)">稼働案件 <strong>${a.activeCases}件</strong></span>
+      </div>
+    </div>`).join('');
+
+  document.getElementById('match-panel').innerHTML = `
+    <div class="match-panel">
+      <div class="mp-head">
+        <div style="font-size:9px;color:rgba(200,169,81,.6);margin-bottom:4px">マッチング案件</div>
+        <div style="font-size:15px;font-weight:300;color:#fff">${c.title}</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:3px">${c.sub}</div>
+        <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+          <span class="badge" style="background:rgba(200,169,81,.15);color:var(--gold)">PT: ${c.ptId} ${c.ptName}</span>
+          <span class="badge b-sk">仲介料 ¥${c.fee.toLocaleString()}</span>
+        </div>
+      </div>
+      <div class="mp-body">
+        ${isDirect ? `<div class="al al-info" style="margin-bottom:14px">🎯 指名マッチング案件です。指名先AG（${c.targetAg}）が承認待ちです。</div>` : '<div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:12px">対応可能なAG一覧（先着マッチング）</div>'}
+        ${agList}
+        <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--bd)">
+          <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:6px">LINE WORKSトークルーム作成メモ</div>
+          <div style="background:var(--cream2);border-radius:7px;padding:10px;font-size:10px;color:var(--muted);line-height:1.8">
+            マッチング確定後、LINE WORKSで<br>
+            AG（${c.type==='rental'?'不動産':'人材'}担当）+ PT（${c.ptName}）+ HQの<br>
+            3者トークルームを作成してください。<br>
+            ルーム名: 【案件】${c.title.slice(0,10)}_${c.id}
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function matchCase(caseId, agId, agName) {
+  showToast(`✅ ${agName} (${agId}) にアサインしました。LINE WORKSトークルームを作成してください。`);
+  UNMATCHED.splice(UNMATCHED.findIndex(c=>c.id===caseId), 1);
+  document.getElementById('pending-count-badge').textContent = `未マッチ ${UNMATCHED.length}件`;
+  selectedCase = null;
+  renderList();
+  document.getElementById('match-panel').innerHTML = `<div style="background:var(--em-bg);border:1px solid rgba(5,150,105,.2);border-radius:12px;padding:32px;text-align:center"><div style="font-size:24px;margin-bottom:8px">✅</div><div style="font-size:13px;font-weight:700;color:var(--em)">マッチング完了</div><div style="font-size:11px;color:var(--muted);margin-top:6px">${agName} にアサインしました</div></div>`;
+}
+
+function assignSelf(caseId) { showToast('✅ 案件を取得しました。クライアント情報が開示されました。'); }
+
+window.addEventListener('DOMContentLoaded', () => {
+  renderList();
+  CNAV.init('cases');
+});
+</script>
+<script src="coreto-nav-v2.js"></script>
+</body>
+</html>

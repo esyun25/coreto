@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>案件パイプライン — COREBLDG</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+
+:root{
+  --navy:#0D1A2D;--navy-m:#152238;--navy-l:#1E3252;
+  --gold:#C8A951;--gold-dim:rgba(200,169,81,.15);
+  --cream:#FFFFFF;--cream2:#F8F9FA;--white:#FFFFFF;
+  --ink:#202124;--ink2:#2D3748;--muted:#5F6368;--faint:#80868B;
+  --em:#059669;--em-bg:#ECFDF5;--am:#D97706;--am-bg:#FFFBEB;
+  --rd:#DC2626;--rd-bg:#FEF2F2;--sk:#0284C7;--sk-bg:#F0F9FF;
+  --vt:#7C3AED;--vt-bg:#F5F3FF;--bd:#E8EAED;--bd2:#DADCE0;
+  --sw:240px;--r:10px;--r-sm:7px;
+  --sh:0 1px 2px rgba(60,64,67,.1),0 1px 3px rgba(60,64,67,.06);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:var(--cream)}
+.shell{display:flex;height:100vh}
+.sb{width:var(--sw);background:var(--navy);display:flex;flex-direction:column;flex-shrink:0;position:relative}
+.sb::after{content:'';position:absolute;top:0;right:0;width:1px;height:100%;background:linear-gradient(180deg,rgba(200,169,81,.25) 0%,rgba(200,169,81,.06) 50%,transparent 100%)}
+.sb-head{padding:24px 20px 18px;border-bottom:1px solid rgba(255,255,255,.06)}
+.sb-logo{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;letter-spacing:5px;color:var(--gold)}
+.sb-ver{font-size:9px;letter-spacing:2px;color:rgba(200,169,81,.3);font-family:'DM Mono',monospace;margin-top:2px}
+.sb-user{margin:14px 14px 10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:9px 11px;display:flex;align-items:center;gap:9px}
+.sb-av{width:28px;height:28px;border-radius:50%;background:var(--gold-dim);border:1px solid rgba(200,169,81,.25);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--gold);flex-shrink:0}
+.sb-uname{font-size:11px;font-weight:600;color:rgba(255,255,255,.8)}
+.sb-urole{font-size:9px;color:rgba(255,255,255,.3);font-family:'DM Mono',monospace}
+.sb-nav{flex:1;overflow-y:auto;padding:6px 10px}
+.sb-nav::-webkit-scrollbar{width:3px}
+.sb-nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:2px}
+.nav-sec-label{font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.18);padding:10px 8px 4px;font-family:'DM Mono',monospace}
+.nav-item{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:7px;cursor:pointer;transition:all .13s;text-decoration:none;position:relative;margin-bottom:1px}
+.nav-item:hover{background:rgba(255,255,255,.06)}
+.nav-item.active{background:rgba(200,169,81,.1)}
+.nav-item.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:16px;background:var(--gold);border-radius:0 2px 2px 0}
+.nav-icon{width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:13px;border-radius:6px;background:rgba(255,255,255,.04);flex-shrink:0}
+.nav-item.active .nav-icon{background:rgba(200,169,81,.12)}
+.nav-label{font-size:11px;font-weight:500;color:rgba(255,255,255,.55);flex:1}
+.nav-item.active .nav-label,.nav-item:hover .nav-label{color:var(--gold)}
+.nav-item:hover .nav-label{color:rgba(255,255,255,.82)}
+.nav-badge{font-size:9px;font-weight:700;padding:1px 6px;border-radius:10px;background:var(--rd);color:#fff;font-family:'Outfit',sans-serif}
+.nav-badge.amber{background:var(--am)}
+.sb-foot{padding:10px 14px 18px;border-top:1px solid rgba(255,255,255,.05)}
+.sb-foot-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;cursor:pointer;font-size:11px;color:rgba(255,255,255,.3);transition:.13s}
+.sb-foot-item:hover{background:rgba(255,255,255,.05);color:rgba(255,255,255,.6)}
+.content{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:58px;background:var(--white);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 24px;gap:14px;flex-shrink:0;box-shadow:var(--sh)}
+.tb-title{font-size:16px;font-weight:600;color:var(--ink);font-family:'Outfit','Noto Sans JP',sans-serif;letter-spacing:.2px}
+.tb-crumb{font-size:11px;color:var(--faint);display:flex;align-items:center;gap:5px;margin-top:1px}
+.tb-crumb a{color:var(--muted);text-decoration:none}
+.tb-crumb a:hover{color:var(--am)}
+.tb-actions{margin-left:auto;display:flex;gap:9px;align-items:center}
+.btn{padding:7px 16px;border-radius:var(--r-sm);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;font-family:'Outfit',sans-serif;border:none}
+.btn-primary{background:var(--navy);color:var(--gold)}
+.btn-primary:hover{background:var(--navy-l)}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--bd)}
+.btn-ghost:hover{background:var(--cream);color:var(--ink)}
+.btn-sm{padding:5px 12px;font-size:11px}
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;font-family:'Outfit',sans-serif;font-feature-settings:'tnum'}
+.badge-em{background:var(--em-bg);color:var(--em)}
+.badge-am{background:var(--am-bg);color:var(--am)}
+.badge-rd{background:var(--rd-bg);color:var(--rd)}
+.badge-sk{background:var(--sk-bg);color:var(--sk)}
+.badge-vt{background:var(--vt-bg);color:var(--vt)}
+.badge-gd{background:var(--gold-dim);color:var(--am)}
+.badge-nt{background:var(--cream2);color:var(--muted)}
+
+/* TABS */
+.tab-bar{padding:0 24px;background:var(--white);border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:0}
+.tab{padding:12px 18px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:.15s;white-space:nowrap;display:flex;align-items:center;gap:7px}
+.tab:hover{color:var(--ink)}
+.tab.active{color:var(--navy);border-bottom-color:var(--gold)}
+.tab-count{font-size:10px;padding:1px 6px;border-radius:10px;background:var(--cream2);font-family:'DM Mono',monospace}
+.tab.active .tab-count{background:var(--gold-dim);color:var(--am)}
+.view-toggle{margin-left:auto;display:flex;gap:4px}
+.view-btn{width:30px;height:30px;border:1px solid var(--bd);border-radius:6px;background:var(--white);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;transition:.13s}
+.view-btn.active{background:var(--navy);border-color:var(--navy)}
+.view-btn:hover:not(.active){background:var(--cream)}
+
+/* FILTER */
+.filter-bar{display:flex;align-items:center;gap:10px;padding:14px 24px;background:var(--cream);border-bottom:1px solid var(--bd);flex-wrap:wrap}
+.search-wrap{position:relative;flex:1;min-width:200px}
+.search-wrap input{width:100%;padding:8px 12px 8px 34px;background:var(--white);border:1.5px solid var(--bd);border-radius:var(--r-sm);font-size:12px;color:var(--ink);outline:none;font-family:'Outfit','Noto Sans JP',sans-serif;transition:.15s}
+.search-wrap input:focus{border-color:var(--gold)}
+.search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--faint)}
+.fsel{padding:7px 11px;background:var(--white);border:1.5px solid var(--bd);border-radius:var(--r-sm);font-size:12px;color:var(--ink);outline:none;cursor:pointer;font-family:'Outfit',sans-serif}
+
+/* LIST VIEW */
+.page{flex:1;overflow-y:auto;padding:20px 24px}
+.page::-webkit-scrollbar{width:5px}
+.page::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:3px}
+.case-list{display:flex;flex-direction:column;gap:8px}
+.case-row{background:var(--white);border:1px solid var(--bd);border-radius:var(--r);padding:14px 18px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:all .15s;box-shadow:var(--sh)}
+.case-row:hover{border-color:rgba(200,169,81,.4);transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,0,0,.08)}
+.case-type-pill{padding:4px 10px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;font-family:'DM Mono',monospace;flex-shrink:0}
+.type-rental{background:var(--sk-bg);color:var(--sk)}
+.type-sale{background:var(--em-bg);color:var(--em)}
+.type-hr{background:var(--vt-bg);color:var(--vt)}
+.type-utility{background:var(--am-bg);color:var(--am)}
+.case-id{font-size:10px;font-family:'DM Mono',monospace;color:var(--faint);margin-bottom:2px}
+.case-name{font-size:14px;font-weight:600;color:var(--ink)}
+.case-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.case-info{flex:1;min-width:0}
+.case-meta{display:flex;gap:16px;align-items:center;flex-shrink:0}
+.case-meta-item{text-align:right}
+.case-meta-label{font-size:9px;color:var(--faint);font-family:'DM Mono',monospace;letter-spacing:.5px}
+.case-meta-val{font-size:12px;font-weight:600;color:var(--ink);margin-top:1px}
+.case-arrow{font-size:16px;color:var(--faint);flex-shrink:0;transition:.15s}
+.case-row:hover .case-arrow{color:var(--am);transform:translateX(2px)}
+
+/* KANBAN */
+.kanban{display:flex;gap:14px;overflow-x:auto;padding-bottom:16px;height:100%}
+.kanban::-webkit-scrollbar{height:5px}
+.kanban::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:3px}
+.kanban-col{flex-shrink:0;width:240px;display:flex;flex-direction:column;gap:8px}
+.kanban-head{padding:10px 14px;border-radius:var(--r-sm);display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.kh-title{font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase}
+.kh-count{font-size:10px;font-family:'DM Mono',monospace;padding:2px 7px;border-radius:10px;font-weight:700}
+.kanban-card{background:var(--white);border:1px solid var(--bd);border-radius:var(--r-sm);padding:12px 13px;cursor:pointer;transition:all .15s;box-shadow:var(--sh)}
+.kanban-card:hover{border-color:rgba(200,169,81,.4);transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.08)}
+.kc-id{font-size:9px;font-family:'DM Mono',monospace;color:var(--faint);margin-bottom:4px}
+.kc-name{font-size:12px;font-weight:700;color:var(--ink);margin-bottom:3px}
+.kc-prop{font-size:11px;color:var(--muted);margin-bottom:8px}
+.kc-footer{display:flex;align-items:center;justify-content:space-between}
+.kc-ag{font-size:9px;font-family:'DM Mono',monospace;color:var(--faint)}
+.kc-flag{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:700}
+
+/* ════════════════════════════════════════════
+   数値フォント統一 — Outfit + Tabular Nums
+   (DM Monoはコード/ID系のみ維持)
+   ════════════════════════════════════════════ */
+
+/* バッジ・カウント系 */
+.nb, .nav-badge, .cnav-badge,
+.tab-count, .kh-count, .kc-count,
+.badge, .score-num {
+  font-family: 'Outfit', sans-serif !important;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+  letter-spacing: 0 !important;
+}
+
+/* KPI大数値 */
+.qs-val, .kpi-val, .kpi-value,
+.stat-val, .count-val {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum', 'lnum';
+}
+
+/* 日時・タイムスタンプ */
+.tl-time, .remit-deadline, .check-meta,
+.ic-date, .pipe-date {
+  font-family: 'Outfit', sans-serif !important;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+
+/* テーブル金額セル */
+td.num, .bc-vl, .slip-meta,
+.it-step-num, .pg-btn, .pg-info {
+  font-family: 'Outfit', sans-serif !important;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+
+/* 金額入力フィールド（Outfit で統一） */
+.amount-input {
+  font-family: 'Outfit', sans-serif !important;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ══ MOBILE RESPONSIVE ══════════════════════════════════════════ */
+.mob-ham{display:none;flex-direction:column;align-items:center;justify-content:center;width:36px;height:36px;background:transparent;border:none;cursor:pointer;border-radius:7px;transition:.13s;flex-shrink:0}
+.mob-ham:hover{background:rgba(255,255,255,.08)}
+.mob-ham span{display:block;width:18px;height:2px;background:rgba(255,255,255,.72);margin:3px 0;border-radius:1px;transition:.2s}
+.mob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:199}
+@media(max-width:768px){
+  .mob-ham{display:flex}
+  .mob-overlay.show{display:block}
+  .sb{position:fixed;left:calc(-1 * var(--sw));top:0;height:100vh;z-index:200;transition:left .25s ease;box-shadow:4px 0 24px rgba(0,0,0,.25)}
+  .sb.open{left:0}
+  .shell{overflow:hidden}
+  .content{width:100vw;min-width:0}
+  .topbar{padding:0 12px;gap:8px}
+  .tb-crumb{display:none}
+  .tb-actions{gap:6px}
+  .page,.detail-wrap{padding:12px}
+  .detail-wrap{flex-direction:column;overflow-y:auto}
+  .detail-main{overflow-y:visible;min-height:0}
+  .detail-side{width:100%!important;overflow-y:visible}
+  table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;font-size:11px}
+  .kpi-row,.qs-row{grid-template-columns:1fr 1fr!important}
+  .g2,.form-grid{grid-template-columns:1fr!important}
+  .pipeline{padding-bottom:8px}
+  .step-label{font-size:9px}
+  .tb-title{font-size:14px}
+}
+
+
+/* ── Google-style Design System ── */
+html, body { background:#FFFFFF !important; }
+.sb-logo, .brand-logo { font-family:'Cormorant Garamond',serif !important; }
+body, input, select, textarea, button { font-family:'Outfit','Noto Sans JP',sans-serif; }
+.kpi-value, .kpi-vl {
+  font-family:'Outfit','Noto Sans JP',sans-serif !important;
+  font-weight:300 !important;
+  font-variant-numeric:tabular-nums lining-nums !important;
+  letter-spacing:-1px !important;
+  color:var(--ink) !important;
+}
+.kpi-value { font-size:32px !important;font-variant-numeric:tabular-nums}
+.kpi-vl   { font-size:28px !important; }
+.stat-val {
+  font-family:'Outfit','Noto Sans JP',sans-serif !important;
+  font-weight:400 !important;
+  font-variant-numeric:tabular-nums !important;
+  color:var(--ink) !important;
+}
+.kpi-label, .kpi-sub, .stat-label { font-size:11px !important; font-weight:500 !important; color:var(--muted) !important; }
+.section-title { font-size:11px !important; font-weight:600 !important; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); }
+.section-title::before { display:none; }
+.card { background:#FFFFFF; border:1px solid var(--bd); border-radius:8px; box-shadow:var(--sh); }
+.kpi-card { background:#FFFFFF !important; border:1px solid var(--bd) !important; border-radius:8px !important; box-shadow:none !important; }
+.badge { border-radius:4px !important; font-size:11px !important; font-weight:500 !important; }
+.delta-up, .kpi-delta.up { color:var(--em) !important; }
+.delta-dn, .kpi-delta.dn { color:var(--rd) !important; }
+/* ── Google-style 数値原則 (DS v2.3) ── */
+.kpi-value, .kpi-vl, .kpi-val,
+.stat-val, .qs-val, .count-val,
+.td-amt, .bc-vl, .bc-total-vl,
+.rr-amount, .amount-val, .srv,
+.visit-reward, .lb-val,
+.mf-kpi-vl, .mf-reward {
+  font-family:'Outfit','Noto Sans JP',sans-serif !important;
+  font-weight:300 !important;
+  font-variant-numeric:tabular-nums !important;
+}
+.kpi-value { font-size:32px !important; }
+.kpi-vl    { font-size:28px !important; }
+</style>
+/* ── Pipeline固有CSS ── */
+.pipe-type-tabs{display:flex;gap:4px;padding:16px 24px 0;background:#fff;border-bottom:1px solid var(--bd)}
+.ptype-tab{padding:8px 18px;border-radius:8px 8px 0 0;font-size:12px;font-weight:600;cursor:pointer;color:var(--muted);border:1px solid transparent;border-bottom:none;transition:.13s}
+.ptype-tab.active{background:#fff;color:var(--ink);border-color:var(--bd);margin-bottom:-1px;border-bottom:1px solid #fff}
+.pipe-container{padding:20px 24px;overflow-y:auto;flex:1}
+.steps-bar{display:flex;align-items:center;gap:0;margin-bottom:24px;background:var(--cream2);border-radius:10px;padding:4px;overflow-x:auto}
+.step-item{display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:7px;cursor:pointer;white-space:nowrap;transition:.13s;flex-shrink:0}
+.step-item:hover{background:rgba(0,0,0,.04)}
+.step-item.done{color:var(--em)}
+.step-item.done .step-icon{background:var(--em-bg)}
+.step-item.active{background:var(--navy);color:#fff}
+.step-item.active .step-icon{background:rgba(255,255,255,.15)}
+.step-item.locked{opacity:.35;cursor:default}
+.step-icon{width:28px;height:28px;border-radius:6px;background:rgba(0,0,0,.04);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.step-label{font-size:11px;font-weight:600}
+.step-connector{width:16px;height:1px;background:var(--bd2);flex-shrink:0}
+.case-detail-panel{background:#fff;border:1px solid var(--bd);border-radius:12px;overflow:hidden;box-shadow:var(--sh)}
+.cdp-head{padding:18px 22px;background:var(--navy);color:#fff;display:flex;justify-content:space-between;align-items:flex-start}
+.cdp-case-id{font-family:'DM Mono',monospace;font-size:10px;color:rgba(200,169,81,.7);margin-bottom:4px}
+.cdp-case-name{font-size:17px;font-weight:300}
+.cdp-case-sub{font-size:11px;color:rgba(255,255,255,.5);margin-top:3px}
+.cdp-body{padding:22px}
+.step-form{background:var(--cream2);border-radius:10px;padding:18px;margin-bottom:16px;border:1px solid var(--bd)}
+.step-form-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.form-label{font-size:10px;font-weight:600;color:var(--muted);margin-bottom:4px}
+.form-input{width:100%;padding:8px 10px;border:1px solid var(--bd);border-radius:7px;font-size:12px;font-family:'Outfit',sans-serif;background:#fff}
+.form-input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(200,169,81,.1)}
+.ai-advice-banner{background:rgba(200,169,81,.06);border:1px solid rgba(200,169,81,.2);border-radius:10px;padding:14px 16px;margin-bottom:16px}
+.case-list-grid{display:grid;gap:10px}
+.case-mini{background:#fff;border:1px solid var(--bd);border-radius:10px;padding:14px 18px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:.13s;box-shadow:var(--sh)}
+.case-mini:hover{border-color:rgba(200,169,81,.4);transform:translateY(-1px)}
+.case-mini.selected{border-color:var(--gold);box-shadow:0 0 0 3px rgba(200,169,81,.12)}
+.cm-type{padding:3px 9px;border-radius:20px;font-size:9px;font-weight:700;font-family:'DM Mono',monospace;flex-shrink:0}
+.type-rental{background:var(--sk-bg);color:var(--sk)}
+.type-sale{background:var(--em-bg);color:var(--em)}
+.type-sannai{background:var(--vt-bg);color:var(--vt)}
+.type-hr{background:var(--am-bg);color:var(--am)}
+.cm-info{flex:1;min-width:0}
+.cm-id{font-family:'DM Mono',monospace;font-size:10px;color:var(--faint)}
+.cm-name{font-size:13px;font-weight:600;color:var(--ink);margin:1px 0}
+.cm-sub{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cm-status{flex-shrink:0;text-align:right}
+.pipe-layout{display:grid;grid-template-columns:360px 1fr;gap:16px}
+@media(max-width:900px){.pipe-layout{grid-template-columns:1fr}.form-row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="shell" id="shell" style="display:none">
+  <div class="sb" id="sb"></div>
+  <div class="content">
+    <div class="topbar">
+      <button class="mob-ham" onclick="toggleSb()"><span></span><span></span><span></span></button>
+      <div>
+        <div class="tb-title">案件パイプライン</div>
+        <div class="tb-crumb"><a href="coreto-hub-v2.html">COREBLDG</a> &#x203A; 案件パイプライン</div>
+      </div>
+      <div class="tb-act" style="margin-left:auto;display:flex;gap:8px;align-items:center">
+        <button class="btn btn-primary btn-sm" onclick="openNewCase()">＋ 新規案件登録</button>
+        <button id="ai-stag-check-btn" class="btn btn-sm" style="background:rgba(200,169,81,.15);color:var(--gold);border:1px solid rgba(200,169,81,.3)" onclick="checkAllStagnant()">✨ AI停滞チェック</button>
+      </div>
+    </div>
+
+    <!-- タブ -->
+    <div class="pipe-type-tabs">
+      <div class="ptype-tab active" id="tab-rental" onclick="switchType('rental')">🏠 賃貸仲介</div>
+      <div class="ptype-tab" id="tab-sale" onclick="switchType('sale')">🏢 売買仲介</div>
+      <div class="ptype-tab" id="tab-sannai" onclick="switchType('sannai')">🔄 三為転売</div>
+      <div class="ptype-tab" id="tab-hr" onclick="switchType('hr')">👥 人材紹介</div>
+    </div>
+
+    <div class="pipe-container">
+      <!-- AI停滞アドバイスバナー -->
+      <div id="ai-stag-banner" style="display:none" class="ai-advice-banner">
+        <div style="font-size:10px;font-weight:700;color:var(--gold);margin-bottom:8px">✨ AI停滞案件アドバイス</div>
+        <div id="ai-stag-content"></div>
+      </div>
+
+      <div class="pipe-layout">
+        <!-- 左: 案件リスト -->
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px" id="case-list-label">進行中の案件</div>
+          <div class="case-list-grid" id="case-list"></div>
+        </div>
+
+        <!-- 右: ステップ詳細 -->
+        <div id="detail-panel">
+          <div style="background:var(--cream2);border:1px dashed var(--bd2);border-radius:12px;padding:48px 32px;text-align:center;color:var(--faint)">
+            <div style="font-size:28px;margin-bottom:12px">📋</div>
+            <div style="font-size:13px">左の案件を選択してステップを進めてください</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="mob-overlay" onclick="toggleSb()"></div>
+<div id="ip-toast" class="toast"></div>
+
+<!-- 新規案件モーダル -->
+<div id="new-case-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9998;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#fff;border-radius:14px;max-width:520px;width:100%;padding:28px;max-height:90vh;overflow-y:auto">
+    <div style="font-size:16px;font-weight:700;color:var(--ink);margin-bottom:20px">新規案件登録</div>
+    <div style="margin-bottom:12px">
+      <div class="form-label">案件種別 <span style="color:var(--rd)">*</span></div>
+      <select class="form-input" id="nc-type">
+        <option value="rental">賃貸仲介</option>
+        <option value="sale">売買仲介</option>
+        <option value="sannai">三為転売</option>
+        <option value="hr">人材紹介</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <div><div class="form-label">クライアント名 <span style="color:var(--rd)">*</span></div><input class="form-input" id="nc-client" placeholder="山田 太郎 様"></div>
+      <div><div class="form-label">物件名 / 求人名</div><input class="form-input" id="nc-property" placeholder="渋谷区 1LDK etc."></div>
+    </div>
+    <div class="form-row">
+      <div><div class="form-label">仲介料 / 報酬見込み</div><input class="form-input" type="number" id="nc-fee" placeholder="198000"></div>
+      <div><div class="form-label">PT紹介コード（任意）</div><input class="form-input" id="nc-pt" placeholder="PT-30001"></div>
+    </div>
+    <div style="margin-bottom:18px">
+      <div class="form-label">備考</div>
+      <textarea class="form-input" id="nc-note" rows="2" placeholder="案件メモ"></textarea>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="closeNewCase()">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveNewCase()">登録する</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function toggleSb(){ document.querySelector('.sb').classList.toggle('open'); document.querySelector('.mob-overlay').classList.toggle('show'); }
+function showToast(msg,type){ const t=document.getElementById('ip-toast'); t.textContent=msg; t.className='toast '+(type||''); t.style.opacity='1'; setTimeout(()=>t.style.opacity='0',3200); }
+
+// ── データ定義 ──────────────────────────────────────────
+const STEPS = {
+  rental: [
+    {id:'naiken',   label:'内見',     icon:'🏠'},
+    {id:'apply',    label:'申込',     icon:'📋'},
+    {id:'screening',label:'入居審査', icon:'⏳'},
+    {id:'invoice',  label:'請求書',   icon:'🧾'},
+    {id:'itsetsu',  label:'IT重説',   icon:'📡'},
+    {id:'payment',  label:'入金確認', icon:'💴'},
+    {id:'key',      label:'鍵渡し',   icon:'🔑'},
+  ],
+  sale: [
+    {id:'naiken',     label:'内見',   icon:'🏠'},
+    {id:'offer',      label:'買付',   icon:'📄'},
+    {id:'invoice',    label:'請求書', icon:'🧾'},
+    {id:'contract',   label:'契約締結',icon:'✍️'},
+    {id:'settlement', label:'決済',   icon:'💴'},
+  ],
+  sannai: [
+    {id:'naiken',    label:'内見',     icon:'🏠'},
+    {id:'verify',    label:'業者確認', icon:'🔍'},
+    {id:'offer',     label:'買付',     icon:'📄'},
+    {id:'invoice',   label:'請求書',   icon:'🧾'},
+    {id:'contract',  label:'契約',     icon:'✍️'},
+    {id:'settlement',label:'決済',     icon:'💴'},
+  ],
+  hr: [
+    {id:'screening', label:'書類選考', icon:'📄'},
+    {id:'jobcheck',  label:'求人票確認',icon:'🔍'},
+    {id:'interview', label:'面接調整', icon:'📅'},
+    {id:'offer',     label:'内定',     icon:'🎉'},
+    {id:'onboard',   label:'入社',     icon:'🏢'},
+    {id:'zaiki',     label:'在籍確認', icon:'✅'},
+    {id:'pay2',      label:'第2回報酬',icon:'💰'},
+  ]
+};
+
+// デモ案件データ
+let CASES = [
+  {id:'RENT-0194',type:'rental',name:'田中 優子 様',sub:'港区三田3丁目 2LDK / ¥198,000',fee:198000,step:3,pt:'',daysOld:4},
+  {id:'RENT-0193',type:'rental',name:'鈴木 健太 様',sub:'渋谷区代々木 1LDK / ¥155,000',fee:155000,step:4,pt:'PT-30007',daysOld:8},
+  {id:'RENT-0192',type:'rental',name:'高橋 美咲 様',sub:'新宿区西新宿 2LDK / ¥175,000',fee:175000,step:5,pt:'',daysOld:18},
+  {id:'SALE-0041',type:'sale',name:'伊藤 誠 様',sub:'品川区大崎 3LDK / ¥62,000,000',fee:2160000,step:2,pt:'',daysOld:6},
+  {id:'SN-0012',type:'sannai',name:'渋谷ビル(三為)',sub:'渋谷区道玄坂 事務所 / ¥85,000,000',fee:2550000,step:1,pt:'',daysOld:14},
+  {id:'HR-0089',type:'hr',name:'山本 達也 様',sub:'株式会社ABCへ営業職 / 年収450万',fee:675000,step:2,pt:'PT-30015',daysOld:11},
+];
+
+let currentType = 'rental';
+let selectedCase = null;
+
+// ── ビュー切替 ──────────────────────────────────────────
+function switchType(type) {
+  currentType = type;
+  ['rental','sale','sannai','hr'].forEach(t => {
+    document.getElementById('tab-'+t).classList.toggle('active', t === type);
+  });
+  selectedCase = null;
+  renderCaseList();
+  renderDetail(null);
+}
+
+// ── 案件リスト描画 ──────────────────────────────────────
+function renderCaseList() {
+  const cases = CASES.filter(c => c.type === currentType);
+  const steps = STEPS[currentType];
+  document.getElementById('case-list-label').textContent = `進行中 ${cases.length}件`;
+  document.getElementById('case-list').innerHTML = cases.map(c => {
+    const stepLabel = steps[c.step] ? steps[c.step].label : '完了';
+    const isStagnant = c.daysOld >= 14;
+    const statusBadge = isStagnant
+      ? '<span class="badge b-rd">⚠️ 停滞中</span>'
+      : c.step >= steps.length
+        ? '<span class="badge b-em">✅ 完了</span>'
+        : `<span class="badge b-sk">${stepLabel}</span>`;
+    return `
+      <div class="case-mini ${selectedCase?.id === c.id ? 'selected' : ''}" onclick="selectCase('${c.id}')">
+        <div class="cm-type type-${c.type}">${c.type === 'rental' ? '賃貸' : c.type === 'sale' ? '売買' : c.type === 'sannai' ? '三為' : '人材'}</div>
+        <div class="cm-info">
+          <div class="cm-id">${c.id}</div>
+          <div class="cm-name">${c.name}</div>
+          <div class="cm-sub">${c.sub}</div>
+        </div>
+        <div class="cm-status">
+          ${statusBadge}
+          ${isStagnant ? `<div style="margin-top:4px"><button class="btn btn-sm" style="font-size:9px;background:rgba(200,169,81,.15);color:var(--gold);border:1px solid rgba(200,169,81,.3);padding:3px 7px" onclick="event.stopPropagation();aiStagnantAdvice('${c.id}','${c.name}',${c.daysOld})">✨AI</button></div>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ── 案件選択 ──────────────────────────────────────────
+function selectCase(caseId) {
+  selectedCase = CASES.find(c => c.id === caseId);
+  renderCaseList(); // 選択状態更新
+  renderDetail(selectedCase);
+}
+
+// ── ステップ詳細パネル描画 ──────────────────────────────
+function renderDetail(cas) {
+  if (!cas) {
+    document.getElementById('detail-panel').innerHTML = `
+      <div style="background:var(--cream2);border:1px dashed var(--bd2);border-radius:12px;padding:48px 32px;text-align:center;color:var(--faint)">
+        <div style="font-size:28px;margin-bottom:12px">📋</div>
+        <div style="font-size:13px">左の案件を選択してステップを進めてください</div>
+      </div>`;
+    return;
+  }
+  const steps = STEPS[cas.type];
+  const stepsBar = steps.map((s, i) => {
+    const isDone = i < cas.step;
+    const isActive = i === cas.step;
+    const cls = isDone ? 'done' : isActive ? 'active' : 'locked';
+    return `<div class="step-item ${cls}" onclick="${isActive ? `activateStep('${cas.id}',${i})` : ''}">
+      <div class="step-icon">${s.icon}</div>
+      <div class="step-label">${s.label}</div>
+    </div>${i < steps.length - 1 ? '<div class="step-connector"></div>' : ''}`;
+  }).join('');
+
+  const currentStep = steps[cas.step];
+  const stepForm = currentStep ? renderStepForm(cas, currentStep, cas.step) : `
+    <div style="background:var(--em-bg);border:1px solid rgba(5,150,105,.2);border-radius:10px;padding:22px;text-align:center">
+      <div style="font-size:24px;margin-bottom:8px">🎉</div>
+      <div style="font-size:14px;font-weight:700;color:var(--em)">すべてのステップが完了しました</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px">成約報告フォームに進んでください</div>
+      <button class="btn btn-primary btn-sm" style="margin-top:14px" onclick="window.location.href='coreto-contract-report-v2.html'">🏆 成約報告へ</button>
+    </div>`;
+
+  const typeLabel = {rental:'賃貸',sale:'売買',sannai:'三為転売',hr:'人材'}[cas.type] || cas.type;
+  const ptRow = cas.pt ? `<span class="badge b-am" style="margin-left:8px">PT: ${cas.pt}</span>` : '';
+  const feeStr = `¥${cas.fee.toLocaleString()}`;
+  const daysWarning = cas.daysOld >= 14
+    ? `<div style="background:var(--rd-bg);border:1px solid rgba(220,38,38,.2);border-radius:7px;padding:8px 12px;margin-bottom:12px;font-size:11px;color:var(--rd)">⚠️ 最終更新から ${cas.daysOld}日 — 停滞中。AI停滞アドバイスを活用してください。<button class="btn btn-sm" style="font-size:10px;margin-left:8px;background:rgba(220,38,38,.1);color:var(--rd);border:1px solid rgba(220,38,38,.2)" onclick="aiStagnantAdvice('${cas.id}','${cas.name}',${cas.daysOld})">✨ AIアドバイス</button></div>`
+    : '';
+
+  document.getElementById('detail-panel').innerHTML = `
+    <div class="case-detail-panel">
+      <div class="cdp-head">
+        <div>
+          <div class="cdp-case-id">${cas.type.toUpperCase()} / ${cas.id}</div>
+          <div class="cdp-case-name">${cas.name} ${ptRow}</div>
+          <div class="cdp-case-sub">${cas.sub} — 仲介料 ${feeStr}</div>
+        </div>
+        <span class="badge" style="background:rgba(200,169,81,.15);color:var(--gold);font-size:10px">${typeLabel}</span>
+      </div>
+      <div class="cdp-body">
+        ${daysWarning}
+        <!-- ステップバー -->
+        <div style="overflow-x:auto;margin-bottom:20px">
+          <div class="steps-bar" style="width:max-content;min-width:100%">${stepsBar}</div>
+        </div>
+        <div id="ai-step-advice-${cas.id}"></div>
+        ${stepForm}
+      </div>
+    </div>`;
+}
+
+// ── ステップフォーム描画 ──────────────────────────────
+function renderStepForm(cas, step, stepIdx) {
+  const forms = {
+    naiken: `<div class="step-form">
+      <div class="step-form-title">🏠 内見情報を入力</div>
+      <div class="form-row">
+        <div><div class="form-label">内見日時</div><input class="form-input" type="datetime-local" id="sf-naiken-dt"></div>
+        <div><div class="form-label">内見場所</div><input class="form-input" id="sf-naiken-loc" placeholder="現地集合 / オンライン"></div>
+      </div>
+      <div style="margin-bottom:12px"><div class="form-label">備考</div><textarea class="form-input" id="sf-naiken-note" rows="2"></textarea></div>
+      <button class="btn btn-primary" onclick="advanceStep('${cas.id}',${stepIdx})">✅ 内見完了・次へ</button>
+    </div>`,
+    apply: `<div class="step-form">
+      <div class="step-form-title">📋 申込情報</div>
+      <div class="form-row">
+        <div><div class="form-label">申込日</div><input class="form-input" type="date" id="sf-apply-dt"></div>
+        <div><div class="form-label">申込書類受領</div><select class="form-input" id="sf-apply-docs"><option>受領済み</option><option>未受領</option></select></div>
+      </div>
+      <button class="btn btn-primary" onclick="advanceStep('${cas.id}',${stepIdx})">✅ 申込完了・審査へ</button>
+    </div>`,
+    screening: `<div class="step-form">
+      <div class="step-form-title">⏳ 入居審査（管理会社）</div>
+      <div class="al al-info" style="margin-bottom:12px">管理会社側の審査です。CORETO側の操作はありません。審査完了後に次へ進んでください。</div>
+      <div class="form-row">
+        <div><div class="form-label">審査提出日</div><input class="form-input" type="date" id="sf-scr-dt"></div>
+        <div><div class="form-label">審査結果</div><select class="form-input" id="sf-scr-result"><option>承認</option><option>否決</option><option>条件付き承認</option></select></div>
+      </div>
+      <button class="btn btn-primary" onclick="advanceStep('${cas.id}',${stepIdx})">✅ 審査完了・次へ</button>
+    </div>`,
+    invoice: `<div class="step-form">
+      <div class="step-form-title">🧾 請求書発行</div>
+      <div class="form-row">
+        <div><div class="form-label">仲介料（円）</div><input class="form-input" type="number" id="sf-inv-fee" value="${cas.fee}"></div>
+        <div><div class="form-label">発行日</div><input class="form-input" type="date" id="sf-inv-dt"></div>
+      </div>
+      <div style="margin-bottom:12px"><div class="form-label">AD料（任意）</div><input class="form-input" type="number" id="sf-inv-ad" placeholder="0"></div>
+      <a href="coreto-hq-receipt-v2.html" class="btn btn-ghost btn-sm" style="margin-right:8px">📄 請求書発行ページへ</a>
+      <button class="btn btn-primary" onclick="advanceStep('${cas.id}',${stepIdx})">✅ 請求書発行済み・次へ</button>
+    </div>`,
+    itsetsu: `<div class="step-form">
+      <div class="step-form-title">📡 IT重説実施</div>
+      <div class="form-row">
+        <div><div class="form-label">重説実施日時</div><input class="form-input" type="datetime-local" id="sf-it-dt"></div>
+        <div><div class="form-label">担当宅建士</div><input class="form-input" id="sf-it-tk" placeholder="田村 誠 宅建士"></div>
+      </div>
+      <a href="coreto-itsetsu-v2.html" class="btn btn-ghost btn-sm" style="margin-right:8px">📡 IT重説管理ページへ</a>
+      <button class="btn btn-primary" onclick="advanceStep('${cas.id}',${stepIdx})">✅ IT重説完了・次へ</button>
+    </div>`,
+    payment: `<div class="step-form">
+      <div class="step-form-title">💴 入金確認（重要）</div>
+      <div class="al al-warn" style="margin-bottom:12px">⚠️ <strong>全額入金確認後</strong>でないと成約報告を送信できません。</div>
+      <div class="form-row">
+        <div><div class="form-label">入金確認日</div><input class="form-input" type="date" id="sf-pay-dt"></div>
+        <div><div class="form-label">入金額（円）</div><input class="form-input" type="number" id="sf-pay-amt" value="${cas.fee}"></div>
+      </div>
+      <a href="coreto-remittance-v2.html" class="btn btn-ghost btn-sm" style="margin-right:8px">💴 入金監視パネルへ</a>
+      <button class="btn btn-primary" onclick="advanceStep('${cas.id}',${stepIdx})">✅ 全額入金確認・次へ</button>
+    </div>`,
+    key: `<div class="step-form">
+      <div class="step-form-title">🔑 鍵渡し・成約完了</div>
+      <div class="form-row">
+        <div><div class="form-label">鍵渡し日</div><input class="form-input" type="date" id="sf-key-dt"></div>
+        <div><div class="form-label">入居開始予定日</div><input class="form-input" type="date" id="sf-key-start"></div>
+      </div>
+      <a href="coreto-contract-report-v2.html" class="btn btn-primary" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px">🏆 成約報告フォームへ</a>
+    </div>`,
+    // 売買・三為用
+    offer: `<div class="step-form">
+      <div class="step-form-title">📄 買付情報</div>
+      <div class="form-row">
+        <div><div class="form-label">売買価格（円）</div><input class="form-input" type="number" id="sf-offer-price" placeholder="62000000"></div>
+        <div><div class="form-label">買付日</div><input class="form-input" type="date" id="sf-offer-dt"></div>
+      </div>
+      <div style="font-size:10px;color:var(--muted);padding:8px 12px;background:var(--cream2);border-radius:6px;margin-bottom:12px" id="fee-limit-msg">仲介料上限：入力後に自動計算</div>
+      <input type="hidden" id="sf-offer-price-val" oninput="calcFeeLimit(this.value)">
+      <button class="btn btn-primary" onclick="advanceStep('${cas.id}',${stepIdx})">✅ 買付受領・次へ</button>
+    </div>`,
+    contract: `<div class="step-form">
+      <div class="step-form-title">✍️ 契約締結</div>
+      <div class="form-row">
+        <div><div class="form-label">契約締結日</div><input class="form-input" type="date" id="sf-con-dt"></div>
+        <div><div class="form-label">契約書スキャン</div><input type="file" class="form-input" accept=".pdf,image/*" id="sf-con-file"></div>
+      </div>
+      <a href="coreto-contract-v2.html" class="btn btn-ghost btn-sm" style="margin-right:8px">📝 業務委託契約確認</a>
+      <button class="btn btn-primary" onclick="advanceStep('${cas.id}',${stepIdx})">✅ 契約完了・次へ</button>
+    </div>`,
+    settlement: `<div class="step-form">
+      <div class="step-form-title">💴 決済・引渡し</div>
+      <div class="form-row">
+        <div><div class="form-label">決済日</div><input class="form-input" type="date" id="sf-set-dt"></div>
+        <div><div class="form-label">引渡し完了</div><select class="form-input" id="sf-set-done"><option>完了</option><option>未了</option></select></div>
+      </div>
+      <button class="btn btn-primary" onclick="advanceStep('${cas.id}',${stepIdx})">✅ 決済完了・成約報告へ</button>
+    </div>`,
+    verify: `<div class="step-form">
+      <div class="step-form-title">🔍 業者確認（三為）</div>
+      <div class="al al-warn" style="margin-bottom:12px">⚠️ 相手業者の宅建業者番号を確認してHQに通知してください</div>
+      <div class="form-row">
+        <div><div class="form-label">相手業者名</div><input class="form-input" id="sf-ver-name" placeholder="株式会社○○不動産"></div>
+        <div><div class="form-label">宅建業者番号</div><input class="form-input" id="sf-ver-no" placeholder="東京都知事(3)第12345号"></div>
+      </div>
+      <button class="btn btn-ghost btn-sm" style="margin-right:8px" onclick="notifyHQ()">📨 HQに通知・認証コード依頼</button>
+      <button class="btn btn-primary" onclick="advanceStep('${cas.id}',${stepIdx})">✅ 業者確認完了・次へ</button>
+    </div>`,
+    // HR用
+    jobcheck: `<div class="step-form">
+      <div class="step-form-title">🔍 求人票確認・クライアントへ提案</div>
+      <div class="form-row">
+        <div><div class="form-label">対象企業名</div><input class="form-input" id="sf-jb-co" placeholder="株式会社ABC"></div>
+        <div><div class="form-label">職種</div><input class="form-input" id="sf-jb-pos" placeholder="営業職（正社員）"></div>
+      </div>
+      <div class="form-row">
+        <div><div class="form-label">想定年収</div><input class="form-input" type="number" id="sf-jb-sal" placeholder="4500000"></div>
+        <div><div class="form-label">保証期間</div><select class="form-input" id="sf-jb-guar"><option value="3">3ヶ月</option><option value="6">6ヶ月</option></select></div>
+      </div>
+      <button class="btn btn-primary" onclick="advanceStep('${cas.id}',${stepIdx})">✅ 求人票提示・面接調整へ</button>
+    </div>`,
+    interview: `<div class="step-form">
+      <div class="step-form-title">📅 面接調整・実施</div>
+      <div class="form-row">
+        <div><div class="form-label">面接日時</div><input class="form-input" type="datetime-local" id="sf-iv-dt"></div>
+        <div><div class="form-label">面接形式</div><select class="form-input" id="sf-iv-type"><option>オンライン</option><option>対面</option></select></div>
+      </div>
+      <button class="btn btn-primary" onclick="advanceStep('${cas.id}',${stepIdx})">✅ 面接実施・内定結果入力へ</button>
+    </div>`,
+    onboard: `<div class="step-form">
+      <div class="step-form-title">🏢 内定承諾・入社準備</div>
+      <div class="form-row">
+        <div><div class="form-label">入社予定日</div><input class="form-input" type="date" id="sf-ob-dt"></div>
+        <div><div class="form-label">最終年収（確定）</div><input class="form-input" type="number" id="sf-ob-sal" value="${cas.fee}"></div>
+      </div>
+      <div style="font-size:10px;color:var(--muted);background:var(--em-bg);border-radius:6px;padding:8px 12px;margin-bottom:12px">
+        💡 人材紹介報酬は<strong>2分割</strong>です。第1回：入社1週間後（50%）、第2回：保証期間後（50%）
+      </div>
+      <button class="btn btn-primary" onclick="advanceStep('${cas.id}',${stepIdx})">✅ 入社確認・在籍確認待ちへ</button>
+    </div>`,
+    zaiki: `<div class="step-form">
+      <div class="step-form-title">✅ 在籍確認（第2回報酬）</div>
+      <div class="form-row">
+        <div><div class="form-label">在籍確認日</div><input class="form-input" type="date" id="sf-zk-dt"></div>
+        <div><div class="form-label">在籍状況</div><select class="form-input" id="sf-zk-status"><option>在籍確認</option><option>早期退職</option></select></div>
+      </div>
+      <button class="btn btn-ghost btn-sm" style="margin-right:8px" onclick="window.location.href='coreto-early-quit-v2.html'">⚠️ 早期退職フローへ</button>
+      <button class="btn btn-primary" onclick="advanceStep('${cas.id}',${stepIdx})">✅ 在籍確認完了</button>
+    </div>`,
+    pay2: `<div class="step-form">
+      <div class="step-form-title">💰 第2回報酬確定</div>
+      <div class="al al-info" style="margin-bottom:12px">保証期間を経過し、第2回報酬（50%）が解禁されました。</div>
+      <button class="btn btn-primary" onclick="advanceStep('${cas.id}',${stepIdx})">✅ 第2回報酬を月次報酬に追加</button>
+    </div>`,
+  };
+  return forms[step.id] || `<div class="step-form"><div class="step-form-title">${step.icon} ${step.label}</div><button class="btn btn-primary" onclick="advanceStep('${cas.id}',${stepIdx})">✅ 完了・次ステップへ</button></div>`;
+}
+
+// ── ステップ進行 ──────────────────────────────────────
+function advanceStep(caseId, currentStep) {
+  const cas = CASES.find(c => c.id === caseId);
+  const steps = STEPS[cas.type];
+  if (!cas) return;
+  cas.step = Math.min(currentStep + 1, steps.length);
+  cas.daysOld = 0;
+  showToast('✅ ステップを更新しました');
+  renderCaseList();
+  renderDetail(cas);
+}
+
+// ── 新規案件 ──────────────────────────────────────────
+function openNewCase() {
+  document.getElementById('new-case-modal').style.display = 'flex';
+}
+function closeNewCase() {
+  document.getElementById('new-case-modal').style.display = 'none';
+}
+function saveNewCase() {
+  const type = document.getElementById('nc-type').value;
+  const client = document.getElementById('nc-client').value.trim();
+  if (!client) { showToast('⚠️ クライアント名を入力してください', 'warn'); return; }
+  const prefix = {rental:'RENT',sale:'SALE',sannai:'SN',hr:'HR'}[type];
+  const newId = `${prefix}-${(1000+CASES.length).toString().padStart(4,'0')}`;
+  CASES.unshift({
+    id: newId, type, name: client,
+    sub: document.getElementById('nc-property').value || '—',
+    fee: parseInt(document.getElementById('nc-fee').value) || 0,
+    pt: document.getElementById('nc-pt').value, step: 0, daysOld: 0
+  });
+  closeNewCase();
+  switchType(type);
+  showToast(`✅ 案件 ${newId} を登録しました`);
+}
+
+// ── AI停滞アドバイス ──────────────────────────────────
+async function aiStagnantAdvice(caseId, caseName, daysOld) {
+  const banner = document.getElementById('ai-stag-banner');
+  const content = document.getElementById('ai-stag-content');
+  banner.style.display = 'block';
+  content.innerHTML = '<span style="animation:spin .8s linear infinite;display:inline-block">✨</span> AI分析中...';
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514', max_tokens: 1000,
+        messages: [{ role: 'user', content:
+          `不動産・人材紹介の営業支援AIとして、停滞案件「${caseName}」（${daysOld}日間進捗なし）への具体的なアクションを3つ提案。JSONのみ:
+{"actions":[{"title":"アクション①","detail":"実施内容（1文）","priority":"high"},{"title":"②","detail":"...","priority":"medium"},{"title":"③","detail":"...","priority":"low"}],"comment":"総合コメント"}` }]
+      })
+    });
+    const data = await resp.json();
+    const res = JSON.parse(data.content[0].text.replace(/\`\`\`json|\`\`\`/g,'').trim());
+    const priColor = p => p==='high'?'var(--rd)':p==='medium'?'var(--am)':'var(--em)';
+    content.innerHTML = `
+      <div style="font-size:11px;font-weight:600;color:var(--ink);margin-bottom:8px">停滞案件：${caseName}（${daysOld}日）</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${(res.actions||[]).map(a=>`
+          <div style="background:#fff;border:1px solid var(--bd);border-radius:8px;padding:10px 14px;flex:1;min-width:150px">
+            <div style="font-size:10px;font-weight:700;color:${priColor(a.priority)};margin-bottom:4px">${a.title}</div>
+            <div style="font-size:10px;color:var(--muted)">${a.detail}</div>
+          </div>`).join('')}
+      </div>
+      <div style="font-size:10px;color:var(--muted);margin-top:8px">💬 ${res.comment||''}</div>
+      <button onclick="document.getElementById('ai-stag-banner').style.display='none'" style="font-size:10px;background:none;border:none;color:var(--faint);cursor:pointer;margin-top:6px">✕ 閉じる</button>`;
+  } catch(e) {
+    content.innerHTML = `<span style="color:var(--rd)">AI取得失敗: ${e.message}</span>`;
+  }
+}
+
+async function checkAllStagnant() {
+  const stagnant = CASES.filter(c => c.daysOld >= 14);
+  if (!stagnant.length) { showToast('✅ 停滞案件はありません'); return; }
+  aiStagnantAdvice(stagnant[0].id, stagnant[0].name, stagnant[0].daysOld);
+}
+
+function calcFeeLimit(price) {
+  const p = parseInt(price)||0;
+  let limit;
+  if (p <= 2000000) limit = Math.floor(p * 0.05 * 1.1);
+  else if (p <= 4000000) limit = Math.floor((p * 0.04 + 20000) * 1.1);
+  else limit = Math.floor((p * 0.03 + 60000) * 1.1);
+  const el = document.getElementById('fee-limit-msg');
+  if (el) el.textContent = `法定仲介料上限（税込）：¥${limit.toLocaleString()}`;
+}
+
+function notifyHQ() { showToast('📨 HQに業者確認通知を送信しました（Slack #三為確認）'); }
+
+window.addEventListener('DOMContentLoaded', () => {
+  renderCaseList();
+  renderDetail(null);
+  CNAV.init('cases');
+});
+</script>
+<script src="coreto-nav-v2.js"></script>
+</body>
+</html>

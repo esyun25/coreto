@@ -471,7 +471,61 @@ body, input, select, textarea, button {
 </div>
 
 <div class="mob-overlay" onclick="toggleSb()"></div>
-<script src="coreto-nav-v2.js"></script>
+<script src="coreto-nav-v2.js">
+// ══ AI育成フィードバック ═══════════════════════════════════
+async function aiAgentFeedback(agentId, agentName, rank, monthlyAmt) {
+  const btn = document.getElementById('ai-fb-btn-' + agentId);
+  const resultEl = document.getElementById('ai-fb-' + agentId);
+  if (!btn || !resultEl) return;
+
+  btn.disabled = true;
+  btn.innerHTML = '<span style="animation:spin .8s linear infinite;display:inline-block">✨</span>';
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{
+          role: 'user',
+          content: `あなたは不動産・人材紹介会社COREBLDGの育成マネージャーAIです。
+エージェント「${agentName}」（現ランク:${rank}、今月報酬:¥${monthlyAmt?.toLocaleString()||'—'}）に対して、
+具体的で実践的な育成フィードバックを生成してください。数値比較と具体的なアクションプランを必ず含めてください。
+JSONのみ（前置き不要）:
+{"strength":"強み（1文）","weakness":"改善点（1文）","next_rank_tips":["次ランクへのアクション①","②","③"],"monthly_goal":"今月の目標提案","encouragement":"励ましのメッセージ（1文）"}`
+        }]
+      })
+    });
+    const data = await resp.json();
+    const text = data.content?.find(b => b.type === 'text')?.text || '{}';
+    const res = JSON.parse(text.replace(/```json|```/g, '').trim());
+    const tipsHtml = (res.next_rank_tips||[]).map((t,i) =>
+      `<div style="font-size:10px;padding:3px 0;color:var(--ink)">⚡ ${t}</div>`).join('');
+    resultEl.innerHTML = `
+      <div style="background:var(--em-bg);border:1px solid rgba(5,150,105,.2);border-radius:8px;padding:12px;margin-top:8px">
+        <div style="font-size:9px;font-weight:700;color:var(--gold);margin-bottom:8px">✨ AI育成フィードバック</div>
+        <div style="font-size:11px;color:var(--em);margin-bottom:4px">💪 ${res.strength||''}</div>
+        <div style="font-size:11px;color:var(--am);margin-bottom:8px">📌 ${res.weakness||''}</div>
+        <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:4px">次ランクへのアクション</div>
+        ${tipsHtml}
+        <div style="font-size:10px;background:var(--am-bg);border-radius:6px;padding:6px 10px;margin-top:8px">🎯 今月目標：${res.monthly_goal||''}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:6px;font-style:italic">💬 ${res.encouragement||''}</div>
+      </div>`;
+    resultEl.style.display = 'block';
+    var fbRow = document.getElementById('ai-fb-row-' + agentId);
+    if (fbRow) fbRow.style.display = 'table-row';
+  } catch(e) {
+    resultEl.innerHTML = `<div style="font-size:10px;color:var(--rd)">取得失敗: ${e.message}</div>`;
+    resultEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '✨ AI育成FB';
+  }
+}
+
+</script>
 <script>
 function toggleSb(){document.querySelector('.sb').classList.toggle('open');document.querySelector('.mob-overlay').classList.toggle('show');}
 function openAddUser(){document.getElementById('modal-add').classList.add('show');}
@@ -518,6 +572,7 @@ function renderUsers(){
       <td>
         <div style="display:flex;gap:5px">
           <button class="btn btn-g btn-sm" onclick="editUser('${u.id}')">編集</button>
+          <button id="ai-fb-btn-${u.id}" class="btn btn-sm" style="background:rgba(200,169,81,.15);color:var(--gold);border:1px solid rgba(200,169,81,.3);font-size:10px" onclick="aiAgentFeedback('${u.id}','${u.name}','${u.role}',${u.monthlyAmt||0})">✨ AI育成FB</button>
           ${u.status==='active'
             ? `<button class="btn btn-sm btn-rd" onclick="suspendUser('${u.id}')">停止</button>`
             : `<button class="btn btn-sm" style="background:var(--em-bg);color:var(--em);border:1px solid rgba(5,150,105,.2);font-size:11px;padding:5px 12px" onclick="restoreUser('${u.id}')">復元</button>`}

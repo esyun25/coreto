@@ -352,6 +352,7 @@ body, input, select, textarea, button { font-family:'Outfit','Noto Sans JP',sans
           <div class="case-meta-item"><div class="case-meta-label">担当AG</div><div class="case-meta-val" style="font-family:'DM Mono',monospace;font-size:11px">AG-0042</div></div>
           <div class="case-meta-item"><div class="case-meta-label">送金期限</div><div class="case-meta-val" style="color:var(--rd);font-size:11px">本日</div></div>
         </div>
+        <button class="btn btn-sm" style="background:rgba(200,169,81,.12);color:var(--gold);border:1px solid rgba(200,169,81,.25);font-size:10px;flex-shrink:0" onclick="event.stopPropagation();showAIStagnationAdvice('RENT-0192','高橋 美咲様',15)">✨ AI停滞アドバイス</button>
         <div class="case-arrow">›</div>
       </div>
       <!-- Sale -->
@@ -486,6 +487,60 @@ function switchTab(type, el) {
 function newCase() {
   alert('新規案件登録（実装時：事業種別を選択→案件登録フォームへ）');
 }
+
+// ══ AI停滞案件アドバイス ═══════════════════════════════════
+async function showAIStagnationAdvice(caseId, caseName, daysSince) {
+  const banner = document.getElementById('ai-adv-' + caseId);
+  if (banner) { banner.remove(); return; }
+
+  const tr = document.querySelector(`tr[data-case="${caseId}"]`);
+  if (!tr) return;
+
+  const row = document.createElement('tr');
+  row.id = 'ai-adv-' + caseId;
+  row.innerHTML = `<td colspan="10" style="padding:0;border:none">
+    <div style="background:rgba(200,169,81,.06);border-left:3px solid var(--gold);padding:10px 16px;font-size:11px;color:var(--muted)">
+      <span style="animation:spin .8s linear infinite;display:inline-block">✨</span> AI停滞アドバイスを生成中...
+    </div></td>`;
+  tr.after(row);
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{
+          role: 'user',
+          content: `あなたは不動産・人材紹介の営業支援AIです。
+停滞している案件「${caseName}」（${daysSince}日間進捗なし）に対して、
+担当エージェントが取るべき具体的な次のアクションを3つ提案してください。
+JSONのみ（前置き不要）:
+{"actions":[{"title":"アクション①タイトル","detail":"具体的な実施内容（1〜2文）","priority":"high/medium"},{"title":"②","detail":"...","priority":"..."},{"title":"③","detail":"...","priority":"..."}],"overall":"総合コメント（1文）"}`
+        }]
+      })
+    });
+    const data = await resp.json();
+    const text = data.content?.find(b => b.type === 'text')?.text || '{}';
+    const res = JSON.parse(text.replace(/```json|```/g, '').trim());
+    const priColor = p => p === 'high' ? 'var(--rd)' : p === 'medium' ? 'var(--am)' : 'var(--em)';
+    const actHtml = (res.actions||[]).map(a =>
+      `<div style="background:#fff;border:1px solid var(--bd);border-radius:6px;padding:8px 12px;margin-right:8px;min-width:160px;flex:1">
+        <div style="font-size:10px;font-weight:700;color:${priColor(a.priority)};margin-bottom:3px">${a.title}</div>
+        <div style="font-size:10px;color:var(--muted);line-height:1.7">${a.detail}</div>
+      </div>`).join('');
+    row.innerHTML = `<td colspan="10" style="padding:0;border:none">
+      <div style="background:rgba(200,169,81,.06);border-left:3px solid var(--gold);padding:12px 16px">
+        <div style="font-size:10px;font-weight:700;color:var(--gold);margin-bottom:8px">✨ AI停滞アドバイス — ${caseName}</div>
+        <div style="display:flex;gap:8px;margin-bottom:8px">${actHtml}</div>
+        <div style="font-size:10px;color:var(--muted)">💬 ${res.overall||''}</div>
+      </div></td>`;
+  } catch(e) {
+    row.innerHTML = `<td colspan="10"><div class="al al-err">AI取得失敗: ${e.message}</div></td>`;
+  }
+}
+
 </script>
 
 

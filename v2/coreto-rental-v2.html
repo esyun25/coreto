@@ -522,6 +522,7 @@ html, body { background:#FFFFFF !important; }
           <button class="action-btn secondary" onclick="alert('HQにIT重説割当依頼を送信')">📨 IT重説を依頼</button>
           <button class="action-btn secondary" onclick="window.location.href='coreto-crm-detail-v2.html'">👤 クライアント詳細</button>
           <button class="action-btn secondary">📋 書類を確認</button>
+          <button id="ai-notify-btn" class="action-btn" style="background:rgba(200,169,81,.15);color:var(--gold);border:1px solid rgba(200,169,81,.3)" onclick="generateAINotification('RENT-0194','田中優子様','港区三田3丁目','山田誠')">✨ AI通知文生成</button>
           <button class="action-btn warn" onclick="window.location.href='coreto-contract-report-v2.html'">🏆 成約を報告</button>
         </div>
       </div>
@@ -614,6 +615,54 @@ function submitRemit(){
     document.querySelector('.remit-head .badge').textContent='登録済み';
   }
 }
+
+// ══ AI通知文生成 ═══════════════════════════════════════════
+async function generateAINotification(caseId, clientName, propertyAddr, agentName) {
+  const btn = document.getElementById('ai-notify-btn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span style="animation:spin .8s linear infinite;display:inline-block">✨</span> 生成中...'; }
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514', max_tokens:1000,
+        messages:[{ role:'user', content:
+          `不動産仲介成約の通知文をSlack/LINE WORKS向けに生成してください。
+案件：${caseId} / クライアント：${clientName} / 物件：${propertyAddr} / 担当AG：${agentName}
+JSONのみ（前置き不要）:
+{"slack_text":"Slack通知文（絵文字あり・2〜3行）","line_works_text":"LINE WORKS用（丁寧語・3〜4行）","summary":"1行サマリー"}` }]
+      })
+    });
+    const data = await resp.json();
+    const text = data.content?.find(b=>b.type==='text')?.text||'{}';
+    const res = JSON.parse(text.replace(/\`\`\`json|\`\`\`/g,'').trim());
+    // モーダル表示
+    const existing = document.getElementById('ai-notify-modal');
+    if (existing) existing.remove();
+    const el = document.createElement('div');
+    el.id = 'ai-notify-modal';
+    el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+    el.innerHTML = `<div style="background:#fff;border-radius:12px;max-width:500px;width:100%;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+      <div style="font-size:9px;color:var(--gold);font-weight:700;margin-bottom:12px">✨ AI通知文生成</div>
+      <div style="margin-bottom:14px">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:6px">📢 Slack通知文</div>
+        <div style="background:var(--cream2);border-radius:8px;padding:10px 12px;font-size:12px;line-height:1.8;white-space:pre-wrap">${res.slack_text||''}</div>
+        <button onclick="navigator.clipboard.writeText('${(res.slack_text||'').replace(/'/g,'\'')}');this.textContent='✅ コピー済み'" style="font-size:10px;background:var(--navy);color:#fff;border:none;border-radius:5px;padding:4px 10px;cursor:pointer;margin-top:6px">📋 コピー</button>
+      </div>
+      <div style="margin-bottom:14px">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:6px">💬 LINE WORKS通知文</div>
+        <div style="background:var(--cream2);border-radius:8px;padding:10px 12px;font-size:12px;line-height:1.8;white-space:pre-wrap">${res.line_works_text||''}</div>
+        <button onclick="navigator.clipboard.writeText('${(res.line_works_text||'').replace(/'/g,'\'')}');this.textContent='✅ コピー済み'" style="font-size:10px;background:var(--navy);color:#fff;border:none;border-radius:5px;padding:4px 10px;cursor:pointer;margin-top:6px">📋 コピー</button>
+      </div>
+      <button onclick="document.getElementById('ai-notify-modal').remove()" style="width:100%;padding:10px;background:var(--ink);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:12px">閉じる</button>
+    </div>`;
+    document.body.appendChild(el);
+    el.onclick = e => { if(e.target===el) el.remove(); };
+  } catch(e) { alert('AI通知文生成失敗: '+e.message); }
+  finally {
+    if (btn) { btn.disabled=false; btn.innerHTML='✨ AI通知文生成'; }
+  }
+}
+
 </script>
 
 

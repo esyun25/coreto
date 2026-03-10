@@ -588,7 +588,132 @@ window.addEventListener('DOMContentLoaded', () => {
   if (el) el.textContent = `書類審査（${roleLabel}）`;
   CNAV.init('screening');
 });
+
+// ══ AI書類解析 ═════════════════════════════════════════
+async function runAIDocAnalysis() {
+  const btn = document.getElementById('ai-doc-btn');
+  const result = document.getElementById('ai-doc-result');
+  const idFile = document.getElementById('ai-id-file').files[0];
+  const tkFile = document.getElementById('ai-tk-file').files[0];
+
+  if (!idFile) { showToast('⚠️ 身分証画像をアップロードしてください'); return; }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span style="animation:spin .8s linear infinite;display:inline-block">✨</span> AI解析中...';
+  result.style.display = 'none';
+
+  try {
+    // 画像→base64変換
+    const toBase64 = file => new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(r.result.split(',')[1]);
+      r.onerror = rej;
+      r.readAsDataURL(file);
+    });
+
+    const idB64 = await toBase64(idFile);
+    const messages = [{
+      role: 'user',
+      content: [
+        { type: 'image', source: { type: 'base64', media_type: idFile.type || 'image/jpeg', data: idB64 } },
+        { type: 'text', text:
+          '身分証明書の画像を解析してください。以下をJSONのみで回答（前置き不要）:
+' +
+          '{"name":"抽出した氏名","expiry":"有効期限(YYYY/MM/DDまたは不明)","doc_type":"書類種別","is_valid":true/false,"issues":["問題点リスト"],"memo":"総合所見"}' }
+      ]
+    }];
+
+    if (tkFile) {
+      const tkB64 = await toBase64(tkFile);
+      messages[0].content.splice(1, 0,
+        { type: 'image', source: { type: 'base64', media_type: tkFile.type || 'image/jpeg', data: tkB64 } }
+      );
+      messages[0].content[messages[0].content.length - 1].text =
+        '2枚の画像を解析してください。1枚目が身分証、2枚目が宅建士証です。以下をJSONのみで回答（前置き不要）:
+' +
+        '{"name":"氏名","id_expiry":"身分証有効期限","id_valid":true/false,"tk_no":"宅建士登録番号","tk_expiry":"宅建士証有効期限","tk_valid":true/false,"issues":["問題点"],"memo":"総合所見"}';
+    }
+
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1000, messages })
+    });
+    const data = await resp.json();
+    const text = data.content?.find(b => b.type === 'text')?.text || '{}';
+    const clean = text.replace(/```json|```/g, '').trim();
+    const res = JSON.parse(clean);
+
+    // 結果表示
+    const isOk = v => `<span class="badge ${v ? 'b-em' : 'b-rd'}">${v ? '✅ OK' : '⚠️ 要確認'}</span>`;
+    const issueHtml = (res.issues?.length ? res.issues : []).map(i =>
+      `<div style="font-size:10px;color:var(--am);padding:3px 0">⚠️ ${i}</div>`).join('');
+
+    let html = `
+      <div style="background:var(--em-bg);border:1px solid rgba(5,150,105,.2);border-radius:8px;padding:14px">
+        <div style="font-size:11px;font-weight:700;color:var(--em);margin-bottom:10px">✨ AI解析結果</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11px;margin-bottom:10px">
+          <div><span style="color:var(--muted)">氏名：</span><strong>${res.name || res.id_name || '—'}</strong></div>
+          <div><span style="color:var(--muted)">身分証有効期限：</span>${res.expiry || res.id_expiry || '—'} ${isOk(res.is_valid ?? res.id_valid ?? true)}</div>`;
+    if (res.tk_no) {
+      html += `
+          <div><span style="color:var(--muted)">宅建士番号：</span><strong class="mono">${res.tk_no}</strong></div>
+          <div><span style="color:var(--muted)">宅建士証有効期限：</span>${res.tk_expiry || '—'} ${isOk(res.tk_valid ?? true)}</div>`;
+    }
+    html += `
+        </div>
+        ${issueHtml}
+        <div style="font-size:10px;color:var(--muted);margin-top:8px;border-top:1px solid rgba(5,150,105,.15);padding-top:8px">💬 ${res.memo || '問題なし'}</div>
+      </div>`;
+
+    result.innerHTML = html;
+    result.style.display = 'block';
+
+    // 懸念事項があればチェックシートにコメント自動入力
+    if (res.issues?.length) {
+      showToast('⚠️ AI解析で懸念事項を検出しました。確認してください。');
+    } else {
+      showToast('✅ AI解析完了：問題なし');
+    }
+  } catch(e) {
+    result.innerHTML = '<div class="al al-err">AI解析エラー：' + e.message + '</div>';
+    result.style.display = 'block';
+    console.error('AI書類解析エラー:', e);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '✨ AI自動チェック実行';
+  }
+}
+
 </script>
+
+<!-- AI書類解析パネル（審査対象選択後に表示） -->
+<div id="ai-doc-panel" style="max-width:860px;margin:0 auto 16px;padding:0 16px">
+  <div class="card" style="border-color:rgba(200,169,81,.3)">
+    <div class="card-head" style="background:rgba(200,169,81,.04)">
+      <div class="card-title" style="color:var(--gold)">✨ AI書類解析</div>
+      <button id="ai-doc-btn" class="btn btn-sm"
+        style="background:var(--gold);color:var(--navy);border:none;font-weight:700"
+        onclick="runAIDocAnalysis()">✨ AI自動チェック実行</button>
+    </div>
+    <div class="card-body">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:12px">
+        身分証・宅建士証の画像をアップロードすると、AIが自動で有効期限・番号形式・懸念点を解析し、チェックシートの参考情報として表示します。
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+        <div>
+          <label style="font-size:10px;font-weight:600;color:var(--muted);margin-bottom:6px;display:block">身分証（免許証・マイナンバー等）</label>
+          <input type="file" id="ai-id-file" accept="image/*" style="font-size:11px;width:100%;padding:6px 8px;border:1px solid var(--bd);border-radius:6px;background:var(--cream2)">
+        </div>
+        <div>
+          <label style="font-size:10px;font-weight:600;color:var(--muted);margin-bottom:6px;display:block">宅建士証（不動産AG審査時のみ）</label>
+          <input type="file" id="ai-tk-file" accept="image/*" style="font-size:11px;width:100%;padding:6px 8px;border:1px solid var(--bd);border-radius:6px;background:var(--cream2)">
+        </div>
+      </div>
+      <div id="ai-doc-result" style="display:none"></div>
+    </div>
+  </div>
+</div>
 <script src="coreto-nav-v2.js"></script>
 </body>
 </html>
