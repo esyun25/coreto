@@ -1,0 +1,1348 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <!-- ── Content Security Policy (XSS軽減) ──────────────────────────────────
+       変更時: 使用する外部サービスのオリジンを追加してください
+       Kintone追加時: connect-src に *.cybozu.com を追加
+  ─────────────────────────────────────────────────────────────────────── -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' 'unsafe-inline'
+      https://cdnjs.cloudflare.com
+      https://js.stripe.com
+      https://cdn-cgi/scripts;
+    style-src 'self' 'unsafe-inline'
+      https://fonts.googleapis.com;
+    font-src 'self'
+      https://fonts.gstatic.com;
+    img-src 'self' data: blob:;
+    connect-src 'self'
+      https://hooks.slack.com
+      https://hooks.zapier.com
+      https://api.stripe.com
+      https://js.stripe.com
+      https://www.houjin-bangou.nta.go.jp
+      https://www.retio.or.jp;
+    frame-src 'none';
+    object-src 'none';
+    base-uri 'self';
+  ">
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CORETO 書類審査チェックシート</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090f;--card:#0f1119;--card2:#141720;--border:#1e2235;--border2:#252a3d;
+  --gold:#c9a84c;--gold-l:#e8c96a;--gold-dim:#7a5f22;
+  --blue:#4f9cf9;--green:#34d399;--red:#f87171;--orange:#fb923c;--purple:#a78bfa;
+  --muted:#4a5270;--sub:#7a849e;--text:#e2e6f3;
+}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;
+  background-image:radial-gradient(ellipse 60% 50% at 20% 0%,rgba(79,156,249,.04) 0%,transparent 60%)}
+
+/* ─ Header ─ */
+.header{display:flex;align-items:center;justify-content:space-between;padding:0 28px;height:54px;
+  border-bottom:1px solid var(--border);background:rgba(7,9,15,.9);backdrop-filter:blur(12px);
+  position:sticky;top:0;z-index:200}
+.logo{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--gold);letter-spacing:3px}
+.hdr-badge{background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.25);
+  color:var(--red);font-size:10px;font-weight:700;padding:3px 10px;border-radius:4px;letter-spacing:1px}
+.hdr-right{display:flex;align-items:center;gap:14px}
+.timer-wrap{display:flex;align-items:center;gap:8px;
+  background:var(--card2);border:1px solid var(--border2);border-radius:8px;padding:6px 12px}
+.timer-label{font-size:9px;color:var(--muted);letter-spacing:1px}
+.timer-val{font-family:'DM Mono',monospace;font-size:16px;font-weight:700;color:var(--gold);min-width:52px}
+
+/* ─ Layout ─ */
+.layout{display:grid;grid-template-columns:320px 1fr;gap:0;height:calc(100vh - 54px)}
+
+/* ─ Left sidebar: applicant list ─ */
+.sidebar{background:var(--card2);border-right:1px solid var(--border);overflow-y:auto;padding:16px 0}
+.sidebar-hd{padding:0 16px 10px;font-size:9px;color:var(--muted);letter-spacing:2px;
+  text-transform:uppercase;border-bottom:1px solid var(--border);margin-bottom:8px}
+.sidebar-filter{display:flex;gap:4px;padding:8px 12px}
+.sf-btn{flex:1;padding:5px 0;font-size:10px;font-weight:700;border-radius:6px;
+  border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;
+  font-family:'Noto Sans JP',sans-serif;transition:all .15s;text-align:center}
+.sf-btn.on{background:rgba(79,156,249,.12);border-color:rgba(79,156,249,.35);color:var(--blue)}
+
+.app-card{padding:12px 16px;cursor:pointer;border-bottom:1px solid rgba(30,34,53,.6);
+  transition:background .15s;position:relative}
+.app-card:hover{background:rgba(255,255,255,.025)}
+.app-card.active{background:rgba(79,156,249,.06);border-left:2px solid var(--blue)}
+.app-card.active{padding-left:14px}
+.ac-name{font-size:13px;font-weight:700;margin-bottom:3px}
+.ac-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.ac-type{font-size:9px;font-weight:700;padding:1px 6px;border-radius:3px}
+.t-re{background:rgba(79,156,249,.15);color:var(--blue)}
+.t-hr{background:rgba(20,184,166,.15);color:#2dd4bf}
+.t-pt{background:rgba(52,211,153,.15);color:var(--green)}
+.ac-time{font-size:10px;color:var(--muted)}
+.ac-status{position:absolute;top:12px;right:12px;width:8px;height:8px;border-radius:50%}
+.s-pending{background:var(--orange)}
+.s-pass{background:var(--green)}
+.s-fail{background:var(--red)}
+.s-hold{background:var(--purple)}
+
+/* ─ Main area ─ */
+.main{overflow-y:auto;display:flex;flex-direction:column}
+
+/* ─ Applicant header ─ */
+.app-hdr{padding:20px 28px 0;position:sticky;top:0;background:var(--bg);z-index:100;
+  border-bottom:1px solid var(--border)}
+.app-hdr-inner{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;padding-bottom:16px}
+.app-name-area{display:flex;align-items:center;gap:14px}
+.app-avatar{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-size:22px;flex-shrink:0;border:2px solid var(--border2)}
+.app-name{font-size:20px;font-weight:700;margin-bottom:4px}
+.app-meta-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.type-pill{font-size:10px;font-weight:700;padding:3px 10px;border-radius:5px}
+.app-id{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)}
+.app-applied{font-size:10px;color:var(--muted)}
+
+/* Progress ring */
+.progress-area{display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0}
+.ring-wrap{position:relative;width:72px;height:72px}
+.ring-wrap svg{transform:rotate(-90deg)}
+.ring-bg{fill:none;stroke:var(--border2);stroke-width:5}
+.ring-fill{fill:none;stroke-width:5;stroke-linecap:round;transition:stroke-dashoffset .4s}
+.ring-label{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring-pct{font-family:'DM Mono',monospace;font-size:14px;font-weight:700}
+.ring-sub{font-size:8px;color:var(--muted);letter-spacing:.5px}
+.progress-text{font-size:10px;color:var(--sub);text-align:center}
+
+/* ─ Info grid ─ */
+.info-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0;
+  border-top:1px solid var(--border);padding:0}
+.info-cell{padding:10px 16px;border-right:1px solid var(--border)}
+.info-cell:last-child{border-right:none}
+.ic-label{font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:3px}
+.ic-val{font-size:12px;font-weight:600}
+
+/* ─ Checklist body ─ */
+.checklist-body{padding:20px 28px;flex:1}
+.section{background:var(--card);border:1px solid var(--border);border-radius:12px;
+  margin-bottom:14px;overflow:hidden}
+.sec-hdr{display:flex;align-items:center;justify-content:space-between;
+  padding:13px 18px;cursor:pointer;user-select:none;transition:background .15s}
+.sec-hdr:hover{background:rgba(255,255,255,.02)}
+.sec-title{display:flex;align-items:center;gap:10px;font-size:12px;font-weight:700}
+.sec-icon{font-size:16px;width:28px;text-align:center}
+.sec-time{font-size:9px;color:var(--muted);margin-left:4px;font-weight:400}
+.sec-meta{display:flex;align-items:center;gap:10px}
+.sec-progress{font-size:10px;font-family:'DM Mono',monospace;color:var(--sub)}
+.sec-chevron{color:var(--muted);font-size:12px;transition:transform .2s}
+.sec-chevron.open{transform:rotate(90deg)}
+.sec-body{border-top:1px solid var(--border);padding:0}
+.sec-body.collapsed{display:none}
+
+/* ─ Check items ─ */
+.chk-item{display:grid;grid-template-columns:24px 1fr auto;gap:12px;align-items:start;
+  padding:13px 18px;border-bottom:1px solid rgba(30,34,53,.5);transition:background .1s}
+.chk-item:last-child{border-bottom:none}
+.chk-item.ng-row{background:rgba(248,113,113,.04)}
+.chk-item.ok-row{background:rgba(52,211,153,.02)}
+.chk-num{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);padding-top:2px}
+.chk-content{flex:1}
+.chk-label{font-size:12px;font-weight:600;margin-bottom:3px;line-height:1.5}
+.chk-desc{font-size:10px;color:var(--sub);line-height:1.7}
+.chk-desc a{color:var(--blue);text-decoration:none}
+.chk-desc a:hover{text-decoration:underline}
+.chk-alert{font-size:10px;color:var(--red);margin-top:4px;display:none}
+.chk-alert.show{display:block}
+
+/* ─ Status buttons ─ */
+.status-btns{display:flex;gap:4px;flex-shrink:0;margin-top:1px}
+.sb{width:32px;height:28px;border-radius:6px;border:1px solid var(--border2);
+  background:transparent;cursor:pointer;font-size:13px;display:flex;align-items:center;
+  justify-content:center;transition:all .15s;position:relative}
+.sb:hover{border-color:var(--border);background:rgba(255,255,255,.03)}
+.sb.ok-active{background:rgba(52,211,153,.15);border-color:rgba(52,211,153,.4);color:var(--green)}
+.sb.ng-active{background:rgba(248,113,113,.15);border-color:rgba(248,113,113,.4);color:var(--red)}
+.sb.skip-active{background:rgba(74,82,112,.2);border-color:var(--border2);color:var(--muted)}
+.sb[title]:hover::after{content:attr(title);position:absolute;bottom:calc(100% + 6px);left:50%;
+  transform:translateX(-50%);background:#1a1e2c;border:1px solid var(--border2);
+  color:var(--sub);font-size:9px;padding:3px 7px;border-radius:4px;white-space:nowrap;
+  font-family:'Noto Sans JP',sans-serif;pointer-events:none}
+
+/* ─ Memo per item ─ */
+.item-memo{margin-top:6px;display:none}
+.item-memo.show{display:block}
+.item-memo input{width:100%;background:#090b13;border:1px solid var(--border2);border-radius:6px;
+  padding:6px 10px;color:var(--sub);font-size:11px;font-family:'Noto Sans JP',sans-serif}
+.item-memo input:focus{outline:none;border-color:var(--blue)}
+
+/* ─ Instant fail banner ─ */
+.instant-fail{background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.3);
+  border-radius:8px;padding:10px 14px;margin:10px 18px;font-size:11px;color:var(--red);
+  display:none;align-items:center;gap:8px}
+.instant-fail.show{display:flex}
+
+/* ─ Verdict panel ─ */
+.verdict-panel{position:sticky;bottom:0;background:rgba(7,9,15,.95);backdrop-filter:blur(12px);
+  border-top:1px solid var(--border);padding:16px 28px}
+.verdict-inner{display:flex;align-items:center;gap:16px}
+.verdict-label{font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;
+  flex-shrink:0}
+.verdict-btns{display:flex;gap:8px}
+.vb{padding:9px 20px;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;
+  border:none;font-family:'Noto Sans JP',sans-serif;transition:all .2s;letter-spacing:.5px}
+.vb-pass{background:linear-gradient(135deg,var(--green),#22a876);color:#0a0c10}
+.vb-pass:hover{filter:brightness(1.1);transform:translateY(-1px)}
+.vb-fail{background:rgba(248,113,113,.15);color:var(--red);border:1px solid rgba(248,113,113,.3)}
+.vb-fail:hover{background:rgba(248,113,113,.25)}
+.vb-hold{background:rgba(167,139,250,.12);color:var(--purple);border:1px solid rgba(167,139,250,.3)}
+.vb-hold:hover{background:rgba(167,139,250,.22)}
+.verdict-note{flex:1}
+.verdict-note input{width:100%;background:#0a0c14;border:1px solid var(--border2);border-radius:8px;
+  padding:9px 14px;color:var(--text);font-size:12px;font-family:'Noto Sans JP',sans-serif}
+.verdict-note input:focus{outline:none;border-color:var(--gold)}
+.verdict-actions{display:flex;gap:8px;flex-shrink:0}
+.va-btn{padding:8px 14px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;
+  border:1px solid var(--border2);background:transparent;color:var(--sub);
+  font-family:'Noto Sans JP',sans-serif;transition:all .15s;white-space:nowrap}
+.va-btn:hover{color:var(--text);border-color:var(--sub)}
+.va-btn.primary{background:rgba(201,168,76,.12);border-color:var(--gold-dim);color:var(--gold)}
+.va-btn.primary:hover{background:rgba(201,168,76,.2)}
+
+/* ─ Modal: applicant details ─ */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);
+  z-index:300;display:none;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:16px;
+  width:560px;max-height:80vh;overflow-y:auto;padding:24px}
+.modal-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+.modal-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--gold)}
+.modal-close{font-size:18px;color:var(--muted);cursor:pointer;background:none;border:none;
+  color:var(--sub);padding:4px 8px;border-radius:4px}
+.modal-close:hover{color:var(--text);background:var(--card2)}
+.detail-sec{margin-bottom:16px}
+.detail-sec-title{font-size:9px;color:var(--muted);letter-spacing:2px;
+  text-transform:uppercase;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border)}
+.detail-row{display:flex;justify-content:space-between;padding:5px 0;font-size:12px;
+  border-bottom:1px solid rgba(30,34,53,.4)}
+.detail-row:last-child{border:none}
+.dr-key{color:var(--muted)}
+.dr-val{font-weight:600;text-align:right;max-width:300px}
+.motivation-box{background:var(--card2);border-radius:8px;padding:12px;font-size:12px;
+  line-height:1.8;color:var(--sub);border-left:2px solid var(--blue)}
+.char-count{font-size:10px;color:var(--muted);margin-top:6px;text-align:right}
+.referral-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:5px;
+  background:rgba(201,168,76,.12);border:1px solid var(--gold-dim);color:var(--gold);
+  font-size:10px;font-weight:700}
+
+/* ─ Verdict result banner ─ */
+.result-banner{padding:12px 28px;font-size:12px;font-weight:700;display:none;
+  align-items:center;gap:10px;letter-spacing:.5px}
+.result-banner.show{display:flex}
+.rb-pass{background:rgba(52,211,153,.08);border-bottom:1px solid rgba(52,211,153,.2);color:var(--green)}
+.rb-fail{background:rgba(248,113,113,.08);border-bottom:1px solid rgba(248,113,113,.2);color:var(--red)}
+.rb-hold{background:rgba(167,139,250,.08);border-bottom:1px solid rgba(167,139,250,.2);color:var(--purple)}
+
+/* ─ Empty state ─ */
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  height:100%;color:var(--muted);gap:12px}
+.empty-icon{font-size:48px;opacity:.4}
+.empty-text{font-size:13px}
+
+/* ─ Scroll ─ */
+::-webkit-scrollbar{width:4px}
+</style>::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* ─ Tag ─ */
+.tag{display:inline-block;font-size:9px;padding:1px 6px;border-radius:3px;font-weight:700}
+.tag-ng{background:rgba(248,113,113,.15);color:var(--red)}
+.tag-ok{background:rgba(52,211,153,.12);color:var(--green)}
+.tag-warn{background:rgba(251,146,60,.15);color:var(--orange)}
+.tag-info{background:rgba(79,156,249,.12);color:var(--blue)}
+</style>
+</head>
+<body>
+
+<!-- ─ Header ─ -->
+<div class="header">
+  <div style="display:flex;align-items:center;gap:12px">
+    <div class="logo">CORETO</div>
+    <div style="width:1px;height:18px;background:var(--border2)"></div>
+    <div style="font-size:10px;color:var(--muted);letter-spacing:1px">書類審査チェックシート</div>
+    <div class="hdr-badge">HQ ONLY</div>
+  </div>
+  <div class="hdr-right">
+    <button onclick="window.open('coreto-apply.html','_blank')" style="padding:6px 14px;border:1px solid var(--border2);border-radius:7px;background:var(--card2);color:var(--sub);font-size:11px;cursor:pointer;margin-right:8px">📋 応募フォームを表示</button>
+    <div class="timer-wrap">
+      <div>
+        <div class="timer-label">審査経過時間</div>
+        <div class="timer-val" id="timer-display">00:00</div>
+      </div>
+    </div>
+    <button onclick="window.location.href='coreto-hub.html'"
+            style="font-size:10px;padding:5px 12px;border-radius:6px;border:1px solid var(--border2);
+            background:transparent;color:var(--muted);cursor:pointer;font-family:'Noto Sans JP',sans-serif">
+      ← 管理ポータル
+    </button>
+  </div>
+</div>
+
+<!-- ─ Layout ─ -->
+<div class="layout">
+
+<!-- ─ Left: Applicant list ─ -->
+<div class="sidebar">
+  <div class="sidebar-hd">審査待ち一覧 <span id="pending-count" style="color:var(--orange)">— 件</span></div>
+  <div class="sidebar-filter">
+    <div class="sf-btn on" data-f="all" onclick="filterApps('all',this)">全て</div>
+    <div class="sf-btn" data-f="re" onclick="filterApps('re',this)">不動産</div>
+    <div class="sf-btn" data-f="hr" onclick="filterApps('hr',this)">人材</div>
+    <div class="sf-btn" data-f="pt" onclick="filterApps('pt',this)">Partner</div>
+  </div>
+  <div id="app-list"></div>
+</div>
+
+<!-- ─ Right: Main ─ -->
+<div class="main" id="main-area">
+  <div class="empty-state" id="empty-state">
+    <div class="empty-icon">📋</div>
+    <div class="empty-text">左から申請者を選択してください</div>
+  </div>
+
+  <!-- Applicant header (hidden until selected) -->
+  <div id="app-hdr-wrap" style="display:none">
+    <div class="app-hdr">
+      <div class="app-hdr-inner">
+        <div class="app-name-area">
+          <div class="app-avatar" id="app-avatar">👤</div>
+          <div>
+            <div class="app-name" id="app-name">—</div>
+            <div class="app-meta-row">
+              <div class="type-pill" id="app-type-pill"></div>
+              <div class="app-id" id="app-sub-id"></div>
+              <div class="app-applied" id="app-applied"></div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <div class="progress-area">
+            <div class="ring-wrap">
+              <svg width="72" height="72" viewBox="0 0 72 72">
+                <circle class="ring-bg" cx="36" cy="36" r="31"/>
+                <circle class="ring-fill" id="ring-fill" cx="36" cy="36" r="31"
+                        stroke-dasharray="194.8" stroke-dashoffset="194.8"/>
+              </svg>
+              <div class="ring-label">
+                <div class="ring-pct" id="ring-pct">0%</div>
+                <div class="ring-sub">完了</div>
+              </div>
+            </div>
+            <div class="progress-text" id="progress-text">0 / 0 項目</div>
+          </div>
+          <button class="va-btn" onclick="showDetailModal()" style="align-self:flex-start;margin-top:4px">
+            📄 申請詳細
+          </button>
+        </div>
+      </div>
+      <div class="info-grid" id="info-grid"></div>
+    </div>
+
+    <!-- Result banner -->
+    <div class="result-banner" id="result-banner"></div>
+
+    <!-- Instant fail banner -->
+    <div class="instant-fail" id="instant-fail-banner">
+      <span style="font-size:18px">🚫</span>
+      <div>
+        <div style="font-weight:700;margin-bottom:2px" id="ifb-title">即時不合格</div>
+        <div id="ifb-reason" style="font-size:10px;opacity:.8"></div>
+      </div>
+    </div>
+
+    <!-- ② AI書類解析パネル -->
+    <div id="ai-doc-panel" style="display:none;margin:0 28px 16px;padding:16px 18px;
+         background:rgba(201,168,76,.07);border:1px solid rgba(201,168,76,.3);border-radius:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div style="font-size:12px;font-weight:700;color:var(--gold);display:flex;align-items:center;gap:8px">
+          ✨ AI書類解析
+          <span style="font-size:9px;font-weight:400;color:var(--muted);background:rgba(255,255,255,.05);
+                padding:2px 8px;border-radius:4px">Powered by Claude Haiku</span>
+        </div>
+        <div id="ai-doc-result-badge" style="font-size:10px;color:var(--muted)">書類をアップロードすると自動解析します</div>
+      </div>
+      <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+        <!-- 身分証アップロード -->
+        <label style="flex:1;min-width:160px;cursor:pointer">
+          <input type="file" id="ai-id-file" accept="image/*,.pdf" style="display:none"
+                 onchange="aiAnalyzeDoc('id', this.files[0])">
+          <div id="ai-id-btn" style="padding:10px 14px;background:rgba(255,255,255,.04);
+               border:1px dashed var(--border2);border-radius:9px;text-align:center;
+               font-size:11px;color:var(--sub);transition:.15s;cursor:pointer"
+               onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--border2)'">
+            <div style="font-size:18px;margin-bottom:4px">🪪</div>
+            身分証をアップロード
+          </div>
+        </label>
+        <!-- 宅建士証アップロード（RE/HRのみ表示） -->
+        <label style="flex:1;min-width:160px;cursor:pointer" id="ai-takken-area">
+          <input type="file" id="ai-takken-file" accept="image/*,.pdf" style="display:none"
+                 onchange="aiAnalyzeDoc('takken', this.files[0])">
+          <div id="ai-takken-btn" style="padding:10px 14px;background:rgba(255,255,255,.04);
+               border:1px dashed var(--border2);border-radius:9px;text-align:center;
+               font-size:11px;color:var(--sub);transition:.15s;cursor:pointer"
+               onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--border2)'">
+            <div style="font-size:18px;margin-bottom:4px">📜</div>
+            宅建士証をアップロード
+          </div>
+        </label>
+      </div>
+      <div id="ai-doc-extracted" style="display:none"></div>
+    </div>
+
+    <!-- Checklist -->
+    <div class="checklist-body" id="checklist-body"></div>
+
+    <!-- Verdict panel -->
+    <div class="verdict-panel">
+      <div class="verdict-inner">
+        <div class="verdict-label">審査結果</div>
+        <div class="verdict-btns">
+          <button class="vb vb-pass" onclick="setVerdict('pass')">✅ 合格　→面接へ</button>
+          <button class="vb vb-fail" onclick="setVerdict('fail')">❌ 不合格</button>
+          <button class="vb vb-hold" onclick="setVerdict('hold')">⏸ 保留</button>
+        </div>
+        <div class="verdict-note">
+          <input type="text" id="verdict-note" placeholder="所見・判定理由を入力（任意）">
+        </div>
+        <div class="verdict-actions">
+          <button class="va-btn primary" onclick="saveToKintone()">💾 Kintoneに保存</button>
+          <button class="va-btn" onclick="sendCalendly()" id="btn-calendly" style="display:none">
+            📅 Calendlyリンク発行
+          </button>
+          <button class="va-btn" onclick="sendRejection()" id="btn-reject" style="display:none">
+            ✉ 不合格通知メール
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div><!-- /main -->
+</div><!-- /layout -->
+
+<!-- ─ Detail modal ─ -->
+<div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)closeModal()">
+<div class="modal">
+  <div class="modal-hd">
+    <div class="modal-title">申請詳細</div>
+    <button class="modal-close" onclick="closeModal()">✕</button>
+  </div>
+  <div id="modal-body"></div>
+</div>
+</div>
+
+<script>
+// ── XSS対策: ユーザー入力値のエスケープ ──────────────────────────────
+// ════════════════════════════════════════════════════════════════
+// ② AI書類解析 — 身分証・宅建士証の自動チェックリスト入力
+// ════════════════════════════════════════════════════════════════
+
+var aiDocResults = {}; // { id: {...}, takken: {...} }
+
+async function aiAnalyzeDoc(type, file) {
+  if (!file) return;
+  var btnEl = document.getElementById('ai-' + type + '-btn');
+  btnEl.innerHTML = '<div style="font-size:18px;margin-bottom:4px;animation:spin .8s linear infinite;display:inline-block">⏳</div><div>解析中...</div>';
+
+  // ファイルをbase64に変換
+  var base64 = await new Promise(function(resolve, reject) {
+    var reader = new FileReader();
+    reader.onload = function(e) { resolve(e.result.split(',')[1]); };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+
+  var isImage = file.type.startsWith('image/');
+  var mediaType = isImage ? file.type : 'application/pdf';
+  var docLabel = type === 'id' ? '身分証（運転免許証・マイナンバーカード等）' : '宅地建物取引士証';
+
+  try {
+    var contentParts = [];
+    if (isImage) {
+      contentParts.push({ type:'image', source:{ type:'base64', media_type:mediaType, data:base64 }});
+    } else {
+      contentParts.push({ type:'document', source:{ type:'base64', media_type:'application/pdf', data:base64 }});
+    }
+    contentParts.push({ type:'text', text:
+      '上記の画像は「' + docLabel + '」です。以下の情報を抽出し、JSONのみで回答してください（前置き不要）。\n' +
+      (type === 'id'
+        ? '{"name":"氏名","furigana":"フリガナ（不明な場合はnull）","birthdate":"生年月日（YYYY-MM-DD）","address":"住所","expiry":"有効期限（YYYY-MM-DD、ない場合はnull）","doc_type":"書類種別（運転免許証/マイナンバーカード/パスポート等）","is_valid":true/false,"issues":["問題点（鮮明でない・有効期限切れ等。なければ空配列）"]}'
+        : '{"name":"氏名","registration_no":"登録番号（例:東京(3)第12345号）","expiry":"有効期限（YYYY-MM-DD）","prefecture":"登録都道府県","is_valid":true/false,"issues":["問題点（なければ空配列）"]}')
+    });
+
+    var response = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 600,
+        messages: [{ role:'user', content: contentParts }]
+      })
+    });
+    var data = await response.json();
+    var text = (data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
+    var clean = text.replace(/```json|```/g,'').trim();
+    var parsed = JSON.parse(clean);
+    aiDocResults[type] = parsed;
+
+    // ボタン表示を更新
+    var icon = parsed.is_valid ? '✅' : '⚠️';
+    var nameDisp = parsed.name || '—';
+    btnEl.innerHTML = '<div style="font-size:16px;margin-bottom:2px">' + icon + '</div><div style="font-size:10px;font-weight:700;color:var(--text)">' + escHtml(nameDisp) + '</div><div style="font-size:9px;color:var(--muted)">解析完了 · 再選択</div>';
+    btnEl.style.borderColor = parsed.is_valid ? 'rgba(52,211,153,.4)' : 'rgba(251,146,60,.4)';
+    btnEl.style.background  = parsed.is_valid ? 'rgba(52,211,153,.06)' : 'rgba(251,146,60,.06)';
+
+    renderAiDocExtracted();
+    autoFillFromAi();
+
+  } catch(e) {
+    btnEl.innerHTML = '<div style="font-size:18px;margin-bottom:4px">⚠️</div><div style="font-size:10px;color:var(--red)">解析失敗 · 再試行</div>';
+    console.error('AI書類解析エラー:', e);
+  }
+}
+
+function renderAiDocExtracted() {
+  var el = document.getElementById('ai-doc-extracted');
+  var badge = document.getElementById('ai-doc-result-badge');
+  if (!el) return;
+
+  var parts = [];
+  if (aiDocResults.id) {
+    var d = aiDocResults.id;
+    parts.push('<div style="margin-bottom:10px">');
+    parts.push('<div style="font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:6px">🪪 身分証から抽出</div>');
+    parts.push('<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">');
+    parts.push(aiInfoCell('氏名', d.name));
+    parts.push(aiInfoCell('生年月日', d.birthdate));
+    parts.push(aiInfoCell('書類種別', d.doc_type));
+    parts.push(aiInfoCell('有効期限', d.expiry || '—'));
+    parts.push(aiInfoCell('住所', d.address, 2));
+    parts.push('</div>');
+    if (d.issues && d.issues.length) {
+      parts.push('<div style="margin-top:8px;padding:6px 10px;background:rgba(251,146,60,.1);border:1px solid rgba(251,146,60,.3);border-radius:6px;font-size:10px;color:var(--orange)">⚠️ ' + d.issues.join(' / ') + '</div>');
+    }
+    parts.push('</div>');
+  }
+  if (aiDocResults.takken) {
+    var t = aiDocResults.takken;
+    parts.push('<div style="margin-bottom:4px">');
+    parts.push('<div style="font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:6px">📜 宅建士証から抽出</div>');
+    parts.push('<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">');
+    parts.push(aiInfoCell('氏名', t.name));
+    parts.push(aiInfoCell('登録番号', t.registration_no));
+    parts.push(aiInfoCell('登録都道府県', t.prefecture));
+    parts.push(aiInfoCell('有効期限', t.expiry));
+    parts.push('</div>');
+    if (t.issues && t.issues.length) {
+      parts.push('<div style="margin-top:8px;padding:6px 10px;background:rgba(251,146,60,.1);border:1px solid rgba(251,146,60,.3);border-radius:6px;font-size:10px;color:var(--orange)">⚠️ ' + t.issues.join(' / ') + '</div>');
+    }
+    parts.push('</div>');
+  }
+
+  if (parts.length) {
+    el.style.display = 'block';
+    el.innerHTML = parts.join('');
+    if (badge) badge.textContent = '✅ 解析完了 — チェックリストに反映済み';
+  }
+}
+
+function aiInfoCell(label, val, span) {
+  return '<div style="' + (span ? 'grid-column:span ' + span + ';' : '') +
+    'padding:6px 10px;background:rgba(255,255,255,.03);border-radius:6px;border:1px solid var(--border2)">' +
+    '<div style="font-size:9px;color:var(--muted);margin-bottom:2px">' + escHtml(label) + '</div>' +
+    '<div style="font-size:11px;font-weight:600;color:var(--text)">' + escHtml(val || '—') + '</div>' +
+    '</div>';
+}
+
+function autoFillFromAi() {
+  // チェックリストのOK/NGを自動設定
+  var idRes = aiDocResults.id;
+  var tkRes = aiDocResults.takken;
+
+  if (idRes) {
+    // 氏名確認
+    autoSetItem('name', idRes.is_valid ? 'ok' : null, idRes.name ? '【AI抽出】氏名: ' + idRes.name : '');
+    // 身分証有効期限
+    if (idRes.expiry) {
+      var exp = new Date(idRes.expiry);
+      autoSetItem('addr', exp > new Date() ? 'ok' : 'ng', '【AI抽出】有効期限: ' + idRes.expiry);
+    }
+  }
+  if (tkRes) {
+    // 宅建士証の有効期限
+    if (tkRes.expiry) {
+      var tkExp = new Date(tkRes.expiry);
+      var isValid = tkExp > new Date();
+      autoSetItem('tk-exp', isValid ? 'ok' : 'ng', '【AI抽出】有効期限: ' + tkRes.expiry + (isValid ? '' : ' → 期限切れ'));
+    }
+    // 登録番号の形式
+    if (tkRes.registration_no) {
+      var fmtOk = /[都道府県]\(.+\)/.test(tkRes.registration_no) || /[^\s]+\(\d+\)/.test(tkRes.registration_no);
+      autoSetItem('tk-fmt', fmtOk ? 'ok' : 'ng', '【AI抽出】登録番号: ' + tkRes.registration_no);
+    }
+    // 宅建士証真正性
+    autoSetItem('tk-img', tkRes.is_valid ? 'ok' : 'ng',
+      tkRes.issues && tkRes.issues.length ? '【AI】懸念: ' + tkRes.issues.join(', ') : '【AI】画像に問題なし');
+  }
+  updateRing();
+}
+
+function autoSetItem(itemId, status, memo) {
+  // setStatus関数が存在する場合に呼び出し
+  if (typeof setStatus === 'function') {
+    setStatus(itemId, status);
+    if (memo) {
+      var inp = document.getElementById('memo-' + itemId);
+      if (inp && !inp.value) inp.value = memo;
+    }
+  }
+}
+
+// 申請者選択時にAIパネルを表示
+var _origSelectApp = null;
+
+// ════════════════════════════════════════════════════════════════
+
+function escHtml(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// ══ AUTH GUARD (HQ専用ページ) ══════════════════════════════════
+(function() {
+  var s = null;
+  try { s = JSON.parse(sessionStorage.getItem('coreto_session') || 'null'); } catch(e) {}
+  if (!s || !s.userId || !s.sessionToken || s.sessionToken.length !== 64) { sessionStorage.removeItem('coreto_session'); location.replace('coreto-login.html'); return; }
+  var _la = new Date(s.loginAt).getTime();
+  if (isNaN(_la) || (Date.now() - _la) > 28800000) { sessionStorage.removeItem('coreto_session'); alert('セッションの有効期限が切れました。'); location.replace('coreto-login.html'); return; }
+  if (s.type !== 'hq') { location.replace('coreto-hub.html'); return; }
+  window._SESSION = s;
+})();
+
+// ================================================================
+//  申請者デモデータ
+// ================================================================
+const APPLICANTS = [
+  {
+    id:'APP-20260218-001', name:'田中 雄介', kana:'タナカ ユウスケ',
+    type:'re', applied:'2026-02-18 10:23', status:'pending',
+    age:34, addr:'東京都渋谷区', email:'tanaka.y@example.com', tel:'090-1234-5678',
+    takken:true, takkenNo:'東京(2)098765', takkenExp:'2028-01-15',
+    experience:'3年以上', expDetail:'賃貸・売買を担当。月平均3件成約。',
+    area:'渋谷・港区・新宿', propType:'マンション・戸建て',
+    motivation:'独立して自由に働きながら、より多くの顧客に貢献したいと考えています。COREMATOのシステムで効率よく案件を進めたいと思い応募しました。これまでの経験を活かして即戦力になれると確信しています。',
+    referralCode:'PT-GOLD-001', referralName:'山田パートナー', referralRank:'Gold',
+    contractType:'individual',
+  },
+  {
+    id:'APP-20260218-002', name:'佐藤 麻衣', kana:'サトウ マイ',
+    type:'hr', applied:'2026-02-18 11:45', status:'pending',
+    age:29, addr:'神奈川県横浜市', email:'sato.m@example.com', tel:'080-9876-5432',
+    experience:'3年以上', expDetail:'CA/RA両面型。IT・製造業界に強み。年間転職支援50名超。',
+    jobTypes:['CA（キャリアアドバイザー）','RA（リクルーティングアドバイザー）','両面型'],
+    industry:'IT・製造・金融', occupation:'エンジニア・営業職',
+    motivation:'フリーランスとして人材紹介業を続けてきました。COREMATOの仕組みを活用してより多くの転職成功者を輩出したいと思います。CA・RA両方の経験があり、即日から案件対応できます。',
+    referralCode:'', referralName:'', referralRank:'',
+    contractType:'individual',
+  },
+  {
+    id:'APP-20260218-003', name:'鈴木 商事', kana:'スズキ ショウジ',
+    type:'pt', applied:'2026-02-18 13:10', status:'pending',
+    age:52, addr:'東京都千代田区', email:'info@suzuki-sh.example.com', tel:'03-1234-5678',
+    contractType:'corporate', corpName:'鈴木商事株式会社', corpNo:'1234567890123', repName:'鈴木 一郎',
+    motivation:'弊社の顧客ネットワークを活用して不動産・人材の紹介事業を展開したいと考えています。関東圏を中心に300社以上の取引先を持ち、優良な紹介ルートを提供できます。よろしくお願いします。',
+    referralCode:'', referralName:'', referralRank:'',
+  },
+  {
+    id:'APP-20260217-004', name:'渡辺 拓也', kana:'ワタナベ タクヤ',
+    type:'re', applied:'2026-02-17 09:00', status:'pending',
+    age:22, addr:'埼玉県さいたま市', email:'watanabe.t@example.com', tel:'090-1111-2222',
+    takken:false, takkenNo:'', takkenExp:'',
+    experience:'未経験', expDetail:'',
+    area:'埼玉県', propType:'',
+    motivation:'不動産に興味があります。',
+    referralCode:'', referralName:'', referralRank:'',
+    contractType:'individual',
+  },
+  {
+    id:'APP-20260217-005', name:'高橋 恵子', kana:'タカハシ ケイコ',
+    type:'hr', applied:'2026-02-17 14:30', status:'pass',
+    age:38, addr:'大阪府大阪市', email:'takahashi.k@example.com', tel:'06-1234-5678',
+    experience:'3年以上', expDetail:'CA専任。医療・介護分野に特化。',
+    jobTypes:['CA（キャリアアドバイザー）'],
+    industry:'医療・介護', occupation:'看護師・介護士',
+    motivation:'医療・介護分野の転職支援に10年以上従事してきました。COREMATOの仕組みを使って、より多くの方に転職をサポートしたいです。',
+    referralCode:'SPECIAL-001', referralName:'本部推薦', referralRank:'Platinum',
+    contractType:'individual',
+  },
+];
+
+// ================================================================
+//  チェックリスト定義
+// ================================================================
+const CHECKLISTS = {
+  re: {
+    estTime: '15〜30分',
+    sections: [
+      {
+        id:'basic', icon:'👤', title:'基本情報確認', time:'約2分',
+        items:[
+          { id:'name',    label:'氏名・フリガナの一致確認',     desc:'申請フォームの氏名とフリガナが正確に記載されているか' },
+          { id:'age',     label:'年齢確認（18歳以上）',         desc:'生年月日から計算し18歳以上であることを確認',
+            autoCheck: app => app.age < 18 ? 'ng' : null,
+            ngAlert: '18歳未満のため即時不合格' },
+          { id:'addr',    label:'住所・連絡先の有効性確認',     desc:'郵便番号・住所・メール・電話が有効な形式か' },
+          { id:'indiv',   label:'個人事業主確認（法人不可）',   desc:'不動産エージェントは宅建業法により個人契約のみ。法人希望の場合は即不合格',
+            ngTag:'即不合格', ngAlert:'法人契約希望の場合は即時不合格' },
+        ]
+      },
+      {
+        id:'antisocial', icon:'🔍', title:'反社チェック', time:'約2分',
+        items:[
+          { id:'google',  label:'Google検索チェック',           desc:'氏名・住所で検索し反社・詐欺・犯罪歴等の情報がないか確認' },
+          { id:'kintone', label:'Kintone内部DB照合',            desc:'過去の除名・トラブル事例と照合',
+            ngTag:'即不合格', ngAlert:'過去除名記録がある場合は即時不合格' },
+        ]
+      },
+      {
+        id:'takken', icon:'📜', title:'宅建士資格確認', time:'約5分',
+        items:[
+          { id:'tk-held',  label:'資格保有有無の確認',          desc:'申請フォームの回答を確認（保有していない場合は以下をスキップ）' },
+          { id:'tk-fmt',   label:'登録番号の形式チェック',      desc:'形式：都道府県名（数字）登録番号　例：東京(2)098765',
+            hint:'保有者のみ' },
+          { id:'tk-exp',   label:'有効期限内か確認',            desc:'宅建士証の有効期限が現在日付より後であることを確認',
+            hint:'保有者のみ' },
+          { id:'tk-img',   label:'宅建士証画像の真正性確認',    desc:'・氏名と番号が申請と一致　・画像が鮮明　・偽造の疑いなし',
+            hint:'保有者のみ' },
+          { id:'tk-db',    label:'国交省DBとの照合',
+            desc:'<a href="https://www.retio.or.jp/" target="_blank">🔗 retio.or.jp（国交省DB）</a>　で登録番号を照合し、氏名・有効期限が一致するか確認',
+            hint:'保有者のみ', ngTag:'即不合格' },
+        ]
+      },
+      {
+        id:'career', icon:'💼', title:'職歴・経験確認', time:'約5分',
+        items:[
+          { id:'exp-yr',  label:'業界経験年数の評価',
+            desc:'3年以上：優遇　／　1〜3年：問題なし　／　1年未満：面接で判断　／　未経験：面接で判断' },
+          { id:'exp-det', label:'実績・職歴の具体性確認',       desc:'月平均成約件数・担当エリア・得意物件タイプが具体的に記載されているか' },
+          { id:'area',    label:'得意エリア・物件タイプの確認', desc:'活動可能な地域・専門分野が明記されているか（任意項目だが記載があると優遇）' },
+        ]
+      },
+      {
+        id:'motivation', icon:'📝', title:'志望動機確認', time:'約3分',
+        items:[
+          { id:'mot-len',  label:'志望動機 100文字以上',
+            desc:'100文字以上で記載されているか確認',
+            autoCheck: app => app.motivation && app.motivation.length >= 100 ? 'ok' : 'ng',
+            ngAlert: '100文字未満のため原則不合格（面接で補完可能か判断）' },
+          { id:'mot-qual', label:'志望動機の具体性・誠実さ',   desc:'冷やかし・コピペ・過度に短い動機でないか。業界経験や独立志向が読み取れるか' },
+        ]
+      },
+      {
+        id:'referral', icon:'🔗', title:'紹介者確認', time:'約1分',
+        items:[
+          { id:'ref-chk', label:'紹介コード確認・紹介者ランク確認', desc:'Goldランク以上の紹介者がいる場合は審査を優遇。特別紹介コードの場合は条件確認' },
+        ]
+      },
+    ]
+  },
+  hr: {
+    estTime: '15〜30分',
+    sections: [
+      {
+        id:'basic', icon:'👤', title:'基本情報確認', time:'約2分',
+        items:[
+          { id:'name',   label:'氏名・フリガナの一致確認',      desc:'申請フォームの氏名とフリガナが正確に記載されているか' },
+          { id:'age',    label:'年齢確認（18歳以上）',          desc:'生年月日から計算し18歳以上であることを確認',
+            autoCheck: app => app.age < 18 ? 'ng' : null,
+            ngAlert:'18歳未満のため即時不合格' },
+          { id:'addr',   label:'住所・連絡先の有効性確認',      desc:'郵便番号・住所・メール・電話が有効な形式か' },
+          { id:'indiv',  label:'個人事業主確認（法人不可）',    desc:'人材エージェントは職業安定法により個人契約のみ',
+            ngTag:'即不合格' },
+        ]
+      },
+      {
+        id:'antisocial', icon:'🔍', title:'反社チェック', time:'約2分',
+        items:[
+          { id:'google',  label:'Google検索チェック',           desc:'氏名・住所で検索し反社・詐欺・犯罪歴等の情報がないか確認' },
+          { id:'kintone', label:'Kintone内部DB照合',            desc:'過去の除名・トラブル事例と照合',
+            ngTag:'即不合格' },
+        ]
+      },
+      {
+        id:'hrexp', icon:'🏢', title:'人材業界経験確認 ★最重要', time:'約7分',
+        items:[
+          { id:'exp-yr',  label:'業界経験年数の確認',
+            desc:'<span class="tag tag-ng">1年未満：即不合格</span>　<span class="tag tag-ng">未経験：即不合格</span>　1〜3年：OK　3年以上：優遇',
+            autoCheck: app => {
+              if (app.experience === '1年未満' || app.experience === '未経験') return 'ng';
+              if (app.experience === '3年以上') return 'ok';
+              return null;
+            },
+            ngAlert:'人材業界経験1年未満または未経験のため即時不合格（必須要件）',
+            instantFail: true,
+          },
+          { id:'jobtype', label:'業務内容の確認',
+            desc:'<span class="tag tag-ok">CA / RA / 両面型：合格</span>　<span class="tag tag-warn">人材営業のみ：面接で確認</span>　<span class="tag tag-ng">事務・受付のみ：不合格</span>',
+            autoCheck: app => {
+              if (!app.jobTypes) return null;
+              if (app.jobTypes.some(t => t.includes('事務'))) return 'ng';
+              if (app.jobTypes.some(t => t.includes('CA') || t.includes('RA') || t.includes('両面'))) return 'ok';
+              return null;
+            },
+          },
+          { id:'exp-det', label:'実績・職歴の具体性確認',       desc:'担当業界・年間支援件数・得意職種が具体的に記載されているか' },
+        ]
+      },
+      {
+        id:'specialty', icon:'🎯', title:'専門分野確認', time:'約3分',
+        items:[
+          { id:'industry', label:'得意業界・職種の確認',        desc:'特化分野が明確か。カバレッジの広さより深さを重視' },
+        ]
+      },
+      {
+        id:'motivation', icon:'📝', title:'志望動機確認', time:'約3分',
+        items:[
+          { id:'mot-len',  label:'志望動機 100文字以上',
+            autoCheck: app => app.motivation && app.motivation.length >= 100 ? 'ok' : 'ng',
+            ngAlert: '100文字未満' },
+          { id:'mot-qual', label:'志望動機の具体性・誠実さ',   desc:'独立志向・実績への言及・フリーランス経験の有無など' },
+        ]
+      },
+    ]
+  },
+  pt: {
+    estTime: '5〜10分',
+    sections: [
+      {
+        id:'basic', icon:'👤', title:'基本情報確認', time:'約2分',
+        items:[
+          { id:'name',   label:'氏名（または法人名）の確認',    desc:'個人の場合：氏名・フリガナ　法人の場合：法人名・代表者名の確認' },
+          { id:'age',    label:'年齢確認（18歳以上）',          desc:'個人の場合のみ（法人はスキップ可）',
+            autoCheck: app => (!app.corpName && app.age < 18) ? 'ng' : null,
+            ngAlert:'18歳未満のため即時不合格' },
+          { id:'addr',   label:'住所・連絡先の有効性確認',      desc:'郵便番号・住所・メール・電話が有効な形式か' },
+        ]
+      },
+      {
+        id:'antisocial', icon:'🔍', title:'反社チェック', time:'約2分',
+        items:[
+          { id:'google',  label:'Google検索チェック',           desc:'氏名・法人名で検索し反社・詐欺等の情報がないか確認' },
+          { id:'kintone', label:'Kintone内部DB照合',            desc:'過去の除名・トラブル事例と照合',
+            ngTag:'即不合格' },
+        ]
+      },
+      {
+        id:'corp', icon:'🏢', title:'法人確認（法人の場合のみ）', time:'約3分',
+        items:[
+          { id:'corp-no',  label:'法人番号の確認（国税庁DB）',
+            desc:'<a href="https://www.houjin-bangou.nta.go.jp/" target="_blank">🔗 国税庁 法人番号公表サイト</a>　で法人番号を照合',
+            hint:'法人パートナーのみ' },
+          { id:'corp-rep', label:'代表者の確認',               desc:'登記情報と申請の代表者名が一致するか',
+            hint:'法人パートナーのみ' },
+        ]
+      },
+      {
+        id:'job', icon:'💼', title:'職業・ネットワーク確認', time:'約1分',
+        items:[
+          { id:'occupation', label:'職業・立場の確認',          desc:'どのような顧客ネットワークを持つか。個人・企業どちらの紹介が主か' },
+        ]
+      },
+      {
+        id:'motivation', icon:'📝', title:'志望動機確認', time:'約3分',
+        items:[
+          { id:'mot-len',  label:'志望動機 50文字以上',
+            autoCheck: app => app.motivation && app.motivation.length >= 50 ? 'ok' : 'ng',
+            ngAlert: '50文字未満のため不合格リスクあり（冷やかし判定）' },
+          { id:'mot-qual', label:'志望動機の具体性確認',        desc:'冷やかし・極端に短い内容でないか。紹介ルートの具体性があるか' },
+        ]
+      },
+      {
+        id:'referral', icon:'🔗', title:'紹介者確認', time:'約1分',
+        items:[
+          { id:'ref-chk', label:'紹介コード確認・紹介者ランク確認', desc:'Goldランク以上の紹介者がいる場合は審査を優遇。特別紹介コードの場合は条件確認' },
+        ]
+      },
+    ]
+  }
+};
+
+// ================================================================
+//  State
+// ================================================================
+let currentApp  = null;
+let checkState  = {};  // { itemId: 'ok'|'ng'|'skip'|null }
+let currentVerdict = null;
+let timerStart  = null;
+let timerInterval = null;
+let currentFilter = 'all';
+
+// ================================================================
+//  Init
+// ================================================================
+window.addEventListener('DOMContentLoaded', () => {
+  renderAppList();
+});
+
+// ================================================================
+//  Applicant list
+// ================================================================
+function renderAppList() {
+  const list  = document.getElementById('app-list');
+  const apps  = APPLICANTS.filter(a =>
+    currentFilter === 'all' || a.type === currentFilter
+  );
+  document.getElementById('pending-count').textContent =
+    APPLICANTS.filter(a => a.status === 'pending').length + ' 件';
+
+  const TYPE = { re:'不動産AG', hr:'人材AG', pt:'Partner' };
+  const TYPE_CLS = { re:'t-re', hr:'t-hr', pt:'t-pt' };
+  const STATUS_CLS = { pending:'s-pending', pass:'s-pass', fail:'s-fail', hold:'s-hold' };
+
+  list.innerHTML = apps.map(a => `
+    <div class="app-card ${currentApp&&currentApp.id===a.id?'active':''}"
+         onclick="selectApp('${a.id}')">
+      <div class="ac-status ${STATUS_CLS[a.status]||'s-pending'}"></div>
+      <div class="ac-name">${escHtml(a.name)}</div>
+      <div class="ac-meta">
+        <span class="ac-type ${TYPE_CLS[a.type]}">${TYPE[a.type]}</span>
+        <span class="ac-time">${a.applied.slice(5,10)} 申請</span>
+        ${a.referralCode ? '<span style="font-size:9px;color:var(--gold)">🔗 紹介あり</span>' : ''}
+      </div>
+    </div>`).join('');
+}
+
+function filterApps(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.sf-btn').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  renderAppList();
+}
+
+// ================================================================
+//  Select applicant
+// ================================================================
+function selectApp(id) {
+  const app = APPLICANTS.find(a => a.id === id);
+  if (!app) return;
+  currentApp = app;
+  checkState = {};
+  currentVerdict = null;
+  // AI解析リセット
+  aiDocResults = {};
+  var aiPanel = document.getElementById('ai-doc-panel');
+  if (aiPanel) {
+    aiPanel.style.display = 'block';
+    document.getElementById('ai-doc-extracted').style.display = 'none';
+    document.getElementById('ai-doc-result-badge').textContent = '書類をアップロードすると自動解析します';
+    document.getElementById('ai-id-btn').innerHTML = '<div style="font-size:18px;margin-bottom:4px">🪪</div>身分証をアップロード';
+    document.getElementById('ai-id-btn').style.borderColor = '';
+    document.getElementById('ai-id-btn').style.background = '';
+    var tkBtn = document.getElementById('ai-takken-btn');
+    tkBtn.innerHTML = '<div style="font-size:18px;margin-bottom:4px">📜</div>宅建士証をアップロード';
+    tkBtn.style.borderColor = '';
+    tkBtn.style.background  = '';
+    // PTは宅建士証エリアを非表示
+    var tkArea = document.getElementById('ai-takken-area');
+    if (tkArea) tkArea.style.display = app.type === 'pt' ? 'none' : '';
+  }
+
+  // Timer reset
+  clearInterval(timerInterval);
+  timerStart = Date.now();
+  timerInterval = setInterval(updateTimer, 1000);
+  updateTimer();
+
+  renderAppList();
+  renderAppHeader(app);
+  renderChecklist(app);
+  updateProgress();
+
+  // Show main
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('app-hdr-wrap').style.display = 'block';
+
+  // Reset verdict UI
+  document.getElementById('result-banner').className = 'result-banner';
+  document.getElementById('result-banner').innerHTML = '';
+  document.getElementById('btn-calendly').style.display = 'none';
+  document.getElementById('btn-reject').style.display = 'none';
+  document.getElementById('verdict-note').value = '';
+  document.getElementById('instant-fail-banner').classList.remove('show');
+
+  // Auto-checks
+  runAutoChecks(app);
+}
+
+// ================================================================
+//  Timer
+// ================================================================
+function updateTimer() {
+  const elapsed = Math.floor((Date.now() - timerStart) / 1000);
+  const m = Math.floor(elapsed / 60).toString().padStart(2,'0');
+  const s = (elapsed % 60).toString().padStart(2,'0');
+  document.getElementById('timer-display').textContent = m + ':' + s;
+}
+
+// ================================================================
+//  Header
+// ================================================================
+function renderAppHeader(app) {
+  const TYPE_LABEL = { re:'🏠 不動産エージェント', hr:'👥 人材エージェント', pt:'🤝 パートナー' };
+  const TYPE_COLOR = {
+    re:'background:rgba(79,156,249,.15);color:#4f9cf9;border:1px solid rgba(79,156,249,.3)',
+    hr:'background:rgba(20,184,166,.15);color:#2dd4bf;border:1px solid rgba(20,184,166,.3)',
+    pt:'background:rgba(52,211,153,.15);color:#34d399;border:1px solid rgba(52,211,153,.3)',
+  };
+  const AVATAR = { re:'🏠', hr:'👥', pt:'🤝' };
+
+  document.getElementById('app-avatar').textContent = AVATAR[app.type];
+  document.getElementById('app-name').textContent   = app.name;
+  document.getElementById('app-type-pill').textContent  = TYPE_LABEL[app.type];
+  document.getElementById('app-type-pill').setAttribute('style',
+    TYPE_COLOR[app.type] + ';padding:3px 10px;border-radius:5px;font-size:10px;font-weight:700');
+  document.getElementById('app-sub-id').textContent    = app.id;
+  document.getElementById('app-applied').textContent   = '申請日時：' + app.applied;
+
+  // Info grid
+  const cl = CHECKLISTS[app.type];
+  const cells = [
+    { label:'年齢',   val: app.age + '歳' },
+    { label:'居住地', val: app.addr },
+    { label:'審査目安', val: cl.estTime },
+    { label:'紹介者',
+      val: app.referralCode
+        ? `<span class="referral-badge">🔗 ${app.referralName} (${app.referralRank})</span>`
+        : '<span style="color:var(--muted)">なし</span>' },
+  ];
+  document.getElementById('info-grid').innerHTML =
+    cells.map(c => `
+      <div class="info-cell">
+        <div class="ic-label">${c.label}</div>
+        <div class="ic-val">${c.val}</div>
+      </div>`).join('');
+}
+
+// ================================================================
+//  Checklist render
+// ================================================================
+function renderChecklist(app) {
+  const cl   = CHECKLISTS[app.type];
+  const body = document.getElementById('checklist-body');
+
+  body.innerHTML = cl.sections.map((sec, si) => `
+    <div class="section" id="sec-${sec.id}">
+      <div class="sec-hdr" onclick="toggleSec('${sec.id}')">
+        <div class="sec-title">
+          <span class="sec-icon">${sec.icon}</span>
+          ${sec.title}
+          <span class="sec-time">${sec.time}</span>
+        </div>
+        <div class="sec-meta">
+          <span class="sec-progress" id="sec-prog-${sec.id}">0/${sec.items.length}</span>
+          <span class="sec-chevron open" id="chev-${sec.id}">›</span>
+        </div>
+      </div>
+      <div class="sec-body" id="sec-body-${sec.id}">
+        ${sec.items.map((item, ii) => renderCheckItem(item, ii)).join('')}
+      </div>
+    </div>`).join('');
+}
+
+function renderCheckItem(item, ii) {
+  const hasHint = item.hint ? `<span class="tag tag-info" style="margin-left:6px">${item.hint}</span>` : '';
+  const hasNgTag = item.ngTag ? `<span class="tag tag-ng" style="margin-left:6px">${item.ngTag}</span>` : '';
+  return `
+    <div class="chk-item" id="row-${item.id}">
+      <div class="chk-num">${String(ii+1).padStart(2,'0')}</div>
+      <div class="chk-content">
+        <div class="chk-label">
+          ${item.label}${hasHint}${hasNgTag}
+        </div>
+        ${item.desc ? `<div class="chk-desc">${item.desc}</div>` : ''}
+        ${item.ngAlert ? `<div class="chk-alert" id="alert-${item.id}">⚠️ ${item.ngAlert}</div>` : ''}
+        <div class="item-memo" id="memo-${item.id}">
+          <input type="text" placeholder="メモを入力（任意）" oninput="saveMemo('${item.id}',this.value)">
+        </div>
+      </div>
+      <div class="status-btns">
+        <button class="sb" id="sb-ok-${item.id}" title="問題なし（OK）"
+                onclick="setCheck('${item.id}','ok')">✓</button>
+        <button class="sb" id="sb-ng-${item.id}" title="問題あり（NG）"
+                onclick="setCheck('${item.id}','ng')">✗</button>
+        <button class="sb" id="sb-skip-${item.id}" title="スキップ（非該当）"
+                onclick="setCheck('${item.id}','skip')">—</button>
+      </div>
+    </div>`;
+}
+
+// ================================================================
+//  Auto-checks
+// ================================================================
+function runAutoChecks(app) {
+  const cl = CHECKLISTS[app.type];
+  let hasInstantFail = false;
+  let ifReason = '';
+
+  cl.sections.forEach(sec => {
+    sec.items.forEach(item => {
+      if (item.autoCheck) {
+        const result = item.autoCheck(app);
+        if (result) {
+          setCheck(item.id, result, true);
+          if (result === 'ng' && item.instantFail) {
+            hasInstantFail = true;
+            ifReason = item.ngAlert || item.label;
+          }
+        }
+      }
+    });
+  });
+
+  if (hasInstantFail) {
+    const banner = document.getElementById('instant-fail-banner');
+    banner.classList.add('show');
+    document.getElementById('ifb-title').textContent = '即時不合格条件に該当';
+    document.getElementById('ifb-reason').textContent = ifReason;
+  }
+}
+
+// ================================================================
+//  Check state
+// ================================================================
+function setCheck(itemId, state, silent = false) {
+  checkState[itemId] = state;
+
+  // Update button styles
+  ['ok','ng','skip'].forEach(s => {
+    const btn = document.getElementById(`sb-${s}-${itemId}`);
+    if (!btn) return;
+    btn.className = 'sb' + (state === s ? ` ${s}-active` : '');
+  });
+
+  // Update row style
+  const row = document.getElementById(`row-${itemId}`);
+  if (row) {
+    row.classList.toggle('ok-row', state === 'ok');
+    row.classList.toggle('ng-row', state === 'ng');
+  }
+
+  // Show/hide alert
+  const alert = document.getElementById(`alert-${itemId}`);
+  if (alert) alert.classList.toggle('show', state === 'ng');
+
+  // Show memo on NG
+  const memo = document.getElementById(`memo-${itemId}`);
+  if (memo) memo.classList.toggle('show', state === 'ng');
+
+  updateProgress();
+  updateSectionProgress();
+}
+
+function saveMemo(itemId, val) {
+  if (!checkState.memos) checkState.memos = {};
+  checkState.memos[itemId] = val;
+}
+
+// ================================================================
+//  Progress
+// ================================================================
+function updateProgress() {
+  if (!currentApp) return;
+  const cl      = CHECKLISTS[currentApp.type];
+  const allItems = cl.sections.flatMap(s => s.items);
+  const total    = allItems.length;
+  const done     = allItems.filter(it => checkState[it.id]).length;
+  const pct      = total > 0 ? Math.round((done / total) * 100) : 0;
+
+  // Ring
+  const circ = 2 * Math.PI * 31;
+  document.getElementById('ring-fill').style.strokeDashoffset = circ * (1 - pct/100);
+  document.getElementById('ring-fill').style.stroke =
+    pct < 50 ? 'var(--orange)' : pct < 100 ? 'var(--blue)' : 'var(--green)';
+  document.getElementById('ring-pct').textContent = pct + '%';
+  document.getElementById('progress-text').textContent = done + ' / ' + total + ' 項目';
+}
+
+function updateSectionProgress() {
+  if (!currentApp) return;
+  const cl = CHECKLISTS[currentApp.type];
+  cl.sections.forEach(sec => {
+    const done  = sec.items.filter(it => checkState[it.id]).length;
+    const el    = document.getElementById(`sec-prog-${sec.id}`);
+    if (el) el.textContent = `${done}/${sec.items.length}`;
+  });
+}
+
+function toggleSec(id) {
+  const body = document.getElementById(`sec-body-${id}`);
+  const chev = document.getElementById(`chev-${id}`);
+  body.classList.toggle('collapsed');
+  chev.classList.toggle('open');
+}
+
+// ================================================================
+//  Verdict
+// ================================================================
+function setVerdict(v) {
+  currentVerdict = v;
+  const banner = document.getElementById('result-banner');
+  const msgs = {
+    pass: { cls:'rb-pass', icon:'✅', text:'合格 — 面接リンクを発行してください' },
+    fail: { cls:'rb-fail', icon:'❌', text:'不合格 — 不合格通知メールを送信してください' },
+    hold: { cls:'rb-hold', icon:'⏸', text:'保留 — 追加確認後に再判定してください' },
+  };
+  const m = msgs[v];
+  banner.className = `result-banner show ${m.cls}`;
+  banner.innerHTML = `<span style="font-size:20px">${m.icon}</span>${m.text}`;
+
+  document.getElementById('btn-calendly').style.display = v === 'pass' ? 'block' : 'none';
+  document.getElementById('btn-reject').style.display   = v === 'fail' ? 'block' : 'none';
+}
+
+// ================================================================
+//  Actions
+// ================================================================
+function saveToKintone() {
+  if (!currentApp) return;
+  if (!currentVerdict) { alert('審査結果（合格/不合格/保留）を選択してください'); return; }
+  const note = document.getElementById('verdict-note').value;
+
+  // Update local state
+  currentApp.status = currentVerdict === 'pass' ? 'pass' : currentVerdict === 'fail' ? 'fail' : 'hold';
+  renderAppList();
+
+  const verdictJP = { pass:'合格', fail:'不合格', hold:'保留' }[currentVerdict];
+
+  if (currentVerdict === 'pass') {
+    // 合格時: トークンURL発行 → LINE WORKSで送付
+    const typePrefix = currentApp.type === 'pt' ? 'PT' : currentApp.type === 'hr' ? 'AG' : 'AG';
+    const agNum = String(Math.floor(10000 + Math.random() * 9999));
+    const token = typePrefix + agNum + '-' + Math.random().toString(36).substr(2,6).toUpperCase();
+    const signupUrl = location.origin + location.pathname.replace('coreto-screening.html','coreto-agent-signup.html') + '?token=' + token;
+
+    // Show token + URL in a copyable modal
+    const box = document.createElement('div');
+    box.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px';
+    box.innerHTML = `
+      <div style="background:#11141f;border:1px solid #2a3050;border-radius:16px;padding:28px;width:min(480px,100%);font-family:inherit">
+        <div style="font-size:16px;font-weight:700;color:#e8eaf0;margin-bottom:6px">✅ 合格 — 入会URL発行</div>
+        <div style="font-size:12px;color:#a0a8c0;margin-bottom:20px">${currentApp.name} さんの入会手続きURLです。LINE WORKSで送付してください。</div>
+        <div style="font-size:10px;color:#5a6080;margin-bottom:4px;letter-spacing:1px">トークン</div>
+        <div style="background:#090b13;border:1px solid #1e2235;border-radius:8px;padding:10px 14px;font-family:monospace;font-size:13px;color:#c9a840;margin-bottom:12px;word-break:break-all">${token}</div>
+        <div style="font-size:10px;color:#5a6080;margin-bottom:4px;letter-spacing:1px">入会URL（コピーして送付）</div>
+        <div id="signup-url-box" style="background:#090b13;border:1px solid #1e2235;border-radius:8px;padding:10px 14px;font-size:11px;color:#4f9cf9;margin-bottom:16px;word-break:break-all">${signupUrl}</div>
+        <div style="display:flex;gap:8px">
+          <button onclick="navigator.clipboard.writeText(document.getElementById('signup-url-box').textContent)" style="flex:1;background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.3);color:#c9a840;border-radius:8px;padding:10px;cursor:pointer;font-family:inherit">📋 URLをコピー</button>
+          <button onclick="this.closest('div[style*=fixed]').remove()" style="flex:1;background:transparent;border:1px solid #2a3050;color:#a0a8c0;border-radius:8px;padding:10px;cursor:pointer;font-family:inherit">閉じる</button>
+        </div>
+        <div style="margin-top:12px;font-size:10px;color:#5a6080;line-height:1.7">※ Kintoneに結果・トークンを保存済み<br>※ 合格通知・面接日程はCalendlyで確認してください</div>
+      </div>`;
+    document.body.appendChild(box);
+  } else {
+    alert(`✅ Kintoneに保存しました\n\n申請者：${currentApp.name}\n審査結果：${verdictJP}\n所見：${note || '（なし）'}\n\nKintoneの申請レコードが更新されました。`);
+  }
+}
+
+function sendCalendly() {
+  if (!currentApp) return;
+  alert(`📅 Calendlyリンクを発行しました\n\n宛先：${currentApp.email}\n内容：面接予約リンク（有効期限：7日間）\n\n※本番ではCalendly API + Zapier経由で自動送信されます`);
+}
+
+function sendRejection() {
+  if (!currentApp) return;
+  const note = document.getElementById('verdict-note').value;
+  alert(`✉ 不合格通知メールを送信しました\n\n宛先：${currentApp.email}\n理由：${note || '（審査基準を満たさなかったため）'}\n\n※本番ではZapier経由でGmail自動送信されます`);
+}
+
+// ================================================================
+//  Detail modal
+// ================================================================
+function showDetailModal() {
+  if (!currentApp) return;
+  const app = currentApp;
+  const TYPE = { re:'🏠 不動産エージェント', hr:'👥 人材エージェント', pt:'🤝 パートナー' };
+  const motLen = (app.motivation||'').length;
+
+  let specificHTML = '';
+  if (app.type === 're') {
+    specificHTML = `
+      <div class="detail-sec">
+        <div class="detail-sec-title">不動産エージェント 詳細</div>
+        <div class="detail-row"><span class="dr-key">宅建士資格</span>
+          <span class="dr-val">${app.takken
+            ? `<span class="tag tag-ok">保有</span> ${app.takkenNo}（有効期限：${app.takkenExp}）`
+            : '<span class="tag tag-warn">未保有</span>'}</span></div>
+        <div class="detail-row"><span class="dr-key">業界経験</span><span class="dr-val">${app.experience}</span></div>
+        <div class="detail-row"><span class="dr-key">実績</span><span class="dr-val">${app.expDetail||'—'}</span></div>
+        <div class="detail-row"><span class="dr-key">得意エリア</span><span class="dr-val">${app.area||'—'}</span></div>
+        <div class="detail-row"><span class="dr-key">得意物件</span><span class="dr-val">${app.propType||'—'}</span></div>
+      </div>`;
+  } else if (app.type === 'hr') {
+    specificHTML = `
+      <div class="detail-sec">
+        <div class="detail-sec-title">人材エージェント 詳細</div>
+        <div class="detail-row"><span class="dr-key">業界経験</span><span class="dr-val">${app.experience}</span></div>
+        <div class="detail-row"><span class="dr-key">実績</span><span class="dr-val">${app.expDetail||'—'}</span></div>
+        <div class="detail-row"><span class="dr-key">業務内容</span>
+          <span class="dr-val">${(app.jobTypes||[]).join('、')||'—'}</span></div>
+        <div class="detail-row"><span class="dr-key">得意業界</span><span class="dr-val">${app.industry||'—'}</span></div>
+        <div class="detail-row"><span class="dr-key">得意職種</span><span class="dr-val">${app.occupation||'—'}</span></div>
+      </div>`;
+  } else if (app.type === 'pt' && app.corpName) {
+    specificHTML = `
+      <div class="detail-sec">
+        <div class="detail-sec-title">法人情報</div>
+        <div class="detail-row"><span class="dr-key">法人名</span><span class="dr-val">${app.corpName}</span></div>
+        <div class="detail-row"><span class="dr-key">法人番号</span><span class="dr-val">${app.corpNo}</span></div>
+        <div class="detail-row"><span class="dr-key">代表者</span><span class="dr-val">${app.repName}</span></div>
+      </div>`;
+  }
+
+  document.getElementById('modal-body').innerHTML = `
+    <div class="detail-sec">
+      <div class="detail-sec-title">基本情報</div>
+      <div class="detail-row"><span class="dr-key">氏名</span><span class="dr-val">${app.name}（${app.kana||'—'}）</span></div>
+      <div class="detail-row"><span class="dr-key">申請タイプ</span><span class="dr-val">${TYPE[app.type]}</span></div>
+      <div class="detail-row"><span class="dr-key">年齢</span><span class="dr-val">${app.age}歳</span></div>
+      <div class="detail-row"><span class="dr-key">住所</span><span class="dr-val">${app.addr}</span></div>
+      <div class="detail-row"><span class="dr-key">メール</span><span class="dr-val">${app.email}</span></div>
+      <div class="detail-row"><span class="dr-key">電話</span><span class="dr-val">${app.tel}</span></div>
+      <div class="detail-row"><span class="dr-key">申請日時</span><span class="dr-val">${app.applied}</span></div>
+      <div class="detail-row"><span class="dr-key">申請ID</span><span class="dr-val" style="font-family:'DM Mono',monospace">${app.id}</span></div>
+    </div>
+    ${specificHTML}
+    <div class="detail-sec">
+      <div class="detail-sec-title">紹介コード</div>
+      ${app.referralCode
+        ? `<div class="referral-badge">🔗 ${app.referralCode}（${app.referralName} / ${app.referralRank}）</div>`
+        : '<span style="font-size:12px;color:var(--muted)">なし</span>'}
+    </div>
+    <div class="detail-sec">
+      <div class="detail-sec-title">志望動機</div>
+      <div class="motivation-box">${(app.motivation||'').replace(/\n/g,'<br>')}</div>
+      <div class="char-count">${motLen}文字</div>
+    </div>`;
+
+  document.getElementById('modal-overlay').classList.add('show');
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('show');
+}
+</script>
+</body>
+</html>

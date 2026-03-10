@@ -1,0 +1,2107 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <!-- ── Content Security Policy (XSS軽減) ──────────────────────────────────
+       変更時: 使用する外部サービスのオリジンを追加してください
+       Kintone追加時: connect-src に *.cybozu.com を追加
+  ─────────────────────────────────────────────────────────────────────── -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' 'unsafe-inline'
+      https://cdnjs.cloudflare.com
+      https://js.stripe.com
+      https://cdn-cgi/scripts;
+    style-src 'self' 'unsafe-inline'
+      https://fonts.googleapis.com;
+    font-src 'self'
+      https://fonts.gstatic.com;
+    img-src 'self' data: blob:;
+    connect-src 'self'
+      https://hooks.slack.com
+      https://hooks.zapier.com
+      https://api.stripe.com
+      https://js.stripe.com
+      https://www.houjin-bangou.nta.go.jp
+      https://www.retio.or.jp;
+    frame-src 'none';
+    object-src 'none';
+    base-uri 'self';
+  ">
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CORETO IT重説 &amp; 契約書管理</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090f;--card:#0f1119;--card2:#141720;--border:#1e2235;--border2:#252a3d;
+  --gold:#c9a84c;--gold-l:#e8c96a;--gold-dim:#7a5f22;
+  --blue:#4f9cf9;--green:#34d399;--red:#f87171;--orange:#fb923c;--purple:#a78bfa;
+  --teal:#2dd4bf;--muted:#4a5270;--sub:#7a849e;--text:#e2e6f3;
+}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;
+  background-image:radial-gradient(ellipse 50% 40% at 70% 5%,rgba(79,156,249,.04),transparent 60%)}
+
+/* ─ Header ─ */
+.header{display:flex;align-items:center;justify-content:space-between;padding:0 28px;height:54px;
+  border-bottom:1px solid var(--border);background:rgba(7,9,15,.9);backdrop-filter:blur(12px);
+  position:sticky;top:0;z-index:200}
+.logo{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--gold);letter-spacing:3px}
+.hdr-mid{display:flex;align-items:center;gap:10px}
+.hdr-badge{font-size:9px;font-weight:700;padding:3px 9px;border-radius:4px;letter-spacing:1px}
+.badge-it{background:rgba(79,156,249,.15);border:1px solid rgba(79,156,249,.3);color:var(--blue)}
+.badge-scan{background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.25);color:var(--green)}
+
+/* ─ Layout: 2-pane ─ */
+.layout{display:grid;grid-template-columns:300px 1fr;height:calc(100vh - 54px)}
+
+/* ─ Left: Case list ─ */
+.caselist{background:var(--card2);border-right:1px solid var(--border);overflow-y:auto}
+.cl-header{padding:14px 16px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.cl-title{font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase}
+.cl-count{font-family:'DM Mono',monospace;font-size:11px;color:var(--sub)}
+.cl-filter{display:flex;gap:4px;padding:8px 10px;border-bottom:1px solid var(--border)}
+.clf{flex:1;padding:5px 0;font-size:9px;font-weight:700;border-radius:5px;letter-spacing:.5px;
+  border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;
+  font-family:'Noto Sans JP',sans-serif;transition:all .15s;text-align:center}
+.clf.on{background:rgba(79,156,249,.12);border-color:rgba(79,156,249,.35);color:var(--blue)}
+.case-item{padding:12px 14px;cursor:pointer;border-bottom:1px solid rgba(30,34,53,.7);
+  transition:background .1s;position:relative}
+.case-item:hover{background:rgba(255,255,255,.02)}
+.case-item.active{background:rgba(79,156,249,.05);border-left:2px solid var(--blue);padding-left:12px}
+.ci-id{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:3px}
+.ci-name{font-size:12px;font-weight:700;margin-bottom:3px}
+.ci-meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.ci-status{position:absolute;top:12px;right:12px;width:8px;height:8px;border-radius:50%}
+.st-waiting{background:var(--orange)}
+.st-it-done{background:var(--blue)}
+.st-scan-pending{background:var(--purple)}
+.st-complete{background:var(--green)}
+.ci-badge{font-size:8px;font-weight:700;padding:1px 5px;border-radius:3px}
+
+/* ─ Main ─ */
+.main{display:flex;flex-direction:column;overflow:hidden}
+
+/* ─ Case header ─ */
+.case-hdr{padding:18px 26px 0;border-bottom:1px solid var(--border);background:rgba(7,9,15,.5)}
+.case-hdr-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding-bottom:14px}
+.case-title-area{}
+.case-id{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:4px}
+.case-name{font-size:20px;font-weight:700;margin-bottom:5px}
+.case-meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.prop-tag{font-size:10px;font-weight:600;padding:3px 9px;border-radius:5px;
+  background:rgba(79,156,249,.12);border:1px solid rgba(79,156,249,.25);color:var(--blue)}
+.case-detail-row{font-size:11px;color:var(--sub)}
+/* Overall progress */
+.case-progress{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0}
+.cp-pct{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;line-height:1}
+.cp-label{font-size:9px;color:var(--muted);letter-spacing:1px}
+.cp-bar-wrap{width:120px;height:5px;background:var(--border2);border-radius:3px;overflow:hidden}
+.cp-bar{height:100%;border-radius:3px;transition:width .5s}
+
+/* Timeline tabs */
+.timeline-tabs{display:flex;gap:0;border-top:1px solid var(--border)}
+.tt{padding:10px 16px;font-size:10px;font-weight:700;cursor:pointer;color:var(--muted);
+  border-bottom:2px solid transparent;transition:all .15s;letter-spacing:.5px;white-space:nowrap;
+  display:flex;align-items:center;gap:6px}
+.tt.on{color:var(--blue);border-bottom-color:var(--blue)}
+.tt-dot{width:7px;height:7px;border-radius:50%}
+
+/* ─ Scroll area ─ */
+.main-scroll{flex:1;overflow-y:auto;padding:22px 26px 80px}
+
+/* ─ Section card ─ */
+.sec-card{background:var(--card);border:1px solid var(--border);border-radius:13px;
+  margin-bottom:14px;overflow:hidden}
+.sec-hdr{display:flex;align-items:center;justify-content:space-between;padding:13px 18px;
+  cursor:pointer;user-select:none;transition:background .15s}
+.sec-hdr:hover{background:rgba(255,255,255,.02)}
+.sec-hdr-left{display:flex;align-items:center;gap:10px}
+.sec-icon{font-size:17px;width:26px;text-align:center}
+.sec-title-text{font-size:12px;font-weight:700}
+
+.sec-right{display:flex;align-items:center;gap:10px}
+.sec-prog{font-size:10px;font-family:'DM Mono',monospace;color:var(--sub)}
+.sec-chev{color:var(--muted);font-size:12px;transition:transform .2s}
+.sec-chev.open{transform:rotate(90deg)}
+.sec-body{border-top:1px solid var(--border)}
+.sec-body.collapsed{display:none}
+
+/* ─ Check items ─ */
+.chk{display:grid;grid-template-columns:22px 1fr auto;gap:10px;align-items:start;
+  padding:12px 18px;border-bottom:1px solid rgba(30,34,53,.5);transition:background .1s}
+.chk:last-child{border-bottom:none}
+.chk.ok-row{background:rgba(52,211,153,.02)}
+.chk.ng-row{background:rgba(248,113,113,.04)}
+.chk-num{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);padding-top:2px}
+.chk-body{}
+.chk-label{font-size:12px;font-weight:600;margin-bottom:2px;line-height:1.5}
+.chk-desc{font-size:10px;color:var(--sub);line-height:1.7}
+.chk-tag{display:inline-block;font-size:8px;font-weight:700;padding:1px 5px;border-radius:3px;
+  margin-left:5px;vertical-align:middle}
+.tag-req{background:rgba(248,113,113,.15);color:var(--red)}
+.tag-takken{background:rgba(167,139,250,.15);color:var(--purple)}
+.tag-record{background:rgba(79,156,249,.12);color:var(--blue)}
+.chk-alert{font-size:10px;color:var(--red);margin-top:4px;display:none}
+.chk-alert.show{display:block}
+.chk-input{margin-top:6px;display:none}
+.chk-input.show{display:block}
+.chk-input input,.chk-input select,.chk-input textarea{
+  width:100%;background:#090b13;border:1px solid var(--border2);border-radius:6px;
+  padding:7px 10px;color:var(--text);font-size:11px;font-family:'Noto Sans JP',sans-serif}
+.chk-input textarea{resize:vertical;min-height:56px}
+.chk-input input:focus,.chk-input select:focus,.chk-input textarea:focus{
+  outline:none;border-color:var(--blue)}
+
+/* ─ Status buttons ─ */
+.sbg{display:flex;gap:4px;flex-shrink:0;margin-top:1px}
+.sb{width:30px;height:27px;border-radius:6px;border:1px solid var(--border2);background:transparent;
+  cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;transition:all .1s}
+.sb:hover{background:rgba(255,255,255,.03)}
+.sb.ok{background:rgba(52,211,153,.15);border-color:rgba(52,211,153,.4)}
+.sb.ng{background:rgba(248,113,113,.15);border-color:rgba(248,113,113,.4)}
+.sb.na{background:rgba(74,82,112,.15);border-color:var(--border2)}
+
+/* ─ Scan panel ─ */
+.scan-panel{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:20px;margin-bottom:14px}
+.scan-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px}
+.scan-item{background:var(--card2);border:1px solid var(--border2);border-radius:10px;padding:14px}
+.scan-item.filled{border-color:rgba(52,211,153,.3);background:rgba(52,211,153,.03)}
+.scan-item.missing{border-color:rgba(251,146,60,.3)}
+.si-label{font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px}
+.si-num{font-family:'DM Mono',monospace;font-size:14px;font-weight:600;
+  letter-spacing:2px;margin-bottom:8px;min-height:24px;color:var(--text)}
+.si-num.empty{color:var(--border2);font-style:italic;font-size:11px}
+.si-type-badge{font-size:9px;font-weight:700;padding:2px 7px;border-radius:3px;margin-bottom:8px;display:inline-block}
+.scan-input-row{display:flex;gap:6px}
+.scan-input-row input{flex:1;background:#090b13;border:1px solid var(--border2);border-radius:6px;
+  padding:7px 10px;color:var(--text);font-size:12px;font-family:'DM Mono',monospace;letter-spacing:1px}
+.scan-input-row input:focus{outline:none;border-color:var(--green)}
+.scan-input-row input::placeholder{font-family:'Noto Sans JP',sans-serif;font-size:11px;letter-spacing:0}
+.scan-btn{padding:6px 10px;border-radius:6px;border:1px solid var(--border2);background:var(--card);
+  color:var(--sub);font-size:11px;cursor:pointer;font-family:'Noto Sans JP',sans-serif;transition:all .15s;white-space:nowrap}
+.scan-btn:hover{color:var(--text);border-color:var(--sub)}
+.scan-btn.scan-go{background:rgba(52,211,153,.12);border-color:rgba(52,211,153,.3);color:var(--green)}
+.si-status{font-size:10px;margin-top:6px;display:flex;align-items:center;gap:5px}
+.si-date{font-size:9px;color:var(--muted);margin-top:3px}
+
+
+
+/* ─ Bottom action bar ─ */
+.action-bar{position:sticky;bottom:0;background:rgba(7,9,15,.95);backdrop-filter:blur(12px);
+  border-top:1px solid var(--border);padding:13px 26px;display:flex;align-items:center;gap:12px}
+.ab-progress{flex:1;font-size:11px;color:var(--sub)}
+.ab-btn{padding:9px 20px;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;
+  border:none;font-family:'Noto Sans JP',sans-serif;transition:all .2s;letter-spacing:.5px}
+.ab-primary{background:linear-gradient(135deg,var(--green),#22a876);color:#0a0c10}
+.ab-primary:hover{filter:brightness(1.08);transform:translateY(-1px)}
+.ab-secondary{background:rgba(201,168,76,.12);border:1px solid var(--gold-dim);color:var(--gold)}
+.ab-ghost{background:transparent;border:1px solid var(--border2);color:var(--sub)}
+.ab-ghost:hover{color:var(--text)}
+
+/* ─ Note ─ */
+.note-area{background:var(--card2);border-radius:10px;padding:14px;margin-bottom:14px}
+.note-label{font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px}
+.note-area textarea{width:100%;background:#090b13;border:1px solid var(--border2);border-radius:7px;
+  padding:10px 12px;color:var(--text);font-size:12px;font-family:'Noto Sans JP',sans-serif;
+  resize:vertical;min-height:72px;line-height:1.7}
+.note-area textarea:focus{outline:none;border-color:var(--blue)}
+
+/* ─ Empty state ─ */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  height:100%;gap:12px;color:var(--muted)}
+.empty-icon{font-size:48px;opacity:.35}
+
+/* ─ Result modal ─ */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);
+  z-index:300;display:none;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:16px;
+  width:500px;padding:28px}
+.modal-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:var(--gold);margin-bottom:4px}
+.modal-sub{font-size:11px;color:var(--sub);margin-bottom:20px}
+.modal-row{display:flex;justify-content:space-between;padding:7px 0;
+  border-bottom:1px solid rgba(30,34,53,.6);font-size:12px}
+.modal-row:last-of-type{border:none}
+.mr-key{color:var(--sub)}
+.mr-val{font-weight:600;font-family:'DM Mono',monospace}
+.modal-actions{display:flex;gap:8px;margin-top:20px;justify-content:flex-end}
+.ma-btn{padding:9px 18px;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;
+  font-family:'Noto Sans JP',sans-serif}
+.ma-confirm{background:linear-gradient(135deg,var(--green),#22a876);border:none;color:#0a0c10}
+.ma-cancel{background:transparent;border:1px solid var(--border2);color:var(--sub)}
+
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+/* ─ Drive doc items ─ */
+.drive-doc{background:var(--card2);border:1px solid var(--border2);border-radius:11px;padding:14px 16px;transition:.15s}
+.drive-doc.ready{border-color:rgba(0,185,0,.35);background:rgba(0,185,0,.04)}
+.drive-doc.missing{border-color:rgba(251,146,60,.3)}
+.dd-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.dd-icon{font-size:18px;flex-shrink:0}
+.dd-name{font-size:12px;font-weight:700;flex:1}
+.dd-status{font-size:9px;font-weight:700;padding:2px 9px;border-radius:5px}
+.dd-status.ok{background:rgba(0,185,0,.12);color:#00b900;border:1px solid rgba(0,185,0,.3)}
+.dd-status.ng{background:rgba(251,146,60,.12);color:var(--orange);border:1px solid rgba(251,146,60,.3)}
+.dd-url-row{display:flex;gap:7px;align-items:center}
+.dd-url-input{flex:1;background:#090b13;border:1px solid var(--border2);border-radius:8px;
+  padding:8px 12px;color:var(--text);font-size:11px;font-family:'DM Mono',monospace;
+  outline:none;transition:.15s}
+.dd-url-input:focus{border-color:#00b900}
+.dd-url-input.has-url{border-color:rgba(0,185,0,.4);color:#00d900}
+.dd-open-btn{padding:7px 13px;background:#00b900;color:#fff;border:none;border-radius:8px;
+  font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;transition:.15s;
+  font-family:'Noto Sans JP',sans-serif}
+.dd-open-btn:hover{filter:brightness(1.1)}
+.dd-open-btn:disabled{background:var(--border2);cursor:not-allowed}
+.dd-remove{padding:5px 8px;background:transparent;border:1px solid var(--border2);
+  border-radius:7px;color:var(--muted);font-size:10px;cursor:pointer;transition:.15s;
+  font-family:'Noto Sans JP',sans-serif}
+.dd-remove:hover{border-color:var(--red);color:var(--red)}
+/* ─ Drop zone ─ */
+.drop-zone{border:2px dashed var(--border2);border-radius:12px;padding:28px 20px;text-align:center;
+  cursor:pointer;transition:.2s;background:rgba(255,255,255,.01)}
+.drop-zone:hover,.drop-zone.over{border-color:var(--blue);background:rgba(79,156,249,.04)}
+.dz-icon{font-size:32px;margin-bottom:10px}
+.dz-main{font-size:13px;font-weight:700;color:var(--text);margin-bottom:5px}
+.dz-sub{font-size:11px;color:var(--muted);margin-bottom:10px}
+.dz-badge{display:inline-block;padding:3px 10px;border-radius:6px;font-size:9px;font-weight:700;
+  background:rgba(79,156,249,.1);color:var(--blue);border:1px solid rgba(79,156,249,.25)}
+/* ─ Upload progress ─ */
+.upl-row{display:flex;align-items:center;gap:10px;padding:10px 14px;
+  background:var(--card2);border:1px solid var(--border2);border-radius:10px}
+.upl-name{flex:1;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.upl-bar-wrap{width:100px;height:5px;background:var(--border2);border-radius:3px;flex-shrink:0}
+.upl-bar{height:5px;border-radius:3px;background:var(--blue);width:0;transition:width .3s}
+.upl-pct{font-size:10px;color:var(--muted);width:30px;text-align:right;font-family:'DM Mono',monospace}
+.upl-ok{font-size:14px;width:20px;text-align:center}
+
+/* ═══ RESPONSIVE ═══════════════════════════════ */
+@media(max-width:768px){
+  .layout{
+    display:flex;flex-direction:column;
+    height:auto;min-height:calc(100vh - 48px);
+  }
+  .caselist{
+    width:100%;height:200px;flex-shrink:0;
+    border-right:none;border-bottom:1px solid var(--border);
+  }
+  .main{flex:1;height:auto;overflow:visible}
+  .main-scroll{overflow-y:visible;padding:14px 12px 60px}
+  .header{padding:0 12px;height:48px}
+  .hdr-badge{display:none}
+  .case-hdr{padding:12px 12px 0}
+  .case-hdr-top{flex-direction:column;gap:8px}
+  .case-progress{align-items:flex-start}
+  .timeline-tabs{overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap}
+  .timeline-tab{padding:10px 10px;font-size:10px;white-space:nowrap;flex-shrink:0}
+  .sec-body{padding:12px 10px}
+  .row2{grid-template-columns:1fr}
+  .note-area textarea{min-height:80px}
+  table{min-width:440px}
+  .sec-body{overflow-x:auto}
+}
+@media(max-width:480px){
+  .caselist{height:160px}
+  .ci-item{padding:8px 10px}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div style="display:flex;align-items:center;gap:12px">
+    <div class="logo">CORETO</div>
+    <div style="width:1px;height:18px;background:var(--border2)"></div>
+    <div class="hdr-mid">
+      <span class="hdr-badge badge-it">📋 IT重説チェックリスト</span>
+      <span style="color:var(--border2)">+</span>
+      <span class="hdr-badge badge-scan">📦 契約書スキャン管理</span>
+    </div>
+  </div>
+  <button onclick="window.location.href='coreto-hub.html'"
+          style="font-size:10px;padding:5px 12px;border-radius:6px;border:1px solid var(--border2);
+          background:transparent;color:var(--muted);cursor:pointer;font-family:'Noto Sans JP',sans-serif">
+    ← マイページ
+  </button>
+</div>
+
+<div class="layout">
+
+<!-- ─ Left: Case list ─ -->
+<div class="caselist">
+  <div class="cl-header">
+    <div class="cl-title">案件一覧</div>
+    <div class="cl-count" id="cl-count">— 件</div>
+  </div>
+  <div class="cl-filter">
+    <div class="clf on" data-f="all" onclick="filterCases('all',this)">全て</div>
+    <div class="clf" data-f="it" onclick="filterCases('it',this)">IT重説待</div>
+    <div class="clf" data-f="scan" onclick="filterCases('scan',this)">書類管理</div>
+    <div class="clf" data-f="done" onclick="filterCases('done',this)">完了</div>
+  </div>
+  <div id="case-list"></div>
+</div>
+
+<!-- ─ Right: Main ─ -->
+<div class="main" id="main-pane">
+  <div class="empty" id="empty-state">
+    <div class="empty-icon">📋</div>
+    <div style="font-size:13px">案件を選択してください</div>
+  </div>
+
+  <!-- Case content (hidden until selected) -->
+  <div id="case-content" style="display:none;flex-direction:column;height:100%">
+
+    <!-- Header -->
+    <div class="case-hdr">
+      <div class="case-hdr-top">
+        <div class="case-title-area">
+          <div class="case-id" id="c-id">—</div>
+          <div class="case-name" id="c-name">—</div>
+          <div class="case-meta" id="c-meta"></div>
+        </div>
+        <div class="case-progress">
+          <div class="cp-pct" id="c-pct" style="color:var(--gold)">0%</div>
+          <div class="cp-label">完了</div>
+          <div class="cp-bar-wrap">
+            <div class="cp-bar" id="c-bar" style="background:var(--gold)"></div>
+          </div>
+        </div>
+      </div>
+      <!-- Tab -->
+      <div class="timeline-tabs" id="timeline-tabs">
+        <div class="tt on" onclick="switchPane(0,this)" data-p="0">
+          <div class="tt-dot" style="background:var(--blue)"></div>IT重説チェックリスト
+        </div>
+        <div class="tt" onclick="switchPane(1,this)" data-p="1">
+          <div class="tt-dot" style="background:var(--green)"></div>契約書・書類スキャン
+        </div>
+      </div>
+    </div>
+
+    <!-- ─ PANE 0: IT重説 ─ -->
+    <div class="main-scroll" id="pane-0">
+      <!-- ══ 書類クイックアクセス（重説中用） ══ -->
+      <div id="docs-quickbar" style="display:none;margin-bottom:14px;
+           background:rgba(0,185,0,.05);border:1px solid rgba(0,185,0,.25);border-radius:12px;padding:12px 16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;
+                      display:flex;align-items:center;gap:7px">
+            <div style="width:3px;height:10px;background:#00b900;border-radius:2px"></div>
+            スキャン書類（重説中に開く）
+          </div>
+          <button onclick="switchPane(1,null)"
+            style="font-size:9px;color:var(--muted);background:transparent;border:none;cursor:pointer;
+                   font-family:'Noto Sans JP',sans-serif;padding:2px 6px">
+            書類管理 →
+          </button>
+        </div>
+        <div id="docs-quickbar-list" style="display:flex;flex-wrap:wrap;gap:7px"></div>
+      </div>
+
+      <!-- Checklist body -->
+      <div id="it-checklist-body"></div>
+
+      <!-- 所見メモ -->
+      <div class="note-area">
+        <div class="note-label">重説 所見・メモ</div>
+        <textarea id="it-memo" placeholder="実施中の特記事項、顧客の質問内容、懸念点などを記入"></textarea>
+      </div>
+    </div>
+
+    <!-- ─ PANE 1: スキャン ─ -->
+    <div class="main-scroll" id="pane-1" style="display:none">
+
+      <!-- ══ IT重説用スキャン書類（Google Drive） ══ -->
+      <div class="scan-panel" id="drive-docs-panel" style="margin-bottom:16px;border-color:rgba(0,185,0,.25)">
+
+        <!-- ヘッダー -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <div class="card-title" style="font-size:9px;color:var(--muted);letter-spacing:2px;
+               text-transform:uppercase;display:flex;align-items:center;gap:8px;margin:0">
+            <div style="width:3px;height:12px;background:#00b900;border-radius:2px"></div>
+            IT重説用スキャン書類
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div id="drive-overall-badge" style="font-size:10px;padding:3px 10px;border-radius:6px;
+                 background:rgba(74,82,112,.15);color:var(--sub);border:1px solid var(--border2)">
+              未アップロード
+            </div>
+            <button onclick="slackShareAll()" id="slack-all-btn"
+              style="padding:5px 12px;background:rgba(79,156,249,.1);border:1px solid rgba(79,156,249,.25);
+                     color:var(--blue);border-radius:7px;font-size:10px;font-weight:700;cursor:pointer;
+                     font-family:'Noto Sans JP',sans-serif;display:none">
+              📢 全件をSlackで共有
+            </button>
+          </div>
+        </div>
+
+        <!-- 権限バナー -->
+        <div style="display:flex;align-items:center;gap:10px;padding:9px 14px;
+                    background:rgba(201,168,76,.07);border:1px solid rgba(201,168,76,.2);
+                    border-radius:9px;margin-bottom:14px;font-size:11px">
+          🔒 <div>
+            <strong style="color:var(--gold)">アクセス権限：リンクを知っている人のみ閲覧可</strong>
+            <span style="color:var(--muted)">（自動設定）— 外部公開なし・社外流出対策済み</span>
+          </div>
+        </div>
+
+        <!-- ドロップゾーン -->
+        <div id="drop-zone" class="drop-zone"
+          ondragover="dzOver(event)" ondragleave="dzLeave(event)" ondrop="dzDrop(event)"
+          onclick="document.getElementById('file-input').click()">
+          <div class="dz-icon">📂</div>
+          <div class="dz-main">PDFをここにドラッグ＆ドロップ</div>
+          <div class="dz-sub">またはクリックしてファイルを選択</div>
+          <div class="dz-badge">PDF / 複数ファイル対応</div>
+        </div>
+        <input type="file" id="file-input" accept=".pdf,application/pdf" multiple
+               style="display:none" onchange="handleFileSelect(this.files)">
+
+        <!-- アップロード中リスト -->
+        <div id="upload-progress-list" style="display:none;flex-direction:column;gap:8px;margin:12px 0"></div>
+
+        <!-- 書類リスト（完了済み） -->
+        <div id="drive-doc-list" style="display:flex;flex-direction:column;gap:10px;margin-top:12px">
+          <!-- JS で描画 -->
+        </div>
+
+        <!-- 追加書類ボタン -->
+        <button onclick="addDriveDoc()" style="width:100%;margin-top:10px;padding:8px;background:transparent;
+          border:1px dashed var(--border2);border-radius:9px;color:var(--muted);font-size:11px;
+          cursor:pointer;font-family:'Noto Sans JP',sans-serif;transition:.15s"
+          onmouseover="this.style.borderColor='var(--blue)';this.style.color='var(--blue)'"
+          onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--muted)'">
+          ＋ ファイル名のみで手動登録する
+        </button>
+
+        <!-- 担当者メタ -->
+        <div id="scan-meta" style="display:none;margin-top:12px;padding:8px 14px;
+             background:var(--card2);border-radius:9px;font-size:10px;color:var(--muted)">
+          最終アップロード：<span id="scan-meta-who" style="color:var(--text)"></span>　
+          <span id="scan-meta-when" style="color:var(--text)"></span>
+        </div>
+      </div>
+
+      <!-- 追跡番号 / 電子契約ステータス（renderScanPanel()で切替描画） -->
+      <div id="track-panel-wrap"></div>
+      <div style="display:none" class="scan-panel" id="__legacy-scan-panel">
+        <div class="card-title" style="font-size:9px;color:var(--muted);letter-spacing:2px;
+             text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:8px">
+          <div style="width:3px;height:12px;background:var(--green);border-radius:2px"></div>
+          追跡番号管理（レターパック）
+        </div>
+        <div class="scan-grid" id="scan-grid"></div>
+        <div style="padding:10px 14px;background:rgba(52,211,153,.05);border:1px solid rgba(52,211,153,.12);
+                    border-radius:9px;font-size:11px;color:var(--sub);line-height:1.8">
+          💡 <strong style="color:var(--text)">バーコードスキャナー対応：</strong>
+          追跡番号フィールドをクリック → バーコードスキャン → 自動入力（所要10秒）<br>
+          Honeywell Voyager 1200g（USB接続、ドライバ不要）推奨
+        </div>
+      </div>
+
+      <!-- Document scan status -->
+      <div class="sec-card">
+        <div class="sec-hdr" onclick="toggleSec('doc-scan',this)">
+          <div class="sec-hdr-left">
+            <div class="sec-icon">📄</div>
+            <div class="sec-title-text">書類スキャン・確認チェックリスト</div>
+          </div>
+          <div class="sec-right">
+            <div class="sec-prog" id="doc-prog">0/—</div>
+            <div class="sec-chev open">›</div>
+          </div>
+        </div>
+        <div class="sec-body" id="sec-doc-scan"></div>
+      </div>
+
+      <!-- Scan note -->
+      <div class="note-area">
+        <div class="note-label">書類管理 メモ</div>
+        <textarea id="scan-memo" placeholder="書類の状態、返送予定日、管理会社への連絡事項など"></textarea>
+      </div>
+    </div>
+
+    <!-- Action bar -->
+    <div class="action-bar">
+      <div class="ab-progress" id="ab-progress">—</div>
+      <button class="ab-btn ab-primary" id="ab-complete-btn" onclick="showCompleteModal()">
+        ✅ IT重説完了・送信
+      </button>
+    </div>
+
+  </div>
+</div>
+
+</div><!-- /layout -->
+
+<!-- ─ Complete Modal ─ -->
+<div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)closeModal()">
+<div class="modal">
+  <div class="modal-title">IT重説 完了報告</div>
+  <div class="modal-sub">内容を確認してください</div>
+  <div id="modal-body"></div>
+  <div id="modal-progress" style="display:none;padding:14px 0 0">
+    <div style="font-size:12px;color:var(--sub);margin-bottom:10px" id="modal-progress-msg">処理中...</div>
+    <div style="height:4px;background:var(--border2);border-radius:2px;overflow:hidden">
+      <div id="modal-progress-bar" style="height:100%;width:0%;background:var(--gold);border-radius:2px;transition:width .4s ease"></div>
+    </div>
+  </div>
+  <div class="modal-actions" id="modal-actions">
+    <button class="ma-btn ma-cancel" onclick="closeModal()">キャンセル</button>
+    <button class="ma-btn ma-confirm" id="modal-submit-btn" onclick="submitComplete()">
+      ✅ 完了報告
+    </button>
+  </div>
+</div>
+</div>
+
+<script src="db.js">
+// ================================================================
+//  Slack通知モジュール（IT重説・契約書スキャン）
+//  設定: db.js の window.SLACK_CONFIG に以下を追加
+//    ITSETSU_NOTIFY: 'https://hooks.slack.com/services/XXX/YYY/ZZZ'
+// ================================================================
+(function(){
+  var CFG = window.SLACK_CONFIG || {};
+  var WH  = CFG.ITSETSU_NOTIFY || CFG.GENERAL || 'YOUR_SLACK_WEBHOOK_URL';
+
+  function post(payload){
+    if(!WH||WH==='YOUR_SLACK_WEBHOOK_URL'){
+      console.log('[Slack未設定 IT重説]', payload.text||''); return;
+    }
+    fetch(WH,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload),mode:'no-cors'})
+      .catch(function(e){ console.error('[Slack IT重説]',e); });
+  }
+
+  function blk(fb,blocks){ return{text:fb,blocks:blocks}; }
+  function hdr(t){ return{type:'header',text:{type:'plain_text',text:t,emoji:true}}; }
+  function sec(m){ return{type:'section',text:{type:'mrkdwn',text:m}}; }
+  function flds(pairs){
+    return{type:'section',fields:pairs.map(function(p){
+      return{type:'mrkdwn',text:'*'+p[0]+'*\n'+p[1]};
+    })};
+  }
+  function ctx(t){ return{type:'context',elements:[{type:'mrkdwn',text:t}]}; }
+  function div(){ return{type:'divider'}; }
+  function now(){ return new Date().toLocaleString('ja-JP'); }
+  function reviewer(){ return(window._SESSION&&window._SESSION.name)||'AGスタッフ'; }
+
+  // ① IT重説完了報告
+  window.slackNotifyITSetsuComplete = function(c, itCheckDone, itCheckAll, docsDone, docsAll, memo){
+    post(blk('✅ IT重説完了: '+c.name+' 様', [
+      hdr('✅ IT重説 — 完了報告'),
+      flds([
+        ['クライアント',  c.name+' 様'],
+        ['物件',          c.prop],
+        ['実施日時',      now()],
+        ['担当エージェント', c.agent],
+      ]),
+      sec('*重説チェック:* '+itCheckDone+'/'+itCheckAll+' 項目完了'
+        + (docsDone?'\n*書類管理:* '+docsDone+'/'+docsAll+' 項目完了':'')
+        + (memo?'\n*備考:* '+memo:'')),
+      div(),
+      sec('📦 次ステップ：契約書（復路）返送確認 → 書類スキャン管理へ'),
+      ctx('COREBLDGシステム — IT重説チェックシート | 担当: '+reviewer()+' | '+now()),
+    ]));
+  };
+
+  // ② 書類スキャン完了（全必須書類アップロード済み）
+  window.slackNotifyDocScanReady = function(c, readyCount, totalCount){
+    post(blk('📄 書類準備完了: '+c.name+' 様', [
+      hdr('📄 IT重説スキャン書類 — 全件準備完了'),
+      flds([
+        ['クライアント', c.name+' 様'],
+        ['物件',         c.prop],
+        ['IT重説日',     c.itDate],
+        ['書類数',       readyCount+'/'+totalCount+' 件'],
+      ]),
+      sec('全ての必須書類がアップロードされました。\nIT重説開始前に書類共有リンクをクライアントに送付してください。'),
+      ctx('COREBLDGシステム — IT重説チェックシート | '+now()),
+    ]));
+  };
+
+  // ③ 追跡番号登録（往路/復路）
+  window.slackNotifyTrackNo = function(c, direction, trackNo){
+    var dir = direction==='outbound'?'契約書 往路（発送）':'契約書 復路（返送）';
+    post(blk(dir+' 追跡番号登録: '+c.name+' 様', [
+      hdr('📮 '+dir+' — 追跡番号登録'),
+      flds([
+        ['クライアント', c.name+' 様'],
+        ['物件',         c.prop],
+        ['追跡番号',     '`'+trackNo+'`'],
+        ['登録担当',     reviewer()],
+      ]),
+      ctx('COREBLDGシステム — IT重説チェックシート | '+now()),
+    ]));
+  };
+
+  // ④ AI署名解析で懸念検出
+  window.slackNotifySignatureIssue = function(c, docLabel, issues){
+    post(blk('⚠️ 署名・捺印懸念: '+c.name+' 様', [
+      hdr('⚠️ AI署名解析 — 懸念事項検出'),
+      flds([
+        ['クライアント', c.name+' 様'],
+        ['物件',         c.prop],
+        ['書類種別',     docLabel],
+      ]),
+      sec('*検出された懸念:*\n'+issues.map(function(i){ return '• '+i; }).join('\n')),
+      sec('_目視確認のうえ、必要に応じて再捺印を依頼してください。_'),
+      ctx('COREBLDGシステム — IT重説チェックシート | AI解析 | '+now()),
+    ]));
+  };
+})();
+
+// ── XSS対策: ユーザー入力値のエスケープ ──────────────────────────────
+function escHtml(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+</script>
+<script>
+// ══ AUTH GUARD (要ログイン) ════════════════════════════════════
+(function() {
+  var s = null;
+  try { s = JSON.parse(sessionStorage.getItem('coreto_session') || 'null'); } catch(e) {}
+  if (!s || !s.userId || !s.type) {
+    sessionStorage.setItem('coreto_redirect', window.location.href);
+    location.replace('coreto-login.html');
+    return;
+  }
+  if (!s.sessionToken || s.sessionToken.length !== 64) {
+    sessionStorage.removeItem('coreto_session');
+    location.replace('coreto-login.html');
+    return;
+  }
+  var _la = new Date(s.loginAt).getTime();
+  if (isNaN(_la) || (Date.now() - _la) > 28800000) {
+    sessionStorage.removeItem('coreto_session');
+    alert('セッションの有効期限が切れました。再度ログインしてください。');
+    location.replace('coreto-login.html');
+    return;
+  }
+  window._SESSION = s;
+})();
+
+// ── アクセス制御: 不動産エージェント（RE）専用 ──
+// window._SESSION は上のauth guard IIFEでセット済み
+(function(){
+  var _s = window._SESSION;
+  if (!_s) return; // auth guardがリダイレクト中 → ロック画面を出さない
+  if (_s.type !== 're') {
+    document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0b0d12;color:#4a4f68;font-family:sans-serif;flex-direction:column;gap:12px"><div style="font-size:32px">🔒</div><div style="font-size:14px">このページは不動産エージェント専用です</div><a href="coreto-hub.html" style="color:#c9a840;font-size:12px;margin-top:8px">← Hub へ戻る</a></div>';
+  }
+})();
+
+// ================================================================
+//  Demo Cases
+// ================================================================
+
+// ════════════════════════════════════════════════════════════════
+//  IT重説用スキャン書類 — Google Drive アップロード＆共有
+// ════════════════════════════════════════════════════════════════
+
+// デフォルト書類テンプレート
+var DRIVE_DOCS_DEFAULT = [
+  { key:'jyusetsu', label:'重要事項説明書', required:true  },
+  { key:'keiyaku',  label:'賃貸借契約書',   required:true  },
+  { key:'setsubi',  label:'設備確認書',      required:false },
+];
+
+// ケースごとの書類データ
+var caseDriveDocs = {};
+
+function getDriveDocs(caseId) {
+  if (!caseDriveDocs[caseId]) {
+    caseDriveDocs[caseId] = DRIVE_DOCS_DEFAULT.map(function(d) {
+      return { key:d.key, label:d.label, required:d.required,
+               url:'', fileName:'', uploadedAt:'', uploadedBy:'' };
+    });
+  }
+  return caseDriveDocs[caseId];
+}
+
+// ── Drag & Drop ──────────────────────────────────────────────────
+function dzOver(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.add('over');
+}
+function dzLeave(e) {
+  document.getElementById('drop-zone').classList.remove('over');
+}
+function dzDrop(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('over');
+  handleFileSelect(e.dataTransfer.files);
+}
+
+function handleFileSelect(files) {
+  if (!files || !files.length) return;
+  var arr = Array.from(files).filter(function(f) {
+    return f.name.toLowerCase().endsWith('.pdf') || f.type === 'application/pdf';
+  });
+  if (!arr.length) { alert('PDFファイルのみ対応しています'); return; }
+  arr.forEach(function(file) { simulateUpload(file); });
+}
+
+// ── アップロードシミュレーション ────────────────────────────────
+function simulateUpload(file) {
+  var caseId = currentCase.id;
+  var docs = getDriveDocs(caseId);
+
+  // ファイル名から書類種別を推定
+  var matched = autoMatchDoc(file.name, docs);
+
+  // プログレスバーを表示
+  var progList = document.getElementById('upload-progress-list');
+  progList.style.display = 'flex';
+  var rowId = 'upl-' + Date.now() + '-' + Math.random().toString(36).slice(2,6);
+  var row = document.createElement('div');
+  row.className = 'upl-row';
+  row.id = rowId;
+  row.innerHTML =
+    '<div class="upl-ok" id="' + rowId + '-ok">📄</div>' +
+    '<div class="upl-name">' + file.name + '</div>' +
+    '<div class="upl-bar-wrap"><div class="upl-bar" id="' + rowId + '-bar"></div></div>' +
+    '<div class="upl-pct" id="' + rowId + '-pct">0%</div>';
+  progList.appendChild(row);
+
+  // アップロード進行アニメーション
+  var pct = 0;
+  var interval = setInterval(function() {
+    pct += Math.floor(Math.random() * 18 + 8);
+    if (pct >= 100) pct = 100;
+    var bar = document.getElementById(rowId + '-bar');
+    var pctEl = document.getElementById(rowId + '-pct');
+    if (bar) bar.style.width = pct + '%';
+    if (pctEl) pctEl.textContent = pct + '%';
+    if (pct >= 100) {
+      clearInterval(interval);
+      // 完了
+      var okEl = document.getElementById(rowId + '-ok');
+      if (okEl) okEl.textContent = '✅';
+      if (bar) bar.style.background = 'var(--green)';
+
+      // 偽のDrive URLを生成
+      var fakeId = 'CORETO_' + caseId + '_' + randomStr(12);
+      var fakeUrl = 'https://drive.google.com/file/d/' + fakeId + '/view?usp=sharing';
+      var now = new Date().toLocaleString('ja-JP').slice(0,-3);
+      var who = '山田 誠';
+
+      // 書類リストに登録
+      if (matched !== null) {
+        docs[matched].url        = fakeUrl;
+        docs[matched].fileName   = file.name;
+        docs[matched].uploadedAt = now;
+        docs[matched].uploadedBy = who;
+      } else {
+        // マッチしなかった場合は新規追加
+        docs.push({
+          key: 'custom-' + Date.now(),
+          label: file.name.replace(/\.pdf$/i,''),
+          required: false,
+          url: fakeUrl,
+          fileName: file.name,
+          uploadedAt: now,
+          uploadedBy: who
+        });
+      }
+
+      // 3秒後にプログレス行を消去してドキュメントリストを更新
+      setTimeout(function() {
+        var r = document.getElementById(rowId);
+        if (r) r.remove();
+        if (!progList.children.length) progList.style.display = 'none';
+        renderDriveDocs();
+        updateScanMeta(who, now);
+      }, 1200);
+    }
+  }, 120);
+}
+
+// ════════════════════════════════════════════════════════════════
+// ① AI：署名・捺印箇所抽出
+// ════════════════════════════════════════════════════════════════
+
+// 抽出済みチェックリストを案件ごとに保持
+var aiSigChecklists = {}; // { caseId: { docIdx: [{page,label,checked}] } }
+
+async function aiExtractSignatures(docIdx, event) {
+  var btn = document.getElementById('ai-sig-btn-' + docIdx);
+  var resultEl = document.getElementById('ai-sig-result-' + docIdx);
+  var caseId = currentCase.id;
+  var docs = getDriveDocs(caseId);
+  var doc = docs[docIdx];
+  if (!doc) return;
+
+  btn.disabled = true;
+  btn.innerHTML = '<span style="animation:spin .8s linear infinite;display:inline-block">⏳</span> AI解析中...';
+
+  // デモ用: 実際はfile objectを保持してbase64変換して送る
+  // 本番ではdoc.fileObjectをbase64に変換してAPIに渡す
+  var docType = doc.key === 'keiyaku' ? '賃貸借契約書' : '重要事項説明書';
+
+  try {
+    var response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 1000,
+        system: 'あなたは宅建業務の専門家AIです。賃貸借契約書や重要事項説明書の署名・捺印が必要な箇所を特定します。JSONのみで回答し、前置きや説明は不要です。',
+        messages: [{
+          role: 'user',
+          content: `以下は「${docType}」のファイル名です：「${doc.fileName}」\n\n一般的な${docType}に存在する署名・捺印が必要な箇所を全て列挙してください。\n\n以下のJSON形式のみで回答してください（前置き不要）：\n{"items":[{"page":"ページ番号（例:3ページ）","label":"箇所名（例:借主署名欄）","type":"署名|捺印|署名+捺印|日付記入"}]}`
+        }]
+      })
+    });
+    var data = await response.json();
+    var text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+    var clean = text.replace(/```json|```/g, '').trim();
+    var parsed = JSON.parse(clean);
+    var items = parsed.items || [];
+
+    // チェックリスト状態を保存
+    if (!aiSigChecklists[caseId]) aiSigChecklists[caseId] = {};
+    aiSigChecklists[caseId][docIdx] = items.map(function(item) {
+      return { page: item.page, label: item.label, type: item.type, checked: false };
+    });
+
+    renderSigChecklist(docIdx, caseId);
+    btn.innerHTML = '✨ AI：署名・捺印箇所を再抽出する';
+    btn.disabled = false;
+
+  } catch(e) {
+    btn.innerHTML = '⚠️ 抽出失敗 — 再試行';
+    btn.disabled = false;
+    console.error('AI署名抽出エラー:', e);
+  }
+}
+
+function renderSigChecklist(docIdx, caseId) {
+  var resultEl = document.getElementById('ai-sig-result-' + docIdx);
+  if (!resultEl) return;
+  var list = (aiSigChecklists[caseId] || {})[docIdx] || [];
+  if (!list.length) { resultEl.style.display = 'none'; return; }
+
+  var allChecked = list.every(function(i) { return i.checked; });
+  var checkedCount = list.filter(function(i) { return i.checked; }).length;
+
+  resultEl.style.display = 'block';
+  resultEl.innerHTML =
+    '<div style="background:rgba(201,168,76,.07);border:1px solid rgba(201,168,76,.25);' +
+    'border-radius:10px;padding:14px 16px">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">' +
+        '<div style="font-size:11px;font-weight:700;color:var(--gold)">✨ AI抽出 — 署名・捺印チェックリスト</div>' +
+        '<div style="font-size:10px;color:' + (allChecked ? 'var(--green)' : 'var(--orange)') + ';font-weight:700">' +
+          checkedCount + ' / ' + list.length + ' 完了' +
+        '</div>' +
+      '</div>' +
+      list.map(function(item, i) {
+        return '<div onclick="toggleSigCheck(' + docIdx + ',' + i + ')" ' +
+          'style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;' +
+          'cursor:pointer;margin-bottom:4px;transition:.15s;' +
+          'background:' + (item.checked ? 'rgba(52,211,153,.1)' : 'rgba(255,255,255,.03)') + ';' +
+          'border:1px solid ' + (item.checked ? 'rgba(52,211,153,.3)' : 'var(--border2)') + '">' +
+            '<div style="width:18px;height:18px;border-radius:5px;border:2px solid ' +
+              (item.checked ? 'var(--green)' : 'var(--border2)') + ';' +
+              'background:' + (item.checked ? 'var(--green)' : 'transparent') + ';' +
+              'display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px">' +
+              (item.checked ? '✓' : '') +
+            '</div>' +
+            '<div style="flex:1">' +
+              '<div style="font-size:12px;font-weight:600;color:' + (item.checked ? 'var(--sub)' : 'var(--text)') + ';' +
+                (item.checked ? 'text-decoration:line-through;' : '') + '">' +
+                item.label +
+              '</div>' +
+              '<div style="font-size:10px;color:var(--muted);margin-top:1px">' +
+                item.page + '　' + item.type +
+              '</div>' +
+            '</div>' +
+        '</div>';
+      }).join('') +
+      '<div style="margin-top:10px;padding:8px 10px;border-radius:7px;font-size:11px;' +
+        'background:rgba(79,156,249,.07);border:1px solid rgba(79,156,249,.15);color:var(--sub)">' +
+        '💡 宅建士がクライアントと一緒に確認しながら、完了した箇所をチェックしてください' +
+      '</div>' +
+    '</div>';
+
+  // 完了ボタンのロック状態を更新
+  updateCompleteBtn();
+}
+
+function toggleSigCheck(docIdx, itemIdx) {
+  var caseId = currentCase ? currentCase.id : null;
+  if (!caseId || !aiSigChecklists[caseId] || !aiSigChecklists[caseId][docIdx]) return;
+  aiSigChecklists[caseId][docIdx][itemIdx].checked = !aiSigChecklists[caseId][docIdx][itemIdx].checked;
+  renderSigChecklist(docIdx, caseId);
+}
+
+function getSigCheckStatus() {
+  var caseId = currentCase ? currentCase.id : null;
+  if (!caseId || !aiSigChecklists[caseId]) return { total: 0, checked: 0, hasChecklist: false };
+  var allItems = [];
+  Object.values(aiSigChecklists[caseId]).forEach(function(items) { allItems = allItems.concat(items); });
+  if (!allItems.length) return { total: 0, checked: 0, hasChecklist: false };
+  return {
+    total: allItems.length,
+    checked: allItems.filter(function(i) { return i.checked; }).length,
+    hasChecklist: true
+  };
+}
+
+function updateCompleteBtn() {
+  var btn = document.getElementById('ab-complete-btn');
+  var prog = document.getElementById('ab-progress');
+  if (!btn) return;
+  var sig = getSigCheckStatus();
+  if (!sig.hasChecklist) return; // チェックリストなければ従来通り
+  var allOk = sig.checked === sig.total;
+  btn.disabled = !allOk;
+  btn.style.opacity = allOk ? '1' : '0.45';
+  btn.style.cursor  = allOk ? 'pointer' : 'not-allowed';
+  btn.title = allOk ? '' : '全ての署名・捺印箇所を確認してからチェックしてください';
+  if (prog) prog.textContent = '署名確認 ' + sig.checked + '/' + sig.total;
+}
+
+// CSS追加（spin アニメーション）
+(function() {
+  var s = document.createElement('style');
+  s.textContent = '@keyframes spin{to{transform:rotate(360deg)}}';
+  document.head.appendChild(s);
+})();
+
+// ════════════════════════════════════════════════════════════════
+
+function autoMatchDoc(fileName, docs) {
+  var fn = fileName.toLowerCase();
+  var keywords = [
+    ['jyusetsu', ['重説','重要事項','jusetsu','jyusetsu']],
+    ['keiyaku',  ['契約','keiyaku']],
+    ['setsubi',  ['設備','setsubi']],
+  ];
+  for (var ki = 0; ki < keywords.length; ki++) {
+    var key = keywords[ki][0];
+    var kws = keywords[ki][1];
+    for (var wi = 0; wi < kws.length; wi++) {
+      if (fn.indexOf(kws[wi]) >= 0) {
+        var docIdx = docs.findIndex(function(d){ return d.key === key; });
+        if (docIdx >= 0 && !docs[docIdx].url) return docIdx;
+      }
+    }
+  }
+  // 未登録のrequiredを優先埋め
+  for (var di = 0; di < docs.length; di++) {
+    if (!docs[di].url) return di;
+  }
+  return null;
+}
+
+function randomStr(len) {
+  var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  var out = '';
+  for (var i = 0; i < len; i++) out += chars[Math.floor(Math.random()*chars.length)];
+  return out;
+}
+
+function updateScanMeta(who, when) {
+  var meta = document.getElementById('scan-meta');
+  if (meta) {
+    meta.style.display = 'block';
+    document.getElementById('scan-meta-who').textContent  = who;
+    document.getElementById('scan-meta-when').textContent = when;
+  }
+}
+
+// ── 書類リスト描画 ────────────────────────────────────────────────
+function renderDriveDocs() {
+  var caseId = currentCase ? currentCase.id : null;
+  if (!caseId) return;
+  var docs = getDriveDocs(caseId);
+  var list = document.getElementById('drive-doc-list');
+  if (!list) return;
+
+  list.innerHTML = docs.map(function(doc, idx) {
+    var hasUrl = !!doc.url;
+    return '<div class="drive-doc ' + (hasUrl ? 'ready' : doc.required ? 'missing' : '') + '">' +
+      '<div class="dd-head">' +
+        '<div class="dd-icon">' + (hasUrl ? '📄' : '🔲') + '</div>' +
+        '<div>' +
+          '<div class="dd-name">' + doc.label +
+            (doc.required ? '' : ' <span style="font-size:9px;color:var(--muted);font-weight:400">任意</span>') +
+          '</div>' +
+          (hasUrl ? '<div style="font-size:10px;color:var(--muted);margin-top:2px">' +
+            doc.fileName + '　アップロード：' + doc.uploadedBy + '　' + doc.uploadedAt + '</div>' : '') +
+        '</div>' +
+        '<div class="dd-status ' + (hasUrl ? 'ok' : 'ng') + '">' + (hasUrl ? '✓ 済み' : '未') + '</div>' +
+        '<button class="dd-remove" onclick="removeDriveDoc(' + idx + ')">✕</button>' +
+      '</div>' +
+      '<div class="dd-url-row">' +
+        '<div style="flex:1;padding:7px 12px;background:#090b13;border:1px solid ' +
+          (hasUrl ? 'rgba(0,185,0,.3)' : 'var(--border2)') + ';border-radius:8px;' +
+          'font-size:10px;font-family:\'DM Mono\',monospace;color:' +
+          (hasUrl ? '#00d900' : 'var(--muted)') + ';overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' +
+          (hasUrl ? doc.url : '— まだアップロードされていません —') +
+        '</div>' +
+        '<button class="dd-open-btn" onclick="openDrive(' + idx + ')"' + (hasUrl ? '' : ' disabled') + '>' +
+          '🔗 開く' +
+        '</button>' +
+        '<button onclick="slackShareOne(' + idx + ')"' +
+          ' style="padding:6px 10px;background:rgba(79,156,249,.1);border:1px solid rgba(79,156,249,.25);' +
+          'color:var(--blue);border-radius:7px;font-size:10px;font-weight:700;cursor:pointer;' +
+          'font-family:\'Noto Sans JP\',sans-serif;white-space:nowrap;' +
+          (hasUrl ? '' : 'opacity:.35;cursor:not-allowed;') + '"' +
+          (hasUrl ? '' : ' disabled') + '>' +
+          '📢 共有' +
+        '</button>' +
+      '</div>' +
+      // AI署名抽出ボタン（アップロード済みかつ契約書・重説書のみ）
+      (hasUrl && (doc.key === 'keiyaku' || doc.key === 'jyusetsu') ?
+        '<button onclick="aiExtractSignatures(' + idx + ', event)" ' +
+          'id="ai-sig-btn-' + idx + '" ' +
+          'style="width:100%;margin-top:8px;padding:8px 14px;' +
+          'background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.3);' +
+          'color:var(--gold);border-radius:8px;font-size:11px;font-weight:700;' +
+          'cursor:pointer;font-family:\'Noto Sans JP\',sans-serif;' +
+          'display:flex;align-items:center;justify-content:center;gap:8px;transition:.15s">' +
+          '✨ AI：署名・捺印箇所を抽出する' +
+        '</button>' +
+        '<div id="ai-sig-result-' + idx + '" style="display:none;margin-top:10px"></div>'
+      : '') +
+    '</div>';
+  }).join('');
+
+  updateDriveOverallBadge(docs);
+  renderDocsQuickbar(docs);
+}
+
+function renderDocsQuickbar(docs) {
+  var bar  = document.getElementById('docs-quickbar');
+  var list = document.getElementById('docs-quickbar-list');
+  if (!bar || !list) return;
+  var ready = docs.filter(function(d){ return !!d.url; });
+  if (!ready.length) { bar.style.display = 'none'; return; }
+  bar.style.display = 'block';
+  list.innerHTML = ready.map(function(doc, i) {
+    return '<button onclick="window.open(\'' + doc.url + '\',\'_blank\')"' +
+      ' style="display:inline-flex;align-items:center;gap:6px;padding:7px 13px;' +
+      'background:rgba(0,185,0,.1);border:1px solid rgba(0,185,0,.3);' +
+      'border-radius:8px;color:#00c900;font-size:11px;font-weight:700;cursor:pointer;' +
+      'font-family:\'Noto Sans JP\',sans-serif;transition:.15s"' +
+      ' onmouseover="this.style.background=\'rgba(0,185,0,.2)\'"' +
+      ' onmouseout="this.style.background=\'rgba(0,185,0,.1)\'">' +
+      '📄 ' + doc.label +
+      '</button>';
+  }).join('');
+}
+
+function openDrive(idx) {
+  var docs = getDriveDocs(currentCase.id);
+  if (docs[idx] && docs[idx].url) window.open(docs[idx].url, '_blank');
+}
+
+function removeDriveDoc(idx) {
+  var docs = getDriveDocs(currentCase.id);
+  if (docs[idx].required) { alert('必須書類は削除できません'); return; }
+  if (!confirm(docs[idx].label + ' を削除しますか？')) return;
+  docs.splice(idx, 1);
+  renderDriveDocs();
+}
+
+function addDriveDoc() {
+  var label = window.prompt('書類名を入力してください（例：間取り図、鍵引渡確認書）');
+  if (!label || !label.trim()) return;
+  var docs = getDriveDocs(currentCase.id);
+  docs.push({ key:'custom-'+Date.now(), label:label.trim(), required:false,
+               url:'', fileName:'', uploadedAt:'', uploadedBy:'' });
+  renderDriveDocs();
+}
+
+function updateDriveOverallBadge(docs) {
+  var badge = document.getElementById('drive-overall-badge');
+  var slackBtn = document.getElementById('slack-all-btn');
+  if (!badge) return;
+  var required  = docs.filter(function(d){ return d.required; });
+  var allReady  = required.every(function(d){ return !!d.url; });
+  var anyReady  = docs.some(function(d){ return !!d.url; });
+  var readyCnt  = docs.filter(function(d){ return !!d.url; }).length;
+  var wasAllReady = badge.dataset.allReady === '1';
+
+  if (allReady && required.length > 0) {
+    badge.style.cssText = 'font-size:10px;padding:3px 10px;border-radius:6px;' +
+      'background:rgba(0,185,0,.12);color:#00b900;border:1px solid rgba(0,185,0,.3)';
+    badge.textContent = '✓ 準備完了（' + readyCnt + '/' + docs.length + '件）';
+    // ② Slack通知：書類全件準備完了（初回のみ）
+    if (!wasAllReady && currentCase && typeof slackNotifyDocScanReady === 'function') {
+      slackNotifyDocScanReady(currentCase, readyCnt, docs.length);
+    }
+    badge.dataset.allReady = '1';
+  } else if (anyReady) {
+    badge.style.cssText = 'font-size:10px;padding:3px 10px;border-radius:6px;' +
+      'background:rgba(251,146,60,.1);color:var(--orange);border:1px solid rgba(251,146,60,.3)';
+    badge.textContent = '準備中（' + readyCnt + '/' + docs.length + '件）';
+    badge.dataset.allReady = '0';
+  } else {
+    badge.style.cssText = 'font-size:10px;padding:3px 10px;border-radius:6px;' +
+      'background:rgba(74,82,112,.15);color:var(--sub);border:1px solid var(--border2)';
+    badge.textContent = '未アップロード';
+    badge.dataset.allReady = '0';
+  }
+  if (slackBtn) slackBtn.style.display = anyReady ? 'inline-flex' : 'none';
+}
+
+// ── Slack共有 ────────────────────────────────────────────────────
+function slackShareOne(idx) {
+  var docs = getDriveDocs(currentCase.id);
+  var doc  = docs[idx];
+  if (!doc || !doc.url) return;
+  var c = currentCase;
+  var msg =
+    '📄 *IT重説スキャン書類（' + doc.label + '）*\n' +
+    '案件：' + c.name + ' 様　' + c.prop + '\n' +
+    '重説日：' + c.itDate + '\n' +
+    '🔗 ' + doc.url + '\n' +
+    '🔒 リンクを知っている人のみ閲覧可　アップロード：' + doc.uploadedBy;
+  navigator.clipboard.writeText(msg).then(function(){}, function(){});
+  showSlackToast('📢 ' + doc.label + ' のリンクをSlack用にコピーしました');
+}
+
+function slackShareAll() {
+  var docs = getDriveDocs(currentCase.id);
+  var ready = docs.filter(function(d){ return !!d.url; });
+  if (!ready.length) return;
+  var c = currentCase;
+  var lines = [
+    '📋 *IT重説スキャン書類一式*',
+    '案件：' + c.name + ' 様　' + c.prop,
+    '重説日：' + c.itDate,
+    '担当：' + c.agent,
+    '─────────────────',
+  ];
+  ready.forEach(function(d) {
+    lines.push((d.required ? '📄' : '📎') + ' ' + d.label + '　' + d.url);
+  });
+  lines.push('─────────────────');
+  lines.push('🔒 全ファイル「リンクを知っている人のみ閲覧可」設定済み');
+  var msg = lines.join('\n');
+  navigator.clipboard.writeText(msg).then(function(){}, function(){});
+  showSlackToast('📢 全' + ready.length + '件のリンクをSlack用にコピーしました\nそのままSlackに貼り付けてください');
+}
+
+function showSlackToast(msg) {
+  var t = document.getElementById('slack-toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'slack-toast';
+    t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999;' +
+      'background:#0f1119;border:1px solid rgba(79,156,249,.4);border-radius:12px;' +
+      'padding:14px 20px;font-size:12px;color:var(--text);max-width:320px;' +
+      'box-shadow:0 8px 32px rgba(0,0,0,.5);line-height:1.7;white-space:pre-line';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(function(){ t.style.opacity='0'; }, 3500);
+}
+
+
+const CASES = [
+  {
+    id:'0234', name:'田中 雄介', prop:'渋谷区東2丁目マンション 302号室',
+    agent:'10012 山田誠', mgmt:'株式会社エイブル渋谷', rent:120000,
+    itDate:'2026-02-22 14:00', itStatus:'scheduled',
+    contractType:'paper',
+    trackNos:{ send:'', reply:'', key:'' },
+    denshiStatus:{ sentAt:'', clientSignedAt:'', hqProcessedAt:'' },
+    status:'it-pending', checkState:{},
+    docCheckState:{},
+  },
+  {
+    id:'0228', name:'佐藤 明日香', prop:'港区南青山4丁目1LDK',
+    agent:'10012 山田誠', mgmt:'株式会社ハウスメイト', rent:185000,
+    itDate:'2026-02-20 10:00', itStatus:'done',
+    contractType:'denshi',
+    itDoneAt:'2026-02-20 11:02', itDuration:62,
+    trackNos:{ send:'', reply:'', key:'' },
+    denshiStatus:{ sentAt:'2026-02-18 15:30', clientSignedAt:'', hqProcessedAt:'' },
+    status:'scan-pending', checkState:{ 'pre-1':'ok','pre-2':'ok','pre-3':'ok','pre-4':'ok',
+      'ice-1':'ok','exp-1':'ok','exp-2':'ok','exp-3':'ok','exp-4':'ok',
+      'cnt-1':'ok','cnt-2':'ok','end-1':'ok','end-2':'ok','end-3':'ok','end-4':'ok' },
+    docCheckState:{},
+  },
+  {
+    id:'0220', name:'鈴木 健一', prop:'新宿区西新宿2LDK',
+    agent:'10012 山田誠', mgmt:'積和不動産', rent:155000,
+    itDate:'2026-02-15 15:00', itStatus:'done',
+    contractType:'paper',
+    itDoneAt:'2026-02-15 16:05', itDuration:65,
+    trackNos:{ send:'111222333444', reply:'555666777888', key:'999000111222' },
+    denshiStatus:{ sentAt:'', clientSignedAt:'', hqProcessedAt:'' },
+    status:'complete', checkState:{ 'pre-1':'ok','pre-2':'ok','pre-3':'ok','pre-4':'ok',
+      'ice-1':'ok','exp-1':'ok','exp-2':'ok','exp-3':'ok','exp-4':'ok',
+      'cnt-1':'ok','cnt-2':'ok','end-1':'ok','end-2':'ok','end-3':'ok','end-4':'ok' },
+    docCheckState:{ 'doc-1':'ok','doc-2':'ok','doc-3':'ok','doc-4':'ok','doc-5':'ok','doc-6':'ok' },
+  },
+];
+
+// ================================================================
+//  IT重説チェックリスト定義
+//  ※ item に contractTypes: ['paper'] / ['denshi'] / 省略=両方 で条件分岐
+// ================================================================
+const IT_CHECKLIST = [
+  {
+    id:'prep', icon:'📋', title:'事前準備',
+    items:[
+      { id:'pre-1', label:'Google Meet URLの動作確認',
+        desc:'実際にURLを開き接続テスト。音声・ビデオが正常か確認' },
+      { id:'pre-2', label:'日時・URL確認',
+        desc:'予約日時・クライアント名・Google Meet URLを確認。リマインドメール送付済みか確認' },
+      // 紙契約のみ
+      { id:'pre-3p', label:'重説書・契約書の手元確認（クライアント着荷確認）',
+        desc:'クライアントに郵送した重要事項説明書・賃貸借契約書が届いているか事前に確認する',
+        tag:'required', tagLabel:'必須', contractTypes:['paper'] },
+      // 電子契約のみ
+      { id:'pre-3d', label:'電子契約URL送付確認（管理会社→ keiyaku@coreto.jp）',
+        desc:'管理会社から keiyaku@coreto.jp に電子契約書のメールが届いているか確認。未着の場合は管理会社に再送依頼',
+        tag:'required', tagLabel:'必須', contractTypes:['denshi'] },
+      { id:'pre-3d2', label:'クライアントへ電子署名リンクの事前送付',
+        desc:'keiyaku@coreto.jp に届いた電子署名リンクをクライアントにLINE WORKSで転送。「IT重説後に署名をお願いします」と案内',
+        tag:'required', tagLabel:'必須', contractTypes:['denshi'] },
+      { id:'pre-4', label:'宅建士証の準備',
+        desc:'宅建士証を手元に用意。カメラに映せる状態にしておく',
+        tag:'takken', tagLabel:'宅建士必須' },
+    ]
+  },
+  {
+    id:'ice', icon:'👋', title:'アイスブレイク',
+    items:[
+      { id:'ice-1', label:'自己紹介・宅建士証の提示',
+        desc:'氏名・宅建士登録番号を口頭で説明し、宅建士証をカメラに映して提示',
+        tag:'takken', tagLabel:'宅建士証提示' },
+      // 紙契約のみ
+      { id:'ice-2p', label:'クライアント手元の書類確認',
+        desc:'「お手元に重要事項説明書と賃貸借契約書はございますか？」と確認する',
+        tag:'required', tagLabel:'必須', contractTypes:['paper'] },
+      // 電子契約のみ
+      { id:'ice-2d', label:'電子署名リンクの受信確認',
+        desc:'「電子署名のリンクはお手元に届いていますか？IT重説後に署名いただきます」と案内',
+        tag:'required', tagLabel:'必須', contractTypes:['denshi'] },
+      { id:'ice-3', label:'本日の流れの説明',
+        desc:'「重要事項説明 → 契約内容のご説明 → 署名のご案内の3部構成です」' },
+    ]
+  },
+  {
+    id:'jyusetsu', icon:'📜', title:'重要事項説明',
+    items:[
+      { id:'exp-1', label:'各項目の読み上げと説明',
+        desc:'物件概要・登記事項・都市計画・設備状況・管理規約・特約事項を順に読み上げる' },
+      { id:'exp-2', label:'質疑応答・クライアントの理解確認',
+        desc:'「ご不明な点はありますか？」を各セクション後に必ず確認。内容は記録に残す' },
+      { id:'exp-3', label:'クライアントの同意確認（口頭）',
+        desc:'「重要事項についてご理解いただけましたか？」→「はい」の口頭確認を取る',
+        tag:'required', tagLabel:'必須' },
+      { id:'exp-4', label:'電磁的方法による重説の同意確認',
+        desc:'「IT重説による電磁的方法での説明に同意いただけますか？」の確認',
+        tag:'required', tagLabel:'法定必須' },
+    ]
+  },
+  {
+    id:'contract', icon:'✍️', title:'契約内容の説明',
+    items:[
+      { id:'cnt-1', label:'契約内容のご説明',
+        desc:'「次に賃貸借契約書の内容をご説明します」と伝える' },
+      { id:'cnt-2', label:'契約期間・更新・解約・特約の説明',
+        desc:'契約期間・自動更新の有無・解約条件（予告期間・違約金）・特約事項を説明' },
+    ]
+  },
+  {
+    id:'hanko', icon:'🔏', title:'署名・捺印のご案内',
+    items:[
+      // 紙契約のみ
+      { id:'hk-1p', label:'重要事項説明書 — 署名・捺印欄の案内',
+        desc:'「重要事項説明書の末尾、署名欄にご署名と捺印をお願いします（認印で可）」',
+        contractTypes:['paper'] },
+      { id:'hk-2p', label:'賃貸借契約書 — 借主署名欄の案内',
+        desc:'「賃貸借契約書の1枚目、借主の署名欄に住所・氏名をご記入ください」',
+        contractTypes:['paper'] },
+      { id:'hk-3p', label:'賃貸借契約書 — 全ページの捺印案内',
+        desc:'「契約書の各ページに捺印箇所があります。赤枠に捺印してください」',
+        contractTypes:['paper'] },
+      { id:'hk-4p', label:'連帯保証人欄の案内（該当者のみ）',
+        desc:'「連帯保証人様の署名・捺印欄が末尾にございます。後日保証人様にご対応いただく旨をお伝えください」',
+        contractTypes:['paper'] },
+      { id:'hk-5p', label:'捺印漏れの最終確認を依頼',
+        desc:'「書類全体をもう一度ご確認いただき、捺印漏れがないかチェックをお願いします」',
+        tag:'required', tagLabel:'必須', contractTypes:['paper'] },
+      // 電子契約のみ
+      { id:'hk-1d', label:'電子署名リンクの操作方法を説明',
+        desc:'「お送りしたリンクを開き、内容を確認してから「署名」ボタンをクリックしてください。スマートフォンからでも可能です」',
+        tag:'required', tagLabel:'必須', contractTypes:['denshi'] },
+      { id:'hk-2d', label:'メールアドレス・本人確認の確認',
+        desc:'「電子署名のリンクは登録メールアドレスに届いています。認証コードが必要な場合は同じメールアドレスのメールを確認してください」',
+        contractTypes:['denshi'] },
+      { id:'hk-3d', label:'重要事項説明書の電子署名（宅建士）',
+        desc:'IT重説完了後、宅建士も電子署名を実施。keiyaku@coreto.jpにて処理',
+        tag:'takken', tagLabel:'宅建士署名', contractTypes:['denshi'] },
+    ]
+  },
+  {
+    id:'closing', icon:'🔑', title:'今後の流れの説明',
+    items:[
+      // 紙契約のみ
+      { id:'end-1p', label:'書類返送方法の案内（レターパック）',
+        desc:'「署名・捺印後はレターパックライトで返送してください。送付先は同封の封筒に記載しています」',
+        contractTypes:['paper'] },
+      // 電子契約のみ
+      { id:'end-1d', label:'電子署名の完了目安を案内',
+        desc:'「IT重説後すぐにリンクから署名いただけます。署名完了後、弊社（keiyaku@coreto.jp）で確認します」',
+        contractTypes:['denshi'] },
+      { id:'end-2', label:'鍵の受け渡し方法の確認',
+        desc:'入居日・鍵の受取方法（郵送 or 直接受取）を確認して記録' },
+      { id:'end-3', label:'入居日・ライフライン手続きの案内',
+        desc:'入居予定日・電気・ガス・水道の手続きについて案内' },
+      { id:'end-4', label:'重説完了の記録',
+        desc:'宅建士名・実施日・クライアント確認の記録（本フォーム送信で自動記録）',
+        tag:'record', tagLabel:'Kintone記録' },
+    ]
+  },
+];
+
+// 契約タイプに応じたチェックリストを返す
+function getActiveChecklist(contractType) {
+  const ct = contractType || 'paper';
+  return IT_CHECKLIST.map(sec => ({
+    ...sec,
+    items: sec.items.filter(it => !it.contractTypes || it.contractTypes.includes(ct))
+  })).filter(sec => sec.items.length > 0);
+}
+
+// ================================================================
+//  書類スキャンチェックリスト（紙契約）
+// ================================================================
+const DOC_CHECKLIST = [
+  { id:'doc-1', label:'契約書（往路）発送 — 追跡番号登録',
+    desc:'管理会社から届いた契約書を顧客へ発送。追跡番号をスキャン入力', required:true },
+  { id:'doc-2', label:'返信用レターパック封入確認',
+    desc:'返送用レターパックライト（送付先印字済み）を契約書に同封', required:true },
+  { id:'doc-3', label:'契約書（往路）クライアント着荷確認',
+    desc:'追跡サイトで配達完了を確認。またはクライアントから着荷連絡を受ける' },
+  { id:'doc-4', label:'IT重説実施確認',
+    desc:'IT重説が完了しているか確認（本ページのIT重説タブを参照）', required:true },
+  { id:'doc-5', label:'契約書（復路）返送確認 — 追跡番号登録',
+    desc:'クライアントが署名捺印して返送。追跡番号をスキャン入力、着荷を確認', required:true },
+  { id:'doc-6', label:'契約書内容の最終確認（署名・捺印漏れチェック）',
+    desc:'返送された契約書の署名・捺印漏れがないか確認。不備があればクライアントに連絡' },
+];
+
+// ================================================================
+//  書類スキャンチェックリスト（電子契約）
+// ================================================================
+const DENSHI_DOC_CHECKLIST = [
+  { id:'ddoc-1', label:'管理会社へ電子契約依頼（keiyaku@coreto.jp宛送付依頼）',
+    desc:'管理会社に「電子契約書の送付先は keiyaku@coreto.jp です」と案内する', required:true },
+  { id:'ddoc-2', label:'keiyaku@coreto.jp への電子契約メール着信確認',
+    desc:'管理会社からの電子署名リンクメールが keiyaku@coreto.jp に届いているか確認', required:true },
+  { id:'ddoc-3', label:'電子署名リンクをクライアントへ転送',
+    desc:'keiyaku@coreto.jp に届いたリンクをLINE WORKS経由でクライアントへ送付', required:true },
+  { id:'ddoc-4', label:'IT重説実施確認',
+    desc:'IT重説が完了しているか確認（本ページのIT重説タブを参照）', required:true },
+  { id:'ddoc-5', label:'クライアントの電子署名完了確認',
+    desc:'クライアントが電子署名を完了したことを確認（リンクのステータス確認 or クライアントから連絡）', required:true },
+  { id:'ddoc-6', label:'HQによる電子契約処理完了確認',
+    desc:'keiyaku@coreto.jp でHQが受領・最終処理。処理完了通知をHQから受け取る' },
+  { id:'ddoc-7', label:'契約書類のアーカイブ確認',
+    desc:'電子署名済みの契約書PDFをシステムにアップロードして保存' },
+];
+
+// ================================================================
+//  State
+// ================================================================
+let currentCase  = null;
+let currentFilter = 'all';
+let timerInterval = null;
+let timerStart_ts = null;
+let timerElapsed  = 0;
+let timerRunning  = false;
+let currentPane   = 0;
+
+// ================================================================
+//  Init
+// ================================================================
+window.addEventListener('DOMContentLoaded', () => {
+  renderCaseList();
+});
+
+// ================================================================
+//  Case list
+// ================================================================
+// ── HQ予約管理 ──
+function hqResetChangeCount(caseId) {
+  try {
+    var bookings = JSON.parse(localStorage.getItem('coreto_itsetsu_bookings')||'[]');
+    var bk = bookings.find(function(b){ return b.caseId===caseId && b.status!=='cancelled'; });
+    if (!bk) { alert('アクティブな予約が見つかりません'); return; }
+    bk.changeCount = 0;
+    localStorage.setItem('coreto_itsetsu_bookings', JSON.stringify(bookings));
+    renderCaseHeader();
+    alert('✅ 変更回数をリセットしました');
+  } catch(e) { alert('エラー: '+e.message); }
+}
+function hqForceCancel(caseId) {
+  try {
+    if (!confirm('【本部権限】この予約を強制キャンセルしますか？\nクライアントには担当から連絡してください。')) return;
+    var bookings = JSON.parse(localStorage.getItem('coreto_itsetsu_bookings')||'[]');
+    var bk = bookings.find(function(b){ return b.caseId===caseId && b.status!=='cancelled'; });
+    if (!bk) { alert('アクティブな予約が見つかりません'); return; }
+    // Release slot
+    var slots = JSON.parse(localStorage.getItem('coreto_itsetsu_slots')||'[]');
+    var slot = slots.find(function(s){ return s.id===bk.slotId; });
+    if (slot) {
+      slot.status='open'; slot.bookedCase=null; slot.bookedClient=null;
+      slot.meetUrl=''; slot.bookedAt=null;
+      localStorage.setItem('coreto_itsetsu_slots', JSON.stringify(slots));
+    }
+    bk.status='cancelled'; bk.cancelledAt=new Date().toISOString(); bk.cancelReason='hq_force';
+    localStorage.setItem('coreto_itsetsu_bookings', JSON.stringify(bookings));
+    renderCaseHeader();
+    alert('✅ 強制キャンセルしました。スロットを解放しました。');
+  } catch(e) { alert('エラー: '+e.message); }
+}
+
+function renderCaseList() {
+  const STATUS_CLS = {
+    'it-pending':   'st-waiting',
+    'scan-pending': 'st-scan-pending',
+    'it-done':      'st-it-done',
+    'complete':     'st-complete',
+  };
+  const STATUS_LABEL = {
+    'it-pending':   'IT重説待ち',
+    'scan-pending': '書類管理中',
+    'complete':     '完了',
+  };
+  const filtered = CASES.filter(c => {
+    if (currentFilter === 'all') return true;
+    if (currentFilter === 'it')   return c.status === 'it-pending';
+    if (currentFilter === 'scan') return c.status === 'scan-pending';
+    if (currentFilter === 'done') return c.status === 'complete';
+    return true;
+  });
+  document.getElementById('cl-count').textContent = filtered.length + ' 件';
+
+  document.getElementById('case-list').innerHTML = filtered.map(c => {
+    const active = currentCase && currentCase.id === c.id;
+    const lbl    = STATUS_LABEL[c.status] || c.status;
+    const clr    = c.status==='complete'?'var(--green)':c.status==='scan-pending'?'var(--purple)':'var(--orange)';
+    return `
+      <div class="case-item ${active?'active':''}" onclick="selectCase('${c.id}')">
+        <div class="ci-status ${STATUS_CLS[c.status]||'st-waiting'}"></div>
+        <div class="ci-id">${c.id}</div>
+        <div class="ci-name">${escHtml(c.name)}</div>
+        <div class="ci-meta">
+          <span style="font-size:10px;color:var(--sub)">${c.prop.slice(0,18)}…</span>
+          <span class="ci-badge" style="background:${clr}22;color:${clr};border:1px solid ${clr}44">${lbl}</span>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function filterCases(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.clf').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  renderCaseList();
+}
+
+// ================================================================
+//  Select case
+// ================================================================
+function selectCase(id) {
+  currentCase = CASES.find(c=>c.id===id);
+  if (!currentCase) return;
+  renderCaseList();
+  renderCaseHeader();
+  renderITChecklist();
+  renderScanPanel();
+  renderDocChecklist();
+  renderDriveDocs();
+  updateProgress();
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('case-content').style.display = 'flex';
+  document.getElementById('pane-0').style.display = 'block';
+  document.getElementById('pane-1').style.display = 'none';
+  document.querySelectorAll('.tt').forEach((t,i)=>t.classList.toggle('on',i===0));
+  currentPane = 0;
+
+  // Complete btn label
+  const isItDone = currentCase.status !== 'it-pending';
+  document.getElementById('ab-complete-btn').textContent = isItDone ? '📦 書類管理へ' : '✅ IT重説完了報告';
+}
+
+// ================================================================
+//  Case header
+// ================================================================
+function renderCaseHeader() {
+  const c = currentCase;
+  document.getElementById('c-id').textContent   = c.id;
+  document.getElementById('c-name').textContent = c.name + ' 様';
+
+  // 予約情報を localStorage から取得
+  let bookingInfo = '';
+  try {
+    const bookings = JSON.parse(localStorage.getItem('coreto_itsetsu_bookings') || '[]');
+    const bk = bookings.find(b => b.caseId === c.id);
+    if (bk) {
+      const d = new Date(bk.date);
+      const DAYS = ['日','月','火','水','木','金','土'];
+      const dtLabel = `${d.getMonth()+1}/${d.getDate()}（${DAYS[d.getDay()]}）${bk.start}〜`;
+      const sess = JSON.parse(sessionStorage.getItem('coreto_session')||'null');
+      const isHQUser = sess && sess.type === 'hq';
+      const hqControls = isHQUser ? `
+        <span class="case-detail-row" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:4px">
+          <span style="font-size:9px;color:var(--muted)">変更回数: ${bk.changeCount||0}/2</span>
+          <button onclick="hqResetChangeCount('${c.id}')"
+            style="font-size:9px;padding:2px 8px;border-radius:4px;border:1px solid rgba(201,168,64,.35);background:transparent;color:var(--gold);cursor:pointer;font-family:inherit">
+            🔄 回数リセット</button>
+          <button onclick="hqForceCancel('${c.id}')"
+            style="font-size:9px;padding:2px 8px;border-radius:4px;border:1px solid rgba(248,113,113,.35);background:transparent;color:var(--red);cursor:pointer;font-family:inherit">
+            ✕ 強制キャンセル</button>
+        </span>` : '';
+      bookingInfo = `
+        <span class="case-detail-row" style="color:var(--green)">✅ 日程確定：${dtLabel}</span>
+        <span class="case-detail-row">重説担当：${bk.itAgentName || '—'}</span>
+        <span class="case-detail-row"><a href="${bk.meetUrl}" target="_blank" style="color:var(--blue)">🔗 Google Meet: ${bk.meetUrl}</a></span>
+        ${hqControls}`;
+    } else if (c.bookingUrl) {
+      bookingInfo = `<span class="case-detail-row" style="color:var(--orange)">⏳ 日程未確定
+        <button onclick="navigator.clipboard.writeText('${(c.bookingUrl||'').replace(/'/g,"\'")}').then(()=>alert('URLをコピーしました'))"
+          style="margin-left:8px;padding:2px 8px;font-size:9px;border-radius:4px;border:1px solid rgba(251,146,60,.35);
+          background:transparent;color:var(--orange);cursor:pointer;font-family:inherit">📋 リンクをコピー</button>
+        </span>`;
+    } else {
+      bookingInfo = `<span class="case-detail-row" style="color:var(--muted)">日程調整リンク未発行</span>`;
+    }
+  } catch(e) {}
+
+  document.getElementById('c-meta').innerHTML = `
+    <span class="prop-tag">🏠 ${escHtml(c.prop)}</span>
+    <span class="case-detail-row">担当：${c.agent}</span>
+    <span class="case-detail-row">管理会社：${c.mgmt}</span>
+    <span class="case-detail-row">家賃：¥${c.rent.toLocaleString()}</span>
+    <span class="case-detail-row" style="display:flex;align-items:center;gap:8px">
+      ${c.contractType==='denshi'
+        ? `<span style="background:rgba(52,211,153,.13);color:var(--green);border:1px solid rgba(52,211,153,.3);padding:2px 9px;border-radius:5px;font-size:10px;font-weight:700">📧 電子契約</span>
+           <span style="font-size:9px;color:var(--muted)">keiyaku@coreto.jp 処理</span>`
+        : `<span style="background:rgba(79,156,249,.12);color:var(--blue);border:1px solid rgba(79,156,249,.25);padding:2px 9px;border-radius:5px;font-size:10px;font-weight:700">📮 紙契約（郵送）</span>`
+      }
+      <button onclick="toggleContractType('${c.id}')"
+        style="font-size:9px;padding:2px 8px;border-radius:4px;border:1px solid var(--border2);
+               background:transparent;color:var(--muted);cursor:pointer;font-family:inherit">
+        切替
+      </button>
+    </span>
+    ${bookingInfo}`;
+}
+
+// ================================================================
+//  IT Checklist render
+// ================================================================
+function renderITChecklist() {
+  const activeList = getActiveChecklist(currentCase.contractType);
+  const body = document.getElementById('it-checklist-body');
+  body.innerHTML = activeList.map(sec => `
+    <div class="sec-card" id="sec-${sec.id}">
+      <div class="sec-hdr" onclick="toggleSec('${sec.id}',this)">
+        <div class="sec-hdr-left">
+          <div class="sec-icon">${sec.icon}</div>
+          <div class="sec-title-text">${sec.title}</div>
+        </div>
+        <div class="sec-right">
+          <div class="sec-prog" id="sp-${sec.id}">0/${sec.items.length}</div>
+          <div class="sec-chev open">›</div>
+        </div>
+      </div>
+      <div class="sec-body" id="sb-${sec.id}">
+        ${sec.items.map((it,i) => renderChkItem(it,i)).join('')}
+      </div>
+    </div>`).join('');
+
+  // Restore saved state
+  Object.entries(currentCase.checkState).forEach(([id, state]) => applyCheck(id, state));
+  updateSectionProgress();
+}
+
+function renderChkItem(it, i) {
+  let tagHTML = '';
+  if (it.tag==='required') tagHTML = `<span class="chk-tag tag-req">${it.tagLabel}</span>`;
+  if (it.tag==='takken')   tagHTML = `<span class="chk-tag tag-takken">${it.tagLabel}</span>`;
+  if (it.tag==='record')   tagHTML = `<span class="chk-tag tag-record">${it.tagLabel}</span>`;
+  return `
+    <div class="chk" id="row-${it.id}">
+      <div class="chk-num">${String(i+1).padStart(2,'0')}</div>
+      <div class="chk-body">
+        <div class="chk-label">${it.label}${tagHTML}</div>
+        ${it.desc ? `<div class="chk-desc">${it.desc}</div>` : ''}
+        <div class="chk-input" id="inp-${it.id}">
+          <input type="text" placeholder="メモ（任意）" oninput="saveMemo('${it.id}',this.value)">
+        </div>
+      </div>
+      <div class="sbg">
+        <button class="sb" id="sb-ok-${it.id}"  title="完了" onclick="setCheck('${it.id}','ok')">✓</button>
+        <button class="sb" id="sb-ng-${it.id}"  title="問題あり" onclick="setCheck('${it.id}','ng')">✗</button>
+        <button class="sb" id="sb-na-${it.id}"  title="非該当" onclick="setCheck('${it.id}','na')">—</button>
+      </div>
+    </div>`;
+}
+
+// ================================================================
+//  Scan panel
+// ================================================================
+function renderScanPanel() {
+  const c = currentCase;
+  const wrap = document.getElementById('track-panel-wrap');
+  if (!wrap) return;
+
+  if (c.contractType === 'denshi') {
+    // ── 電子契約ステータス管理パネル ──
+    const ds = c.denshiStatus || { sentAt:'', clientSignedAt:'', hqProcessedAt:'' };
+    wrap.innerHTML = `
+      <div class="scan-panel" style="border-color:rgba(52,211,153,.25)">
+        <div class="card-title" style="font-size:9px;color:var(--muted);letter-spacing:2px;
+             text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:8px">
+          <div style="width:3px;height:12px;background:var(--green);border-radius:2px"></div>
+          電子契約ステータス管理
+        </div>
+
+        <!-- 送付先メールアドレス表示 -->
+        <div style="display:flex;align-items:center;gap:10px;padding:9px 14px;
+                    background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.2);
+                    border-radius:9px;margin-bottom:14px;font-size:11px">
+          📧 <div>
+            <strong style="color:var(--green)">電子契約書の送付先：keiyaku@coreto.jp</strong>
+            <span style="color:var(--muted)">（管理会社にこのアドレスへ送付するよう伝えてください）</span>
+          </div>
+        </div>
+
+        <!-- ステータス3ステップ -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px">
+          <div class="scan-item ${ds.sentAt?'filled':''}" id="ds-sent">
+            <div class="si-label">📤 管理会社→keiyaku着信</div>
+            <div class="si-type-badge" style="background:rgba(52,211,153,.15);color:var(--green);border:1px solid rgba(52,211,153,.3)">必須</div>
+            <div class="si-num ${ds.sentAt?'':'empty'}" id="dsn-sent">${ds.sentAt||'未確認'}</div>
+            <div class="scan-input-row">
+              <input type="text" id="dsi-sent" placeholder="着信日時（例：2026-03-08 14:30）"
+                     value="${ds.sentAt}" oninput="updateDenshiStatus('sentAt',this.value)">
+            </div>
+            <div class="si-status" id="dss-sent">
+              ${ds.sentAt
+                ? `<span style="color:var(--green)">✓</span><span style="color:var(--green)">確認済み</span>`
+                : `<span style="color:var(--orange)">○</span><span style="color:var(--muted)">未確認</span>`}
+            </div>
+          </div>
+          <div class="scan-item ${ds.clientSignedAt?'filled':''}" id="ds-signed">
+            <div class="si-label">✍️ クライアント電子署名完了</div>
+            <div class="si-type-badge" style="background:rgba(79,156,249,.15);color:var(--blue);border:1px solid rgba(79,156,249,.3)">必須</div>
+            <div class="si-num ${ds.clientSignedAt?'':'empty'}" id="dsn-signed">${ds.clientSignedAt||'未完了'}</div>
+            <div class="scan-input-row">
+              <input type="text" id="dsi-signed" placeholder="署名完了日時"
+                     value="${ds.clientSignedAt}" oninput="updateDenshiStatus('clientSignedAt',this.value)">
+            </div>
+            <div class="si-status" id="dss-signed">
+              ${ds.clientSignedAt
+                ? `<span style="color:var(--green)">✓</span><span style="color:var(--green)">署名完了</span>`
+                : `<span style="color:var(--orange)">○</span><span style="color:var(--muted)">署名待ち</span>`}
+            </div>
+          </div>
+          <div class="scan-item ${ds.hqProcessedAt?'filled':''}" id="ds-hq">
+            <div class="si-label">🏢 HQ処理完了</div>
+            <div class="si-type-badge" style="background:rgba(201,168,76,.12);color:var(--gold);border:1px solid rgba(201,168,76,.25)">任意</div>
+            <div class="si-num ${ds.hqProcessedAt?'':'empty'}" id="dsn-hq">${ds.hqProcessedAt||'処理中'}</div>
+            <div class="scan-input-row">
+              <input type="text" id="dsi-hq" placeholder="HQ処理完了日時"
+                     value="${ds.hqProcessedAt}" oninput="updateDenshiStatus('hqProcessedAt',this.value)">
+            </div>
+            <div class="si-status" id="dss-hq">
+              ${ds.hqProcessedAt
+                ? `<span style="color:var(--green)">✓</span><span style="color:var(--green)">処理完了</span>`
+                : `<span style="color:var(--orange)">○</span><span style="color:var(--muted)">処理待ち</span>`}
+            </div>
+          </div>
+        </div>
+
+        <div style="padding:10px 14px;background:rgba(52,211,153,.04);border:1px solid rgba(52,211,153,.12);
+                    border-radius:9px;font-size:11px;color:var(--sub);line-height:1.8">
+          💡 <strong style="color:var(--text)">電子契約の流れ：</strong>
+          ①管理会社がkeiyaku@coreto.jpに署名リンクを送付 → ②HQがクライアントにLINE WORKSで転送 →
+          ③クライアントが署名 → ④keiyaku@coreto.jpで受領・処理
+        </div>
+      </div>`;
+  } else {
+    // ── 紙契約：追跡番号管理（レターパック）──
+    const items = [
+      { key:'send',  label:'往路（事務所→クライアント）', icon:'📤', color:'var(--blue)',  placeholder:'追跡番号 12桁' },
+      { key:'reply', label:'復路（クライアント→事務所）', icon:'📥', color:'var(--green)', placeholder:'追跡番号 12桁' },
+      { key:'key',   label:'鍵送付',                      icon:'🔑', color:'var(--gold)',  placeholder:'追跡番号 12桁（任意）' },
+    ];
+    wrap.innerHTML = `
+      <div class="scan-panel">
+        <div class="card-title" style="font-size:9px;color:var(--muted);letter-spacing:2px;
+             text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:8px">
+          <div style="width:3px;height:12px;background:var(--green);border-radius:2px"></div>
+          追跡番号管理（レターパック）
+        </div>
+        <div class="scan-grid" id="scan-grid">
+          ${items.map(item => {
+            const val = c.trackNos[item.key] || '';
+            const filled = !!val;
+            const missing = !filled && (item.key !== 'key');
+            return `<div class="scan-item ${filled?'filled':missing?'missing':''}" id="scan-${item.key}">
+              <div class="si-label">${item.icon} ${item.label}</div>
+              <div class="si-type-badge" style="background:${item.color}22;color:${item.color};border:1px solid ${item.color}44">
+                ${item.key==='key'?'任意':'必須'}
+              </div>
+              <div class="si-num ${filled?'':'empty'}" id="sn-${item.key}">${filled ? val : '未入力'}</div>
+              <div class="scan-input-row">
+                <input type="text" id="si-${item.key}" maxlength="12" placeholder="${item.placeholder}"
+                       value="${val}" oninput="updateTrackNo('${item.key}',this.value)"
+                       onfocus="this.select()">
+                <button class="scan-btn scan-go" onclick="lookupTrack('${item.key}')">🔍 追跡</button>
+              </div>
+              <div class="si-status" id="ss-${item.key}">
+                ${filled
+                  ? `<span style="color:var(--green)">✓</span><span style="color:var(--green)">登録済み</span>`
+                  : `<span style="color:var(--orange)">○</span><span style="color:var(--muted)">未登録</span>`}
+              </div>
+              ${filled ? `<div class="si-date" id="sd-${item.key}">登録済み</div>` : ''}
+            </div>`;
+          }).join('')}
+        </div>
+        <div style="padding:10px 14px;background:rgba(52,211,153,.05);border:1px solid rgba(52,211,153,.12);
+                    border-radius:9px;font-size:11px;color:var(--sub);line-height:1.8">
+          💡 <strong style="color:var(--text)">バーコードスキャナー対応：</strong>
+          追跡番号フィールドをクリック → バーコードスキャン → 自動入力（所要10秒）<br>
+          Honeywell Voyager 1200g（USB接続、ドライバ不要）推奨
+        </div>
+      </div>`;
+  }
+}
+
+function updateDenshiStatus(key, val) {
+  if (!currentCase.denshiStatus) currentCase.denshiStatus = {};
+  currentCase.denshiStatus[key] = val.trim();
+  const filled = !!val.trim();
+  const sfx = key==='sentAt'?'sent':key==='clientSignedAt'?'signed':'hq';
+  const numEl = document.getElementById(`dsn-${sfx}`);
+  const statEl = document.getElementById(`dss-${sfx}`);
+  const wrap = document.getElementById(`ds-${sfx}`);
+  if (numEl) numEl.textContent = filled ? val.trim() : (sfx==='hq'?'処理中':sfx==='signed'?'未完了':'未確認');
+  if (numEl) numEl.className = 'si-num' + (filled?'':' empty');
+  const greenMsg = sfx==='hq'?'処理完了':sfx==='signed'?'署名完了':'確認済み';
+  const orangeMsg = sfx==='hq'?'処理待ち':sfx==='signed'?'署名待ち':'未確認';
+  if (statEl) statEl.innerHTML = filled
+    ? `<span style="color:var(--green)">✓</span><span style="color:var(--green)">${greenMsg}</span>`
+    : `<span style="color:var(--orange)">○</span><span style="color:var(--muted)">${orangeMsg}</span>`;
+  if (wrap) wrap.className = 'scan-item' + (filled?' filled':'');
+  updateProgress();
+}
+
+function updateTrackNo(key, val) {
+  val = val.replace(/\D/g,'').slice(0,12);
+  document.getElementById(`si-${key}`).value = val;
+  currentCase.trackNos[key] = val;
+  const filled = val.length === 12;
+  const numEl  = document.getElementById(`sn-${key}`);
+  const statEl = document.getElementById(`ss-${key}`);
+  if (numEl) {
+    numEl.className = 'si-num' + (filled?'':' empty');
+    numEl.textContent = filled ? val : '未入力';
+  }
+  if (statEl) statEl.innerHTML = filled
+    ? `<span style="color:var(--green)">✓</span><span style="color:var(--green)">登録済み</span>`
+    : `<span style="color:var(--orange)">○</span><span style="color:var(--muted)">未登録</span>`;
+  const wrap = document.getElementById(`scan-${key}`);
+  if (wrap) { wrap.className = 'scan-item' + (filled?' filled':''); }
+  // ③ Slack通知：追跡番号登録
+  if (filled && currentCase && typeof slackNotifyTrackNo === 'function') {
+    var direction = key === 'outbound' ? 'outbound' : 'inbound';
+    slackNotifyTrackNo(currentCase, direction, val);
+  }
+  updateProgress();
+}
+
+function lookupTrack(key) {
+  const num = currentCase.trackNos[key];
+  if (!num || num.length < 12) { alert('12桁の追跡番号を入力してください'); return; }
+  window.open(`https://trackings.post.japanpost.jp/services/srv/search/direct?reqCodeNo1=${num}&searchKind=S002&locale=ja`, '_blank');
+}
+
+// ================================================================
+//  Doc checklist
+// ================================================================
+function renderDocChecklist() {
+  const isDenshi = (currentCase.contractType === 'denshi');
+  const list = isDenshi ? DENSHI_DOC_CHECKLIST : DOC_CHECKLIST;
+  document.getElementById('sec-doc-scan').innerHTML = list.map((it,i) => `
+    <div class="chk" id="drow-${it.id}">
+      <div class="chk-num">${String(i+1).padStart(2,'0')}</div>
+      <div class="chk-body">
+        <div class="chk-label">
+          ${it.label}
+          ${it.required ? '<span class="chk-tag tag-req">必須</span>' : ''}
+        </div>
+        <div class="chk-desc">${it.desc}</div>
+      </div>
+      <div class="sbg">
+        <button class="sb" id="dsb-ok-${it.id}"  onclick="setDocCheck('${it.id}','ok')">✓</button>
+        <button class="sb" id="dsb-ng-${it.id}"  onclick="setDocCheck('${it.id}','ng')">✗</button>
+        <button class="sb" id="dsb-na-${it.id}"  onclick="setDocCheck('${it.id}','na')">—</button>
+      </div>
+    </div>`).join('');
+
+  // Restore
+  Object.entries(currentCase.docCheckState).forEach(([id, s]) => applyDocCheck(id, s));
+  updateDocProgress();
+}
+
+// ================================================================
+//  Check state
+// ================================================================
+function setCheck(id, state) {
+  currentCase.checkState[id] = state;
+  applyCheck(id, state);
+  updateProgress();
+  updateSectionProgress();
+}
+function applyCheck(id, state) {
+  ['ok','ng','na'].forEach(s => {
+    const b = document.getElementById(`sb-${s}-${id}`);
+    if (b) b.className = 'sb' + (state===s ? ' '+s : '');
+  });
+  const row = document.getElementById(`row-${id}`);
+  if (row) { row.className = 'chk'+(state==='ok'?' ok-row':state==='ng'?' ng-row':''); }
+  const inp = document.getElementById(`inp-${id}`);
+  if (inp) inp.className = 'chk-input' + (state==='ng'?' show':'');
+}
+
+function setDocCheck(id, state) {
+  currentCase.docCheckState[id] = state;
+  applyDocCheck(id, state);
+  updateDocProgress();
+  updateProgress();
+}
+function applyDocCheck(id, state) {
+  ['ok','ng','na'].forEach(s => {
+    const b = document.getElementById(`dsb-${s}-${id}`);
+    if (b) b.className = 'sb' + (state===s ? ' '+s : '');
+  });
+  const row = document.getElementById(`drow-${id}`);
+  if (row) row.className = 'chk'+(state==='ok'?' ok-row':state==='ng'?' ng-row':'');
+}
+
+// ================================================================
+//  Progress
+// ================================================================
+function updateProgress() {
+  if (!currentCase) return;
+  const activeList = getActiveChecklist(currentCase.contractType);
+  const allIT  = activeList.flatMap(s=>s.items);
+  const doneIT = allIT.filter(it=>currentCase.checkState[it.id]).length;
+  const isDenshi = (currentCase.contractType === 'denshi');
+  const docList  = isDenshi ? DENSHI_DOC_CHECKLIST : DOC_CHECKLIST;
+  const doneDoc = Object.values(currentCase.docCheckState).filter(v=>v).length;
+  // 紙のみ追跡番号カウント
+  const trackDone = isDenshi ? 0 : Object.values(currentCase.trackNos).filter(v=>v&&v.length===12).length;
+  const trackRequired = isDenshi ? 0 : 2;
+
+  const total = allIT.length + trackRequired + docList.length;
+  const done  = doneIT + Math.min(trackDone, trackRequired) + doneDoc;
+  const pct   = total > 0 ? Math.round((done/total)*100) : 0;
+
+  const clr   = pct < 40 ? 'var(--orange)' : pct < 100 ? 'var(--blue)' : 'var(--green)';
+  document.getElementById('c-pct').textContent = pct + '%';
+  document.getElementById('c-pct').style.color  = clr;
+  document.getElementById('c-bar').style.width   = pct + '%';
+  document.getElementById('c-bar').style.background = clr;
+
+  const trackLabel = isDenshi ? '' : ` ／ 追跡番号 ${trackDone}/2`;
+  document.getElementById('ab-progress').textContent =
+    `IT重説 ${doneIT}/${allIT.length}項目 完了 ／ 書類 ${doneDoc}/${docList.length}項目${trackLabel}`;
+}
+
+function updateSectionProgress() {
+  const activeList = getActiveChecklist(currentCase.contractType);
+  activeList.forEach(sec => {
+    const done = sec.items.filter(it=>currentCase.checkState[it.id]).length;
+    const el   = document.getElementById(`sp-${sec.id}`);
+    if (el) el.textContent = `${done}/${sec.items.length}`;
+  });
+}
+
+function updateDocProgress() {
+  const isDenshi = (currentCase.contractType === 'denshi');
+  const docList  = isDenshi ? DENSHI_DOC_CHECKLIST : DOC_CHECKLIST;
+  const done = Object.values(currentCase.docCheckState).filter(v=>v).length;
+  const el   = document.getElementById('doc-prog');
+  if (el) el.textContent = `${done}/${docList.length}`;
+}
+
+// ================================================================
+//  Section toggle
+// ================================================================
+function toggleContractType(caseId) {
+  const c = CASES.find(x=>x.id===caseId);
+  if (!c) return;
+  const was = c.contractType || 'paper';
+  c.contractType = (was === 'paper') ? 'denshi' : 'paper';
+  // 状態をリセット（チェックリストが変わるため）
+  c.checkState = {};
+  c.docCheckState = {};
+  renderCaseHeader();
+  renderITChecklist();
+  renderScanPanel();
+  renderDocChecklist();
+  updateProgress();
+}
+
+function toggleSec(id, btn) {
+  const body = document.getElementById(`sb-${id}`);
+  const chev = btn ? btn.querySelector('.sec-chev') : null;
+  if (body) body.classList.toggle('collapsed');
+  if (chev) chev.classList.toggle('open');
+}
+// ================================================================
+//  Pane switch
+// ================================================================
+function switchPane(i, btn) {
+  currentPane = i;
+  document.querySelectorAll('.tt').forEach((t,j)=>t.classList.toggle('on',j===i));
+  document.getElementById('pane-0').style.display = i===0?'block':'none';
+  document.getElementById('pane-1').style.display = i===1?'block':'none';
+}
+
+// ================================================================
+//  Actions
+// ================================================================
+function saveMemo(id, val) {
+  if (!currentCase.memos) currentCase.memos = {};
+  currentCase.memos[id] = val;
+}
+
+// ── 完了報告モーダル表示 ──────────────────────────────────────────
+function showCompleteModal() {
+  if (!currentCase) return;
+  const c    = currentCase;
+  const all  = IT_CHECKLIST.flatMap(s => s.items);
+  const done = all.filter(it => c.checkState[it.id] === 'ok').length;
+  const ng   = all.filter(it => c.checkState[it.id] === 'ng').length;
+  const memoEl = document.getElementById('it-memo');
+  const memo = memoEl ? memoEl.value || '（なし）' : '（なし）';
+  const now  = new Date().toLocaleString('ja-JP');
+
+  const rows = [
+    ['案件ID',       c.id],
+    ['顧客名',       c.name + ' 様'],
+    ['実施日時',     now],
+    ['チェック完了', done + ' / ' + all.length + ' 項目'],
+    ng > 0 ? ['問題あり', ng + ' 項目'] : null,
+    ['メモ',         memo],
+  ].filter(Boolean);
+
+  document.getElementById('modal-body').innerHTML =
+    rows.map(function(r){
+      var k=r[0], v=r[1];
+      var col = k==='問題あり' ? 'color:var(--red)' : k==='チェック完了' ? 'color:var(--green)' : '';
+      return '<div class="modal-row"><span class="mr-key">'+k+'</span><span class="mr-val" style="'+col+'">'+v+'</span></div>';
+    }).join('') +
+    '';
+
+  document.getElementById('modal-progress').style.display = 'none';
+  var actions = document.getElementById('modal-actions');
+  if (actions) actions.style.display = 'flex';
+  var submitBtn = document.getElementById('modal-submit-btn');
+  if (submitBtn) { submitBtn.disabled = false; submitBtn.style.opacity = '1'; }
+  document.getElementById('modal-overlay').classList.add('show');
+}
+
+// ── ワンクリック自動送信 ──────────────────────────────────────────
+function submitComplete() {
+  if (!currentCase) return;
+
+  var btn       = document.getElementById('modal-submit-btn');
+  var cancelBtn = document.querySelector('.ma-cancel');
+  var progress  = document.getElementById('modal-progress');
+  var progMsg   = document.getElementById('modal-progress-msg');
+  var progBar   = document.getElementById('modal-progress-bar');
+
+  if (btn) { btn.disabled = true; btn.style.opacity = '0.5'; }
+  if (cancelBtn) { cancelBtn.disabled = true; cancelBtn.style.opacity = '0.4'; }
+  if (progress) progress.style.display = 'block';
+
+  // IT重説・書類チェック進捗を取得
+  var activeList = getActiveChecklist(currentCase.contractType);
+  var allIT   = activeList.flatMap(function(s){ return s.items; });
+  var doneIT  = allIT.filter(function(it){ return currentCase.checkState[it.id]==='ok'; }).length;
+  var isDenshi = (currentCase.contractType === 'denshi');
+  var docList  = isDenshi ? DENSHI_DOC_CHECKLIST : DOC_CHECKLIST;
+  var doneDoc = docList.filter(function(d){ return currentCase.docCheckState[d.id]==='ok'; }).length;
+  var memo    = (document.getElementById('modal-memo')||{}).value || '';
+
+  var steps = [
+    { pct: 30,  msg: '💾 Kintoneに完了記録を保存中...',  ms: 700 },
+    { pct: 65,  msg: '📢 Slackに通知を送信中...',         ms: 600,
+      action: function(){
+        // ① Slack実通知
+        if (typeof slackNotifyITSetsuComplete === 'function') {
+          slackNotifyITSetsuComplete(
+            currentCase, doneIT, allIT.length, doneDoc, docList.length, memo
+          );
+        }
+      }
+    },
+    { pct: 90,  msg: '📱 LINE完了通知を送信中...',         ms: 500 },
+    { pct: 100, msg: '✅ 全て完了しました',                ms: 400 },
+  ];
+
+  var i = 0;
+  function runStep() {
+    if (i >= steps.length) {
+      // 完了処理
+      currentCase.status   = 'scan-pending';
+      currentCase.itStatus = 'done';
+      currentCase.itDoneAt = new Date().toLocaleString('ja-JP');
+      setTimeout(function() {
+        closeModal();
+        renderCaseList();
+        var completeBtn = document.getElementById('ab-complete-btn');
+        if (completeBtn) {
+          completeBtn.textContent = '📦 完了済み';
+          completeBtn.disabled    = true;
+          completeBtn.style.opacity = '0.5';
+        }
+        showSlackToast('✅ 完了報告送信済み — Kintone・Slack・LINEに自動通知しました');
+      }, 300);
+      return;
+    }
+    var s = steps[i++];
+    if (progMsg) progMsg.textContent = s.msg;
+    if (progBar) progBar.style.width = s.pct + '%';
+    if (typeof s.action === 'function') { try { s.action(); } catch(e) { console.error(e); } }
+    setTimeout(runStep, s.ms);
+  }
+  runStep();
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('show');
+}
+</script>
+</body>
+</html>

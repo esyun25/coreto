@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>案件管理・介入 | CORETO HQ</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://hooks.slack.com https://hooks.zapier.com; img-src 'self' data:; frame-src 'none'; object-src 'none';">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090f;--bg2:#0b0d18;--bg3:#0f111e;
+  --card:#111420;--card2:#161929;
+  --border:#1e2338;--border2:#2a2f47;
+  --gold:#c9a84c;--gold2:#e8c96a;
+  --blue:#4f9cf9;--blue2:#3b82e8;
+  --green:#2dd4bf;--green2:#34d399;
+  --red:#f87171;--orange:#fb923c;
+  --purple:#a78bfa;--pink:#f472b6;
+  --muted:#3d4263;--sub:#6b7499;--text:#dde3f5;
+  --r:14px;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans-serif;overflow:hidden}
+body{display:grid;grid-template-rows:52px 1fr}
+
+/* HEADER */
+.hdr{background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:14px;position:relative;z-index:10}
+.hdr::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(201,168,76,.3),transparent)}
+.hdr-logo{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:var(--gold);letter-spacing:4px}
+.hdr-pipe{width:1px;height:20px;background:var(--border2)}
+.hdr-title{font-size:11px;font-weight:700;color:var(--blue);background:rgba(79,156,249,.08);border:1px solid rgba(79,156,249,.15);border-radius:6px;padding:3px 9px;letter-spacing:.5px}
+.hdr-r{margin-left:auto;display:flex;align-items:center;gap:10px}
+.hdr-user{font-size:10px;color:var(--sub);background:var(--card);border:1px solid var(--border2);border-radius:7px;padding:4px 10px}
+.hdr-back{font-size:10px;color:var(--muted);text-decoration:none;border:1px solid var(--border2);border-radius:7px;padding:4px 10px;transition:.15s;display:flex;align-items:center;gap:4px}
+.hdr-back:hover{color:var(--text);border-color:var(--sub)}
+
+/* LAYOUT */
+.layout{display:grid;grid-template-columns:300px 1fr;height:100%;overflow:hidden}
+
+/* LEFT PANE */
+.left-pane{border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;background:var(--bg2)}
+
+/* Stats strip */
+.stats-strip{display:grid;grid-template-columns:repeat(6,1fr);border-bottom:1px solid var(--border)}
+.sc{padding:8px 6px;text-align:center;cursor:pointer;transition:background .15s;border-right:1px solid var(--border);position:relative}
+.sc:last-child{border-right:none}
+.sc:hover{background:rgba(255,255,255,.02)}
+.sc.active{background:rgba(79,156,249,.06)}
+.sc.active::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--blue)}
+.sc-v{font-family:'DM Mono',monospace;font-size:15px;font-weight:500;line-height:1}
+.sc-l{font-size:7px;color:var(--muted);margin-top:2px;letter-spacing:.4px;text-transform:uppercase;font-weight:700}
+.sc.danger .sc-v{color:var(--red)}
+.sc.warn .sc-v{color:var(--orange)}
+.sc.good .sc-v{color:var(--green)}
+.sc.accent .sc-v{color:var(--blue)}
+.sc.gold .sc-v{color:var(--gold)}
+
+/* Toolbar */
+.toolbar{padding:10px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:7px}
+.search-wrap{position:relative}
+.search-icon{position:absolute;left:9px;top:50%;transform:translateY(-50%);font-size:11px;opacity:.4;pointer-events:none}
+.search-input{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:inherit;font-size:11px;padding:7px 70px 7px 28px;outline:none;transition:border-color .15s}
+.search-input:focus{border-color:var(--blue)}
+.search-new{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:var(--gold);color:#0a0c10;border:none;border-radius:6px;font-size:10px;font-weight:800;font-family:inherit;padding:4px 9px;cursor:pointer;transition:.15s}
+.search-new:hover{background:var(--gold2)}
+
+.chips{display:flex;gap:4px;flex-wrap:wrap}
+.chip{font-size:9px;font-weight:700;padding:3px 8px;border-radius:8px;cursor:pointer;border:1px solid var(--border2);color:var(--sub);background:transparent;font-family:inherit;transition:.15s;letter-spacing:.2px}
+.chip:hover{border-color:var(--sub);color:var(--text)}
+.chip.on{border-color:var(--blue);color:var(--blue);background:rgba(79,156,249,.08)}
+
+/* Sort row */
+.sort-row{display:flex;align-items:center;gap:4px;padding:5px 10px;border-bottom:1px solid var(--border);background:var(--bg)}
+.sort-lbl{font-size:8px;color:var(--muted);font-weight:700;letter-spacing:.4px;flex-shrink:0}
+.sort-btn{font-size:9px;padding:2px 7px;border-radius:5px;cursor:pointer;border:1px solid transparent;color:var(--muted);background:transparent;font-family:inherit;transition:.15s}
+.sort-btn:hover{color:var(--sub)}
+.sort-btn.on{border-color:var(--border2);color:var(--blue);background:rgba(79,156,249,.06)}
+.sort-r{margin-left:auto;display:flex;gap:3px}
+.icon-btn{font-size:9px;padding:2px 6px;border-radius:5px;cursor:pointer;border:1px solid var(--border2);color:var(--muted);background:transparent;font-family:inherit;transition:.15s}
+.icon-btn:hover{color:var(--text);border-color:var(--sub)}
+
+/* Bulk bar */
+.bulk-bar{display:none;align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid rgba(79,156,249,.2);background:rgba(79,156,249,.05)}
+.bulk-bar.show{display:flex}
+.bulk-count{font-size:10px;color:var(--blue);font-weight:700;flex-shrink:0}
+
+/* List meta */
+.list-meta{padding:5px 10px;font-size:9px;color:var(--muted);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+
+/* Case list */
+.list-scroll{overflow-y:auto;flex:1}
+.case-item{padding:10px 12px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;position:relative;user-select:none}
+.case-item:hover{background:rgba(255,255,255,.015)}
+.case-item.active{background:rgba(79,156,249,.05);border-right:2px solid var(--blue)}
+.ci-row1{display:flex;align-items:center;gap:6px;margin-bottom:3px}
+.ci-id{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted)}
+.type-pill{font-size:8px;font-weight:800;padding:1px 6px;border-radius:4px;letter-spacing:.3px}
+.tp-reLet{background:rgba(79,156,249,.12);color:var(--blue)}
+.tp-reSale{background:rgba(201,168,76,.12);color:var(--gold)}
+.tp-sannai{background:rgba(167,139,250,.12);color:var(--purple)}
+.tp-hr{background:rgba(45,212,191,.12);color:var(--green)}
+.ci-flags{margin-left:auto;font-size:10px;opacity:.7}
+.ci-name{font-size:12px;font-weight:600;margin-bottom:2px;color:var(--text)}
+.ci-sub{font-size:10px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px}
+.ci-row3{display:flex;align-items:center;gap:6px}
+.ci-agent{font-size:9px;color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ci-step{font-size:8px;padding:1px 5px;border-radius:3px;background:var(--card2);color:var(--sub);border:1px solid var(--border2)}
+.ci-age{font-size:9px;font-family:'DM Mono',monospace}
+.age-new{color:var(--green)}
+.age-mid{color:var(--orange)}
+.age-old{color:var(--red)}
+.case-item.stale .ci-id::before{content:'●';color:var(--red);font-size:6px;margin-right:3px;animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* RIGHT PANE */
+.right-pane{overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:14px;background:var(--bg)}
+.empty-pane{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;text-align:center;gap:10px;color:var(--muted)}
+.empty-pane .ei{font-size:40px;margin-bottom:4px}
+.empty-pane .et{font-size:14px;font-weight:700;color:var(--sub)}
+.empty-pane .es{font-size:11px;line-height:1.7}
+
+/* Case header */
+.case-hdr{background:linear-gradient(135deg,var(--card2) 0%,var(--card) 100%);border:1px solid var(--border2);border-radius:var(--r);padding:18px 20px 22px;position:relative}
+.case-hdr::before{content:'';position:absolute;top:-30px;right:-30px;width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,rgba(79,156,249,.07) 0%,transparent 70%);pointer-events:none}
+.ch-top{display:flex;align-items:flex-start;gap:12px;margin-bottom:14px}
+.ch-id{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:2px}
+.ch-name{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;line-height:1.1}
+.ch-sub{font-size:11px;color:var(--sub);margin-top:4px}
+.ch-badges{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:5px}
+
+/* Step bar */
+.step-bar{display:flex;align-items:center;margin-bottom:4px}
+.sn{display:flex;flex-direction:column;align-items:center;flex:1;position:relative;cursor:default}
+.sn:not(:last-child)::after{content:'';position:absolute;top:10px;left:50%;width:100%;height:1px;background:var(--border2);z-index:0}
+.sn.done::after{background:var(--green)}
+.sn.active::after{background:linear-gradient(90deg,var(--gold),var(--border2))}
+.sn-dot{width:20px;height:20px;border-radius:50%;border:2px solid var(--border2);background:var(--bg);font-size:8px;display:flex;align-items:center;justify-content:center;z-index:1;transition:.2s}
+.sn.done .sn-dot{background:var(--green);border-color:var(--green);color:#0a0c10;font-size:9px}
+.sn.active .sn-dot{background:var(--gold);border-color:var(--gold);color:#0a0c10;box-shadow:0 0 8px rgba(201,168,76,.4)}
+.sn.future .sn-dot{color:var(--muted)}
+.sn-lbl{font-size:6px;margin-top:3px;font-weight:700;color:var(--muted);white-space:nowrap;letter-spacing:.3px}
+.sn.done .sn-lbl{color:var(--green)}
+.sn.active .sn-lbl{color:var(--gold)}
+
+/* Banners */
+.hq-memo-banner{margin-top:10px;padding:8px 12px;border-radius:8px;font-size:11px;line-height:1.6;background:rgba(79,156,249,.06);border:1px solid rgba(79,156,249,.15);color:var(--blue)}
+.stale-banner{margin-top:8px;padding:7px 12px;border-radius:8px;font-size:11px;background:rgba(251,146,60,.06);border:1px solid rgba(251,146,60,.15);color:var(--orange)}
+
+/* Meta grid */
+.meta-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding-bottom:2px}
+.mi{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 12px}
+.mi-l{font-size:8px;color:var(--muted);font-weight:700;letter-spacing:.5px;margin-bottom:4px;text-transform:uppercase}
+.mi-v{font-size:12px;font-weight:600;color:var(--text)}
+
+/* Section card */
+.sec{background:var(--card);border:1px solid var(--border);border-radius:var(--r)}
+.sec-hdr{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--border)}
+.sec-title{font-size:12px;font-weight:700;color:var(--text)}
+.sec-body{padding:16px 16px 20px}
+
+/* Action grid */
+.action-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding-bottom:4px}
+.ab{background:var(--card2);border:1px solid var(--border2);border-radius:10px;padding:14px 10px;cursor:pointer;transition:all .15s;font-family:inherit;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:90px}
+.ab:hover{border-color:var(--blue);background:rgba(79,156,249,.05);transform:translateY(-1px)}
+.ab.danger:hover{border-color:var(--red);background:rgba(248,113,113,.05)}
+.ab.restore:hover{border-color:var(--green);background:rgba(45,212,191,.05)}
+.ab-icon{font-size:20px;line-height:1}
+.ab-label{font-size:10px;font-weight:700;color:var(--text)}
+.ab-desc{font-size:8px;color:var(--muted);line-height:1.5;text-align:center}
+
+/* History */
+.hist-row{display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);font-size:11px}
+.hist-row:last-child{border-bottom:none}
+.hist-dot{width:7px;height:7px;border-radius:50%;background:var(--border2);flex-shrink:0;margin-top:5px}
+.hist-dot.hq{background:var(--blue);box-shadow:0 0 4px rgba(79,156,249,.4)}
+.hist-text{color:var(--sub);line-height:1.6;flex:1}
+.hist-text b{color:var(--text)}
+
+/* Table */
+.tbl{width:100%;border-collapse:collapse;font-size:11px}
+.tbl th{font-size:8px;color:var(--muted);padding:4px 8px;text-align:left;border-bottom:1px solid var(--border);font-weight:700;letter-spacing:.5px;text-transform:uppercase}
+.tbl td{padding:8px 8px;border-bottom:1px solid var(--border);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+
+/* Badges */
+.badge{display:inline-flex;align-items:center;font-size:9px;font-weight:700;padding:2px 7px;border-radius:6px;white-space:nowrap;letter-spacing:.2px}
+.b-blue{background:rgba(79,156,249,.1);color:var(--blue);border:1px solid rgba(79,156,249,.2)}
+.b-gold{background:rgba(201,168,76,.1);color:var(--gold);border:1px solid rgba(201,168,76,.2)}
+.b-green{background:rgba(45,212,191,.1);color:var(--green);border:1px solid rgba(45,212,191,.2)}
+.b-red{background:rgba(248,113,113,.1);color:var(--red);border:1px solid rgba(248,113,113,.2)}
+.b-orange{background:rgba(251,146,60,.1);color:var(--orange);border:1px solid rgba(251,146,60,.2)}
+.b-purple{background:rgba(167,139,250,.1);color:var(--purple);border:1px solid rgba(167,139,250,.2)}
+.b-muted{background:rgba(61,66,99,.2);color:var(--sub);border:1px solid var(--border2)}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:8px 14px;border-radius:8px;border:none;cursor:pointer;font-size:11px;font-weight:700;font-family:inherit;transition:.15s;white-space:nowrap}
+.btn-primary{background:var(--blue);color:#fff}.btn-primary:hover{background:var(--blue2)}
+.btn-gold{background:var(--gold);color:#0a0c10}.btn-gold:hover{background:var(--gold2)}
+.btn-ghost{background:transparent;color:var(--sub);border:1px solid var(--border2)}.btn-ghost:hover{color:var(--text);border-color:var(--sub)}
+.btn-danger{background:rgba(248,113,113,.1);color:var(--red);border:1px solid rgba(248,113,113,.2)}.btn-danger:hover{background:rgba(248,113,113,.18)}
+.btn-green{background:rgba(45,212,191,.1);color:var(--green);border:1px solid rgba(45,212,191,.2)}.btn-green:hover{background:rgba(45,212,191,.18)}
+.btn-sm{padding:5px 10px;font-size:10px}
+.btn-xs{padding:3px 8px;font-size:9px;border-radius:6px}
+
+/* Forms */
+input:not([type=checkbox]),select,textarea{background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:inherit;font-size:12px;padding:9px 12px;outline:none;transition:border-color .15s;width:100%}
+input:not([type=checkbox]):focus,select:focus,textarea:focus{border-color:var(--blue)}
+select option{background:var(--card)}
+.fg{margin-bottom:12px}
+.fg label{display:block;font-size:10px;font-weight:700;color:var(--sub);margin-bottom:5px;letter-spacing:.3px}
+.fg-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.req{color:var(--red)}
+.checkbox-row{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;cursor:pointer;margin-bottom:8px;transition:border-color .15s}
+.checkbox-row:hover{border-color:var(--sub)}
+.checkbox-row input[type=checkbox]{width:15px;height:15px;flex-shrink:0;cursor:pointer;accent-color:var(--blue);background:var(--bg3);border:none;padding:0}
+.checkbox-row span{font-size:12px;color:var(--text)}
+
+/* Alerts */
+.alert{border-radius:9px;padding:10px 13px;font-size:11px;line-height:1.8;margin-bottom:12px}
+.al-warn{background:rgba(251,146,60,.06);border:1px solid rgba(251,146,60,.18);color:var(--orange)}
+.al-info{background:rgba(79,156,249,.06);border:1px solid rgba(79,156,249,.18);color:var(--blue)}
+.al-danger{background:rgba(248,113,113,.06);border:1px solid rgba(248,113,113,.18);color:var(--red)}
+.al-success{background:rgba(45,212,191,.06);border:1px solid rgba(45,212,191,.18);color:var(--green)}
+
+/* Case preview in modals */
+.case-preview{background:var(--bg3);border:1px solid var(--border2);border-radius:9px;padding:11px 14px;margin-bottom:14px}
+.cp-id{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:2px}
+.cp-name{font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px}
+.cp-sub{font-size:10px;color:var(--sub)}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);z-index:900;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--card);border:1px solid var(--border2);border-radius:16px;width:500px;max-width:100%;max-height:88vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,.7)}
+.m-hdr{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--card);z-index:1}
+.m-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:800}
+.m-close{background:var(--card2);border:1px solid var(--border2);color:var(--muted);font-size:14px;cursor:pointer;line-height:1;padding:5px 7px;border-radius:6px;transition:.15s}
+.m-close:hover{color:var(--text);border-color:var(--sub)}
+.m-body{padding:18px 20px}
+.m-footer{padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;position:sticky;bottom:0;background:var(--card)}
+
+/* Toast */
+.toast{position:fixed;bottom:22px;right:22px;background:var(--card2);border:1px solid var(--border2);border-radius:10px;padding:10px 16px;font-size:12px;color:var(--text);opacity:0;transition:all .25s;z-index:9999;pointer-events:none;transform:translateY(6px)}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.success{border-color:rgba(45,212,191,.3);color:var(--green)}
+.toast.error{border-color:rgba(248,113,113,.3);color:var(--red)}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:var(--muted)}
+</style>
+</head>
+<body>
+<header class="hdr">
+  <span class="hdr-logo">CORETO</span>
+  <div class="hdr-pipe"></div>
+  <span class="hdr-title">案件管理・介入</span>
+  <div class="hdr-r">
+    <span class="hdr-user" id="hdr-user">読込中...</span>
+    <a href="coreto-hub.html" class="hdr-back">← HQ ポータル</a>
+  </div>
+</header>
+<div class="layout">
+  <div class="left-pane">
+    <div class="stats-strip" id="stats-strip"></div>
+    <div class="toolbar">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input class="search-input" id="search" type="text" placeholder="ID・名前・物件・担当者で検索..." autocomplete="off">
+        <button class="search-new" id="btn-new">＋ 新規</button>
+      </div>
+      <div class="chips">
+        <button class="chip on" data-filter="all">すべて</button>
+        <button class="chip" data-filter="reLet">🏠 賃貸</button>
+        <button class="chip" data-filter="reSale">🏢 売買</button>
+        <button class="chip" data-filter="sannai">🔄 三為</button>
+        <button class="chip" data-filter="hr">👥 人材</button>
+        <button class="chip" data-filter="stale">⚠️ 停滞</button>
+        <button class="chip" data-filter="cancel">🚫 取消</button>
+        <button class="chip" data-filter="priority">🔥 優先</button>
+      </div>
+    </div>
+    <div class="sort-row">
+      <span class="sort-lbl">並順:</span>
+      <button class="sort-btn on" data-sort="age">更新日</button>
+      <button class="sort-btn" data-sort="type">種別</button>
+      <button class="sort-btn" data-sort="step">ステップ</button>
+      <button class="sort-btn" data-sort="agent">担当</button>
+      <div class="sort-r">
+        <button class="icon-btn" id="btn-all">全選択</button>
+        <button class="icon-btn" id="btn-csv">CSV</button>
+      </div>
+    </div>
+    <div class="bulk-bar" id="bulk-bar">
+      <span class="bulk-count" id="bulk-count">0件</span>
+      <button class="btn btn-primary btn-xs" id="bb-step">ステップ変更</button>
+      <button class="btn btn-ghost btn-xs" id="bb-agent">担当変更</button>
+      <button class="btn btn-danger btn-xs" id="bb-cancel">一括取消</button>
+      <button class="btn btn-ghost btn-xs" style="margin-left:auto" id="bb-clear">✕</button>
+    </div>
+    <div class="list-meta">
+      <span id="list-count" style="color:var(--sub)">—</span>
+      <span id="sel-count" style="color:var(--blue);font-weight:700;display:none"></span>
+    </div>
+    <div class="list-scroll" id="case-list"></div>
+  </div>
+  <div class="right-pane" id="right-pane">
+    <div class="empty-pane">
+      <div class="ei">📋</div>
+      <div class="et">介入する案件を選択</div>
+      <div class="es">左のリストから案件をクリックすると<br>詳細と介入アクションが表示されます</div>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="m-hdr">
+      <span class="m-title" id="m-title"></span>
+      <button class="m-close" id="m-close">✕</button>
+    </div>
+    <div class="m-body" id="m-body"></div>
+    <div class="m-footer" id="m-footer"></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script src="db.js"></script>
+<script>
+'use strict';
+
+// ══ SESSION ══
+let SESSION = {name:'HQ',userId:'00001',type:'hq',hqRole:'exec'};
+(function(){
+  try {
+    const s = JSON.parse(sessionStorage.getItem('coreto_session')||'null');
+    if(!s||!s.userId) return;
+    if(s.loginAt){const la=new Date(s.loginAt).getTime();if(!isNaN(la)&&(Date.now()-la)>28800000){sessionStorage.removeItem('coreto_session');return;}}
+    if(s.type&&s.type!=='hq'){location.replace('coreto-login.html');return;}
+    SESSION=s;
+  } catch(e){}
+})();
+document.getElementById('hdr-user').textContent=(SESSION.name||SESSION.userId||'HQ')+(SESSION.hqRole==='exec'?' (統括)':SESSION.hqRole==='manager'?' (管理職)':'');
+
+// ══ UTILS ══
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function today(){return new Date().toLocaleDateString('ja-JP',{month:'numeric',day:'numeric'});}
+function todayISO(){return new Date().toISOString().slice(0,10);}
+function showToast(msg,type){const t=document.getElementById('toast');t.textContent=msg;t.className='toast show'+(type?' '+type:'');clearTimeout(t._t);t._t=setTimeout(()=>{t.className='toast';},3000);}
+function notifySlack(msg){const wh=(typeof window.SLACK_CONFIG!=='undefined'&&window.SLACK_CONFIG)?(window.SLACK_CONFIG.GENERAL||window.SLACK_CONFIG.IT_SETSU):null;if(!wh)return;fetch(wh,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:'[HQ案件介入] '+msg})}).catch(()=>{});}
+function saveHqLog(action,detail){let logs=[];try{logs=JSON.parse(localStorage.getItem('coreto_hq_case_log')||'[]');}catch(e){}logs.unshift({action,detail,by:SESSION.name||SESSION.userId,at:new Date().toISOString()});if(logs.length>500)logs=logs.slice(0,500);try{localStorage.setItem('coreto_hq_case_log',JSON.stringify(logs));}catch(e){}}
+const AGENT_MAP={'10008':'佐藤 花子','10012':'山田 誠','10023':'鈴木 健太','10041':'渡辺 隆','20005':'田中 美穂','20010':'松本 由美','00001':'HQ 統括','00347':'HQ マネージャー','00891':'HQ スタッフ'};
+function agentName(id){if(!id)return'——';if(typeof USERS!=='undefined'&&USERS[id])return USERS[id].name;return AGENT_MAP[id]||id;}
+
+// ══ STEP DEFINITIONS ══
+const STEP_DEFS={
+  reLet:[{id:'naiken',label:'内見'},{id:'apply',label:'申込'},{id:'screening',label:'審査'},{id:'invoice',label:'請求書'},{id:'prekey',label:'重説・入金'},{id:'key',label:'鍵渡し'},{id:'done',label:'完了'}],
+  reSale:[{id:'naiken',label:'内見'},{id:'offer',label:'買付'},{id:'invoice',label:'請求書'},{id:'contract',label:'契約'},{id:'settlement',label:'決済'},{id:'done',label:'完了'}],
+  sannai:[{id:'naiken',label:'内見'},{id:'verify',label:'業者確認'},{id:'offer',label:'買付'},{id:'invoice',label:'請求書'},{id:'contract',label:'契約'},{id:'settlement',label:'決済'},{id:'done',label:'完了'}],
+  hr:[{id:'screening',label:'書類選考'},{id:'job-check',label:'求人確認'},{id:'interview',label:'面接調整'},{id:'offer',label:'内定'},{id:'onboard',label:'入社'},{id:'zaiki',label:'在籍確認'},{id:'pay2',label:'第2報酬'},{id:'done',label:'完了'}],
+};
+const TYPE_LABELS={reLet:'賃貸',reSale:'売買',sannai:'三為',hr:'人材'};
+const STEP_LABEL={cancel:'取消'};
+Object.values(STEP_DEFS).flat().forEach(s=>{STEP_LABEL[s.id]=s.label;});
+
+// ══ DATA ══
+const DEMO_CASES=[
+  {id:'R042857',name:'田中 雄介',type:'reLet',corp:false,agent:'10012',sub:'渋谷区 2LDK 〜¥220,000',step:'screening',age:3,stale:false,apps:[{id:'A001',prop:'渋谷区桜丘 2LDK',status:'rejected'},{id:'A002',prop:'渋谷区代々木 2LDK',status:'reviewing'}],dates:{naiken:'2026-02-17'},hist:['2/17 内見完了','2/18 申込→審査落ち','2/21 別物件で再申込']},
+  {id:'R039102',name:'木村 彩香',type:'reLet',corp:false,agent:'10012',sub:'品川区 1K 〜¥85,000',step:'screening',age:1,stale:false,apps:[{id:'A010',prop:'品川区大崎 1K',status:'reviewing'},{id:'A011',prop:'品川区五反田 1K',status:'reviewing'}],dates:{naiken:'2026-02-20'},hist:['2/20 内見完了','2/21 2物件同時申込']},
+  {id:'R041003',name:'斎藤 亮',type:'reLet',corp:false,agent:'10023',sub:'新宿区 1LDK 〜¥130,000',step:'naiken',age:9,stale:true,apps:[],dates:{},hist:['2/11 問合せ受信']},
+  {id:'R045500',name:'伊藤 翔太',type:'reLet',corp:false,agent:'10012',sub:'渋谷区恵比寿 1LDK ¥155,000',step:'invoice',age:2,stale:false,apps:[{id:'A020',prop:'渋谷区恵比寿 1LDK',status:'approved'}],dates:{naiken:'2026-02-14'},hist:['2/14 内見','2/15 申込','2/17 審査通過']},
+  {id:'R038291',name:'松本 浩二',type:'reLet',corp:false,agent:'10012',sub:'渋谷区 2K ¥170,000',step:'prekey',age:0,stale:false,apps:[{id:'A040',prop:'渋谷区 2K',status:'approved'}],dates:{naiken:'2026-02-07'},hist:['2/07 内見','2/08 申込','2/12 審査通過','2/17 入金確認']},
+  {id:'R046001',name:'加藤 美咲',type:'reLet',corp:false,agent:'10008',sub:'港区南青山 1LDK ¥180,000',step:'cancel',age:0,stale:false,apps:[],dates:{naiken:'2026-02-09'},hist:['2/09 内見','2/10 申込','2/21 キャンセル（本人都合）']},
+  {id:'R040011',name:'中村 由美',type:'reLet',corp:false,agent:'10012',sub:'港区 1R ¥95,000',step:'done',age:0,stale:false,apps:[],dates:{},hist:['2/01 内見','2/05 審査通過','2/18 鍵渡し完了']},
+  {id:'S819204',name:'吉田 大輔',type:'reSale',corp:false,agent:'10008',sub:'目黒区 戸建て ¥32,000,000',step:'contract',age:5,stale:false,salePrice:32000000,apps:[],dates:{},hist:['2/15 買付受領','2/20 売買契約締結']},
+  {id:'S291047',name:'田中 美咲',type:'reSale',corp:false,agent:'10012',sub:'港区 タワマン ¥65,000,000',step:'offer',age:2,stale:false,salePrice:65000000,apps:[],dates:{},hist:['2/21 内見なし・買付提出']},
+  {id:'S104382',name:'渡辺 健一',type:'reSale',corp:true,contactName:'渡辺 部長',agent:'10008',sub:'渋谷区 マンション ¥28,500,000',step:'naiken',age:1,stale:false,salePrice:28500000,apps:[],dates:{},hist:['2/22 内見予定']},
+  {id:'N001001',name:'株式会社アルファ不動産',type:'sannai',corp:true,contactName:'山田 課長',agent:'10008',sub:'世田谷区 一棟マンション ¥180,000,000',step:'verify',age:1,stale:false,salePrice:180000000,apps:[],dates:{},hist:['2/21 内見完了','2/22 業者確認依頼送信']},
+  {id:'N002002',name:'合同会社サクラ投資',type:'sannai',corp:true,contactName:'佐藤 部長',agent:'10012',sub:'目黒区 区分マンション ¥45,000,000',step:'naiken',age:0,stale:false,salePrice:45000000,apps:[],dates:{},hist:['2/23 内見予定']},
+  {id:'H00341',name:'鈴木 健一',type:'hr',corp:false,agent:'20005',sub:'ITエンジニア / 年収600万〜',step:'apply',age:5,stale:false,apps:[],dates:{},hist:['2/17 案件登録','2/18 3社に書類提出','2/21 2次面接通過']},
+  {id:'H00389',name:'田村 真由',type:'hr',corp:false,agent:'20005',sub:'Webデザイナー / 年収450万〜',step:'contract',age:2,stale:false,apps:[],dates:{},hist:['2/10 案件登録','2/20 内定','2/22 内定承諾']},
+  {id:'H00412',name:'木村 奈々',type:'hr',corp:false,agent:'20005',sub:'人事 / 年収500万〜',step:'naiken',age:1,stale:false,apps:[],dates:{},hist:['2/23 案件登録']},
+];
+function loadCases(){try{const raw=localStorage.getItem('coreto_cases');if(raw){const p=JSON.parse(raw);if(p&&p.length)return p;}}catch(e){}return JSON.parse(JSON.stringify(DEMO_CASES));}
+function saveCases(){try{localStorage.setItem('coreto_cases',JSON.stringify(CASES));}catch(e){}}
+let CASES=loadCases();
+let currentId=null,typeFilter='all',sortKey='age';
+let selectedIds=new Set();
+
+// ══ STATS ══
+function renderStats(){
+  const total=CASES.length;
+  const active=CASES.filter(c=>c.step!=='cancel'&&c.step!=='done').length;
+  const stale=CASES.filter(c=>c.stale).length;
+  const done=CASES.filter(c=>c.step==='done').length;
+  const cancelled=CASES.filter(c=>c.step==='cancel').length;
+  const priority=CASES.filter(c=>c.hqPriority).length;
+  document.getElementById('stats-strip').innerHTML=[
+    {v:total,l:'全案件',f:'all',cls:'accent'},
+    {v:active,l:'進行中',f:'active',cls:''},
+    {v:stale,l:'停滞',f:'stale',cls:stale>0?'danger':''},
+    {v:done,l:'完了',f:'done-f',cls:'good'},
+    {v:cancelled,l:'取消',f:'cancel',cls:'warn'},
+    {v:priority,l:'優先',f:'priority',cls:'gold'},
+  ].map(s=>`<div class="sc ${s.cls}" data-sfilter="${s.f}"><div class="sc-v">${s.v}</div><div class="sc-l">${s.l}</div></div>`).join('');
+  document.querySelectorAll('.sc[data-sfilter]').forEach(el=>{
+    el.addEventListener('click',()=>{const fm={'all':'all','active':'active','stale':'stale','done-f':'done','cancel':'cancel','priority':'priority'};setFilter(fm[el.dataset.sfilter]||'all');});
+  });
+}
+function setFilter(f){
+  typeFilter=f;
+  document.querySelectorAll('.chip[data-filter]').forEach(el=>el.classList.toggle('on',el.dataset.filter===f));
+  renderList();
+}
+function getFiltered(){
+  const q=document.getElementById('search').value.trim().toLowerCase();
+  let list=CASES.filter(c=>{
+    if(typeFilter==='stale'&&!c.stale)return false;
+    if(typeFilter==='cancel'&&c.step!=='cancel')return false;
+    if(typeFilter==='done'&&c.step!=='done')return false;
+    if(typeFilter==='active'&&(c.step==='cancel'||c.step==='done'))return false;
+    if(typeFilter==='priority'&&!c.hqPriority)return false;
+    if(!['all','stale','cancel','done','active','priority'].includes(typeFilter)&&c.type!==typeFilter)return false;
+    if(q){const hay=(c.id+c.name+(c.sub||'')+agentName(c.agent)).toLowerCase();if(!hay.includes(q))return false;}
+    return true;
+  });
+  list.sort((a,b)=>{
+    if(sortKey==='age')return(a.age||0)-(b.age||0);
+    if(sortKey==='type')return(a.type||''). localeCompare(b.type||''  );
+    if(sortKey==='step')return(a.step||''). localeCompare(b.step||''  );
+    if(sortKey==='agent')return agentName(a.agent).localeCompare(agentName(b.agent));
+    return 0;
+  });
+  return list;
+}
+function updateBulkUI(){
+  const n=selectedIds.size;
+  const sc=document.getElementById('sel-count');
+  sc.style.display=n?'':' none';
+  sc.textContent=n+'件選択中';
+  const bb=document.getElementById('bulk-bar');
+  bb.classList.toggle('show',n>0);
+  document.getElementById('bulk-count').textContent=n+'件選択中';
+}
+function renderList(){
+  const list=getFiltered();
+  document.getElementById('list-count').textContent=list.length+'件';
+  if(!list.length){document.getElementById('case-list').innerHTML='<div style="padding:28px;text-align:center;font-size:11px;color:var(--muted)">該当案件なし</div>';return;}
+  document.getElementById('case-list').innerHTML=list.map(c=>{
+    const stepLbl=STEP_LABEL[c.step]||c.step;
+    const ageClass=c.age>=7?'age-old':c.age>=3?'age-mid':'age-new';
+    const flags=(c.hqPriority?'🔥':''  )+(c.hqHold?'⏸':''  )+(c.hqMemo?'📌':''  )+(c.hqCreated?'🏢':'');
+    const isActive=currentId===c.id;
+    return `<div class="case-item${c.stale?' stale':''}${isActive?' active':''}" data-id="${esc(c.id)}">
+      <div class="ci-row1">
+        <span class="ci-id">${esc(c.id)}</span>
+        <span class="type-pill tp-${c.type}">${TYPE_LABELS[c.type]||c.type}</span>
+        ${c.corp?'<span class="badge b-purple" style="font-size:7px;padding:1px 4px">法人</span>':''}
+        ${flags?`<span class="ci-flags">${flags}</span>`:''}
+        <input type="checkbox" class="ci-cb" data-cbid="${esc(c.id)}" ${selectedIds.has(c.id)?'checked':''} style="margin-left:auto;width:13px;height:13px;accent-color:var(--blue);cursor:pointer;flex-shrink:0">
+      </div>
+      <div class="ci-name">${esc(c.name)}</div>
+      <div class="ci-sub">${esc(c.sub||''  )}</div>
+      <div class="ci-row3">
+        <span class="ci-agent">${esc(agentName(c.agent))}</span>
+        <span class="ci-step">${esc(stepLbl)}</span>
+        <span class="ci-age ${ageClass}">${c.age===0?'本日':c.age+'日前'}</span>
+      </div>
+    </div>`;
+  }).join('');
+  document.querySelectorAll('.case-item[data-id]').forEach(el=>{
+    el.addEventListener('click',e=>{if(e.target.classList.contains('ci-cb'))return;openCase(el.dataset.id);});
+  });
+  document.querySelectorAll('.ci-cb[data-cbid]').forEach(cb=>{
+    cb.addEventListener('change',e=>{e.stopPropagation();if(cb.checked)selectedIds.add(cb.dataset.cbid);else selectedIds.delete(cb.dataset.cbid);updateBulkUI();});
+  });
+  updateBulkUI();
+}
+
+// ══ DETAIL ══
+function openCase(id){
+  currentId=id;
+  const c=CASES.find(x=>x.id===id);if(!c)return;
+  if(!c.dates)c.dates={};if(!c.hist)c.hist=[];if(!c.apps)c.apps=[];
+  document.querySelectorAll('.case-item').forEach(el=>el.classList.toggle('active',el.dataset.id===id));
+  renderDetail(c);
+}
+function renderDetail(c){
+  const steps=(STEP_DEFS[c.type]||[]).filter(s=>s.id!=='cancel');
+  const curIdx=steps.findIndex(s=>s.id===c.step);
+  const stepBar=steps.map((s,i)=>{const cls=i<curIdx?'done':s.id===c.step?'active':'future';return `<div class="sn ${cls}"><div class="sn-dot">${i<curIdx?'✓':i+1}</div><div class="sn-lbl">${s.label}</div></div>`;}).join('');
+  const tbc={reLet:'b-blue',reSale:'b-gold',sannai:'b-purple',hr:'b-green'}[c.type]||'b-muted';
+  const stepBadge=c.step==='cancel'?'<span class="badge b-red" style="font-size:10px">🚫 取消</span>':c.step==='done'?'<span class="badge b-green" style="font-size:10px">✅ 完了</span>':`<span class="badge b-blue" style="font-size:10px">${esc(STEP_LABEL[c.step]||c.step)}</span>`;
+  const memoHtml=c.hqMemo?`<div class="hq-memo-banner">📌 <strong>HQメモ:</strong> ${esc(c.hqMemo)}</div>`:'';
+  const staleHtml=c.stale?`<div class="stale-banner">⚠️ 停滞中 — 最終更新から <strong>${c.age}日</strong> 経過</div>`:'';
+  const holdHtml=c.hqHold?'<div class="stale-banner" style="background:rgba(167,139,250,.06);border-color:rgba(167,139,250,.18);color:var(--purple)">⏸ 保留フラグが設定されています</div>':'';
+  const appsHtml=(c.apps&&c.apps.length)?`<div class="sec"><div class="sec-hdr"><span class="sec-title">📋 申込一覧</span></div><div class="sec-body" style="padding:0"><table class="tbl"><thead><tr><th>物件</th><th>状態</th><th></th></tr></thead><tbody>${c.apps.map(a=>{const ab=a.status==='approved'?'<span class="badge b-green">通過</span>':a.status==='rejected'?'<span class="badge b-red">落ち</span>'  :'<span class="badge b-orange">審査中</span>';return `<tr><td>${esc(a.prop||a.id)}</td><td>${ab}</td><td><button class="btn btn-ghost btn-xs app-st-btn" data-cid="${esc(c.id)}" data-aid="${esc(a.id)}">変更</button></td></tr>`;}).join('')}</tbody></table></div></div>`:''  ;
+  const histHtml=`<div class="sec"><div class="sec-hdr"><span class="sec-title">📝 案件履歴</span><button class="btn btn-ghost btn-sm add-hist-btn" data-cid="${esc(c.id)}" style="margin-left:auto">＋ メモ</button></div><div class="sec-body" style="padding:8px 16px">${!c.hist.length?'<div style="text-align:center;color:var(--muted);font-size:11px;padding:12px">履歴なし</div>':c.hist.map(h=>`<div class="hist-row"><div class="hist-dot${h.indexOf('[HQ')!==-1?' hq':''}"></div><div class="hist-text">${esc(h)}</div></div>`).join('')}</div></div>`;
+  const isCancelled=c.step==='cancel';
+  const cancelOrRestore=isCancelled
+    ?`<button class="ab restore" data-action="restore" data-cid="${esc(c.id)}"><div class="ab-icon">🔄</div><div class="ab-label">案件復活</div><div class="ab-desc">取消を元に戻す</div></button>`
+    :`<button class="ab danger" data-action="cancel" data-cid="${esc(c.id)}"><div class="ab-icon">🚫</div><div class="ab-label">案件取消</div><div class="ab-desc">理由必須</div></button>`;
+  const forceDoneBtn=(c.step!=='done'&&c.step!=='cancel')?`<button class="ab" data-action="force-done" data-cid="${esc(c.id)}"><div class="ab-icon">✅</div><div class="ab-label">強制完了</div><div class="ab-desc">完了として処理</div></button>`:'';
+  document.getElementById('right-pane').innerHTML=
+    `<div class="case-hdr"><div class="ch-top"><div style="flex:1;min-width:0"><div class="ch-id">${esc(c.id)}</div><div class="ch-name">${esc(c.name)}${c.corp?'<span class="badge b-purple" style="font-size:9px;margin-left:8px;vertical-align:middle">法人</span>':''}  </div><div class="ch-sub">${esc(c.sub||'')}${c.contactName?` — 担当: ${esc(c.contactName)}`:''}${c.salePrice?` <span class="badge b-gold" style="font-size:9px;margin-left:4px">¥${c.salePrice.toLocaleString()}</span>`:''}  </div></div><div class="ch-badges"><span class="badge ${tbc}">${TYPE_LABELS[c.type]||c.type}</span>${stepBadge}</div></div><div class="step-bar">${stepBar}</div>${memoHtml}${staleHtml}${holdHtml}</div>`
+    +`<div class="meta-grid">${metaItem('担当',agentName(c.agent))}${metaItem('経過',c.age===0?'本日':c.age+'日前')}${metaItem('ステップ',STEP_LABEL[c.step]||c.step)}${metaItem('種別',TYPE_LABELS[c.type]||c.type)}${metaItem('申込',(c.apps&&c.apps.length||0)+'件')}${metaItem('フラグ',[c.stale&&'停滞',c.hqPriority&&'🔥優先',c.hqHold&&'⏸保留'].filter(Boolean).join(' ')||'なし')}</div>`
+    +`<div class="sec"><div class="sec-hdr"><span class="sec-title">🏢 HQ介入アクション</span></div><div class="sec-body"><div class="action-grid">
+        <button class="ab" data-action="step" data-cid="${esc(c.id)}"><div class="ab-icon">🔀</div><div class="ab-label">ステップ変更</div><div class="ab-desc">強制的に変更</div></button>
+        <button class="ab" data-action="agent" data-cid="${esc(c.id)}"><div class="ab-icon">👤</div><div class="ab-label">担当者変更</div><div class="ab-desc">担当を差し替え</div></button>
+        <button class="ab" data-action="memo" data-cid="${esc(c.id)}"><div class="ab-icon">📌</div><div class="ab-label">HQメモ</div><div class="ab-desc">注意書きを設定</div></button>
+        <button class="ab" data-action="flag" data-cid="${esc(c.id)}"><div class="ab-icon">🚩</div><div class="ab-label">フラグ設定</div><div class="ab-desc">停滞・優先・保留</div></button>
+        <button class="ab" data-action="edit" data-cid="${esc(c.id)}"><div class="ab-icon">✏️</div><div class="ab-label">情報編集</div><div class="ab-desc">名前・物件など</div></button>
+        ${cancelOrRestore}
+        <button class="ab" data-action="hist" data-cid="${esc(c.id)}"><div class="ab-icon">📝</div><div class="ab-label">メモ追記</div><div class="ab-desc">履歴に追加</div></button>
+        ${forceDoneBtn}
+      </div></div></div>`
+    +appsHtml+histHtml;
+  document.querySelectorAll('[data-action]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const a=btn.dataset.action,cid=btn.dataset.cid;
+      if(a==='step')openStepModal(cid);
+      else if(a==='agent')openAgentModal(cid);
+      else if(a==='memo')openMemoModal(cid);
+      else if(a==='flag')openFlagModal(cid);
+      else if(a==='edit')openEditModal(cid);
+      else if(a==='cancel')openCancelModal(cid);
+      else if(a==='restore')restoreCase(cid);
+      else if(a==='hist')openHistModal(cid);
+      else if(a==='force-done')forceDone(cid);
+    });
+  });
+  document.querySelectorAll('.app-st-btn').forEach(b=>b.addEventListener('click',()=>openAppStatusModal(b.dataset.cid,b.dataset.aid)));
+  document.querySelectorAll('.add-hist-btn').forEach(b=>b.addEventListener('click',()=>openHistModal(b.dataset.cid)));
+}
+function metaItem(label,val){return `<div class="mi"><div class="mi-l">${label}</div><div class="mi-v">${esc(String(val!=null?val:'——'))}</div></div>`;}
+
+// ══ MODAL ENGINE ══
+function openModal(title,bodyHtml,buttons){
+  document.getElementById('m-title').textContent=title;
+  document.getElementById('m-body').innerHTML=bodyHtml;
+  const f=document.getElementById('m-footer');f.innerHTML='';
+  buttons.forEach(b=>{const btn=document.createElement('button');btn.className='btn '+(b.cls||'btn-ghost');btn.textContent=b.label;btn.addEventListener('click',b.fn);f.appendChild(btn);});
+  document.getElementById('modal-overlay').classList.add('open');
+}
+function closeModal(){document.getElementById('modal-overlay').classList.remove('open');}
+
+// ══ MODALS ══
+function openStepModal(id){
+  const c=CASES.find(x=>x.id===id);if(!c)return;
+  const steps=[...(STEP_DEFS[c.type]||[]),{id:'cancel',label:'取消'}];
+  const opts=steps.map(s=>`<option value="${s.id}"${s.id===c.step?' selected':''  }>${s.label}</option>`).join('');
+  openModal('ステップ変更',
+    `<div class="alert al-warn">⚠️ HQによる強制変更。エージェントに通知されます。</div>
+     <div class="case-preview"><div class="cp-id">${esc(c.id)}</div><div class="cp-name">${esc(c.name)}</div><div class="cp-sub">現在: <span class="badge b-blue" style="font-size:9px">${esc(STEP_LABEL[c.step]||c.step)}</span></div></div>
+     <div class="fg"><label>変更後のステップ</label><select id="m-step">${opts}</select></div>
+     <div class="fg"><label>変更理由</label><textarea id="m-reason" rows="2" placeholder="理由（Slack通知に含まれます）"></textarea></div>`,
+    [{label:'キャンセル',cls:'btn-ghost',fn:closeModal},{label:'🔀 変更する',cls:'btn-primary',fn:()=>{
+      const ns=document.getElementById('m-step').value,reason=document.getElementById('m-reason').value;
+      const prev=STEP_LABEL[c.step]||c.step;c.step=ns;c.age=0;
+      const note=`${today()} [HQ] ステップ変更: ${prev} → ${STEP_LABEL[ns]||ns}${reason?' 理由: '+reason:''}`;
+      c.hist.unshift(note);saveCases();saveHqLog('ステップ変更',`${c.id} ${prev}→${STEP_LABEL[ns]||ns}`);notifySlack(note+` (${c.id} ${c.name})`);
+      closeModal();showToast('✅ ステップを変更しました','success');renderStats();renderList();renderDetail(c);
+    }}]
+  );
+}
+function openAgentModal(id){
+  const c=CASES.find(x=>x.id===id);if(!c)return;
+  const agents=['10008','10012','10023','10041','20005','20010','00001','00347','00891'];
+  const opts=agents.map(a=>`<option value="${a}"${a===c.agent?' selected':''  }>${agentName(a)}（${a}）</option>`).join('');
+  openModal('担当者変更',
+    `<div class="case-preview"><div class="cp-id">${esc(c.id)}</div><div class="cp-name">${esc(c.name)}</div><div class="cp-sub">現在: <strong>${esc(agentName(c.agent))}</strong>（${esc(c.agent)}）</div></div>
+     <div class="fg"><label>新しい担当エージェント</label><select id="m-agent">${opts}</select></div>
+     <div class="fg"><label>変更理由</label><textarea id="m-reason" rows="2" placeholder="理由を入力"></textarea></div>`,
+    [{label:'キャンセル',cls:'btn-ghost',fn:closeModal},{label:'👤 変更する',cls:'btn-primary',fn:()=>{
+      const na=document.getElementById('m-agent').value,reason=document.getElementById('m-reason').value;
+      const prev=agentName(c.agent);c.agent=na;
+      const note=`${today()} [HQ] 担当変更: ${prev} → ${agentName(na)}${reason?' 理由: '+reason:''}`;
+      c.hist.unshift(note);saveCases();saveHqLog('担当変更',`${c.id} ${prev}→${agentName(na)}`);notifySlack(note+` (${c.id} ${c.name})`);
+      closeModal();showToast('✅ 担当者を変更しました','success');renderStats();renderList();renderDetail(c);
+    }}]
+  );
+}
+function openMemoModal(id){
+  const c=CASES.find(x=>x.id===id);if(!c)return;
+  openModal('HQメモ設定',
+    `<div class="fg"><label>メモ内容（案件詳細の上部に常時表示）</label><textarea id="m-memo" rows="3" placeholder="保証会社審査に注意。クライアント連絡は午後のみ可。">${esc(c.hqMemo||''  )}</textarea></div>`,
+    [{label:'クリア',cls:'btn-danger',fn:()=>{c.hqMemo='';saveCases();closeModal();showToast('メモをクリアしました');renderDetail(c);}},
+     {label:'キャンセル',cls:'btn-ghost',fn:closeModal},
+     {label:'📌 保存',cls:'btn-gold',fn:()=>{
+      const memo=document.getElementById('m-memo').value.trim();
+      c.hqMemo=memo;if(memo)c.hist.unshift(`${today()} [HQ] メモ設定: ${memo}`);
+      saveCases();saveHqLog('HQメモ',`${c.id} ${memo.slice(0,40)}`);
+      closeModal();showToast('✅ メモを保存しました','success');renderDetail(c);
+    }}]
+  );
+}
+function openFlagModal(id){
+  const c=CASES.find(x=>x.id===id);if(!c)return;
+  openModal('フラグ設定',
+    `<label class="checkbox-row"><input type="checkbox" id="f-stale" ${c.stale?'checked':''  }><span>⚠️ 停滞フラグ（${c.age||0}日経過）</span></label>
+     <label class="checkbox-row"><input type="checkbox" id="f-priority" ${c.hqPriority?'checked':''  }><span>🔥 優先対応フラグ</span></label>
+     <label class="checkbox-row"><input type="checkbox" id="f-hold" ${c.hqHold?'checked':''  }><span>⏸ 保留フラグ（進行停止）</span></label>`,
+    [{label:'キャンセル',cls:'btn-ghost',fn:closeModal},{label:'🚩 更新する',cls:'btn-primary',fn:()=>{
+      c.stale=document.getElementById('f-stale').checked;
+      c.hqPriority=document.getElementById('f-priority').checked;
+      c.hqHold=document.getElementById('f-hold').checked;
+      const flags=[c.stale&&'停滞',c.hqPriority&&'🔥優先',c.hqHold&&'⏸保留'].filter(Boolean);
+      c.hist.unshift(`${today()} [HQ] フラグ: ${flags.length?flags.join(', '):'すべて解除'}`);
+      saveCases();saveHqLog('フラグ設定',`${c.id} ${flags.join(',')}`);
+      closeModal();showToast('✅ フラグを更新しました','success');renderStats();renderList();renderDetail(c);
+    }}]
+  );
+}
+function openEditModal(id){
+  const c=CASES.find(x=>x.id===id);if(!c)return;
+  openModal('案件情報編集',
+    `<div class="fg"><label>クライアント名</label><input type="text" id="e-name" value="${esc(c.name||''  )}"></div>
+     <div class="fg"><label>物件概要</label><input type="text" id="e-sub" value="${esc(c.sub||''  )}"></div>
+     ${c.corp?`<div class="fg"><label>担当者名（法人）</label><input type="text" id="e-contact" value="${esc(c.contactName||''  )}"></div>`:''}
+     ${c.salePrice!==undefined?`<div class="fg"><label>物件価格（円）</label><input type="number" id="e-price" value="${c.salePrice||0}"></div>`:''}
+     <div class="fg"><label>電話番号</label><input type="text" id="e-tel" value="${esc(c.tel||''  )}"></div>`,
+    [{label:'キャンセル',cls:'btn-ghost',fn:closeModal},{label:'✏️ 保存する',cls:'btn-gold',fn:()=>{
+      const changes=[];
+      const nn=document.getElementById('e-name').value.trim();const ns_=document.getElementById('e-sub').value.trim();
+      if(nn&&nn!==c.name){changes.push(`名前: ${c.name}→${nn}`);c.name=nn;}
+      if(ns_&&ns_!==c.sub){changes.push(`物件: →${ns_}`);c.sub=ns_;}
+      const ec=document.getElementById('e-contact');if(ec){const v=ec.value.trim();if(v!==c.contactName){c.contactName=v;changes.push('担当: '+v);}}
+      const ep=document.getElementById('e-price');if(ep){const v=parseFloat(ep.value)||0;if(v!==c.salePrice){c.salePrice=v;changes.push('価格: ¥'+v.toLocaleString());}}
+      const et=document.getElementById('e-tel');if(et)c.tel=et.value.trim();
+      if(changes.length)c.hist.unshift(`${today()} [HQ] 情報編集: ${changes.join(', ')}`);
+      saveCases();saveHqLog('情報編集',`${c.id} ${changes.join(', ')}`);
+      closeModal();showToast('✅ 情報を保存しました','success');renderList();renderDetail(c);
+    }}]
+  );
+}
+function openCancelModal(id){
+  const c=CASES.find(x=>x.id===id);if(!c)return;
+  openModal('案件取消',
+    `<div class="alert al-danger">⚠️ この案件を取消にします。エージェントへSlack通知が送信されます。</div>
+     <div class="case-preview"><div class="cp-id">${esc(c.id)}</div><div class="cp-name">${esc(c.name)}</div><div class="cp-sub">${esc(c.sub||''  )}</div></div>
+     <div class="fg"><label>取消理由 <span class="req">*</span></label><textarea id="m-reason" rows="2" placeholder="理由を入力してください"></textarea></div>`,
+    [{label:'戻る',cls:'btn-ghost',fn:closeModal},{label:'🚫 取消する',cls:'btn-danger',fn:()=>{
+      const reason=document.getElementById('m-reason').value.trim();
+      if(!reason){showToast('理由を入力してください','error');return;}
+      c.prevStep=c.step;c.step='cancel';
+      const note=`${today()} [HQ] 取消処理 理由: ${reason}`;
+      c.hist.unshift(note);saveCases();saveHqLog('案件取消',`${c.id} ${reason}`);notifySlack(`${c.id} ${c.name} 取消 理由: ${reason}`);
+      closeModal();showToast('案件を取消しました');renderStats();renderList();renderDetail(c);
+    }}]
+  );
+}
+function restoreCase(id){
+  const c=CASES.find(x=>x.id===id);if(!c)return;
+  openModal('案件復活',
+    `<div class="alert al-info">取消を解除して案件を復活させます。</div>
+     <div class="case-preview"><div class="cp-id">${esc(c.id)}</div><div class="cp-name">${esc(c.name)}</div><div class="cp-sub">復活後のステップ: <strong>${esc(STEP_LABEL[c.prevStep||'naiken']||'内見')}</strong></div></div>`,
+    [{label:'キャンセル',cls:'btn-ghost',fn:closeModal},{label:'🔄 復活させる',cls:'btn-green',fn:()=>{
+      c.step=c.prevStep||'naiken';delete c.prevStep;
+      c.hist.unshift(`${today()} [HQ] 案件復活 ステップ: ${STEP_LABEL[c.step]||c.step}`);
+      saveCases();saveHqLog('案件復活',c.id);
+      closeModal();showToast('✅ 案件を復活させました','success');renderStats();renderList();renderDetail(c);
+    }}]
+  );
+}
+function openHistModal(id){
+  openModal('履歴メモを追加',
+    '<div class="fg"><label>メモ内容</label><textarea id="h-memo" rows="3" placeholder="例: クライアントから連絡あり。保証会社変更を検討中。"></textarea></div>',
+    [{label:'キャンセル',cls:'btn-ghost',fn:closeModal},{label:'＋ 追記する',cls:'btn-gold',fn:()=>{
+      const memo=document.getElementById('h-memo').value.trim();
+      if(!memo){showToast('内容を入力してください','error');return;}
+      const c=CASES.find(x=>x.id===id);if(!c)return;
+      c.hist.unshift(`${today()} [HQ] ${memo}`);saveCases();saveHqLog('メモ追記',`${id} ${memo.slice(0,40)}`);
+      closeModal();showToast('✅ メモを追記しました','success');renderDetail(c);
+    }}]
+  );
+}
+function forceDone(id){
+  const c=CASES.find(x=>x.id===id);if(!c)return;
+  openModal('強制完了',
+    `<div class="alert al-warn">完了レポート未提出の場合にHQが手動で完了処理します。</div>
+     <div class="case-preview"><div class="cp-id">${esc(c.id)}</div><div class="cp-name">${esc(c.name)}</div></div>
+     <div class="fg"><label>完了メモ</label><textarea id="fd-memo" rows="2" placeholder="完了理由・状況"></textarea></div>`,
+    [{label:'キャンセル',cls:'btn-ghost',fn:closeModal},{label:'✅ 完了にする',cls:'btn-green',fn:()=>{
+      const memo=document.getElementById('fd-memo').value.trim();
+      c.step='done';c.hqForceDone=true;c.hist.unshift(`${today()} [HQ] 強制完了${memo?' '+memo:''}`);
+      saveCases();saveHqLog('強制完了',c.id);
+      closeModal();showToast('✅ 完了として処理しました','success');renderStats();renderList();renderDetail(c);
+    }}]
+  );
+}
+function openAppStatusModal(caseId,appId){
+  const c=CASES.find(x=>x.id===caseId);if(!c)return;
+  const a=c.apps.find(x=>x.id===appId);if(!a)return;
+  const lm={reviewing:'審査中',approved:'通過',rejected:'落ち'};
+  const opts=['reviewing','approved','rejected'].map(s=>`<option value="${s}"${a.status===s?' selected':''  }>${lm[s]}</option>`).join('');
+  openModal('申込状態の変更',
+    `<div class="fg"><label>物件</label><input type="text" readonly value="${esc(a.prop||a.id)}" style="color:var(--muted)"></div>
+     <div class="fg"><label>状態</label><select id="app-status">${opts}</select></div>`,
+    [{label:'キャンセル',cls:'btn-ghost',fn:closeModal},{label:'変更する',cls:'btn-primary',fn:()=>{
+      const ns=document.getElementById('app-status').value;a.status=ns;
+      c.hist.unshift(`${today()} [HQ] 申込状態変更: ${esc(a.prop||a.id)} → ${lm[ns]}`);
+      saveCases();closeModal();showToast('✅ 申込状態を変更しました','success');renderDetail(c);
+    }}]
+  );
+}
+
+// ══ BULK ══
+function openBulkStepModal(){
+  if(!selectedIds.size)return;
+  const all=Object.values(STEP_DEFS).flat().filter((s,i,a)=>a.findIndex(x=>x.id===s.id)===i);
+  const opts=all.map(s=>`<option value="${s.id}">${s.label}</option>`).join('');
+  openModal(`一括ステップ変更（${selectedIds.size}件）`,
+    `<div class="alert al-warn">⚠️ 選択した全案件のステップを変更します。</div>
+     <div class="fg"><label>変更後のステップ</label><select id="bk-step">${opts}</select></div>
+     <div class="fg"><label>理由</label><textarea id="bk-reason" rows="2"></textarea></div>`,
+    [{label:'キャンセル',cls:'btn-ghost',fn:closeModal},{label:'🔀 一括変更',cls:'btn-primary',fn:()=>{
+      const ns=document.getElementById('bk-step').value,reason=document.getElementById('bk-reason').value;
+      const label=STEP_LABEL[ns]||ns;let count=0;
+      selectedIds.forEach(id=>{const c=CASES.find(x=>x.id===id);if(!c)return;c.step=ns;c.age=0;c.hist.unshift(`${today()} [HQ一括] ステップ→${label}${reason?' '+reason:''}`);count++;});
+      saveCases();saveHqLog('一括ステップ変更',`${count}件 →${label}`);selectedIds.clear();
+      closeModal();showToast(`✅ ${count}件のステップを変更しました`,'success');renderStats();renderList();if(currentId)openCase(currentId);
+    }}]
+  );
+}
+function openBulkAgentModal(){
+  if(!selectedIds.size)return;
+  const agents=['10008','10012','10023','10041','20005','20010','00001','00347'];
+  const opts=agents.map(a=>`<option value="${a}">${agentName(a)}（${a}）</option>`).join('');
+  openModal(`一括担当者変更（${selectedIds.size}件）`,
+    `<div class="fg"><label>新しい担当エージェント</label><select id="bk-agent">${opts}</select></div>
+     <div class="fg"><label>理由</label><textarea id="bk-reason" rows="2"></textarea></div>`,
+    [{label:'キャンセル',cls:'btn-ghost',fn:closeModal},{label:'👤 一括変更',cls:'btn-primary',fn:()=>{
+      const na=document.getElementById('bk-agent').value,reason=document.getElementById('bk-reason').value;
+      const name=agentName(na);let count=0;
+      selectedIds.forEach(id=>{const c=CASES.find(x=>x.id===id);if(!c)return;const prev=agentName(c.agent);c.agent=na;c.hist.unshift(`${today()} [HQ一括] 担当: ${prev}→${name}${reason?' '+reason:''}`);count++;});
+      saveCases();saveHqLog('一括担当変更',`${count}件 →${name}`);selectedIds.clear();
+      closeModal();showToast(`✅ ${count}件の担当者を変更しました`,'success');renderList();if(currentId)openCase(currentId);
+    }}]
+  );
+}
+function openBulkCancelModal(){
+  if(!selectedIds.size)return;
+  openModal(`一括取消（${selectedIds.size}件）`,
+    `<div class="alert al-danger">⚠️ 選択した${selectedIds.size}件をすべて取消にします。</div>
+     <div class="fg"><label>理由 <span class="req">*</span></label><textarea id="bk-reason" rows="2"></textarea></div>`,
+    [{label:'戻る',cls:'btn-ghost',fn:closeModal},{label:'🚫 一括取消',cls:'btn-danger',fn:()=>{
+      const reason=document.getElementById('bk-reason').value.trim();
+      if(!reason){showToast('理由を入力してください','error');return;}
+      let count=0;
+      selectedIds.forEach(id=>{const c=CASES.find(x=>x.id===id);if(!c||c.step==='cancel')return;c.prevStep=c.step;c.step='cancel';c.hist.unshift(`${today()} [HQ一括] 取消: ${reason}`);count++;});
+      saveCases();saveHqLog('一括取消',`${count}件 ${reason}`);selectedIds.clear();
+      closeModal();showToast(`${count}件を取消しました`);renderStats();renderList();
+    }}]
+  );
+}
+
+// ══ NEW CASE ══
+function openNewCaseModal(){
+  const agents=['10008','10012','10023','10041','20005','20010','00001','00347'];
+  const aOpts=agents.map(a=>`<option value="${a}">${agentName(a)}（${a}）</option>`).join('');
+  const initId=genId('reLet');
+  openModal('新規案件登録（HQ起票）',
+    `<div class="fg-row">
+       <div class="fg"><label>案件種別 <span class="req">*</span></label><select id="n-type"><option value="reLet">🏠 賃貸</option><option value="reSale">🏢 売買</option><option value="sannai">🔄 三為</option><option value="hr">👥 人材紹介</option></select></div>
+       <div class="fg"><label>案件ID（自動）</label><input type="text" id="n-id" readonly value="${initId}" style="color:var(--muted)"></div>
+     </div>
+     <div class="fg"><label>クライアント名 <span class="req">*</span></label><input type="text" id="n-name" placeholder="田中 雄介 / 株式会社〇〇"></div>
+     <div class="fg"><label>物件概要</label><input type="text" id="n-sub" placeholder="渋谷区 2LDK ¥180,000"></div>
+     <label class="checkbox-row" style="margin-bottom:12px"><input type="checkbox" id="n-corp"><span>法人案件</span></label>
+     <div class="fg"><label>担当エージェント <span class="req">*</span></label><select id="n-agent">${aOpts}</select></div>
+     <div class="fg"><label>電話番号</label><input type="text" id="n-tel" placeholder="090-XXXX-XXXX"></div>
+     <div class="fg"><label>初期メモ</label><textarea id="n-memo" rows="2" placeholder="起票時の注意点"></textarea></div>`,
+    [{label:'キャンセル',cls:'btn-ghost',fn:closeModal},{label:'✅ 登録する',cls:'btn-gold',fn:()=>{
+      const type=document.getElementById('n-type').value,id=document.getElementById('n-id').value;
+      const name=document.getElementById('n-name').value.trim();
+      if(!name){showToast('クライアント名を入力してください','error');return;}
+      const corp=document.getElementById('n-corp').checked,sub=document.getElementById('n-sub').value.trim();
+      const agent=document.getElementById('n-agent').value,tel=document.getElementById('n-tel').value.trim();
+      const memo=document.getElementById('n-memo').value.trim();
+      const firstStep={reLet:'naiken',reSale:'naiken',sannai:'naiken',hr:'screening'}[type];
+      const nc={id,name,type,corp,agent,sub,tel,step:firstStep,age:0,stale:false,apps:[],dates:{},hqCreated:true,createdBy:SESSION.name||SESSION.userId,hist:[`${today()} [HQ起票] 登録 担当: ${agentName(agent)}${memo?' メモ: '+memo:''}`]};
+      CASES.unshift(nc);saveCases();saveHqLog('新規登録',`${id} ${name}`);notifySlack(`📁 HQ起票: ${id} ${name} 担当: ${agentName(agent)}`);
+      closeModal();showToast(`✅ 案件を登録しました（${id}）`,'success');renderStats();renderList();openCase(id);
+    }}]
+  );
+  setTimeout(()=>{const nt=document.getElementById('n-type');if(nt)nt.addEventListener('change',function(){const ni=document.getElementById('n-id');if(ni)ni.value=genId(this.value);});},100);
+}
+function genId(type){const p={reLet:'R',reSale:'S',sannai:'N',hr:'H'}[type]||'R';return p+Date.now().toString().slice(-6);}
+
+// ══ CSV ══
+function csvExport(){
+  const cols=['案件ID','クライアント','種別','担当','ステップ','物件概要','経過日数','停滞','優先','HQメモ'];
+  const rows=[cols,...CASES.map(c=>[c.id,c.name,TYPE_LABELS[c.type]||c.type,agentName(c.agent),STEP_LABEL[c.step]||c.step,c.sub||''  ,c.age||0,c.stale?'停滞':'',c.hqPriority?'優先':'',c.hqMemo||''  ])];
+  const csv='\uFEFF'+rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download=`coreto_cases_${todayISO()}.csv`;a.click();
+  showToast(`✅ CSVをダウンロードしました（${CASES.length}件）`,'success');
+}
+
+// ══ EVENTS ══
+document.getElementById('search').addEventListener('input',()=>renderList());
+document.querySelectorAll('.chip[data-filter]').forEach(el=>el.addEventListener('click',()=>setFilter(el.dataset.filter)));
+document.querySelectorAll('.sort-btn[data-sort]').forEach(el=>el.addEventListener('click',()=>{sortKey=el.dataset.sort;document.querySelectorAll('.sort-btn').forEach(b=>b.classList.remove('on'));el.classList.add('on');renderList();}));
+document.getElementById('btn-all').addEventListener('click',()=>{document.querySelectorAll('.case-item[data-id]').forEach(el=>{selectedIds.add(el.dataset.id);const cb=el.querySelector('.ci-cb');if(cb)cb.checked=true;});updateBulkUI();});
+document.getElementById('btn-csv').addEventListener('click',csvExport);
+document.getElementById('btn-new').addEventListener('click',openNewCaseModal);
+document.getElementById('bb-step').addEventListener('click',openBulkStepModal);
+document.getElementById('bb-agent').addEventListener('click',openBulkAgentModal);
+document.getElementById('bb-cancel').addEventListener('click',openBulkCancelModal);
+document.getElementById('bb-clear').addEventListener('click',()=>{selectedIds.clear();renderList();});
+document.getElementById('modal-overlay').addEventListener('click',e=>{if(e.target===document.getElementById('modal-overlay'))closeModal();});
+document.getElementById('m-close').addEventListener('click',closeModal);
+
+// ══ INIT ══
+renderStats();
+renderList();
+</script>
+</body>
+</html>
