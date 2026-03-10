@@ -457,6 +457,33 @@ renderTab('summary');
 <script>
 window.addEventListener('DOMContentLoaded', function() {
   CNAV.init('payment');
+
+  const sRole = sessionStorage.getItem('coreto_role') || 'hq';
+
+  if (sRole === 'hq') {
+    // HQ: デフォルトのまま（HQ/AG切替セレクタ・一括出力ボタン表示）
+    role = 'hq';
+    renderTab('summary');
+  } else {
+    // AG / PT / インターン: AG視点で固定起動
+    role = 'ag';
+    // HQ視点切替セレクタを非表示
+    const roleSel = document.getElementById('role-sel');
+    if (roleSel) roleSel.style.display = 'none';
+    // 一括出力ボタン（HQ専用）を非表示
+    document.querySelectorAll('.tb-act .btn-p').forEach(b => {
+      if (b.textContent.includes('一括出力')) b.style.display = 'none';
+    });
+    // サイドバーをAG情報に更新
+    const name = sRole === 'hr_ag' ? '鈴木 花子' : sRole === 'pt' ? '佐藤 PT' : '山田 誠';
+    const id   = sRole === 'hr_ag' ? 'AG-0088 / Gold' : sRole === 'pt' ? 'PT-0010 / —' : 'AG-0042 / Gold';
+    const av   = sRole === 'pt' ? 'PT' : 'AG';
+    const el = document.getElementById('sb-av'); if(el) el.textContent = av;
+    const un = document.getElementById('sb-un'); if(un) un.textContent = name;
+    const ur = document.getElementById('sb-ur'); if(ur) ur.textContent = id;
+    const pt = document.getElementById('pg-title'); if(pt) pt.textContent = '報酬明細';
+    renderTab('summary');
+  }
 });
 </script>
 </body>
