@@ -353,6 +353,7 @@ function renderApply() {
   document.getElementById('page-content').innerHTML =
     '<div style="max-width:920px">' +
     '<div class="al al-warn">⚠️ <div><strong>即時払いについての注意事項</strong><br>即時払いは申請後に<strong>2段階認証（SMSによる認証コード）</strong>が必須です。3回連続失敗でアカウントがロックされます。</div></div>' +
+    (function(){ var cp=getCampaign(); if(!cp) return ''; var ep=Math.max(15-Math.round(cp.discountRate*100),1); return '<div class="al al-info" style="background:var(--em-bg);border-color:rgba(5,150,105,.3)">'+'🎉 <div><strong>'+cp.label+'</strong> 適用中！手数料が <s>15%</s> → <strong style="color:var(--em)">'+ep+'%</strong> になっています。期限：'+cp.until+'</div></div>'; })() +
 
     '<div class="card"><div class="card-head"><div class="card-title">受取条件チェック</div></div><div class="card-body" style="display:flex;flex-direction:column;gap:8px">' +
     '<div class="check-item"><div class="check-item-left"><span class="check-item-icon">✅</span><div><div class="check-item-title">eKYC 本人確認</div><div class="check-item-sub">2025/11/15 承認済み</div></div></div><span class="badge b-em">確認済み</span></div>' +
@@ -363,8 +364,8 @@ function renderApply() {
 
     '<div class="card"><div class="card-head"><div class="card-title">出金方法</div></div>' +
     '<div class="card-body" style="display:grid;grid-template-columns:' + (isHQ ? '1fr 1fr 1fr' : '1fr 1fr') + ';gap:12px">' +
-    '<div style="background:var(--cream2);border:1px solid var(--bd);border-radius:var(--r-sm);padding:14px"><div style="font-size:18px;margin-bottom:6px">📲</div><div style="font-size:12px;font-weight:700;color:var(--ink);margin-bottom:4px">Kyash出金</div><div style="font-size:10px;color:var(--muted);line-height:1.8">100万円<strong>未満</strong>の場合<br>手数料 2.5%<br>即時〜翌営業日</div></div>' +
-    '<div style="background:var(--sk-bg);border:1px solid rgba(2,132,199,.2);border-radius:var(--r-sm);padding:14px"><div style="font-size:18px;margin-bottom:6px">🏦</div><div style="font-size:12px;font-weight:700;color:var(--ink);margin-bottom:4px">銀行振込</div><div style="font-size:10px;color:var(--muted);line-height:1.8">100万円<strong>以上</strong>の場合<br>手数料 2.5%<br>翌営業日〜2営業日</div></div>' +
+    '<div style="background:var(--cream2);border:1px solid var(--bd);border-radius:var(--r-sm);padding:14px"><div style="font-size:18px;margin-bottom:6px">📲</div><div style="font-size:12px;font-weight:700;color:var(--ink);margin-bottom:4px">Kyash出金</div><div style="font-size:10px;color:var(--muted);line-height:1.8">100万円<strong>未満</strong>の場合<br>手数料 15%<br>即時〜翌営業日</div></div>' +
+    '<div style="background:var(--sk-bg);border:1px solid rgba(2,132,199,.2);border-radius:var(--r-sm);padding:14px"><div style="font-size:18px;margin-bottom:6px">🏦</div><div style="font-size:12px;font-weight:700;color:var(--ink);margin-bottom:4px">銀行振込</div><div style="font-size:10px;color:var(--muted);line-height:1.8">100万円<strong>以上</strong>の場合<br>手数料 15%<br>翌営業日〜2営業日</div></div>' +
     cashCard +
     '</div></div>' +
 
@@ -372,7 +373,7 @@ function renderApply() {
     '<div><div class="card"><div class="card-head"><div class="card-title">申請内容</div></div><div class="card-body">' +
     '<div class="field"><label>出金希望額（実際に受け取る金額）<span style="color:var(--rd)">*</span></label><input type="number" id="req-amount" placeholder="例：300,000" min="10000" style="font-family:\'DM Mono\',monospace;font-size:18px" oninput="calcBreakdown()"><div style="font-size:10px;color:var(--muted);margin-top:4px">最低 ¥10,000〜 / 報酬残高の範囲内</div></div>' +
     methodSel +
-    '<div id="breakdown-wrap" style="display:none;background:var(--cream2);border:1px solid var(--bd);border-radius:var(--r-sm);padding:16px;margin-bottom:16px"><div id="method-badge" style="margin-bottom:10px"></div><div style="font-size:10px;color:var(--muted);margin-bottom:10px">手数料は報酬残高より差し引かれます。</div><div class="fee-row"><span class="fee-row-label">出金希望額</span><span class="fee-row-val" id="bd-req">—</span></div><div class="fee-row"><span class="fee-row-label" id="bd-fee-label">即時払い手数料</span><span class="fee-row-val" style="color:var(--am)" id="bd-fee">—</span></div><div class="fee-row"><span class="fee-row-label">受取額</span><span class="fee-row-val" style="font-size:16px" id="bd-payout">—</span></div></div>' +
+    '<div id="breakdown-wrap" style="display:none;background:var(--cream2);border:1px solid var(--bd);border-radius:var(--r-sm);padding:16px;margin-bottom:16px"><div id="method-badge" style="margin-bottom:10px"></div><div style="font-size:10px;color:var(--muted);margin-bottom:10px">手数料は報酬残高より差し引かれます。</div><div class="fee-row"><span class="fee-row-label">出金希望額</span><span class="fee-row-val" id="bd-req"></span></div><div id="bd-fee-rows"></div><div class="fee-row" style="border-top:1px solid var(--bd2);margin-top:4px;padding-top:10px"><span class="fee-row-label" style="font-weight:700">受取額</span><span class="fee-row-val" style="font-size:18px;font-weight:700;color:var(--em)" id="bd-payout">—</span></div></div>' +
     '<div id="method-notice" class="al al-info" style="margin-bottom:16px">📱 登録の携帯番号にSMSで認証コードを送信します</div>' +
     '<button class="btn btn-p btn-lg" id="req-submit-btn" onclick="startRequest()" disabled>🔐 申請して2段階認証へ</button>' +
     '</div></div></div>' +
@@ -391,7 +392,22 @@ function renderApply() {
     '</div>';
 }
 
-// ── 出金計算 ────────────────────────────────────────────────
+// ── 出金計算 ─────────────────────────────────────────────────
+// 即時払い基本手数料: 15%（キャンペーン割引あり）
+var INSTANT_BASE_RATE = 0.15;
+
+// キャンペーン設定（HQが設定、sessionStorageに保存）
+function getCampaign() {
+  try {
+    var d = sessionStorage.getItem('ip_campaign');
+    return d ? JSON.parse(d) : null;
+  } catch(e) { return null; }
+}
+function setCampaign(camp) {
+  if (camp) sessionStorage.setItem('ip_campaign', JSON.stringify(camp));
+  else sessionStorage.removeItem('ip_campaign');
+}
+
 // 現金手数料: ¥5,000/百万円
 function cashFee(amt) {
   return Math.ceil(amt / 1000000) * 5000;
@@ -403,7 +419,14 @@ function detectMethod(req) {
   if (chosen === 'cash')  return 'cash';
   if (chosen === 'bank')  return 'bank';
   if (chosen === 'kyash') return 'kyash';
-  return req < 1000000 ? 'kyash' : 'bank';  // 100万円未満→Kyash / 以上→銀行
+  return req < 1000000 ? 'kyash' : 'bank';
+}
+// 実効手数料レートを返す（キャンペーン考慮）
+function effectiveRate() {
+  var camp = getCampaign();
+  if (!camp || !camp.discountRate) return INSTANT_BASE_RATE;
+  var r = INSTANT_BASE_RATE - camp.discountRate;
+  return Math.max(r, 0);
 }
 
 function calcBreakdown() {
@@ -413,70 +436,61 @@ function calcBreakdown() {
   if (req < 10000) { wrap.style.display = 'none'; btn.disabled = true; return; }
 
   var method = detectMethod(req);
-  var fee, feeLabel, methodBadge, noticeHtml;
-  var fmt = function(v){ return '¥' + Math.round(v).toLocaleString(); };
+  var camp   = getCampaign();
+  var fmt    = function(v){ return '¥' + Math.round(v).toLocaleString(); };
+
+  var fee, feeRows, methodBadge, noticeHtml;
 
   if (method === 'cash') {
     fee      = cashFee(req);
-    feeLabel = '現金手数料（¥5,000/百万円）';
+    feeRows  = '<div class="fee-row"><span class="fee-row-label">現金手数料（¥5,000/百万円）</span><span class="fee-row-val" style="color:var(--am)">− ' + fmt(fee) + '</span></div>';
     methodBadge = '<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:var(--am-bg);border-radius:4px;font-size:11px;font-weight:600;color:var(--am)">💴 現金出金</span>';
     noticeHtml  = '<div class="al al-warn" style="margin-bottom:16px">💴 HQ担当者が現金で直接お渡しします。事前予約が必要です。</div>';
-  } else if (method === 'bank') {
-    fee      = Math.round(req * 0.025);
-    feeLabel = '即時払い手数料（2.5%）';
-    methodBadge = '<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:var(--sk-bg);border-radius:4px;font-size:11px;font-weight:600;color:var(--sk)">🏦 銀行振込</span>';
-    noticeHtml  = '<div class="al al-info" style="margin-bottom:16px">📱 登録の携帯番号にSMSで認証コードを送信します</div>';
   } else {
-    fee      = Math.round(req * 0.025);
-    feeLabel = '即時払い手数料（2.5%）';
-    methodBadge = '<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:var(--em-bg);border-radius:4px;font-size:11px;font-weight:600;color:var(--em)">📲 Kyash出金</span>';
-    noticeHtml  = '<div class="al al-info" style="margin-bottom:16px">📲 Kyashに即時送金します</div>';
+    var baseRate = INSTANT_BASE_RATE;
+    var effRate  = effectiveRate();
+    var baseFee  = Math.round(req * baseRate);
+    fee          = Math.round(req * effRate);
+    var discount = baseFee - fee;
+    var effPct   = Math.round(effRate * 1000) / 10;
+
+    if (camp && discount > 0) {
+      var discPct = Math.round(camp.discountRate * 1000) / 10;
+      feeRows =
+        '<div class="fee-row"><span class="fee-row-label">即時払い手数料（15%）</span><span class="fee-row-val" style="color:var(--muted);text-decoration:line-through">− ' + fmt(baseFee) + '</span></div>' +
+        '<div class="fee-row"><span class="fee-row-label" style="color:var(--em)">🎉 キャンペーン割引（−' + discPct + '%）<br><span style="font-size:10px;color:var(--em)">' + camp.label + ' / ' + camp.until + 'まで</span></span><span class="fee-row-val" style="color:var(--em)">− ' + fmt(discount) + '</span></div>' +
+        '<div class="fee-row"><span class="fee-row-label" style="font-weight:600">適用手数料（' + effPct + '%）</span><span class="fee-row-val" style="color:var(--am)">− ' + fmt(fee) + '</span></div>';
+    } else {
+      feeRows = '<div class="fee-row"><span class="fee-row-label">即時払い手数料（15%）</span><span class="fee-row-val" style="color:var(--am)">− ' + fmt(fee) + '</span></div>';
+    }
+
+    if (method === 'bank') {
+      methodBadge = '<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:var(--sk-bg);border-radius:4px;font-size:11px;font-weight:600;color:var(--sk)">🏦 銀行振込</span>';
+      noticeHtml  = '<div class="al al-info" style="margin-bottom:16px">📱 登録の携帯番号にSMSで認証コードを送信します</div>';
+    } else {
+      methodBadge = '<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:var(--em-bg);border-radius:4px;font-size:11px;font-weight:600;color:var(--em)">📲 Kyash出金</span>';
+      noticeHtml  = '<div class="al al-info" style="margin-bottom:16px">📲 Kyashに即時送金します</div>';
+    }
   }
 
-  document.getElementById('method-badge').innerHTML   = methodBadge;
-  document.getElementById('bd-fee-label').textContent = feeLabel;
-  document.getElementById('bd-req').textContent       = fmt(req);
-  document.getElementById('bd-fee').textContent       = '− ' + fmt(fee);
-  document.getElementById('bd-payout').textContent    = fmt(req - fee);
-  document.getElementById('method-notice').innerHTML  = noticeHtml;
+  document.getElementById('method-badge').innerHTML  = methodBadge;
+  document.getElementById('bd-req').textContent      = fmt(req);
+  document.getElementById('bd-fee-rows').innerHTML   = feeRows;
+  document.getElementById('bd-payout').textContent   = fmt(req - fee);
+  document.getElementById('method-notice').innerHTML = noticeHtml;
   wrap.style.display = 'block';
   btn.disabled = false;
   window._currentMethod = method;
-}
-function renderHistory() {
-  const rows = HISTORY.map(r => `
-    <tr>
-      <td class="mono" style="font-size:10px">${r.id}</td>
-      <td class="mono" style="font-size:10px">${r.date}</td>
-      <td class="mono">¥${r.req.toLocaleString()}</td>
-      <td class="mono" style="color:var(--am)">${r.fee ? '¥'+r.fee.toLocaleString() : '—'}</td>
-      <td class="mono" style="font-weight:600">${r.payout ? '¥'+r.payout.toLocaleString() : '—'}</td>
-      <td>📱 ${r.method}</td>
-      <td><span class="badge ${r.auth==='認証済み'?'b-em':r.auth==='タイムアウト'?'b-am':'b-rd'}">${r.auth}</span></td>
-      <td><span class="badge ${r.status==='振込完了'?'b-em':r.status==='キャンセル'?'b-nt':'b-am'}">${r.status}</span></td>
-    </tr>`).join('');
-  document.getElementById('page-content').innerHTML = `
-  <div class="card">
-    <div class="card-head"><div class="card-title">申請履歴</div></div>
-    <div style="overflow-x:auto">
-      <table class="tbl">
-        <thead><tr>
-          <th>申請ID</th><th>申請日時</th><th>申請額</th><th>手数料</th><th>振込額</th>
-          <th>認証方法</th><th>認証状態</th><th>振込状態</th>
-        </tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-    </div>
-  </div>`;
+  window._currentFee    = fee;
 }
 
 // ══════════════════════════════════════════════════════════════
 // VIEW 3: HQ処理ダッシュボード
 // ══════════════════════════════════════════════════════════════
 const PENDING_TRANSFERS = [
-  {reqId:'IPY-2026-P9W4', agId:'10012', agName:'山田 誠',   agKana:'ヤマダ マコト',  reqAmt:300000, payoutAmt:292500, bankCode:'0310', bankName:'GMOアオゾラネットギンコウ', branchCode:'101', branchName:'ホンテン', accountType:1, accountNo:'7654321', accountName:'ヤマダ マコト', requestedAt:'2026/02/20 10:32', status:'pending'},
-  {reqId:'IPY-2026-A3R7', agId:'10008', agName:'佐藤 花子', agKana:'サトウ ハナコ',  reqAmt:500000, payoutAmt:487500, bankCode:'0005', bankName:'ミツビシUFJギンコウ',  branchCode:'001', branchName:'ホンテン', accountType:1, accountNo:'1234567', accountName:'サトウ ハナコ', requestedAt:'2026/02/20 09:18', status:'pending'},
-  {reqId:'IPY-2026-Z6T2', agId:'20005', agName:'田中 美穂', agKana:'タナカ ミホ',    reqAmt:150000, payoutAmt:146250, bankCode:'0033', bankName:'ペイペイギンコウ',      branchCode:'001', branchName:'ホンテン', accountType:1, accountNo:'9876543', accountName:'タナカ ミホ',  requestedAt:'2026/02/19 16:55', status:'pending'},
+  {reqId:'IPY-2026-P9W4', agId:'10012', agName:'山田 誠',   agKana:'ヤマダ マコト',  reqAmt:300000, payoutAmt:255000, bankCode:'0310', bankName:'GMOアオゾラネットギンコウ', branchCode:'101', branchName:'ホンテン', accountType:1, accountNo:'7654321', accountName:'ヤマダ マコト', requestedAt:'2026/02/20 10:32', status:'pending'},
+  {reqId:'IPY-2026-A3R7', agId:'10008', agName:'佐藤 花子', agKana:'サトウ ハナコ',  reqAmt:500000, payoutAmt:425000, bankCode:'0005', bankName:'ミツビシUFJギンコウ',  branchCode:'001', branchName:'ホンテン', accountType:1, accountNo:'1234567', accountName:'サトウ ハナコ', requestedAt:'2026/02/20 09:18', status:'pending'},
+  {reqId:'IPY-2026-Z6T2', agId:'20005', agName:'田中 美穂', agKana:'タナカ ミホ',    reqAmt:150000, payoutAmt:127500, bankCode:'0033', bankName:'ペイペイギンコウ',      branchCode:'001', branchName:'ホンテン', accountType:1, accountNo:'9876543', accountName:'タナカ ミホ',  requestedAt:'2026/02/19 16:55', status:'pending'},
 ];
 
 const REQUESTER = {
@@ -514,6 +528,43 @@ function renderHQ() {
       <div class="kpi-card"><div class="kpi-icon">🔒</div><div class="kpi-val red">1</div><div class="kpi-lbl">アカウントロック中</div></div>
       <div class="kpi-card"><div class="kpi-icon">✅</div><div class="kpi-val green">12</div><div class="kpi-lbl">今月振込完了</div></div>
       <div class="kpi-card"><div class="kpi-icon">💰</div><div class="kpi-val gold">¥3,200,000</div><div class="kpi-lbl">今月即時払い総額</div></div>
+    </div>
+
+
+    <!-- キャンペーン設定カード -->
+    <div class="card" style="margin-bottom:16px;border-color:rgba(5,150,105,.3)">
+      <div class="card-head" style="background:var(--em-bg)">
+        <div class="card-title" style="color:var(--em)">🎉 即時払い手数料キャンペーン設定</div>
+        <span id="camp-status-badge"></span>
+      </div>
+      <div class="card-body">
+        <div id="camp-current" style="margin-bottom:14px;font-size:12px;color:var(--muted)">現在：キャンペーンなし（手数料 15%）</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:10px;align-items:end">
+          <div class="field" style="margin:0">
+            <label style="font-size:10px">キャンペーン名</label>
+            <input type="text" id="camp-label" placeholder="春の特別キャンペーン" style="font-size:12px;padding:8px 10px">
+          </div>
+          <div class="field" style="margin:0">
+            <label style="font-size:10px">割引率（%）</label>
+            <input type="number" id="camp-discount" placeholder="例：5" min="1" max="14"
+              style="font-size:12px;padding:8px 10px;font-family:'DM Mono',monospace" oninput="updateCampPreview()">
+            <div style="font-size:9px;color:var(--muted);margin-top:2px">最大14%（適用後最低1%）</div>
+          </div>
+          <div class="field" style="margin:0">
+            <label style="font-size:10px">期限</label>
+            <input type="date" id="camp-until" style="font-size:12px;padding:8px 10px;font-family:'DM Mono',monospace">
+          </div>
+          <div class="field" style="margin:0">
+            <label style="font-size:10px">対象AG（空欄＝全員）</label>
+            <input type="text" id="camp-target" placeholder="AG-0042（空欄で全員）" style="font-size:12px;padding:8px 10px">
+          </div>
+          <button class="btn btn-em btn-sm" style="padding:9px 16px;white-space:nowrap" onclick="applyCampaign()">✅ 設定する</button>
+        </div>
+        <div id="camp-preview" style="margin-top:12px;font-size:11px;color:var(--em)"></div>
+        <div style="margin-top:10px;text-align:right">
+          <button class="btn btn-rd btn-sm" onclick="clearCampaign()">🗑 キャンペーンを終了する</button>
+        </div>
+      </div>
     </div>
 
     ${lockAlert}
@@ -566,64 +617,95 @@ function renderHQ() {
 
   updateNextBatchTime();
   renderZenginPreview();
+  updateCampDisplay();
 }
 
-// ══════════════════════════════════════════════════════════════
-// 申請フォーム ロジック
-// ══════════════════════════════════════════════════════════════
-// 現金手数料: ¥5,000 per ¥1,000,000
-function cashFee(amt) {
-  return Math.round((amt / 1000000) * 5000);
-}
-// 出金方法判定
-function detectMethod(req) {
-  const sel = document.getElementById('payout-method');
-  const chosen = sel ? sel.value : 'auto';
-  if (chosen === 'cash')  return 'cash';
-  if (chosen === 'bank')  return 'bank';
-  if (chosen === 'kyash') return 'kyash';
-  // auto: 100万円未満はKyash、以上は銀行
-  return req < 1000000 ? 'kyash' : 'bank';
+// ══ キャンペーン管理 ══════════════════════════════════════════
+function updateCampPreview() {
+  var d = parseFloat(document.getElementById('camp-discount').value) || 0;
+  var p = document.getElementById('camp-preview');
+  if (!p) return;
+  if (d <= 0) { p.textContent = ''; return; }
+  var eff = Math.max(15 - d, 1);
+  p.innerHTML = '✅ 適用後の手数料：<strong>' + eff + '%</strong>（基本15% - 割引' + d + '%）';
 }
 
-function calcBreakdown() {
-  const req  = parseFloat(document.getElementById('req-amount').value) || 0;
-  const wrap = document.getElementById('breakdown-wrap');
-  const btn  = document.getElementById('req-submit-btn');
-  if (req < 10000) { wrap.style.display = 'none'; btn.disabled = true; return; }
+function applyCampaign() {
+  var label    = (document.getElementById('camp-label').value || '').trim();
+  var discount = parseFloat(document.getElementById('camp-discount').value) || 0;
+  var until    = document.getElementById('camp-until').value;
+  var target   = (document.getElementById('camp-target').value || '').trim();
 
-  const method = detectMethod(req);
-  const fmt = v => '¥' + Math.round(v).toLocaleString();
-
-  let fee, feeLabel, methodBadge, noticeHtml;
-  if (method === 'cash') {
-    fee = cashFee(req);
-    feeLabel = `現金手数料（¥5,000/百万円）`;
-    methodBadge = `<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:var(--am-bg);border-radius:4px;font-size:11px;font-weight:600;color:var(--am)">💴 現金出金</span>`;
-    noticeHtml = `<div class="al al-warn" style="margin-bottom:16px">💴 HQ担当者が現金で直接お渡しします。事前予約が必要です。</div>`;
-  } else if (method === 'bank') {
-    fee = Math.round(req * 0.025);
-    feeLabel = `即時払い手数料（2.5%）`;
-    methodBadge = `<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:var(--sk-bg);border-radius:4px;font-size:11px;font-weight:600;color:var(--sk)">🏦 銀行振込</span>`;
-    noticeHtml = `<div class="al al-info" style="margin-bottom:16px">📱 登録の携帯番号にSMSで認証コードを送信します</div>`;
-  } else {
-    fee = Math.round(req * 0.025);
-    feeLabel = `即時払い手数料（2.5%）`;
-    methodBadge = `<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:var(--em-bg);border-radius:4px;font-size:11px;font-weight:600;color:var(--em)">📲 Kyash出金</span>`;
-    noticeHtml = `<div class="al al-info" style="margin-bottom:16px">📱 登録の携帯番号にSMSで認証コードを送信します</div>`;
+  if (!label)    { alert('キャンペーン名を入力してください'); return; }
+  if (!discount || discount < 1 || discount > 14) {
+    alert('割引率は1%〜14%で設定してください'); return;
   }
+  if (!until) { alert('期限を設定してください'); return; }
 
-  document.getElementById('method-badge').innerHTML    = methodBadge;
-  document.getElementById('bd-fee-label').textContent  = feeLabel;
-  document.getElementById('bd-req').textContent        = fmt(req);
-  document.getElementById('bd-fee').textContent        = '− ' + fmt(fee);
-  document.getElementById('bd-payout').textContent     = fmt(req - fee);
-  document.getElementById('method-notice').innerHTML   = noticeHtml;
-  wrap.style.display = 'block';
-  btn.disabled = false;
-  // 現在の方法をグローバルに保持
-  window._currentMethod = method;
+  var camp = {
+    label:        label,
+    discountRate: discount / 100,
+    until:        until.replace(/-/g, '/'),
+    target:       target || '全AG',
+    setAt:        new Date().toLocaleString('ja-JP')
+  };
+  setCampaign(camp);
+
+  var effPct = Math.max(15 - discount, 1);
+  renderCampCurrent(camp, effPct);
+  showToast('🎉 キャンペーンを設定しました（手数料 ' + effPct + '%）');
+  document.getElementById('camp-preview').textContent = '';
 }
+
+function clearCampaign() {
+  if (!confirm('キャンペーンを終了してよろしいですか？\n手数料が15%に戻ります。')) return;
+  setCampaign(null);
+  var cur = document.getElementById('camp-current');
+  if (cur) cur.innerHTML = '現在：キャンペーンなし（手数料 15%）';
+  var badge = document.getElementById('camp-status-badge');
+  if (badge) badge.innerHTML = '';
+  showToast('キャンペーンを終了しました');
+}
+
+function updateCampDisplay() {
+  // renderHQ呼び出し後にDOMが存在するので遅延実行
+  setTimeout(function() {
+    var camp = getCampaign();
+    if (!camp) return;
+    var effPct = Math.max(15 - Math.round(camp.discountRate * 100), 1);
+    renderCampCurrent(camp, effPct);
+    // 入力欄にも設定値を復元
+    var li = document.getElementById('camp-label');
+    var di = document.getElementById('camp-discount');
+    var ui = document.getElementById('camp-until');
+    var ti = document.getElementById('camp-target');
+    if (li) li.value = camp.label;
+    if (di) di.value = Math.round(camp.discountRate * 100);
+    if (ui) ui.value = camp.until.replace(/\//g, '-');
+    if (ti) ti.value = camp.target === '全AG' ? '' : camp.target;
+  }, 50);
+}
+
+function renderCampCurrent(camp, effPct) {
+  var discPct = Math.round(camp.discountRate * 100);
+  var cur = document.getElementById('camp-current');
+  if (cur) cur.innerHTML =
+    '<div style="background:var(--em-bg);border:1px solid rgba(5,150,105,.2);border-radius:6px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center">' +
+    '<div>' +
+    '<div style="font-weight:700;color:var(--em);font-size:13px">🎉 ' + camp.label + ' 実施中</div>' +
+    '<div style="font-size:11px;color:var(--muted);margin-top:4px">' +
+    '手数料：<s style="color:var(--faint)">15%</s> → <strong style="color:var(--em)">' + effPct + '%</strong>' +
+    '　割引率：−' + discPct + '%' +
+    '　対象：' + camp.target +
+    '　期限：' + camp.until +
+    '</div>' +
+    '</div>' +
+    '<span class="badge b-em">設定済み</span>' +
+    '</div>';
+  var badge = document.getElementById('camp-status-badge');
+  if (badge) badge.innerHTML = '<span class="badge b-em" style="margin-left:8px">実施中</span>';
+}
+
 
 // ══ 2FA ════════════════════════════════════════════════════════
 let tfaOtp = '', tfaAttempts = 0, tfaTimer = null, tfaCountdown = 300;
