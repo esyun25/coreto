@@ -138,8 +138,8 @@ html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:
 .tbl tr:last-child td{border:none}
 /* ── Name card preview ── */
 .name-card-preview{background:var(--white);border:1px solid var(--bd);border-radius:9px;padding:14px 18px;display:inline-block;box-shadow:0 2px 12px rgba(0,0,0,.06)}
-/* ── Kyash ── */
-.kyash-input{font-family:'Outfit',sans-serif;letter-spacing:1px;font-size:14px!important}
+/* ── BankAccount ── */
+.bank-input{font-family:'Outfit',sans-serif;letter-spacing:1px;font-size:14px!important}
 /* 数値統一 */
 .num,.tbl td.num{font-family:'Outfit',sans-serif;font-variant-numeric:tabular-nums}
 ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:2px}
@@ -240,8 +240,8 @@ html, body { background:#FFFFFF !important; }
         <span class="sb-item-icon">👤</span><span class="sb-item-label">氏名・旧姓設定</span>
       </div>
       <div class="sb-sec-label">報酬</div>
-      <div class="sb-item" id="si-kyash" onclick="showPage('kyash')">
-        <span class="sb-item-icon">💳</span><span class="sb-item-label">Kyash ID登録</span>
+      <div class="sb-item" id="si-bank" onclick="showPage('bank')">
+        <span class="sb-item-icon">💳</span><span class="sb-item-label">銀行口座登録</span> <span style="color:var(--rd);font-size:9px;font-weight:700">必須</span>
       </div>
     </div>
     <div class="sb-foot">
@@ -350,7 +350,7 @@ const ME = {
   lineId: '@yamada_makoto',
   lineWorks: '連携済み',
   nameOld: '', nameOldKana: '', showOld: false,
-  kyashId: ''
+  bankInfo: {bankCode:'',bankName:'',branchCode:'',branchName:'',accountType:'普通',accountNo:'',accountName:''}
 };
 
 document.getElementById('sb-uname').textContent = ME.name;
@@ -358,7 +358,7 @@ document.getElementById('sb-role').textContent  = ME.id + ' / ' + ME.rank;
 document.getElementById('sb-av').textContent    = role === 'hq' ? 'HQ' : 'AG';
 
 // ── Page routing ──────────────────────────────────────────────────
-const PAGES = {pw:'パスワード変更','2fa':'2FA / 認証設定',contact:'連絡先情報',line:'LINE連携設定',name:'氏名・旧姓設定',kyash:'Kyash ID登録'};
+const PAGES = {pw:'パスワード変更','2fa':'2FA / 認証設定',contact:'連絡先情報',line:'LINE連携設定',name:'氏名・旧姓設定',bank:'銀行口座登録'};
 function showPage(p) {
   Object.keys(PAGES).forEach(k => {
     const el = document.getElementById('si-'+k);
@@ -366,7 +366,7 @@ function showPage(p) {
   });
   document.getElementById('page-title').textContent = PAGES[p] || p;
   document.getElementById('crumb-cur').textContent  = PAGES[p] || p;
-  const fn = {pw:pagePw,'2fa':page2fa,contact:pageContact,line:pageLine,name:pageName,kyash:pageKyash};
+  const fn = {pw:pagePw,'2fa':page2fa,contact:pageContact,line:pageLine,name:pageName,bank:pageBank};
   (fn[p] || pagePw)();
 }
 
@@ -689,38 +689,88 @@ function updateCardPreview(){const old=document.getElementById('old-name')?.valu
 function saveOldName(){ME.nameOld=document.getElementById('old-name').value;ME.nameOldKana=document.getElementById('old-kana').value;ME.showOld=document.getElementById('show-old').checked;alert('✅ 旧姓設定を保存しました。');}
 function hqChangeName(){const n=document.getElementById('hq-name-new')?.value.trim();const k=document.getElementById('hq-name-kana')?.value.trim();const r=document.getElementById('hq-name-reason')?.value;if(!n||!k||!r){alert('全項目を入力してください');return;}if(!confirm(`氏名を「${n}（${k}）」に変更しますか？理由：${r}\n\nこの操作は取り消せません。`))return;alert(`✅ 氏名を「${n}」に変更しました。エージェントにSlackで通知されます。`);pageName();}
 
-// ══ KYASH PAGE ════════════════════════════════════════════════════
-function pageKyash(){
+// ══ BANK PAGE ════════════════════════════════════════════════
+function pageBank(){
+  const b = ME.bankInfo || {};
   document.getElementById('page-content').innerHTML = `
-    <div style="max-width:560px">
-      <div class="card">
-        <div class="card-head"><div class="card-title">Kyash ID 登録</div></div>
-        <div class="card-body">
-          <div class="al al-info">ℹ️ 報酬受取用のKyash IDを登録してください。<br>99万円以下の報酬はKyash経由で受け取ります。100万円超の場合はHQより別途ご連絡します。</div>
-          <div style="padding:12px 16px;background:var(--cream2);border-radius:9px;margin-bottom:16px">
-            <div style="font-size:10px;color:var(--muted);margin-bottom:4px">現在登録中のKyash ID</div>
-            <div style="font-size:18px;font-weight:700;color:var(--gold);font-family:'Outfit',sans-serif" id="kyash-current">${ME.kyashId||'未登録'}</div>
+    <div class="al al-warn" style="margin-bottom:20px">
+      🏦 <div><strong>銀行口座登録は必須です</strong><br>
+      報酬はすべてGMOあおぞらネット銀行振込で支払われます。<br>
+      口座未登録の場合、報酬の支払いができません。HQに登録完了後通知されます。</div>
+    </div>
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-head"><div class="card-title">🏦 振込先銀行口座</div></div>
+      <div class="card-body">
+        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+          <div class="field">
+            <label>銀行コード<span class="req">*</span></label>
+            <input type="text" id="bank-code" value="${b.bankCode||''}" placeholder="例：0310（GMOあおぞら）" maxlength="4">
           </div>
           <div class="field">
-            <label>Kyash ID（@から始まる）<span class="req">*</span></label>
-            <input type="text" id="kyash-input" value="${ME.kyashId}" placeholder="@your-kyash-id" class="kyash-input">
-            <div class="field-hint">📌 KyashアプリのホームでユーザーID（@から始まるID）をご確認ください</div>
+            <label>銀行名<span class="req">*</span></label>
+            <input type="text" id="bank-name" value="${b.bankName||''}" placeholder="例：GMOあおぞらネット銀行">
           </div>
-          <button class="btn btn-primary" onclick="saveKyash()">✅ 保存してHQに通知する</button>
+          <div class="field">
+            <label>支店コード<span class="req">*</span></label>
+            <input type="text" id="branch-code" value="${b.branchCode||''}" placeholder="例：101" maxlength="3">
+          </div>
+          <div class="field">
+            <label>支店名<span class="req">*</span></label>
+            <input type="text" id="branch-name" value="${b.branchName||''}" placeholder="例：ビジネス営業部">
+          </div>
+          <div class="field">
+            <label>口座種別<span class="req">*</span></label>
+            <select id="account-type">
+              <option value="普通" ${(b.accountType||'普通')==='普通'?'selected':''}>普通</option>
+              <option value="当座" ${b.accountType==='当座'?'selected':''}>当座</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>口座番号<span class="req">*</span></label>
+            <input type="text" id="account-no" value="${b.accountNo||''}" placeholder="7桁" maxlength="7">
+          </div>
         </div>
-      </div>
-      <div class="card">
-        <div class="card-head"><div class="card-title">Kyash IDの確認方法</div></div>
-        <div class="card-body" style="font-size:12px;color:var(--muted);line-height:2.2">
-          ① Kyashアプリを開く<br>
-          ② ホーム画面の上部にある「@ユーザーID」を確認<br>
-          ③ タップするとコピーできます
+        <div class="field" style="margin-bottom:16px">
+          <label>口座名義（カタカナ）<span class="req">*</span></label>
+          <input type="text" id="account-name" value="${b.accountName||''}" placeholder="例：ヤマダ タロウ" class="bank-input">
+          <div class="field-hint">📌 振込名義と完全一致している必要があります（半角カタカナ）</div>
         </div>
+        ${b.accountNo ? `<div style="background:var(--em-bg);border:1px solid rgba(5,150,105,.2);border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:11px">
+          <div style="font-weight:700;color:var(--em);margin-bottom:6px">✅ 登録中の口座</div>
+          <div style="color:var(--ink)">${b.bankName||''} ${b.branchName||''} / ${b.accountType||''} ${b.accountNo||''} / ${b.accountName||''}</div>
+        </div>` : `<div class="al al-warn" style="margin-bottom:16px">⚠️ 口座が未登録です。報酬支払いのため必ず登録してください。</div>`}
+        <button class="btn btn-primary" onclick="saveBank()">🏦 保存してHQに通知する</button>
       </div>
-    </div>`;
+    </div>
+    <div class="card">
+      <div class="card-head"><div class="card-title">GMOあおぞらネット銀行 開設方法</div></div>
+      <div class="card-body" style="font-size:11px;color:var(--muted);line-height:2.2">
+        ① <a href="https://gmo-aozora.com" target="_blank" style="color:var(--sky,#0284C7)">gmo-aozora.com</a> にアクセス<br>
+        ② 「個人口座を開設する」→ スマートフォンで本人確認（マイナンバーカード or 運転免許証）<br>
+        ③ 最短翌営業日に口座番号発行<br>
+        ④ 銀行コード：<strong style="font-family:'DM Mono',monospace">0310</strong> ／ 支店コードは開設時に確認
+      </div>
+    </div>
+  `;
 }
-function saveKyash(){const id=document.getElementById('kyash-input')?.value.trim();if(!id){alert('Kyash IDを入力してください');return;}if(!id.startsWith('@')){alert('Kyash IDは@から始まります（例：@yourname）');return;}ME.kyashId=id;document.getElementById('kyash-current').textContent=id;alert('✅ Kyash ID「'+id+'」を保存しました。\nHQに通知されます。');}
-
+function saveBank(){
+  const code = document.getElementById('bank-code')?.value.trim();
+  const name = document.getElementById('bank-name')?.value.trim();
+  const bcode = document.getElementById('branch-code')?.value.trim();
+  const bname = document.getElementById('branch-name')?.value.trim();
+  const atype = document.getElementById('account-type')?.value;
+  const ano   = document.getElementById('account-no')?.value.trim();
+  const aname = document.getElementById('account-name')?.value.trim();
+  if (!code||!name||!bcode||!bname||!ano||!aname) {
+    alert('⚠️ すべての必須項目を入力してください'); return;
+  }
+  if (!/^\d{4}$/.test(code)) { alert('銀行コードは4桁の数字です'); return; }
+  if (!/^\d{3}$/.test(bcode)) { alert('支店コードは3桁の数字です'); return; }
+  if (!/^\d{7}$/.test(ano))   { alert('口座番号は7桁の数字です'); return; }
+  ME.bankInfo = {bankCode:code,bankName:name,branchCode:bcode,branchName:bname,accountType:atype,accountNo:ano,accountName:aname};
+  alert('✅ 銀行口座「'+name+' '+ano+'」を保存しました。\nHQに通知されます。');
+  pageBank();
+}
 // ══ OTP汎用 ════════════════════════════════════════════════════════
 let _otpCode='',_otpCb=null,_otpTimerId=null,_otpSec=300;
 function openOtp(ctx,title,cb){
