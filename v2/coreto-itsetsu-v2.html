@@ -362,6 +362,7 @@ const FLOW_STEPS = [
   {id:'ai',      label:'AI案件\n特定', icon:'✨'},
   {id:'confirm', label:'確認',      icon:'✅'},
   {id:'stamp',   label:'仲介印\n捺印', icon:'🔴'},
+  {id:'barcode', label:'BC\n登録',      icon:'📷'},
   {id:'label',   label:'ラベル\n印刷', icon:'🖨️'},
   {id:'ship',    label:'発送\n完了',   icon:'📮'},
 ];
@@ -378,6 +379,7 @@ let STATE = {
   stampedAt:      null,
   trackingNo:     '',
   shippedAt:      null,
+  barcodes: {case_id:'',outbound_name:'',outbound_track:'',return_name:'',return_track:''},
 };
 
 // ── デモ案件データ ─────────────────────────────────────
@@ -752,7 +754,126 @@ function confirmCase() {
   if (!STATE.selectedCase) return;
   STATE.docType = STATE.aiResult?.extracted?.doc_type || '賃貸借契約書';
   showToast(`✅ ${STATE.selectedCase.name} 様の案件に登録しました`);
+  // 確定と同時にクライアント向け案内を自動印刷
+  setTimeout(() => printClientGuide(), 400);
   goStep('stamp');
+}
+
+function printClientGuide() {
+  const cas = STATE.selectedCase;
+  const r   = STATE.aiResult || {};
+  const ex  = r.extracted || {};
+  const caseId = cas?.id || 'UNKNOWN';
+
+  const signsHtml = (r.customer_signs||[]).map((s,i) => `
+    <tr>
+      <td style="padding:6px 10px;border:1px solid #ddd;text-align:center;font-weight:700;
+        color:${s.type==='sign'?'#DC2626':'#D97706'};white-space:nowrap">
+        ${i+1}. ${s.type==='sign'?'✍️ 署名':'🔴 捺印'}
+      </td>
+      <td style="padding:6px 10px;border:1px solid #ddd;font-size:11px">${s.location}</td>
+      <td style="padding:6px 10px;border:1px solid #ddd;font-size:11px">${s.instruction}</td>
+    </tr>`).join('');
+
+  const w = window.open('','_blank','width=800,height:1100');
+  w.document.write(`<!DOCTYPE html><html lang="ja"><head>
+<meta charset="UTF-8">
+<title>ご案内 — ${caseId}</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"><\/script>
+<style>
+  body{font-family:'Noto Sans JP','Hiragino Kaku Gothic Pro',sans-serif;margin:0;padding:32px;font-size:12px;line-height:1.8;color:#202124}
+  .page{max-width:680px;margin:0 auto}
+  .header{display:flex;align-items:flex-start;justify-content:space-between;border-bottom:3px solid #0D1A2D;padding-bottom:16px;margin-bottom:20px}
+  .logo{font-size:20px;font-weight:700;letter-spacing:2px;color:#0D1A2D}
+  .logo-sub{font-size:9px;color:#5F6368;letter-spacing:1px;margin-top:2px}
+  .client-box{background:#F8F9FA;border:1px solid #E8EAED;border-radius:8px;padding:14px 18px;margin-bottom:18px}
+  .cb-label{font-size:9px;font-weight:700;color:#5F6368;letter-spacing:1px;margin-bottom:4px}
+  .cb-name{font-size:18px;font-weight:700;color:#0D1A2D}
+  .cb-sub{font-size:11px;color:#5F6368;margin-top:2px}
+  .section-title{font-size:11px;font-weight:700;letter-spacing:.8px;color:#0D1A2D;
+    border-left:3px solid #C8A951;padding-left:10px;margin:18px 0 10px}
+  table{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:16px}
+  th{background:#0D1A2D;color:#fff;padding:7px 10px;text-align:left;font-size:10px;font-weight:600}
+  .return-box{background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:14px 18px;margin-bottom:18px}
+  .return-box h3{margin:0 0 8px;font-size:12px;color:#1D4ED8}
+  .return-box ol{margin:0;padding-left:18px;font-size:11px;line-height:2.2}
+  .bc-section{text-align:center;margin:20px 0;padding:16px;border:1px dashed #E8EAED;border-radius:8px}
+  .bc-label{font-size:9px;color:#5F6368;margin-bottom:8px;letter-spacing:1px}
+  .bc-id{font-family:monospace;font-size:13px;font-weight:700;color:#0D1A2D;margin-top:6px}
+  .footer{margin-top:24px;padding-top:12px;border-top:1px solid #E8EAED;font-size:9px;color:#9AA0A6;text-align:center}
+  @media print{button{display:none!important}.no-print{display:none!important}}
+</style>
+</head><body>
+<div class="page">
+  <div class="header">
+    <div>
+      <div class="logo">CORETO</div>
+      <div class="logo-sub">株式会社CORETO — 書類送付のご案内</div>
+    </div>
+    <div style="text-align:right;font-size:10px;color:#5F6368">
+      発行日：${new Date().toLocaleDateString('ja-JP')}<br>
+      案件ID：<strong style="font-family:monospace">${caseId}</strong>
+    </div>
+  </div>
+
+  <div class="client-box">
+    <div class="cb-label">送付先クライアント</div>
+    <div class="cb-name">${cas?.name || '—'} 様</div>
+    <div class="cb-sub">${ex.property_address || cas?.sub || '—'}</div>
+    <div class="cb-sub" style="margin-top:4px">書類種別：${STATE.docType||'—'} ／ 担当AG：${cas?.ag||'—'}</div>
+  </div>
+
+  <div class="section-title">署名・捺印のお願い</div>
+  <p style="font-size:11px;margin:0 0 10px">下記の箇所にご署名・ご捺印をお願いいたします。ご不明な点はCORETOまでお問い合わせください。</p>
+  <table>
+    <tr><th style="width:120px">種別・箇所</th><th style="width:180px">場所</th><th>指示</th></tr>
+    ${signsHtml}
+  </table>
+
+  <div class="return-box">
+    <h3>📦 書類の返送方法</h3>
+    <ol>
+      <li>同封の<strong>返送用レターパックプラス</strong>をご使用ください</li>
+      <li>署名・捺印済みの書類一式を封入してください</li>
+      <li>差出人欄（ご自身のお名前・住所）をご記入ください</li>
+      <li>ポストまたは郵便局の窓口より発送してください</li>
+      <li>発送後、追跡番号をCORETOまでご連絡いただく必要はありません</li>
+    </ol>
+  </div>
+
+  <div class="bc-section">
+    <div class="bc-label">案件管理バーコード（開封・返送時にスキャンしてください）</div>
+    <svg id="barcode-svg"></svg>
+    <div class="bc-id">${caseId}</div>
+  </div>
+
+  <div class="footer">
+    株式会社CORETO ／ このご案内は書類と一緒に保管してください。<br>
+    ご返送の際は同封の返送用レターパックプラスをご利用ください。
+  </div>
+
+  <div class="no-print" style="text-align:center;margin-top:20px">
+    <button onclick="window.print()"
+      style="padding:10px 28px;background:#0D1A2D;color:#fff;border:none;border-radius:6px;
+      font-size:13px;cursor:pointer;margin-right:10px">🖨️ 印刷する</button>
+    <button onclick="window.close()"
+      style="padding:10px 20px;background:#E8EAED;color:#202124;border:none;border-radius:6px;
+      font-size:13px;cursor:pointer">閉じる</button>
+  </div>
+</div>
+<script>
+  window.addEventListener('load', function() {
+    JsBarcode("#barcode-svg", "${caseId}", {
+      format: "CODE128", width: 2.2, height: 60,
+      displayValue: false, margin: 8,
+      lineColor: "#0D1A2D"
+    });
+    // 自動印刷
+    setTimeout(() => window.print(), 800);
+  });
+<\/script>
+</body></html>`);
+  w.document.close();
 }
 
 // ══ STEP 4: 仲介印捺印 ═══════════════════════════════════
@@ -848,7 +969,7 @@ function confirmStampDone() {
   }
   STATE.stampedAt = new Date().toISOString();
   showToast('✅ 仲介印 捺印完了を記録しました');
-  goStep('label');
+  goStep('barcode');
 }
 
 function printCustomerGuide() {
@@ -1014,12 +1135,157 @@ function completeShip() {
         <div>仲介印捺印<span style="float:right;font-size:10px">${STATE.stampedAt ? new Date(STATE.stampedAt).toLocaleString('ja-JP') : '—'}</span></div>
         <div>発送日時<span style="float:right;font-size:10px">${new Date(STATE.shippedAt).toLocaleString('ja-JP')}</span></div>
         <div>追跡番号<span style="float:right;font-family:'DM Mono',monospace;font-size:10px">${no}</span></div>
+        <div style="border-top:1px solid rgba(5,150,105,.15);margin-top:6px;padding-top:6px;font-size:10px;color:var(--muted)">バーコード登録</div>
+        <div>往路追跡BC<span style="float:right;font-family:'DM Mono',monospace;font-size:10px">${STATE.barcodes.outbound_track||'—'}</span></div>
+        <div>返送追跡BC<span style="float:right;font-family:'DM Mono',monospace;font-size:10px">${STATE.barcodes.return_track||'—'}</span></div>
       </div>
     </div>
   `;
   showToast('📮 発送完了を登録しました');
   STATE.step = 'ship';
   renderFlowBar();
+}
+
+
+// ══ STEP BC: バーコード登録 ════════════════════════════════
+const BC_STEPS = [
+  {key:'case_id',      label:'① 案件バーコード',             icon:'📋',
+   hint:'クライアントへの案内に印刷されたバーコードをスキャン',     color:'navy'},
+  {key:'outbound_name',label:'② 往路レターパック — 宛名BC',   icon:'📬',
+   hint:'クライアント宛レターパックの宛名部分のバーコードをスキャン', color:'em'},
+  {key:'outbound_track',label:'③ 往路レターパック — 追跡BC',  icon:'🔍',
+   hint:'往路レターパックの追跡番号バーコードをスキャン',            color:'em'},
+  {key:'return_name',  label:'④ 返送レターパック — 宛名BC',   icon:'📮',
+   hint:'同封する返送用レターパックの宛名部分のバーコードをスキャン', color:'am'},
+  {key:'return_track', label:'⑤ 返送レターパック — 追跡BC',   icon:'🔍',
+   hint:'返送用レターパックの追跡番号バーコードをスキャン',          color:'am'},
+];
+
+function renderBarcode() {
+  STATE.step = 'barcode';
+  renderFlowBar();
+
+  const cas    = STATE.selectedCase;
+  const bcs    = STATE.barcodes;
+  const doneCount = BC_STEPS.filter(s=>bcs[s.key]).length;
+  const allDone   = doneCount === BC_STEPS.length;
+
+  // 現在フォーカスすべきステップ
+  const activeIdx = BC_STEPS.findIndex(s=>!bcs[s.key]);
+
+  const stepsHtml = BC_STEPS.map((s,i) => {
+    const val    = bcs[s.key];
+    const isDone = !!val;
+    const isActive = i === activeIdx && !allDone;
+    return `
+    <div id="bc-row-${s.key}" style="
+      border:2px solid ${isActive?'var(--navy)':isDone?'var(--em)':'var(--bd)'};
+      border-radius:10px;padding:12px 14px;margin-bottom:10px;
+      background:${isActive?'rgba(13,26,45,.03)':isDone?'var(--em-bg)':'#fff'};
+      transition:.2s">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:${isActive?'10px':'0'}">
+        <div style="font-size:18px">${isDone?'✅':s.icon}</div>
+        <div style="flex:1">
+          <div style="font-size:11px;font-weight:700;color:${isDone?'var(--em)':isActive?'var(--navy)':'var(--muted)'}">${s.label}</div>
+          <div style="font-size:10px;color:var(--faint);margin-top:1px">${s.hint}</div>
+        </div>
+        ${isDone ? `<div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--em);
+          background:var(--em-bg);padding:3px 8px;border-radius:20px;max-width:140px;overflow:hidden;
+          text-overflow:ellipsis;white-space:nowrap">${val}</div>` : ''}
+      </div>
+      ${isActive ? `
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="text" id="bc-input-${s.key}" autofocus
+            placeholder="バーコードをスキャン または 手動入力..."
+            style="flex:1;padding:9px 12px;border:1px solid var(--navy);border-radius:8px;
+              font-size:12px;font-family:'DM Mono',monospace;outline:none"
+            onkeydown="bcKeydown(event,'${s.key}')"
+            oninput="bcAutoSubmit(this,'${s.key}')">
+          <button class="btn btn-sm" onclick="submitBC('${s.key}')"
+            style="background:var(--navy);color:#fff;border:none;white-space:nowrap">登録</button>
+        </div>
+        <div style="font-size:10px;color:var(--muted);margin-top:6px">
+          💡 スキャナーで読み取ると自動登録されます（Enterで確定）
+        </div>` : ''}
+    </div>`;
+  }).join('');
+
+  document.getElementById('cs-left').innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:700;color:var(--navy)">📷 バーコード登録</div>
+      <div style="font-size:10px;color:var(--muted)">${doneCount} / ${BC_STEPS.length} 完了</div>
+    </div>
+    <div style="background:var(--cream2);border:1px solid var(--bd);border-radius:8px;
+      padding:10px 13px;margin-bottom:14px;font-size:11px;color:var(--muted);line-height:1.8">
+      📌 上から順番にバーコードをスキャンしてください。<br>
+      スキャナーはEnterキー送信設定にしてください。
+    </div>
+    ${stepsHtml}
+    <button class="btn btn-primary" onclick="goStep('label')"
+      style="width:100%;${allDone?'':'opacity:.5'}" ${allDone?'':'disabled'}>
+      🖨️ 全登録完了 → ラベル印刷へ
+    </button>
+  `;
+
+  document.getElementById('cs-right').innerHTML = `
+    <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:14px">登録状況</div>
+    <div style="background:var(--cream2);border:1px solid var(--bd);border-radius:10px;padding:16px;margin-bottom:16px">
+      <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:10px">紐付け案件</div>
+      <div style="font-size:13px;font-weight:700;color:var(--ink)">${cas?.name||'—'} 様</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px">${cas?.sub||'—'}</div>
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--faint);margin-top:3px">${cas?.id||'—'}</div>
+    </div>
+
+    <div style="font-size:11px;line-height:2.6">
+      ${BC_STEPS.map(s=>{
+        const val = bcs[s.key];
+        return `<div style="display:flex;justify-content:space-between;align-items:center;
+          border-bottom:1px solid var(--bd);padding:4px 0">
+          <span style="color:var(--muted)">${s.label.replace(/[①-⑤] /,'')}</span>
+          <span style="font-family:'DM Mono',monospace;font-size:10px;
+            color:${val?'var(--em)':'var(--faint)'}">${val||'未登録'}</span>
+        </div>`;
+      }).join('')}
+    </div>
+
+    ${allDone ? `
+    <div style="background:var(--em-bg);border:1px solid rgba(5,150,105,.2);border-radius:8px;
+      padding:12px;margin-top:14px;font-size:11px;color:var(--em);font-weight:600;text-align:center">
+      ✅ 全バーコード登録完了！ラベル印刷へ進んでください
+    </div>` : ''}
+  `;
+
+  // アクティブ入力欄にフォーカス
+  const activeStep = BC_STEPS[activeIdx];
+  if (activeStep && !allDone) {
+    setTimeout(()=>document.getElementById('bc-input-'+activeStep.key)?.focus(), 100);
+  }
+}
+
+// バーコード入力: Enter で次へ進む
+function bcKeydown(e, key) {
+  if (e.key === 'Enter') { e.preventDefault(); submitBC(key); }
+}
+
+// スキャナーは短時間に大量入力→一定時間後に自動サブミット
+let _bcTimer = null;
+function bcAutoSubmit(el, key) {
+  clearTimeout(_bcTimer);
+  const val = el.value.trim();
+  if (!val) return;
+  // スキャナー入力は通常 200ms 以内に完了するので 300ms 後に自動確定
+  _bcTimer = setTimeout(() => {
+    if (document.getElementById('bc-input-'+key)?.value.trim()) submitBC(key);
+  }, 300);
+}
+
+function submitBC(key) {
+  const el  = document.getElementById('bc-input-'+key);
+  const val = el?.value.trim();
+  if (!val) { showToast('⚠️ バーコードを入力してください','warn'); return; }
+  STATE.barcodes[key] = val;
+  showToast(`✅ ${BC_STEPS.find(s=>s.key===key)?.label} を登録しました`);
+  renderBarcode(); // 再描画（次のフィールドが有効化）
 }
 
 // ══ フロー制御 ════════════════════════════════════════════
@@ -1031,6 +1297,7 @@ function goStep(step) {
     ai:      ()=>renderAI(),
     confirm: renderAIConfirm,
     stamp:   renderStamp,
+    barcode: renderBarcode,
     label:   renderLabel,
     ship:    renderShip,
   })[step]?.();
@@ -1038,7 +1305,9 @@ function goStep(step) {
 
 function resetFlow() {
   STATE = {step:'scan',scannedFile:null,scannedDataUrl:null,aiResult:null,
-           selectedCase:null,docType:'',stampChecks:{},stampedAt:null,trackingNo:'',shippedAt:null};
+           selectedCase:null,docType:'',stampChecks:{},stampedAt:null,
+           barcodes:{case_id:'',outbound_name:'',outbound_track:'',return_name:'',return_track:''},
+           trackingNo:'',shippedAt:null};
   renderFlowBar();
   renderScan();
 }
