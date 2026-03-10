@@ -1614,54 +1614,84 @@ function submitReferral(biz) {
 }
 
 // ═══════════════════════════════════════════
-// LINE再連携（AG・PT・インターン共通）
+// LINE再連携（AG・PT・インターン共通）— 公式LINE + LINE WORKS の2系統
 // ═══════════════════════════════════════════
 function renderLineRelink() {
   document.getElementById('page-content').innerHTML = `
-    <div style="max-width:480px">
-      <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:26px;box-shadow:var(--shadow)">
-        <div style="text-align:center;margin-bottom:22px">
-          <div style="font-size:40px;margin-bottom:8px">📲</div>
-          <div style="font-size:16px;font-weight:700;color:var(--ink);font-family:'Cormorant Garamond',serif;margin-bottom:4px">LINE再連携</div>
-          <div style="font-size:12px;color:var(--muted)">LINEアカウントを再連携して通知を受け取れるようにします</div>
-        </div>
+    <div style="max-width:520px">
+      <div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:700;color:var(--ink);margin-bottom:4px">LINE連携管理</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:22px">公式LINEと本部LINE WORKSの2つの連携を管理します</div>
 
-        <div style="background:var(--cream);border-radius:10px;padding:16px;margin-bottom:20px">
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:10px">現在の連携状況</div>
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-            <div style="width:10px;height:10px;border-radius:50%;background:var(--emerald)"></div>
-            <div style="font-size:13px;font-weight:600;color:var(--ink)">LINE認証済み</div>
+      <!-- ① 公式LINE（お客様通知用） -->
+      <div style="background:var(--white);border:1px solid var(--bd);border-radius:12px;padding:22px;box-shadow:var(--sh);margin-bottom:14px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+          <div style="width:36px;height:36px;background:#06C755;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px">💬</div>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:var(--ink)">公式LINE①</div>
+            <div style="font-size:11px;color:var(--muted)">お客様通知・内部スタッフ連絡用</div>
           </div>
-          <div style="font-size:11px;color:var(--muted);line-height:1.8">
-            登録LINE ID：<span style="font-family:'DM Mono',monospace">U4a8f3d...2c1</span><br>
-            認証日：2026/04/01
-          </div>
+          <span style="margin-left:auto;display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:600;background:#ECFDF5;color:#059669">✓ 認証済み</span>
         </div>
-
-        <div style="margin-bottom:20px;padding:14px;background:rgba(217,119,6,.06);border:1px solid rgba(217,119,6,.2);border-radius:8px;font-size:12px;color:var(--amber);line-height:1.6">
-          ⚠ 再連携すると現在の連携が解除されます。<br>
-          LINEアカウントを変更した場合や、通知が届かない場合に実行してください。
+        <div style="background:var(--cream);border-radius:8px;padding:12px;margin-bottom:14px;font-size:11px;color:var(--muted);line-height:1.9">
+          登録LINE ID：<span style="font-family:'DM Mono',monospace;color:var(--ink)">U4a8f3d...2c1</span><br>
+          認証日：2026/04/01　最終通知：本日 09:22
         </div>
-
-        <div style="display:flex;flex-direction:column;gap:10px">
-          <button onclick="startRelink()" style="width:100%;padding:13px;background:#06C755;color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif">
+        <div style="margin-bottom:12px;padding:10px 12px;background:rgba(217,119,6,.06);border:1px solid rgba(217,119,6,.2);border-radius:7px;font-size:11px;color:var(--am);line-height:1.6">
+          ⚠ 再連携すると現在の連携が解除されます。LINEアカウントを変更した場合のみ実行してください。
+        </div>
+        <div style="display:flex;gap:8px">
+          <button onclick="startRelink('line')" style="flex:2;padding:10px;background:#06C755;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif">
             🔄 LINEで再連携する
           </button>
-          <button onclick="window.location.href='coreto-line-auth-v2.html'" style="width:100%;padding:11px;background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:9px;font-size:13px;cursor:pointer;font-family:'Outfit',sans-serif">
-            管理者に再発行を依頼する
+          <button onclick="requestReissue('line')" style="flex:1;padding:10px;background:transparent;color:var(--muted);border:1px solid var(--bd);border-radius:8px;font-size:11px;cursor:pointer;font-family:'Outfit',sans-serif">
+            管理者に依頼
           </button>
         </div>
+      </div>
 
-        <div style="margin-top:16px;font-size:10px;color:var(--faint);text-align:center;line-height:1.6">
-          連携後、COREBLDGからのLINE通知が再開されます。<br>
-          問題が解決しない場合は support@coreto.jp までご連絡ください。
+      <!-- ② LINE WORKS（本部業務連絡） -->
+      <div style="background:var(--white);border:1px solid var(--bd);border-radius:12px;padding:22px;box-shadow:var(--sh);margin-bottom:14px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+          <div style="width:36px;height:36px;background:#0082C8;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px">💼</div>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:var(--ink)">LINE WORKS（本部）</div>
+            <div style="font-size:11px;color:var(--muted)">HQとの業務連絡・重要通知受信</div>
+          </div>
+          <span style="margin-left:auto;display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:600;background:var(--rd-bg);color:var(--rd)">✗ 未連携</span>
         </div>
+        <div style="background:rgba(0,130,200,.06);border:1px solid rgba(0,130,200,.2);border-radius:8px;padding:13px;margin-bottom:14px;font-size:11px;color:#0074a0;line-height:1.9">
+          <strong>💡 友達追加で完了 — 認証コード不要</strong><br>
+          LINE WORKSは本部との業務連絡専用チャンネルです。<br>
+          下記のWORKS IDをLINEアプリから「友達追加」してください。<br>
+          <span style="font-family:'DM Mono',monospace;background:rgba(0,130,200,.1);padding:2px 8px;border-radius:4px;margin-top:4px;display:inline-block;font-size:12px">WORKS ID：coreto_hq</span>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button onclick="startRelink('works')" style="flex:2;padding:10px;background:#0082C8;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif">
+            ➕ LINE WORKSを友達追加する
+          </button>
+          <button onclick="requestReissue('works')" style="flex:1;padding:10px;background:transparent;color:var(--muted);border:1px solid var(--bd);border-radius:8px;font-size:11px;cursor:pointer;font-family:'Outfit',sans-serif">
+            管理者に依頼
+          </button>
+        </div>
+      </div>
+
+      <div style="font-size:10px;color:var(--faint);text-align:center;line-height:1.7">
+        問題が解決しない場合は <strong>support@coreto.jp</strong> までご連絡ください。
       </div>
     </div>`;
 }
 
-function startRelink() {
-  alert('LINE再連携フローを開始します（実装時：LINE Login OAuth）\n\nLINEアプリが起動します。');
+function startRelink(type) {
+  if (type === 'works') {
+    alert('LINE WORKSを友達追加します（実装時：LINE Add Friend URL）\n\nLINEアプリが起動します。\nWORKS ID: coreto_hq を検索して友達追加してください。');
+  } else {
+    alert('LINE再連携フローを開始します（実装時：LINE Login OAuth）\n\nLINEアプリが起動します。');
+  }
+}
+
+function requestReissue(type) {
+  const label = type === 'works' ? 'LINE WORKS' : '公式LINE';
+  window.location.href = 'coreto-line-auth-v2.html';
 }
 
 // ═══════════════════════════════════════════

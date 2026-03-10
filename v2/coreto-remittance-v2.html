@@ -450,15 +450,22 @@ window.addEventListener('DOMContentLoaded', function() {
     const title = document.querySelector('.tb-title');
     if (title) title.textContent = '入金確認（担当案件）';
 
+    // 【HQ専用】全ての送金実行ボタンを完全非表示
+    // AGは「入金確認」のみ可。送金実行・全銀出力はHQ限定。
+    document.querySelectorAll('.rr-confirm-btn').forEach(btn => {
+      if (!btn.getAttribute('onclick') || !btn.getAttribute('onclick').includes('confirmPayment')) {
+        btn.style.display = 'none';
+      }
+    });
+    // 全銀ファイル出力ボタン群も非表示
+    document.querySelectorAll('[onclick*="exportZengin"], [onclick*="exportZenginAll"]').forEach(btn => {
+      btn.style.display = 'none';
+    });
+
     // 担当案件以外の行を非表示（AG-0042のみ表示）
     document.querySelectorAll('.remit-row').forEach(row => {
       const agText = row.querySelector('.rr-meta-item strong');
       if (agText && agText.parentElement.textContent.includes('AG-0042')) {
-        // 送金実行ボタンを無効化（AGは入金確認のみ、送金実行はHQ）
-        const remitBtn = row.querySelector('.rr-confirm-btn:not([onclick*="confirmPayment"])');
-        if (remitBtn) {
-          remitBtn.style.display = 'none';
-        }
         // AG向け注記を追加
         const actionArea = row.querySelector('.rr-actions');
         if (actionArea) {
