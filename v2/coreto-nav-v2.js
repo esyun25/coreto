@@ -356,5 +356,19 @@ function init(activeKey) {
   if (legacyFooter) legacyFooter.style.display = 'none';
 }
 
-return { init, openSettings, closeSettings, logout };
+
+function session() {
+  const role = sessionStorage.getItem('coreto_role') || null;
+  if (!role) return null;
+  const nameMap = {
+    hq:     { name:'田中 誠一（統括）', type:'hq',    userId:'HQ-001' },
+    re_ag:  { name:'山田 誠（RE-AG）',  type:'re_ag', userId:'AG-0042' },
+    hr_ag:  { name:'鈴木 花子（HR-AG）',type:'hr_ag', userId:'AG-0088' },
+    pt:     { name:'PT ユーザー',        type:'pt',    userId:'PT-0001' },
+    intern: { name:'インターン',          type:'intern',userId:'INT-001' },
+  };
+  return nameMap[role] || { name:role, type:role, userId:role };
+}
+
+return { init, openSettings, closeSettings, logout, session };
 })();
