@@ -344,124 +344,105 @@ function switchTab(name, el) {
 // VIEW 1: 申請フォーム
 // ══════════════════════════════════════════════════════════════
 function renderApply() {
-  document.getElementById('page-content').innerHTML = `
-  <div style="max-width:900px">
-    <div class="al al-warn">
-      ⚠️ <div><strong>即時払いについての注意事項</strong><br>
-      即時払いは申請後に<strong>2段階認証（SMSによる認証コード）</strong>が必須です。3回連続失敗でアカウントがロックされます。</div>
-    </div>
+  var s   = CNAV.session ? CNAV.session() : null;
+  var isHQ = s && s.type === 'hq';
 
-    <!-- KYC check -->
-    <div class="card">
-      <div class="card-head"><div class="card-title">受取条件チェック</div></div>
-      <div class="card-body" style="display:flex;flex-direction:column;gap:8px">
-        <div class="check-item">
-          <div class="check-item-left">
-            <span class="check-item-icon">✅</span>
-            <div><div class="check-item-title">eKYC 本人確認</div><div class="check-item-sub">2025/11/15 承認済み</div></div>
-          </div>
-          <span class="badge b-em">確認済み</span>
-        </div>
-        <div class="check-item">
-          <div class="check-item-left">
-            <span class="check-item-icon">✅</span>
-            <div><div class="check-item-title">口座名義確認</div><div class="check-item-sub">GMOあおぞら ···4567 ／ ヤマダ マコト</div></div>
-          </div>
-          <span class="badge b-em">本人名義確認済み</span>
-        </div>
-        <div class="check-item">
-          <div class="check-item-left">
-            <span class="check-item-icon">✅</span>
-            <div><div class="check-item-title">SMS認証番号</div><div class="check-item-sub">認証先：090-****-4321</div></div>
-          </div>
-          <span class="badge b-em">確認済み</span>
-        </div>
-      </div>
-    </div>
+  var cashCard = isHQ ? '<div style="background:var(--am-bg);border:1px solid rgba(217,119,6,.2);border-radius:var(--r-sm);padding:14px"><div style="font-size:18px;margin-bottom:6px">💴</div><div style="font-size:12px;font-weight:700;color:var(--ink);margin-bottom:4px">現金出金</div><div style="font-size:10px;color:var(--muted);line-height:1.8">HQ操作のみ<br>手数料 ¥5,000/百万円<br>事前予約制</div></div>' : '';
+  var methodSel = isHQ ? '<div class="field"><label>出金方法（HQ選択）</label><select id="payout-method" onchange="calcBreakdown()" style="font-family:\'Outfit\',sans-serif"><option value="auto">自動選択（金額で切替）</option><option value="kyash">📲 Kyash</option><option value="bank">🏦 銀行振込</option><option value="cash">💴 現金</option></select></div>' : '';
 
-    <div class="g2" style="align-items:start">
-      <!-- Left: form -->
-      <div>
-        <div class="card">
-          <div class="card-head"><div class="card-title">申請内容</div></div>
-          <div class="card-body">
-            <div class="field">
-              <label>出金希望額（実際に受け取る金額）<span style="color:var(--rd)">*</span></label>
-              <input type="number" id="req-amount" placeholder="例：100,000" min="10000"
-                     style="font-family:'DM Mono',monospace;font-size:18px"
-                     oninput="calcBreakdown()">
-              <div style="font-size:10px;color:var(--muted);margin-top:4px">最低 ¥10,000〜 / 報酬残高の範囲内</div>
-            </div>
+  document.getElementById('page-content').innerHTML =
+    '<div style="max-width:920px">' +
+    '<div class="al al-warn">⚠️ <div><strong>即時払いについての注意事項</strong><br>即時払いは申請後に<strong>2段階認証（SMSによる認証コード）</strong>が必須です。3回連続失敗でアカウントがロックされます。</div></div>' +
 
-            <div id="breakdown-wrap" style="display:none;background:var(--cream2);border:1px solid var(--bd);border-radius:var(--r-sm);padding:16px;margin-bottom:16px">
-              <div style="font-size:10px;color:var(--muted);margin-bottom:12px">手数料は報酬残高より差し引かれます。</div>
-              <div class="fee-row"><span class="fee-row-label">出金希望額</span><span class="fee-row-val" id="bd-req">—</span></div>
-              <div class="fee-row"><span class="fee-row-label">即時払い手数料（2.5%）</span><span class="fee-row-val" style="color:var(--am)" id="bd-fee">—</span></div>
-              <div class="fee-row"><span class="fee-row-label">振込額</span><span class="fee-row-val" style="font-size:16px" id="bd-payout">—</span></div>
-            </div>
+    '<div class="card"><div class="card-head"><div class="card-title">受取条件チェック</div></div><div class="card-body" style="display:flex;flex-direction:column;gap:8px">' +
+    '<div class="check-item"><div class="check-item-left"><span class="check-item-icon">✅</span><div><div class="check-item-title">eKYC 本人確認</div><div class="check-item-sub">2025/11/15 承認済み</div></div></div><span class="badge b-em">確認済み</span></div>' +
+    '<div class="check-item"><div class="check-item-left"><span class="check-item-icon">✅</span><div><div class="check-item-title">口座名義確認（銀行）</div><div class="check-item-sub">GMOあおぞら ···4567 ／ ヤマダ マコト</div></div></div><span class="badge b-em">本人名義確認済み</span></div>' +
+    '<div class="check-item"><div class="check-item-left"><span class="check-item-icon">✅</span><div><div class="check-item-title">Kyash口座</div><div class="check-item-sub">yamada_makoto ／ 残高上限 ¥1,000,000/回</div></div></div><span class="badge b-em">連携済み</span></div>' +
+    '<div class="check-item"><div class="check-item-left"><span class="check-item-icon">✅</span><div><div class="check-item-title">SMS認証番号</div><div class="check-item-sub">認証先：090-****-4321</div></div></div><span class="badge b-em">確認済み</span></div>' +
+    '</div></div>' +
 
-            <div class="al al-info" style="margin-bottom:16px">
-              📱 登録の携帯番号にSMSで認証コードを送信します
-            </div>
+    '<div class="card"><div class="card-head"><div class="card-title">出金方法</div></div>' +
+    '<div class="card-body" style="display:grid;grid-template-columns:' + (isHQ ? '1fr 1fr 1fr' : '1fr 1fr') + ';gap:12px">' +
+    '<div style="background:var(--cream2);border:1px solid var(--bd);border-radius:var(--r-sm);padding:14px"><div style="font-size:18px;margin-bottom:6px">📲</div><div style="font-size:12px;font-weight:700;color:var(--ink);margin-bottom:4px">Kyash出金</div><div style="font-size:10px;color:var(--muted);line-height:1.8">100万円<strong>未満</strong>の場合<br>手数料 2.5%<br>即時〜翌営業日</div></div>' +
+    '<div style="background:var(--sk-bg);border:1px solid rgba(2,132,199,.2);border-radius:var(--r-sm);padding:14px"><div style="font-size:18px;margin-bottom:6px">🏦</div><div style="font-size:12px;font-weight:700;color:var(--ink);margin-bottom:4px">銀行振込</div><div style="font-size:10px;color:var(--muted);line-height:1.8">100万円<strong>以上</strong>の場合<br>手数料 2.5%<br>翌営業日〜2営業日</div></div>' +
+    cashCard +
+    '</div></div>' +
 
-            <button class="btn btn-p btn-lg" id="req-submit-btn" onclick="startRequest()" disabled>
-              🔐 申請して2段階認証へ
-            </button>
-          </div>
-        </div>
-      </div>
+    '<div class="g2" style="align-items:start">' +
+    '<div><div class="card"><div class="card-head"><div class="card-title">申請内容</div></div><div class="card-body">' +
+    '<div class="field"><label>出金希望額（実際に受け取る金額）<span style="color:var(--rd)">*</span></label><input type="number" id="req-amount" placeholder="例：300,000" min="10000" style="font-family:\'DM Mono\',monospace;font-size:18px" oninput="calcBreakdown()"><div style="font-size:10px;color:var(--muted);margin-top:4px">最低 ¥10,000〜 / 報酬残高の範囲内</div></div>' +
+    methodSel +
+    '<div id="breakdown-wrap" style="display:none;background:var(--cream2);border:1px solid var(--bd);border-radius:var(--r-sm);padding:16px;margin-bottom:16px"><div id="method-badge" style="margin-bottom:10px"></div><div style="font-size:10px;color:var(--muted);margin-bottom:10px">手数料は報酬残高より差し引かれます。</div><div class="fee-row"><span class="fee-row-label">出金希望額</span><span class="fee-row-val" id="bd-req">—</span></div><div class="fee-row"><span class="fee-row-label" id="bd-fee-label">即時払い手数料</span><span class="fee-row-val" style="color:var(--am)" id="bd-fee">—</span></div><div class="fee-row"><span class="fee-row-label">受取額</span><span class="fee-row-val" style="font-size:16px" id="bd-payout">—</span></div></div>' +
+    '<div id="method-notice" class="al al-info" style="margin-bottom:16px">📱 登録の携帯番号にSMSで認証コードを送信します</div>' +
+    '<button class="btn btn-p btn-lg" id="req-submit-btn" onclick="startRequest()" disabled>🔐 申請して2段階認証へ</button>' +
+    '</div></div></div>' +
 
-      <!-- Right: info -->
-      <div>
-        <div class="card">
-          <div class="card-head"><div class="card-title">現在出金可能な報酬金額</div></div>
-          <div class="card-body">
-            <div style="font-family:'Outfit',sans-serif;font-size:32px;font-weight:300;font-variant-numeric:tabular-nums;letter-spacing:-1px;color:var(--ink);margin-bottom:4px">¥726,163</div>
-            <div style="font-size:11px;color:var(--muted);margin-bottom:14px">通常振込日：2026/03/25</div>
-            <div style="font-size:10px;color:var(--muted);background:var(--cream2);padding:10px 12px;border-radius:var(--r-sm);line-height:1.9">
-              通常振込日：2026/03/25<br>※ 上記金額を上限として何回でも出金できます
-            </div>
-          </div>
-        </div>
-        <div class="card">
-          <div class="card-head"><div class="card-title">振込先口座</div></div>
-          <div class="card-body" style="font-size:12px;line-height:2.2">
-            GMOあおぞらネット銀行<br>
-            ビジネス営業部（010）<br>
-            普通 <span class="mono" style="color:var(--gold)">1234567</span><br>
-            <strong>ヤマダ マコト</strong>
-            <div style="display:flex;align-items:center;gap:6px;margin-top:10px;padding:7px 10px;background:var(--em-bg);border-radius:var(--r-sm);font-size:10px;color:var(--em)">
-              ✅ 本人名義確認済み
-            </div>
-          </div>
-        </div>
-        <div class="card">
-          <div class="card-head"><div class="card-title">2段階認証について</div></div>
-          <div class="card-body" style="font-size:11px;color:var(--muted);line-height:2">
-            即時払いは不正利用防止のため、申請後に必ず2段階認証が必要です。<br><br>
-            <strong style="color:var(--ink)">認証の流れ：</strong><br>
-            ① 申請ボタンを押す<br>
-            ② 登録の携帯番号にSMSで6桁の認証コードが届く（有効期限5分）<br>
-            ③ 認証コード入力で確認完了<br>
-            ④ HQに振込依頼が自動送信される<br><br>
-            <strong style="color:var(--rd)">3回連続失敗でアカウントがロックされます。</strong><br>
-            解除にはHQへの連絡が必要です。
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>`;
+    '<div>' +
+    '<div class="card"><div class="card-head"><div class="card-title">現在出金可能な報酬金額</div></div><div class="card-body"><div style="font-family:\'Outfit\',sans-serif;font-size:32px;font-weight:300;font-variant-numeric:tabular-nums;letter-spacing:-1px;color:var(--ink);margin-bottom:4px">¥726,163</div><div style="font-size:11px;color:var(--muted);margin-bottom:14px">通常振込日：2026/03/25</div><div style="font-size:10px;color:var(--muted);background:var(--cream2);padding:10px 12px;border-radius:var(--r-sm);line-height:1.9">通常振込日：2026/03/25<br>※ 上記金額を上限として何回でも出金できます</div></div></div>' +
+
+    '<div class="card"><div class="card-head"><div class="card-title">振込先・受取口座</div></div><div class="card-body" style="display:flex;flex-direction:column;gap:10px">' +
+    '<div style="background:var(--cream2);border-radius:var(--r-sm);padding:10px 14px"><div style="font-size:10px;font-weight:600;color:var(--muted);margin-bottom:4px">📲 Kyash（100万円未満）</div><div style="font-size:12px;font-weight:600;color:var(--ink)">yamada_makoto</div><div style="font-size:10px;color:var(--muted)">上限 ¥1,000,000/回</div></div>' +
+    '<div style="background:var(--cream2);border-radius:var(--r-sm);padding:10px 14px;font-size:12px;line-height:2"><div style="font-size:10px;font-weight:600;color:var(--muted);margin-bottom:4px">🏦 銀行振込（100万円以上）</div>GMOあおぞらネット銀行<br>ビジネス営業部（010）<br>普通 <span style="font-family:\'DM Mono\',monospace;color:var(--gold)">1234567</span><br><strong>ヤマダ マコト</strong></div>' +
+    '</div></div>' +
+
+    '<div class="card"><div class="card-head"><div class="card-title">2段階認証について</div></div><div class="card-body" style="font-size:11px;color:var(--muted);line-height:2">不正利用防止のため、申請後に必ず2段階認証が必要です。<br><br>① 申請ボタンを押す<br>② SMSで6桁コードが届く（有効期限5分）<br>③ 認証コード入力で確認完了<br>④ HQに振込依頼が自動送信される<br><br><strong style="color:var(--rd)">3回連続失敗でアカウントがロックされます。</strong></div></div>' +
+    '</div>' +
+    '</div>' +
+    '</div>';
 }
 
-// ══════════════════════════════════════════════════════════════
-// VIEW 2: 申請履歴
-// ══════════════════════════════════════════════════════════════
-const HISTORY = [
-  {id:'IPY-2026-K7X3', date:'2026/02/05 14:32', req:300000, fee:7500, payout:292500, method:'SMS', auth:'認証済み', status:'振込完了'},
-  {id:'IPY-2025-M2N8', date:'2025/12/18 09:15', req:200000, fee:5000, payout:195000, method:'SMS', auth:'認証済み', status:'振込完了'},
-  {id:'IPY-2025-R5Q1', date:'2025/11/02 17:44', req:500000, fee:0,    payout:0,      method:'SMS', auth:'タイムアウト', status:'キャンセル'},
-];
+// ── 出金計算 ────────────────────────────────────────────────
+// 現金手数料: ¥5,000/百万円
+function cashFee(amt) {
+  return Math.ceil(amt / 1000000) * 5000;
+}
+// 出金方法判定
+function detectMethod(req) {
+  var sel = document.getElementById('payout-method');
+  var chosen = sel ? sel.value : 'auto';
+  if (chosen === 'cash')  return 'cash';
+  if (chosen === 'bank')  return 'bank';
+  if (chosen === 'kyash') return 'kyash';
+  return req < 1000000 ? 'kyash' : 'bank';  // 100万円未満→Kyash / 以上→銀行
+}
 
+function calcBreakdown() {
+  var req  = parseFloat(document.getElementById('req-amount').value) || 0;
+  var wrap = document.getElementById('breakdown-wrap');
+  var btn  = document.getElementById('req-submit-btn');
+  if (req < 10000) { wrap.style.display = 'none'; btn.disabled = true; return; }
+
+  var method = detectMethod(req);
+  var fee, feeLabel, methodBadge, noticeHtml;
+  var fmt = function(v){ return '¥' + Math.round(v).toLocaleString(); };
+
+  if (method === 'cash') {
+    fee      = cashFee(req);
+    feeLabel = '現金手数料（¥5,000/百万円）';
+    methodBadge = '<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:var(--am-bg);border-radius:4px;font-size:11px;font-weight:600;color:var(--am)">💴 現金出金</span>';
+    noticeHtml  = '<div class="al al-warn" style="margin-bottom:16px">💴 HQ担当者が現金で直接お渡しします。事前予約が必要です。</div>';
+  } else if (method === 'bank') {
+    fee      = Math.round(req * 0.025);
+    feeLabel = '即時払い手数料（2.5%）';
+    methodBadge = '<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:var(--sk-bg);border-radius:4px;font-size:11px;font-weight:600;color:var(--sk)">🏦 銀行振込</span>';
+    noticeHtml  = '<div class="al al-info" style="margin-bottom:16px">📱 登録の携帯番号にSMSで認証コードを送信します</div>';
+  } else {
+    fee      = Math.round(req * 0.025);
+    feeLabel = '即時払い手数料（2.5%）';
+    methodBadge = '<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:var(--em-bg);border-radius:4px;font-size:11px;font-weight:600;color:var(--em)">📲 Kyash出金</span>';
+    noticeHtml  = '<div class="al al-info" style="margin-bottom:16px">📲 Kyashに即時送金します</div>';
+  }
+
+  document.getElementById('method-badge').innerHTML   = methodBadge;
+  document.getElementById('bd-fee-label').textContent = feeLabel;
+  document.getElementById('bd-req').textContent       = fmt(req);
+  document.getElementById('bd-fee').textContent       = '− ' + fmt(fee);
+  document.getElementById('bd-payout').textContent    = fmt(req - fee);
+  document.getElementById('method-notice').innerHTML  = noticeHtml;
+  wrap.style.display = 'block';
+  btn.disabled = false;
+  window._currentMethod = method;
+}
 function renderHistory() {
   const rows = HISTORY.map(r => `
     <tr>
@@ -590,19 +571,58 @@ function renderHQ() {
 // ══════════════════════════════════════════════════════════════
 // 申請フォーム ロジック
 // ══════════════════════════════════════════════════════════════
+// 現金手数料: ¥5,000 per ¥1,000,000
+function cashFee(amt) {
+  return Math.round((amt / 1000000) * 5000);
+}
+// 出金方法判定
+function detectMethod(req) {
+  const sel = document.getElementById('payout-method');
+  const chosen = sel ? sel.value : 'auto';
+  if (chosen === 'cash')  return 'cash';
+  if (chosen === 'bank')  return 'bank';
+  if (chosen === 'kyash') return 'kyash';
+  // auto: 100万円未満はKyash、以上は銀行
+  return req < 1000000 ? 'kyash' : 'bank';
+}
+
 function calcBreakdown() {
   const req  = parseFloat(document.getElementById('req-amount').value) || 0;
   const wrap = document.getElementById('breakdown-wrap');
   const btn  = document.getElementById('req-submit-btn');
   if (req < 10000) { wrap.style.display = 'none'; btn.disabled = true; return; }
-  const fee    = Math.round(req * 0.025);   // 手数料 2.5%（残高から差引）
-  const payout = req;                         // 出金希望額 = そのまま振込
-  const fmt = v => '¥' + v.toLocaleString();
-  document.getElementById('bd-req').textContent    = fmt(req);
-  document.getElementById('bd-fee').textContent    = '− ' + fmt(fee);
-  document.getElementById('bd-payout').textContent = fmt(payout);
+
+  const method = detectMethod(req);
+  const fmt = v => '¥' + Math.round(v).toLocaleString();
+
+  let fee, feeLabel, methodBadge, noticeHtml;
+  if (method === 'cash') {
+    fee = cashFee(req);
+    feeLabel = `現金手数料（¥5,000/百万円）`;
+    methodBadge = `<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:var(--am-bg);border-radius:4px;font-size:11px;font-weight:600;color:var(--am)">💴 現金出金</span>`;
+    noticeHtml = `<div class="al al-warn" style="margin-bottom:16px">💴 HQ担当者が現金で直接お渡しします。事前予約が必要です。</div>`;
+  } else if (method === 'bank') {
+    fee = Math.round(req * 0.025);
+    feeLabel = `即時払い手数料（2.5%）`;
+    methodBadge = `<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:var(--sk-bg);border-radius:4px;font-size:11px;font-weight:600;color:var(--sk)">🏦 銀行振込</span>`;
+    noticeHtml = `<div class="al al-info" style="margin-bottom:16px">📱 登録の携帯番号にSMSで認証コードを送信します</div>`;
+  } else {
+    fee = Math.round(req * 0.025);
+    feeLabel = `即時払い手数料（2.5%）`;
+    methodBadge = `<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:var(--em-bg);border-radius:4px;font-size:11px;font-weight:600;color:var(--em)">📲 Kyash出金</span>`;
+    noticeHtml = `<div class="al al-info" style="margin-bottom:16px">📱 登録の携帯番号にSMSで認証コードを送信します</div>`;
+  }
+
+  document.getElementById('method-badge').innerHTML    = methodBadge;
+  document.getElementById('bd-fee-label').textContent  = feeLabel;
+  document.getElementById('bd-req').textContent        = fmt(req);
+  document.getElementById('bd-fee').textContent        = '− ' + fmt(fee);
+  document.getElementById('bd-payout').textContent     = fmt(req - fee);
+  document.getElementById('method-notice').innerHTML   = noticeHtml;
   wrap.style.display = 'block';
   btn.disabled = false;
+  // 現在の方法をグローバルに保持
+  window._currentMethod = method;
 }
 
 // ══ 2FA ════════════════════════════════════════════════════════
