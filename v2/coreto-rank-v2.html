@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ランクダッシュボード — COREBLDG</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0D1A2D;--navy-m:#152238;--navy-l:#1E3252;
+  --gold:#C8A951;--gold-dim:rgba(200,169,81,.15);
+  --cream:#F7F4EE;--cream2:#EFECE4;--white:#FFFFFF;
+  --ink:#1A1A2E;--muted:#6B7280;--faint:#9CA3AF;
+  --em:#059669;--em-bg:#ECFDF5;--am:#D97706;--am-bg:#FFFBEB;
+  --rd:#DC2626;--rd-bg:#FEF2F2;--sk:#0284C7;--sk-bg:#F0F9FF;
+  --vt:#7C3AED;--vt-bg:#F5F3FF;--bd:#E5E0D5;--bd2:#D4CFC4;
+  /* Rank colors */
+  --br:#92400E;--br-bg:rgba(146,64,14,.08);--br-bd:rgba(146,64,14,.2);
+  --sv:#6B7280;--sv-bg:rgba(107,114,128,.08);--sv-bd:rgba(107,114,128,.2);
+  --go:#D97706;--go-bg:rgba(217,119,6,.1);--go-bd:rgba(217,119,6,.25);
+  --pl:#7C3AED;--pl-bg:rgba(124,58,237,.09);--pl-bd:rgba(124,58,237,.22);
+  --sw:240px;--r:10px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:var(--cream)}
+.shell{display:flex;height:100vh}
+/* Sidebar */
+.sb{width:var(--sw);background:var(--navy);display:flex;flex-direction:column;flex-shrink:0;position:relative}
+.sb::after{content:'';position:absolute;top:0;right:0;width:1px;height:100%;background:linear-gradient(180deg,rgba(200,169,81,.25) 0%,rgba(200,169,81,.06) 50%,transparent 100%)}
+.sb-head{padding:24px 20px 18px;border-bottom:1px solid rgba(255,255,255,.06)}
+.sb-logo{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;letter-spacing:5px;color:var(--gold)}
+.sb-ver{font-size:9px;letter-spacing:2px;color:rgba(200,169,81,.3);font-family:'DM Mono',monospace;margin-top:2px}
+.sb-user{margin:14px 14px 10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:9px 11px;display:flex;align-items:center;gap:9px}
+.sb-av{width:28px;height:28px;border-radius:50%;background:var(--gold-dim);border:1px solid rgba(200,169,81,.25);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--gold)}
+.sb-uname{font-size:11px;font-weight:600;color:rgba(255,255,255,.8)}
+.sb-urole{font-size:9px;color:rgba(255,255,255,.3);font-family:'DM Mono',monospace}
+.sb-nav{flex:1;padding:6px 10px;overflow-y:auto}
+.sb-sec-label{font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.18);padding:12px 8px 4px;font-family:'DM Mono',monospace}
+.sb-item{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:7px;cursor:pointer;transition:.13s;position:relative;margin-bottom:1px}
+.sb-item:hover{background:rgba(255,255,255,.06)}
+.sb-item.on{background:rgba(200,169,81,.1)}
+.sb-item.on::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:14px;background:var(--gold);border-radius:0 2px 2px 0}
+.sb-item-icon{font-size:14px;width:22px;text-align:center}
+.sb-item-label{font-size:11px;font-weight:500;color:rgba(255,255,255,.5)}
+.sb-item.on .sb-item-label{color:var(--gold)}
+.sb-item:hover .sb-item-label{color:rgba(255,255,255,.8)}
+.sb-foot{padding:10px 14px 18px;border-top:1px solid rgba(255,255,255,.05)}
+.sb-foot-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;cursor:pointer;font-size:11px;color:rgba(255,255,255,.3);transition:.13s}
+.sb-foot-item:hover{background:rgba(255,255,255,.05);color:rgba(255,255,255,.6)}
+/* Content */
+.content{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:58px;background:var(--white);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 24px;gap:14px;flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.tb-title{font-size:16px;font-weight:600;color:var(--ink);font-family:'Cormorant Garamond',serif}
+.page{flex:1;overflow-y:auto;padding:28px 32px 60px}
+/* Rank Hero */
+.rank-hero{border-radius:14px;padding:28px;margin-bottom:20px;position:relative;overflow:hidden}
+.rank-hero.bronze{background:linear-gradient(135deg,rgba(146,64,14,.12) 0%,rgba(146,64,14,.04) 100%);border:1px solid var(--br-bd)}
+.rank-hero.silver{background:linear-gradient(135deg,rgba(107,114,128,.12) 0%,rgba(107,114,128,.04) 100%);border:1px solid var(--sv-bd)}
+.rank-hero.gold{background:linear-gradient(135deg,rgba(217,119,6,.14) 0%,rgba(217,119,6,.04) 100%);border:1px solid var(--go-bd)}
+.rank-hero.platinum{background:linear-gradient(135deg,rgba(124,58,237,.14) 0%,rgba(124,58,237,.04) 100%);border:1px solid var(--pl-bd)}
+.rank-hero-bg{position:absolute;top:-20px;right:-10px;font-size:120px;opacity:.06;line-height:1;pointer-events:none;user-select:none}
+.rank-badge{display:inline-flex;align-items:center;gap:8px;padding:6px 18px;border-radius:30px;font-size:13px;font-weight:700;letter-spacing:2px;margin-bottom:14px;font-family:'Cormorant Garamond',serif}
+.rank-badge.bronze{background:var(--br-bg);border:1.5px solid var(--br-bd);color:var(--br)}
+.rank-badge.silver{background:var(--sv-bg);border:1.5px solid var(--sv-bd);color:var(--sv)}
+.rank-badge.gold{background:var(--go-bg);border:1.5px solid var(--go-bd);color:var(--go)}
+.rank-badge.platinum{background:var(--pl-bg);border:1.5px solid var(--pl-bd);color:var(--pl)}
+/* Progress bar */
+.rank-progress-wrap{margin-top:14px}
+.rank-progress-bar{height:6px;background:var(--bd);border-radius:4px;overflow:hidden;margin-bottom:6px}
+.rank-progress-fill{height:100%;border-radius:4px;transition:width .6s ease}
+.fill-bronze{background:linear-gradient(90deg,var(--br),#b45309)}
+.fill-silver{background:linear-gradient(90deg,var(--sv),#9ca3af)}
+.fill-gold{background:linear-gradient(90deg,var(--go),#f59e0b)}
+.fill-platinum{background:linear-gradient(90deg,var(--pl),#8b5cf6)}
+/* Cards */
+.card{background:var(--white);border:1px solid var(--bd);border-radius:var(--r);margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.card-head{padding:14px 20px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between}
+.card-title{font-size:11px;font-weight:700;color:var(--ink);letter-spacing:.3px;display:flex;align-items:center;gap:8px}
+.card-title::before{content:'';width:3px;height:12px;border-radius:2px;background:var(--gold);display:inline-block}
+.card-body{padding:20px}
+/* Rank Road */
+.rank-road{display:flex;align-items:center;gap:0;margin:4px 0}
+.rr-step{flex:1;display:flex;flex-direction:column;align-items:center;position:relative}
+.rr-step:not(:last-child)::after{content:'';position:absolute;top:18px;left:calc(50% + 18px);right:calc(-50% + 18px);height:2px;background:var(--bd)}
+.rr-step.done:not(:last-child)::after{background:var(--em);opacity:.5}
+.rr-dot{width:36px;height:36px;border-radius:50%;border:2px solid var(--bd);background:var(--cream2);display:flex;align-items:center;justify-content:center;font-size:16px;z-index:1;position:relative}
+.rr-step.done .rr-dot{border-color:var(--em);background:var(--em-bg)}
+.rr-step.current .rr-dot{border-width:3px}
+.rr-step.current.bronze .rr-dot{border-color:var(--br);background:var(--br-bg)}
+.rr-step.current.silver .rr-dot{border-color:var(--sv);background:var(--sv-bg)}
+.rr-step.current.gold .rr-dot{border-color:var(--go);background:var(--go-bg)}
+.rr-step.current.platinum .rr-dot{border-color:var(--pl);background:var(--pl-bg)}
+.rr-label{font-size:9px;color:var(--muted);margin-top:5px;text-align:center}
+.rr-pts{font-size:9px;color:var(--faint);margin-top:1px;font-variant-numeric:tabular-nums}
+/* Tabs */
+.tabs{display:flex;border-bottom:1px solid var(--bd);margin-bottom:16px}
+.tab-btn{padding:10px 16px;font-size:12px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer;transition:.13s;background:none;border-top:none;border-left:none;border-right:none;font-family:'Outfit',sans-serif}
+.tab-btn.on{color:var(--navy);border-bottom-color:var(--navy)}
+/* Badge */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;font-family:'Outfit',sans-serif;font-variant-numeric:tabular-nums;letter-spacing:0}
+.b-em{background:var(--em-bg);color:var(--em)}.b-am{background:var(--am-bg);color:var(--am)}.b-rd{background:var(--rd-bg);color:var(--rd)}.b-sk{background:var(--sk-bg);color:var(--sk)}.b-muted{background:var(--cream2);color:var(--muted)}.b-vt{background:var(--vt-bg);color:var(--vt)}
+.badge.bronze{background:var(--br-bg);color:var(--br)}.badge.silver{background:var(--sv-bg);color:var(--sv)}.badge.gold{background:var(--go-bg);color:var(--go)}.badge.platinum{background:var(--pl-bg);color:var(--pl)}
+/* Table */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{padding:9px 14px;font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);background:var(--cream2);border-bottom:1px solid var(--bd);text-align:left}
+.tbl td{padding:10px 14px;border-bottom:1px solid rgba(229,224,213,.5);font-size:12px;vertical-align:middle;font-variant-numeric:tabular-nums}
+.tbl tr:last-child td{border:none}
+/* KPI mini cards */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.kpi-mini{background:var(--white);border:1px solid var(--bd);border-radius:9px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.kpi-mini-label{font-size:10px;color:var(--muted);margin-bottom:6px;font-weight:600}
+.kpi-mini-val{font-size:22px;font-weight:700;color:var(--ink);font-family:'Outfit',sans-serif;font-variant-numeric:tabular-nums;letter-spacing:0}
+.kpi-mini-sub{font-size:10px;color:var(--faint);margin-top:3px;font-variant-numeric:tabular-nums}
+/* Rate table */
+.rate-table{width:100%;border-collapse:collapse}
+.rate-table th{padding:8px 12px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);text-align:left;border-bottom:1px solid var(--bd)}
+.rate-table td{padding:10px 12px;font-size:12px;border-bottom:1px solid rgba(229,224,213,.4);font-variant-numeric:tabular-nums}
+.rate-table tr:last-child td{border:none}
+/* Stability */
+.stab-cols{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.stab-card{background:var(--cream2);border-radius:9px;padding:14px;text-align:center}
+.stab-num{font-size:26px;font-weight:700;font-family:'Outfit',sans-serif;font-variant-numeric:tabular-nums;color:var(--ink)}
+/* Alert */
+.al{display:flex;align-items:flex-start;gap:10px;padding:12px 16px;border-radius:9px;margin-bottom:14px;font-size:12px;line-height:1.8}
+.al-info{background:var(--sk-bg);border:1px solid rgba(2,132,199,.2)}
+.al-ok{background:var(--em-bg);border:1px solid rgba(5,150,105,.2)}
+.al-warn{background:var(--am-bg);border:1px solid rgba(217,119,6,.2)}
+/* Sim */
+.sim-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.sim-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--bd);font-size:12px}
+.sim-row:last-child{border:none}
+.sim-rank-btns{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.sim-rank-btn{padding:5px 14px;font-size:11px;font-weight:700;border:1.5px solid var(--bd);border-radius:7px;cursor:pointer;background:var(--cream2);font-family:'Outfit',sans-serif;transition:.13s}
+.sim-rank-btn:hover{border-color:var(--ink)}
+.sim-rank-btn.on.bronze{background:var(--br-bg);border-color:var(--br-bd);color:var(--br)}
+.sim-rank-btn.on.silver{background:var(--sv-bg);border-color:var(--sv-bd);color:var(--sv)}
+.sim-rank-btn.on.gold{background:var(--go-bg);border-color:var(--go-bd);color:var(--go)}
+.sim-rank-btn.on.platinum{background:var(--pl-bg);border-color:var(--pl-bd);color:var(--pl)}
+input[type=range]{width:100%;accent-color:var(--navy)}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:2px}
+</style>
+</head>
+<body>
+<div class="shell">
+  <!-- Sidebar -->
+  <div class="sb">
+    <div class="sb-head">
+      <div class="sb-logo">CORETO</div>
+      <div class="sb-ver">COREBLDG v2.0</div>
+    </div>
+    <div class="sb-user">
+      <div class="sb-av" id="sb-av">AG</div>
+      <div>
+        <div class="sb-uname" id="sb-uname">山田 誠</div>
+        <div class="sb-urole" id="sb-role">AG-0042</div>
+      </div>
+    </div>
+    <div class="sb-nav">
+      <div class="sb-sec-label">ランク</div>
+      <div class="sb-item on" id="si-overview" onclick="showTab(0)">
+        <span class="sb-item-icon">🏅</span><span class="sb-item-label">現在のランク</span>
+      </div>
+      <div class="sb-item" id="si-history" onclick="showTab(1)">
+        <span class="sb-item-icon">📅</span><span class="sb-item-label">月次ポイント履歴</span>
+      </div>
+      <div class="sb-item" id="si-stability" onclick="showTab(2)">
+        <span class="sb-item-icon">🔒</span><span class="sb-item-label">ランク保証</span>
+      </div>
+      <div class="sb-item" id="si-rate" onclick="showTab(3)">
+        <span class="sb-item-icon">💰</span><span class="sb-item-label">報酬率・手数料</span>
+      </div>
+      <div class="sb-item" id="si-sim" onclick="showTab(4)">
+        <span class="sb-item-icon">🔢</span><span class="sb-item-label">報酬シミュレーター</span>
+      </div>
+      <div class="sb-item" id="si-mentor" onclick="showTab(5)">
+        <span class="sb-item-icon">👥</span><span class="sb-item-label">メンティー状況</span>
+      </div>
+    </div>
+    <div class="sb-foot">
+      <div class="sb-foot-item" onclick="window.location.href='coreto-hub-v2.html'">
+        <span>🏠</span><span>ダッシュボードへ戻る</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="content">
+    <div class="topbar">
+      <span class="tb-title" id="tb-title">ランクダッシュボード</span>
+      <div style="display:flex;align-items:center;gap:10px;margin-left:auto">
+        <span id="rank-badge-top" class="badge gold">🥇 GOLD</span>
+        <a href="coreto-hub-v2.html" style="padding:6px 14px;background:var(--cream2);border:1px solid var(--bd);border-radius:7px;font-size:11px;font-weight:500;color:var(--ink);text-decoration:none">← ホーム</a>
+      </div>
+    </div>
+    <div class="page" id="page-content"></div>
+  </div>
+</div>
+
+<script src="coreto-nav-v2.js"></script>
+<script>
+// ── Data ─────────────────────────────────────────────────────────
+const sessionRole = sessionStorage.getItem('coreto_role') || 're_ag';
+const isPT = sessionRole === 'pt';
+
+const AGENT = {
+  id:   isPT ? 'PT-0015' : 'AG-0042',
+  name: isPT ? '佐藤 健一' : '山田 誠',
+  rank: isPT ? 'silver'    : 'gold',
+  type: isPT ? 'pt'        : 're'
+};
+
+document.getElementById('sb-av').textContent    = isPT ? 'PT' : 'AG';
+document.getElementById('sb-uname').textContent = AGENT.name;
+document.getElementById('sb-role').textContent  = AGENT.id;
+
+const RANKS = {
+  bronze:  { label:'BRONZE',   icon:'🥉', c:'var(--br)', bg:'var(--br-bg)', bd:'var(--br-bd)', rateRE:.65, rateHR:.45, rateUtil:.80, ratePT:.22, fee:980,  mentorRate:.05, ptsMin:0,  ptsMax:9  },
+  silver:  { label:'SILVER',   icon:'🥈', c:'var(--sv)', bg:'var(--sv-bg)', bd:'var(--sv-bd)', rateRE:.675,rateHR:.475,rateUtil:.82, ratePT:.24, fee:490,  mentorRate:.06, ptsMin:10, ptsMax:19 },
+  gold:    { label:'GOLD',     icon:'🥇', c:'var(--go)', bg:'var(--go-bg)', bd:'var(--go-bd)', rateRE:.70, rateHR:.50, rateUtil:.85, ratePT:.27, fee:0,    mentorRate:.07, ptsMin:20, ptsMax:29 },
+  platinum:{ label:'PLATINUM', icon:'💎', c:'var(--pl)', bg:'var(--pl-bg)', bd:'var(--pl-bd)', rateRE:.75, rateHR:.55, rateUtil:.90, ratePT:.30, fee:0,    mentorRate:.08, ptsMin:30, ptsMax:999},
+};
+const RANK_ORDER = ['bronze','silver','gold','platinum'];
+const yen = v => '¥' + Math.round(v).toLocaleString();
+function calcPts(cases, fee, mentorRw, feePT=0) {
+  const fp = Math.floor(fee/100000) + Math.floor(feePT/100000)*0.5;
+  const cp = cases;
+  const mp = Math.floor(mentorRw/5000)*0.5;
+  return { feeP: fp, caseP: cp, mentorP: mp, total: fp + cp + mp };
+}
+function rankFromPts(pts) { return pts>=30?'platinum':pts>=20?'gold':pts>=10?'silver':'bronze'; }
+
+const HISTORY = [
+  {label:'2025/03',cases:3,fee:900000,mentorRw:0},
+  {label:'2025/04',cases:4,fee:1200000,mentorRw:0},
+  {label:'2025/05',cases:4,fee:1100000,mentorRw:0},
+  {label:'2025/06',cases:2,fee:600000,mentorRw:0},
+  {label:'2025/07',cases:5,fee:1500000,mentorRw:15000},
+  {label:'2025/08',cases:4,fee:1200000,mentorRw:21000},
+  {label:'2025/09',cases:4,fee:1300000,mentorRw:21000},
+  {label:'2025/10',cases:5,fee:1600000,mentorRw:21000},
+  {label:'2025/11',cases:4,fee:1200000,mentorRw:21000},
+  {label:'2025/12',cases:5,fee:1500000,mentorRw:21000},
+  {label:'2026/01',cases:5,fee:1550000,mentorRw:21000},
+  {label:'2026/02',cases:7,fee:1850000,mentorRw:33000,current:true},
+];
+HISTORY.forEach(m=>{m.pts=calcPts(m.cases,m.fee,m.mentorRw);m.rank=rankFromPts(m.pts.total);});
+
+const cur = HISTORY.find(m=>m.current);
+const curRankIdx = RANK_ORDER.indexOf(AGENT.rank);
+const nextRank = RANK_ORDER[curRankIdx+1];
+const nextPts = nextRank ? RANKS[nextRank].ptsMin : 999;
+const progress = nextRank ? Math.min(100, ((cur.pts.total - RANKS[AGENT.rank].ptsMin) / (nextPts - RANKS[AGENT.rank].ptsMin))*100) : 100;
+
+// Update topbar badge
+document.getElementById('rank-badge-top').className = 'badge ' + AGENT.rank;
+document.getElementById('rank-badge-top').textContent = RANKS[AGENT.rank].icon + ' ' + RANKS[AGENT.rank].label;
+
+// ── Tab routing ──────────────────────────────────────────────────
+const TAB_LABELS = ['現在のランク','月次ポイント履歴','ランク保証','報酬率・手数料','報酬シミュレーター','メンティー状況'];
+const TAB_IDS = ['si-overview','si-history','si-stability','si-rate','si-sim','si-mentor'];
+function showTab(i) {
+  TAB_IDS.forEach((id,j)=>{document.getElementById(id)?.classList.toggle('on',j===i);});
+  document.getElementById('tb-title').textContent = 'ランクダッシュボード — ' + TAB_LABELS[i];
+  const fns = [renderOverview, renderHistory, renderStability, renderRate, renderSim, renderMentor];
+  (fns[i]||renderOverview)();
+}
+
+// ══ TAB 0: 現在のランク ═══════════════════════════════════════════
+function renderOverview() {
+  const r = RANKS[AGENT.rank];
+  document.getElementById('page-content').innerHTML = `
+    <!-- Hero -->
+    <div class="rank-hero ${AGENT.rank}">
+      <div class="rank-hero-bg">${r.icon}</div>
+      <div class="rank-badge ${AGENT.rank}">${r.icon} ${r.label} RANK</div>
+      <div style="display:flex;align-items:baseline;gap:16px">
+        <div>
+          <div style="font-size:36px;font-weight:700;font-family:'Outfit',sans-serif;font-variant-numeric:tabular-nums;color:var(--ink)">${cur.pts.total} pt</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px">今月累計ポイント（2026/02）</div>
+        </div>
+        ${nextRank ? `
+        <div style="padding:10px 18px;background:rgba(255,255,255,.6);border-radius:9px;border:1px solid var(--bd)">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:2px">次のランクまで</div>
+          <div style="font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink)">${Math.max(0, nextPts - cur.pts.total)} pt</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px">${RANKS[nextRank].icon} ${RANKS[nextRank].label} → ${nextPts}pt必要</div>
+        </div>` : `
+        <div style="padding:10px 18px;background:var(--pl-bg);border-radius:9px;border:1px solid var(--pl-bd)">
+          <div style="font-size:11px;font-weight:700;color:var(--pl)">💎 最高ランク達成</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:4px">Platinumランクです</div>
+        </div>`}
+      </div>
+      ${nextRank ? `
+      <div class="rank-progress-wrap">
+        <div class="rank-progress-bar"><div class="rank-progress-fill fill-${AGENT.rank}" style="width:${progress.toFixed(1)}%"></div></div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted)">
+          <span>${RANKS[AGENT.rank].icon} ${r.label} (${RANKS[AGENT.rank].ptsMin}pt)</span>
+          <span style="font-variant-numeric:tabular-nums">${progress.toFixed(0)}%</span>
+          <span>${RANKS[nextRank].icon} ${RANKS[nextRank].label} (${nextPts}pt)</span>
+        </div>
+      </div>` : ''}
+    </div>
+
+    <!-- KPI -->
+    <div class="kpi-row">
+      <div class="kpi-mini">
+        <div class="kpi-mini-label">今月成約</div>
+        <div class="kpi-mini-val">${cur.cases}件</div>
+        <div class="kpi-mini-sub">案件ポイント +${cur.pts.caseP}pt</div>
+      </div>
+      <div class="kpi-mini">
+        <div class="kpi-mini-label">今月仲介料</div>
+        <div class="kpi-mini-val">${yen(cur.fee)}</div>
+        <div class="kpi-mini-sub">手数料ポイント +${cur.pts.feeP}pt</div>
+      </div>
+      <div class="kpi-mini">
+        <div class="kpi-mini-label">メンター報酬</div>
+        <div class="kpi-mini-val">${yen(cur.mentorRw)}</div>
+        <div class="kpi-mini-sub">メンターポイント +${cur.pts.mentorP}pt</div>
+      </div>
+      <div class="kpi-mini">
+        <div class="kpi-mini-label">今月報酬（見込み）</div>
+        <div class="kpi-mini-val">${yen(cur.fee * r.rateRE)}</div>
+        <div class="kpi-mini-sub">報酬率 ${(r.rateRE*100).toFixed(1)}%</div>
+      </div>
+    </div>
+
+    <!-- ランクロード -->
+    <div class="card">
+      <div class="card-head"><div class="card-title">ランクロード</div></div>
+      <div class="card-body">
+        <div class="rank-road">
+          ${RANK_ORDER.map((rk,i) => {
+            const done = i < curRankIdx;
+            const current = i === curRankIdx;
+            return `<div class="rr-step ${done?'done':''} ${current?'current '+rk:''}">
+              <div class="rr-dot">${RANKS[rk].icon}</div>
+              <div class="rr-label">${RANKS[rk].label}</div>
+              <div class="rr-pts">${RANKS[rk].ptsMin}pt〜</div>
+            </div>`;
+          }).join('')}
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:12px;padding:10px 14px;background:var(--cream2);border-radius:8px">
+          判定：<strong>月末</strong>（翌月ランク確定） ／ ポイントは案件件数・仲介料・メンター報酬の合算
+        </div>
+      </div>
+    </div>
+
+    <!-- ポイント内訳 -->
+    <div class="card">
+      <div class="card-head"><div class="card-title">今月ポイント内訳</div></div>
+      <div class="card-body">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+          <div style="text-align:center;padding:14px;background:var(--cream2);border-radius:9px">
+            <div style="font-size:10px;color:var(--muted);margin-bottom:6px">成約件数ポイント</div>
+            <div style="font-size:24px;font-weight:700;font-variant-numeric:tabular-nums">${cur.pts.caseP}<span style="font-size:12px;font-weight:500;color:var(--muted)"> pt</span></div>
+            <div style="font-size:10px;color:var(--faint);margin-top:4px">1pt / 1件</div>
+          </div>
+          <div style="text-align:center;padding:14px;background:var(--cream2);border-radius:9px">
+            <div style="font-size:10px;color:var(--muted);margin-bottom:6px">手数料ポイント</div>
+            <div style="font-size:24px;font-weight:700;font-variant-numeric:tabular-nums">${cur.pts.feeP}<span style="font-size:12px;font-weight:500;color:var(--muted)"> pt</span></div>
+            <div style="font-size:10px;color:var(--faint);margin-top:4px">1pt / ¥100,000</div>
+          </div>
+          <div style="text-align:center;padding:14px;background:var(--cream2);border-radius:9px">
+            <div style="font-size:10px;color:var(--muted);margin-bottom:6px">メンターポイント</div>
+            <div style="font-size:24px;font-weight:700;font-variant-numeric:tabular-nums">${cur.pts.mentorP}<span style="font-size:12px;font-weight:500;color:var(--muted)"> pt</span></div>
+            <div style="font-size:10px;color:var(--faint);margin-top:4px">0.5pt / ¥5,000</div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+// ══ TAB 1: 月次履歴 ═══════════════════════════════════════════════
+function renderHistory() {
+  const rows = HISTORY.map(m => `
+    <tr ${m.current?'style="background:rgba(200,169,81,.06)"':''}>
+      <td style="font-weight:${m.current?700:400}">${m.label}${m.current?' <span class="badge b-gold" style="font-size:9px">今月</span>':''}</td>
+      <td class="badge ${m.rank}" style="border:none;background:none">${RANKS[m.rank].icon} ${RANKS[m.rank].label}</td>
+      <td>${m.pts.total} pt</td>
+      <td>${m.cases}件</td>
+      <td>${yen(m.fee)}</td>
+      <td>${yen(m.mentorRw)}</td>
+    </tr>`).reverse().join('');
+  document.getElementById('page-content').innerHTML = `
+    <div class="card">
+      <div class="card-head"><div class="card-title">月次ポイント履歴（直近12ヶ月）</div></div>
+      <div style="overflow-x:auto">
+        <table class="tbl">
+          <thead><tr><th>月</th><th>ランク</th><th>ポイント計</th><th>成約数</th><th>仲介料合計</th><th>メンター報酬</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+// ══ TAB 2: ランク保証 ═════════════════════════════════════════════
+function renderStability() {
+  const streak = HISTORY.filter(m=>RANK_ORDER.indexOf(m.rank)>=curRankIdx).length;
+  document.getElementById('page-content').innerHTML = `
+    <div class="al al-info">ℹ️ 同ランク以上を継続維持することで段階的な保証が付与されます。保証期間中はポイントが下回ってもランクを維持します。</div>
+    <div class="stab-cols" style="margin-bottom:16px">
+      <div class="stab-card">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:8px">現在の継続月数</div>
+        <div class="stab-num">${streak}ヶ月</div>
+        <div style="font-size:10px;color:var(--faint);margin-top:4px">${RANKS[AGENT.rank].icon} ${RANKS[AGENT.rank].label}以上を継続</div>
+      </div>
+      <div class="stab-card" style="background:${streak>=6?'var(--em-bg)':'var(--cream2)'};border:1px solid ${streak>=6?'rgba(5,150,105,.2)':'var(--bd)'}">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:8px">📅 6ヶ月保証</div>
+        <div class="stab-num" style="color:${streak>=6?'var(--em)':'var(--ink)'}">${streak>=6?'✓ 取得済':'あと'+(6-streak)+'ヶ月'}</div>
+        <div style="font-size:10px;color:var(--faint);margin-top:4px">6ヶ月継続でランク保証</div>
+      </div>
+      <div class="stab-card" style="background:${streak>=36?'var(--vt-bg)':'var(--cream2)'};border:1px solid ${streak>=36?'rgba(124,58,237,.2)':'var(--bd)'}">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:8px">♾ 永久保証</div>
+        <div class="stab-num" style="color:${streak>=36?'var(--vt)':'var(--ink)'}">${streak>=36?'Lifetime!':'あと'+(36-streak)+'ヶ月'}</div>
+        <div style="font-size:10px;color:var(--faint);margin-top:4px">36ヶ月継続でLifetime会員</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><div class="card-title">ランク保証 月別履歴</div></div>
+      <div style="overflow-x:auto">
+        <table class="tbl">
+          <thead><tr><th>月</th><th>ランク</th><th>ポイント</th><th>継続カウント</th></tr></thead>
+          <tbody>
+            ${HISTORY.map((m,i)=>{
+              const cnt = HISTORY.slice(0,i+1).reverse().findIndex(x=>RANK_ORDER.indexOf(x.rank)<curRankIdx);
+              const streak_i = cnt<0?i+1:cnt;
+              return `<tr><td>${m.label}</td><td><span class="badge ${m.rank}">${RANKS[m.rank].icon} ${RANKS[m.rank].label}</span></td><td>${m.pts.total} pt</td><td style="font-variant-numeric:tabular-nums">${streak_i}ヶ月目</td></tr>`;
+            }).reverse().join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+// ══ TAB 3: 報酬率 ═════════════════════════════════════════════════
+function renderRate() {
+  document.getElementById('page-content').innerHTML = `
+    <div class="card">
+      <div class="card-head"><div class="card-title">不動産・人材 報酬率</div></div>
+      <div class="card-body">
+        <table class="rate-table">
+          <thead><tr><th>ランク</th><th>不動産（RE）</th><th>人材（HR）</th><th>光通信</th><th>PT紹介</th><th>月次手数料</th></tr></thead>
+          <tbody>
+            ${RANK_ORDER.map(rk=>`
+              <tr ${rk===AGENT.rank?'style="background:rgba(200,169,81,.06);font-weight:700"':''}>
+                <td><span class="badge ${rk}">${RANKS[rk].icon} ${RANKS[rk].label}</span>${rk===AGENT.rank?' ← 現在':''}</td>
+                <td style="font-variant-numeric:tabular-nums">${(RANKS[rk].rateRE*100).toFixed(1)}%</td>
+                <td style="font-variant-numeric:tabular-nums">${(RANKS[rk].rateHR*100).toFixed(1)}%</td>
+                <td style="font-variant-numeric:tabular-nums">${(RANKS[rk].rateUtil*100).toFixed(0)}%</td>
+                <td style="font-variant-numeric:tabular-nums">${(RANKS[rk].ratePT*100).toFixed(0)}%</td>
+                <td style="font-variant-numeric:tabular-nums">${RANKS[rk].fee===0?'無料':'¥'+RANKS[rk].fee.toLocaleString()}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head"><div class="card-title">メンター報酬率</div></div>
+      <div class="card-body">
+        <div class="al al-info">ℹ️ メンターとして育成したエージェントの成約ごとに、メンター報酬が付与されます。ランクが高いほど報酬率が上がります。</div>
+        <table class="rate-table">
+          <thead><tr><th>ランク</th><th>メンター報酬率</th><th>ポイント換算</th></tr></thead>
+          <tbody>
+            ${RANK_ORDER.map(rk=>`
+              <tr ${rk===AGENT.rank?'style="background:rgba(200,169,81,.06);font-weight:700"':''}>
+                <td><span class="badge ${rk}">${RANKS[rk].icon} ${RANKS[rk].label}</span></td>
+                <td>${(RANKS[rk].mentorRate*100).toFixed(0)}%</td>
+                <td>0.5pt / ¥5,000のメンター報酬</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+// ══ TAB 4: シミュレーター ════════════════════════════════════════
+let simRank = AGENT.rank, simCases = cur.cases, simFee = Math.round(cur.fee/10000);
+function renderSim() {
+  document.getElementById('page-content').innerHTML = `
+    <div style="max-width:700px">
+      <div class="card">
+        <div class="card-head"><div class="card-title">報酬シミュレーター</div></div>
+        <div class="card-body">
+          <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:8px">ランク選択</div>
+          <div class="sim-rank-btns" id="sim-rank-btns">
+            ${RANK_ORDER.map(rk=>`<button class="sim-rank-btn ${rk===simRank?'on '+rk:''}" onclick="setSimRank('${rk}',this)">${RANKS[rk].icon} ${RANKS[rk].label}</button>`).join('')}
+          </div>
+          <div class="sim-grid">
+            <div>
+              <label style="font-size:11px;font-weight:700;color:var(--muted);display:block;margin-bottom:6px">成約件数：<span id="sim-cases-val" style="font-variant-numeric:tabular-nums">${simCases}件</span></label>
+              <input type="range" id="sim-cases" min="0" max="20" value="${simCases}" oninput="updateSim()">
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:700;color:var(--muted);display:block;margin-bottom:6px">仲介料合計：<span id="sim-fee-val" style="font-variant-numeric:tabular-nums">${simFee}万円</span></label>
+              <input type="range" id="sim-fee" min="0" max="400" value="${simFee}" oninput="updateSim()">
+            </div>
+          </div>
+          <div style="background:var(--cream2);border-radius:10px;padding:18px;margin-top:14px" id="sim-result"></div>
+        </div>
+      </div>
+    </div>`;
+  updateSim();
+}
+function setSimRank(rk, btn) {
+  simRank = rk;
+  document.querySelectorAll('.sim-rank-btn').forEach(b => b.className = 'sim-rank-btn');
+  btn.className = 'sim-rank-btn on ' + rk;
+  updateSim();
+}
+function updateSim() {
+  const cases = parseInt(document.getElementById('sim-cases')?.value||0);
+  const fee   = parseInt(document.getElementById('sim-fee')?.value||0) * 10000;
+  const cv = document.getElementById('sim-cases-val'); if(cv) cv.textContent = cases+'件';
+  const fv = document.getElementById('sim-fee-val');   if(fv) fv.textContent = Math.round(fee/10000)+'万円';
+  const r = RANKS[simRank];
+  const pts = calcPts(cases, fee, 0);
+  const reward = fee * r.rateRE;
+  const el = document.getElementById('sim-result');
+  if (!el) return;
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:14px">
+      <div><div style="font-size:10px;color:var(--muted);margin-bottom:4px">獲得ポイント</div><div style="font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink)">${pts.total} pt</div><div style="font-size:10px;color:var(--faint)">判定：${RANKS[rankFromPts(pts.total)].icon} ${RANKS[rankFromPts(pts.total)].label}</div></div>
+      <div><div style="font-size:10px;color:var(--muted);margin-bottom:4px">報酬（不動産）</div><div style="font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink)">${yen(reward)}</div><div style="font-size:10px;color:var(--faint)">報酬率 ${(r.rateRE*100).toFixed(1)}%</div></div>
+      <div><div style="font-size:10px;color:var(--muted);margin-bottom:4px">月次手数料</div><div style="font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;color:${r.fee?'var(--rd)':'var(--em)'}">${r.fee?'¥'+r.fee.toLocaleString():'無料'}</div><div style="font-size:10px;color:var(--faint)">${simRank==='gold'||simRank==='platinum'?'Gold以上は手数料無料':'月額システム利用料'}</div></div>
+    </div>
+    <div style="font-size:11px;color:var(--muted);border-top:1px solid var(--bd);padding-top:10px">実質手取り：<strong style="font-size:14px;color:var(--ink);font-variant-numeric:tabular-nums">${yen(reward - r.fee)}</strong></div>`;
+}
+
+// ══ TAB 5: メンティー ═════════════════════════════════════════════
+function renderMentor() {
+  if (isPT) {
+    document.getElementById('page-content').innerHTML = `
+      <div class="al al-info">ℹ️ メンター制度はエージェント向けの機能です。PTからAGに昇格するとメンティーを持てるようになります。</div>`;
+    return;
+  }
+  document.getElementById('page-content').innerHTML = `
+    <div class="card">
+      <div class="card-head"><div class="card-title">メンティー一覧</div></div>
+      <table class="tbl">
+        <thead><tr><th>名前</th><th>現ランク</th><th>今月成約</th><th>今月仲介料</th><th>メンター報酬（見込み）</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><div style="font-weight:600">渡辺 隆</div><div style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace">AG-0055</div></td>
+            <td><span class="badge bronze">🥉 BRONZE</span></td>
+            <td style="font-variant-numeric:tabular-nums">2件</td>
+            <td style="font-variant-numeric:tabular-nums">¥330,000</td>
+            <td style="font-variant-numeric:tabular-nums">¥${Math.round(330000*RANKS[AGENT.rank].mentorRate).toLocaleString()}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card">
+      <div class="card-head"><div class="card-title">メンター報酬率（現ランク）</div></div>
+      <div class="card-body">
+        <div class="al al-ok">✅ 現在のメンター報酬率：<strong>${(RANKS[AGENT.rank].mentorRate*100).toFixed(0)}%</strong>（${RANKS[AGENT.rank].icon} ${RANKS[AGENT.rank].label}）</div>
+        <div style="font-size:12px;color:var(--muted);line-height:2">
+          メンティーが¥5,000のメンター報酬を生み出すたびに、あなたに0.5ptが付与されます。<br>
+          メンターポイントはランク判定ポイントに加算されます。
+        </div>
+      </div>
+    </div>`;
+}
+
+// ── Init
+showTab(0);
+</script>
+</body>
+</html>
