@@ -37,7 +37,7 @@ const INJECT_CSS = `
 .cnav-item:hover .cnav-label { color:rgba(255,255,255,.82); }
 .cnav-badge {
   font-size:9px; font-weight:700; padding:1px 6px; border-radius:10px;
-  background:#DC2626; color:#fff; font-family:'DM Mono',monospace;
+  background:#DC2626; color:#fff; font-family:'Outfit',sans-serif;font-feature-settings:'tnum';
 }
 .cnav-badge.amber { background:#D97706; }
 .cnav-badge.gold  { background:#C8A951; color:#0D1A2D; }
