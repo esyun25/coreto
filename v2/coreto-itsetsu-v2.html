@@ -362,8 +362,8 @@ const FLOW_STEPS = [
   {id:'ai',      label:'AI案件\n特定', icon:'✨'},
   {id:'confirm', label:'確認',      icon:'✅'},
   {id:'stamp',   label:'仲介印\n捺印', icon:'🔴'},
-  {id:'barcode', label:'BC\n登録',      icon:'📷'},
   {id:'label',   label:'ラベル\n印刷', icon:'🖨️'},
+  {id:'barcode', label:'BC\n登録',      icon:'📷'},
   {id:'ship',    label:'発送\n完了',   icon:'📮'},
 ];
 
@@ -969,7 +969,7 @@ function confirmStampDone() {
   }
   STATE.stampedAt = new Date().toISOString();
   showToast('✅ 仲介印 捺印完了を記録しました');
-  goStep('barcode');
+  goStep('label');
 }
 
 function printCustomerGuide() {
@@ -1016,9 +1016,9 @@ function renderLabel() {
     </div>
     <div style="display:flex;flex-direction:column;gap:10px">
       <button class="btn btn-primary" onclick="printLabel()" style="width:100%">🖨️ 送付ラベルを印刷</button>
-      <button class="btn" onclick="goStep('ship')"
+      <button class="btn" onclick="goStep('barcode')"
         style="width:100%;background:var(--navy);color:#fff;border:none">
-        📮 印刷完了 → 発送登録へ
+        📷 印刷完了 → バーコード登録へ
       </button>
     </div>
   `;
@@ -1221,20 +1221,25 @@ function renderBarcode() {
       スキャナーはEnterキー送信設定にしてください。
     </div>
     ${stepsHtml}
-    <button class="btn btn-primary" onclick="goStep('label')"
+    <button class="btn btn-primary" onclick="goStep('ship')"
       style="width:100%;${allDone?'':'opacity:.5'}" ${allDone?'':'disabled'}>
-      🖨️ 全登録完了 → ラベル印刷へ
+      📮 全登録完了 → 発送登録へ
     </button>
   `;
 
   document.getElementById('cs-right').innerHTML = `
     <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:14px">登録状況</div>
-    <div style="background:var(--cream2);border:1px solid var(--bd);border-radius:10px;padding:16px;margin-bottom:16px">
-      <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:10px">紐付け案件</div>
-      <div style="font-size:13px;font-weight:700;color:var(--ink)">${cas?.name||'—'} 様</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:2px">${cas?.sub||'—'}</div>
-      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--faint);margin-top:3px">${cas?.id||'—'}</div>
-    </div>
+    ${cas ? `
+    <div style="background:var(--em-bg);border:1px solid rgba(5,150,105,.2);border-radius:10px;padding:14px 16px;margin-bottom:16px">
+      <div style="font-size:10px;font-weight:700;color:var(--em);margin-bottom:6px">✅ 案件自動特定済み</div>
+      <div style="font-size:13px;font-weight:700;color:var(--ink)">${cas.name} 様</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px">${cas.sub}</div>
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--faint);margin-top:3px">${cas.id}</div>
+    </div>` : `
+    <div style="background:var(--am-bg);border:1px solid rgba(217,119,6,.2);border-radius:10px;padding:14px 16px;margin-bottom:16px">
+      <div style="font-size:10px;font-weight:700;color:var(--am);margin-bottom:6px">⏳ ① 案件BCをスキャンすると自動特定します</div>
+      <div style="font-size:11px;color:var(--muted)">クライアント向け案内に印刷されたバーコードを読み取ってください</div>
+    </div>`}
 
     <div style="font-size:11px;line-height:2.6">
       ${BC_STEPS.map(s=>{
@@ -1284,8 +1289,20 @@ function submitBC(key) {
   const val = el?.value.trim();
   if (!val) { showToast('⚠️ バーコードを入力してください','warn'); return; }
   STATE.barcodes[key] = val;
-  showToast(`✅ ${BC_STEPS.find(s=>s.key===key)?.label} を登録しました`);
-  renderBarcode(); // 再描画（次のフィールドが有効化）
+
+  // ① 案件BCスキャン → 案件IDでDEMO_CASESを検索して自動特定
+  if (key === 'case_id') {
+    const found = DEMO_CASES.find(cas => cas.id === val.toUpperCase());
+    if (found) {
+      STATE.selectedCase = found;
+      showToast(`✅ 案件を自動特定しました：${found.name} 様（${found.id}）`);
+    } else {
+      showToast(`⚠️ 案件ID「${val}」が見つかりません。手動で確認してください`,'warn');
+    }
+  } else {
+    showToast(`✅ ${BC_STEPS.find(s=>s.key===key)?.label} を登録しました`);
+  }
+  renderBarcode();
 }
 
 // ══ フロー制御 ════════════════════════════════════════════
