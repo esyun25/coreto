@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>COREBLDG — 初期費用明細チェック</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600&family=Outfit:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0D1A2D;--navy-m:#152238;--navy-l:#1E3252;
+  --gold:#C8A951;--gold-dim:rgba(200,169,81,.15);
+  --ink:#202124;--muted:#5F6368;--faint:#80868B;
+  --em:#059669;--em-bg:#ECFDF5;
+  --am:#D97706;--am-bg:#FFFBEB;
+  --rd:#DC2626;--rd-bg:#FEF2F2;
+  --sk:#0284C7;--sk-bg:#F0F9FF;
+  --cream:#FFFFFF;--cream2:#F8F9FA;
+  --bd:#E8EAED;--bd2:#DADCE0;
+  --sw:240px;--sh:0 1px 2px rgba(60,64,67,.1),0 1px 3px rgba(60,64,67,.06);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:var(--cream2)}
+.shell{display:flex;height:100vh}
+
+/* サイドバー */
+.sb{width:var(--sw);background:var(--navy);display:flex;flex-direction:column;flex-shrink:0;position:relative}
+.sb::after{content:'';position:absolute;top:0;right:0;width:1px;height:100%;
+  background:linear-gradient(180deg,rgba(200,169,81,.25) 0%,rgba(200,169,81,.06) 50%,transparent 100%)}
+.sb-head{padding:24px 20px 18px;border-bottom:1px solid rgba(255,255,255,.06)}
+.sb-logo{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;letter-spacing:5px;color:var(--gold)}
+.sb-ver{font-size:9px;letter-spacing:2px;color:rgba(200,169,81,.3);font-family:'DM Mono',monospace;margin-top:2px}
+.sb-nav{flex:1;overflow-y:auto;padding:6px 10px}
+.nav-sec{font-size:9px;font-weight:700;letter-spacing:1.5px;color:rgba(255,255,255,.2);padding:14px 11px 5px;text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:8px;
+  font-size:12px;font-weight:500;color:rgba(255,255,255,.55);transition:.15s;text-decoration:none;margin-bottom:2px}
+.nav-item:hover{background:rgba(255,255,255,.06);color:rgba(255,255,255,.85)}
+.nav-item.active{background:var(--gold-dim);color:var(--gold)}
+.sb-foot{padding:14px 12px;border-top:1px solid rgba(255,255,255,.06)}
+.sb-user{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);
+  border-radius:9px;padding:9px 11px;display:flex;align-items:center;gap:9px}
+.sb-av{width:28px;height:28px;border-radius:50%;background:var(--gold-dim);
+  border:1px solid rgba(200,169,81,.25);display:flex;align-items:center;
+  justify-content:center;font-size:10px;font-weight:700;color:var(--gold);flex-shrink:0}
+.sb-uname{font-size:11px;font-weight:600;color:rgba(255,255,255,.8)}
+.sb-urole{font-size:9px;color:rgba(255,255,255,.3);font-family:'DM Mono',monospace}
+
+/* メイン */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.top-bar{background:#fff;border-bottom:1px solid var(--bd);padding:0 28px;height:52px;
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.top-title{font-size:15px;font-weight:700;color:var(--navy)}
+.top-sub{font-size:10px;color:var(--muted);margin-top:1px}
+.content{flex:1;overflow-y:auto;padding:24px 28px}
+
+/* カード */
+.card{background:#fff;border:1px solid var(--bd);border-radius:12px;box-shadow:var(--sh);margin-bottom:18px;overflow:hidden}
+.card-head{padding:14px 18px;border-bottom:1px solid var(--bd);
+  display:flex;align-items:center;justify-content:space-between;gap:12px}
+.card-title{font-size:13px;font-weight:700;color:var(--navy);display:flex;align-items:center;gap:8px}
+.card-body{padding:20px}
+
+/* フォーム */
+.form-group{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
+.form-label{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.4px;text-transform:uppercase}
+.req{color:var(--rd);margin-left:2px}
+.form-input,.form-select{padding:10px 13px;border:1.5px solid var(--bd2);border-radius:8px;
+  font-size:13px;font-family:'Outfit',sans-serif;color:var(--ink);background:#fff;
+  transition:.15s;width:100%}
+.form-input:focus,.form-select:focus{outline:none;border-color:var(--navy);
+  box-shadow:0 0 0 3px rgba(13,26,45,.06)}
+.form-input.amount{font-family:'DM Mono',monospace;font-size:15px;font-weight:600}
+.form-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+
+/* ボタン */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:10px 20px;border-radius:8px;
+  font-size:12px;font-weight:700;font-family:'Outfit',sans-serif;cursor:pointer;border:none;transition:.15s}
+.btn-navy{background:var(--navy);color:var(--gold)}
+.btn-navy:hover{background:var(--navy-m)}
+.btn-navy:disabled{opacity:.35;cursor:not-allowed}
+.btn-ghost{background:transparent;color:var(--muted);border:1.5px solid var(--bd2)}
+.btn-ghost:hover{border-color:var(--navy);color:var(--navy)}
+.btn-sm{padding:7px 14px;font-size:11px}
+
+/* アップロードゾーン */
+.upload-zone{border:2px dashed var(--bd2);border-radius:12px;padding:32px;
+  text-align:center;cursor:pointer;transition:.2s;background:var(--cream2);position:relative}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--navy);background:#F0F4FF}
+.upload-zone.has-file{border-color:var(--em);border-style:solid;background:var(--em-bg)}
+.upload-icon{font-size:36px;margin-bottom:10px}
+.upload-label{font-size:13px;font-weight:600;color:var(--muted)}
+.upload-sub{font-size:11px;color:var(--faint);margin-top:4px}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+
+/* プレビュー */
+.img-preview{max-width:100%;max-height:320px;border-radius:8px;border:1px solid var(--bd);
+  display:block;margin:0 auto;object-fit:contain}
+
+/* 判定結果 */
+.result-grid{display:flex;flex-direction:column;gap:8px}
+.result-row{display:grid;grid-template-columns:120px 1fr 1fr 60px;gap:0;
+  border:1.5px solid var(--bd);border-radius:10px;overflow:hidden;align-items:stretch}
+.result-cell{padding:11px 14px;font-size:12px}
+.result-label{background:var(--cream2);font-weight:700;color:var(--muted);
+  font-size:10px;letter-spacing:.4px;display:flex;align-items:center;
+  border-right:1px solid var(--bd)}
+.result-input-val{border-right:1px solid var(--bd);display:flex;align-items:center}
+.result-scan-val{border-right:1px solid var(--bd);display:flex;align-items:center;
+  font-family:'DM Mono',monospace;font-size:11px}
+.result-status{display:flex;align-items:center;justify-content:center;font-size:18px}
+.result-row.ok{border-color:rgba(5,150,105,.3)}
+.result-row.ok .result-label{background:var(--em-bg)}
+.result-row.ok .result-status{background:var(--em-bg)}
+.result-row.ng{border-color:rgba(220,38,38,.3)}
+.result-row.ng .result-label{background:var(--rd-bg)}
+.result-row.ng .result-status{background:var(--rd-bg)}
+.result-row.loading{border-color:var(--bd2);opacity:.7}
+.result-row.ng .result-scan-val{color:var(--rd);font-weight:700}
+.result-row.ng .result-input-val{color:var(--am)}
+
+/* サマリーバナー */
+.summary-banner{border-radius:12px;padding:18px 22px;margin-bottom:20px;
+  display:flex;align-items:center;gap:16px}
+.summary-banner.all-ok{background:var(--em-bg);border:1.5px solid rgba(5,150,105,.25)}
+.summary-banner.has-ng{background:var(--rd-bg);border:1.5px solid rgba(220,38,38,.25)}
+.summary-banner.partial{background:var(--am-bg);border:1.5px solid rgba(217,119,6,.25)}
+.summary-icon{font-size:36px;flex-shrink:0}
+.summary-title{font-size:16px;font-weight:800}
+.summary-title.ok{color:var(--em)}
+.summary-title.ng{color:var(--rd)}
+.summary-sub{font-size:11px;color:var(--muted);margin-top:3px;line-height:1.6}
+
+/* AI思考 */
+.ai-thinking{display:flex;align-items:center;gap:10px;padding:14px 18px;
+  background:linear-gradient(135deg,#0D1A2D,#1E3252);border-radius:10px}
+.ai-dots{display:flex;gap:4px}
+.ai-dots span{width:6px;height:6px;border-radius:50%;background:var(--gold);
+  animation:db 1.4s infinite ease-in-out}
+.ai-dots span:nth-child(2){animation-delay:.2s}
+.ai-dots span:nth-child(3){animation-delay:.4s}
+@keyframes db{0%,80%,100%{transform:scale(.6);opacity:.4}40%{transform:scale(1);opacity:1}}
+
+/* 列ヘッダー */
+.result-header{display:grid;grid-template-columns:120px 1fr 1fr 60px;gap:0;
+  padding:6px 0;margin-bottom:4px}
+.result-header-cell{font-size:9px;font-weight:700;color:var(--faint);
+  letter-spacing:.5px;text-transform:uppercase;padding:0 14px}
+
+/* ステップインジケーター */
+.steps{display:flex;align-items:center;gap:0;margin-bottom:24px}
+.step{display:flex;align-items:center;gap:8px;padding:10px 16px;border-radius:8px;
+  font-size:11px;font-weight:600;color:var(--muted);transition:.2s;flex:1;justify-content:center}
+.step.active{background:var(--navy);color:var(--gold)}
+.step.done{background:var(--em-bg);color:var(--em)}
+.step-arrow{color:var(--bd2);font-size:16px;flex-shrink:0}
+
+/* トースト */
+.toast{position:fixed;bottom:24px;right:24px;padding:11px 18px;border-radius:9px;
+  font-size:12px;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,.2);
+  opacity:0;transition:.3s;z-index:999;pointer-events:none;max-width:340px}
+.toast.show{opacity:1}
+
+@media(max-width:768px){.sb{display:none}.form-grid-2,.form-grid-3{grid-template-columns:1fr}
+  .result-row{grid-template-columns:90px 1fr;}.result-scan-val,.result-status{display:none}}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- サイドバー -->
+<div class="sb">
+  <div class="sb-head">
+    <div class="sb-logo">CORETO</div>
+    <div class="sb-ver">COREBLDG v2</div>
+  </div>
+  <div class="sb-nav">
+    <div class="nav-sec">書類・確認</div>
+    <a class="nav-item active" href="coreto-invoice-check-v2.html">🏦 明細ダブルチェック</a>
+    <a class="nav-item" href="coreto-barcode-scan-v2.html">📷 書類スキャン</a>
+    <a class="nav-item" href="coreto-screening-v2.html">📋 書類審査</a>
+    <div class="nav-sec">メニュー</div>
+    <a class="nav-item" href="coreto-hub-v2.html">🏠 ホーム</a>
+    <a class="nav-item" href="coreto-cases-v2.html">📁 案件管理</a>
+    <a class="nav-item" href="coreto-remittance-v2.html">💸 出金管理</a>
+  </div>
+  <div class="sb-foot">
+    <div class="sb-user">
+      <div class="sb-av">中</div>
+      <div>
+        <div class="sb-uname">中村 陽子</div>
+        <div class="sb-urole">AG-0042 / Platinum</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- メイン -->
+<div class="main">
+  <div class="top-bar">
+    <div>
+      <div class="top-title">🏦 初期費用明細 ダブルチェック</div>
+      <div class="top-sub">管理会社の明細をスキャン → AGの入力情報と照合 → 送金前に不一致を検出</div>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="resetAll()">↺ リセット</button>
+  </div>
+
+  <div class="content">
+
+    <!-- ステップ表示 -->
+    <div class="steps">
+      <div class="step active" id="step1">① AG情報を入力</div>
+      <div class="step-arrow">›</div>
+      <div class="step" id="step2">② 明細をアップロード</div>
+      <div class="step-arrow">›</div>
+      <div class="step" id="step3">③ AI照合</div>
+      <div class="step-arrow">›</div>
+      <div class="step" id="step4">④ 結果確認</div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start">
+
+      <!-- 左: AG入力フォーム + アップロード -->
+      <div>
+
+        <!-- Step1: AG手入力 -->
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title">① AGが入力する情報</div>
+            <span style="font-size:10px;color:var(--muted)">送金依頼に記載した内容を正確に入力</span>
+          </div>
+          <div class="card-body">
+
+            <div style="background:var(--sk-bg);border:1px solid rgba(2,132,199,.15);
+              border-radius:8px;padding:10px 13px;margin-bottom:16px;font-size:10px;color:var(--sk);line-height:1.6">
+              💡 管理会社に送付済みの送金依頼書 / 出金申請書に記載した内容をそのまま入力してください
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">案件番号 / 物件名</label>
+              <input type="text" class="form-input" id="in-case" placeholder="例: CASE-2026-042 / ルーブル渋谷 305号">
+            </div>
+
+            <div style="font-size:10px;font-weight:700;color:var(--navy);
+              letter-spacing:.5px;margin:16px 0 10px;padding-bottom:6px;
+              border-bottom:1px solid var(--bd)">振込先口座</div>
+
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label class="form-label">銀行名<span class="req">*</span></label>
+                <input type="text" class="form-input" id="in-bank" placeholder="例: 三菱UFJ銀行">
+              </div>
+              <div class="form-group">
+                <label class="form-label">支店名<span class="req">*</span></label>
+                <input type="text" class="form-input" id="in-branch" placeholder="例: 渋谷支店">
+              </div>
+            </div>
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label class="form-label">口座種別<span class="req">*</span></label>
+                <select class="form-select" id="in-type">
+                  <option value="普通">普通</option>
+                  <option value="当座">当座</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">口座番号<span class="req">*</span></label>
+                <input type="text" class="form-input" id="in-number"
+                  placeholder="例: 1234567" maxlength="8"
+                  style="font-family:'DM Mono',monospace;letter-spacing:2px">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">口座名義（カナ）<span class="req">*</span></label>
+              <input type="text" class="form-input" id="in-holder"
+                placeholder="例: ｶﾌﾞｼｷｶﾞｲｼｬ ﾀﾅｶﾌﾄﾞｳｻﾝ"
+                style="font-family:'DM Mono',monospace">
+            </div>
+
+            <div style="font-size:10px;font-weight:700;color:var(--navy);
+              letter-spacing:.5px;margin:16px 0 10px;padding-bottom:6px;
+              border-bottom:1px solid var(--bd)">送金金額</div>
+
+            <div class="form-group">
+              <label class="form-label">送金要請金額（円）<span class="req">*</span></label>
+              <div style="position:relative">
+                <span style="position:absolute;left:13px;top:50%;transform:translateY(-50%);
+                  font-size:13px;color:var(--muted);font-weight:600">¥</span>
+                <input type="number" class="form-input amount" id="in-amount"
+                  placeholder="例: 380000" style="padding-left:26px">
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Step2: アップロード -->
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title">② 管理会社の明細をアップロード</div>
+          </div>
+          <div class="card-body">
+            <div class="upload-zone" id="upload-zone"
+              ondragover="handleDragOver(event)" ondragleave="handleDragLeave()"
+              ondrop="handleDrop(event)">
+              <input type="file" id="file-input" accept="image/*,.pdf"
+                onchange="handleFileSelect(event)">
+              <div class="upload-icon" id="upload-icon">📄</div>
+              <div class="upload-label" id="upload-label">クリックまたはドラッグ＆ドロップ</div>
+              <div class="upload-sub" id="upload-sub">JPG・PNG・HEIC・PDF 対応 / 写真でも可</div>
+            </div>
+
+            <div id="preview-area" style="display:none;margin-top:14px">
+              <img id="img-preview" class="img-preview">
+              <div style="text-align:center;margin-top:8px">
+                <span id="file-name" style="font-size:10px;color:var(--muted);
+                  font-family:'DM Mono',monospace"></span>
+              </div>
+            </div>
+
+            <div style="margin-top:16px">
+              <button class="btn btn-navy" id="check-btn"
+                onclick="runCheck()" style="width:100%;justify-content:center" disabled>
+                🤖 AI照合を実行
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 右: 照合結果 -->
+      <div id="result-panel">
+        <div style="background:var(--cream2);border:1.5px dashed var(--bd2);
+          border-radius:12px;padding:48px;text-align:center;color:var(--faint)">
+          <div style="font-size:36px;margin-bottom:10px">🏦</div>
+          <div style="font-size:13px;font-weight:600;color:var(--muted)">入力と明細の照合結果がここに表示されます</div>
+          <div style="font-size:11px;margin-top:6px">左側の情報を入力して明細をアップロードしてください</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════════
+let uploadedFile = null;
+let fileBase64   = null;
+let fileMime     = null;
+
+// ══════════════════════════════════════════════════════════════
+// FILE HANDLING
+// ══════════════════════════════════════════════════════════════
+function handleDragOver(e){
+  e.preventDefault();
+  document.getElementById('upload-zone').classList.add('drag');
+}
+function handleDragLeave(){
+  document.getElementById('upload-zone').classList.remove('drag');
+}
+function handleDrop(e){
+  e.preventDefault();
+  document.getElementById('upload-zone').classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if(file) processFile(file);
+}
+function handleFileSelect(e){
+  const file = e.target.files[0];
+  if(file) processFile(file);
+}
+
+function processFile(file){
+  uploadedFile = file;
+  fileMime = file.type || 'image/jpeg';
+
+  // プレビュー表示
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    fileBase64 = e.target.result.split(',')[1];
+    const preview = document.getElementById('img-preview');
+    const zone    = document.getElementById('upload-zone');
+
+    if(file.type.startsWith('image/')){
+      preview.src = e.target.result;
+      document.getElementById('preview-area').style.display = 'block';
+    }
+
+    zone.classList.add('has-file');
+    document.getElementById('upload-icon').textContent = '✅';
+    document.getElementById('upload-label').textContent = file.name;
+    document.getElementById('upload-sub').textContent =
+      (file.size/1024).toFixed(0) + ' KB — アップロード完了';
+    document.getElementById('file-name').textContent = file.name;
+    updateCheckBtn();
+  };
+  reader.readAsDataURL(file);
+}
+
+function updateCheckBtn(){
+  const hasFile  = !!fileBase64;
+  const hasInput = document.getElementById('in-bank').value &&
+                   document.getElementById('in-number').value &&
+                   document.getElementById('in-amount').value;
+  document.getElementById('check-btn').disabled = !(hasFile && hasInput);
+}
+
+// フォーム変更時にボタン状態更新
+document.querySelectorAll && document.addEventListener('DOMContentLoaded', () => {
+  ['in-bank','in-branch','in-number','in-holder','in-amount'].forEach(id=>{
+    document.getElementById(id)?.addEventListener('input', updateCheckBtn);
+  });
+});
+
+// ══════════════════════════════════════════════════════════════
+// AI照合メイン
+// ══════════════════════════════════════════════════════════════
+async function runCheck(){
+  // 入力値収集
+  const agInput = {
+    bank:   document.getElementById('in-bank').value.trim(),
+    branch: document.getElementById('in-branch').value.trim(),
+    type:   document.getElementById('in-type').value,
+    number: document.getElementById('in-number').value.trim(),
+    holder: document.getElementById('in-holder').value.trim(),
+    amount: parseInt(document.getElementById('in-amount').value)||0,
+    case:   document.getElementById('in-case').value.trim(),
+  };
+
+  if(!agInput.bank||!agInput.number||!agInput.amount){
+    showToast('銀行名・口座番号・送金金額は必須です','error'); return;
+  }
+  if(!fileBase64){
+    showToast('明細ファイルをアップロードしてください','error'); return;
+  }
+
+  // ステップ更新
+  setStep(3);
+  const panel = document.getElementById('result-panel');
+  panel.innerHTML = `
+    <div class="ai-thinking" style="margin-bottom:12px">
+      <div class="ai-dots"><span></span><span></span><span></span></div>
+      <div style="color:rgba(255,255,255,.75);font-size:12px;margin-left:8px">
+        🤖 明細を読み取り中... 口座情報と金額を抽出しています
+      </div>
+    </div>
+    <div style="color:var(--faint);font-size:11px;text-align:center;padding:20px">
+      PDFや手書き明細も対応しています。少々お待ちください。
+    </div>`;
+
+  document.getElementById('check-btn').disabled = true;
+  document.getElementById('check-btn').textContent = '🤖 照合中...';
+
+  try {
+    const result = await extractAndCompare(agInput);
+    renderResult(agInput, result);
+    setStep(4);
+  } catch(e){
+    panel.innerHTML = `<div style="background:var(--rd-bg);border:1px solid rgba(220,38,38,.2);
+      border-radius:10px;padding:20px;color:var(--rd);font-size:12px">
+      ❌ AI照合に失敗しました: ${e.message}<br>
+      <span style="font-size:10px;color:var(--muted)">ファイルを確認して再度お試しください</span>
+    </div>`;
+    showToast('照合に失敗しました','error');
+  }
+
+  document.getElementById('check-btn').disabled = false;
+  document.getElementById('check-btn').textContent = '🤖 AI照合を実行';
+}
+
+// ══════════════════════════════════════════════════════════════
+// AI API呼び出し
+// ══════════════════════════════════════════════════════════════
+async function extractAndCompare(agInput){
+  const isImage = fileMime.startsWith('image/');
+
+  const systemPrompt = `あなたは不動産取引における初期費用明細書の読み取り専門AIです。
+送られてくる明細書の画像またはPDFから、以下の情報を正確に抽出してください。
+
+抽出対象:
+1. 振込先銀行名
+2. 振込先支店名
+3. 口座種別（普通/当座）
+4. 口座番号（数字のみ）
+5. 口座名義（カナまたは漢字）
+6. 合計請求金額（円、数字のみ）
+7. 明細に記載されているクライアント名・物件名（あれば）
+
+注意事項:
+- 口座番号は数字のみで返してください（ハイフン不要）
+- 金額は数字のみ（カンマ・円記号不要）
+- 読み取れない項目は null を返してください
+- 複数の振込先がある場合は最初に記載されているものを返してください
+
+必ずJSONのみで返答してください（前置き・後置き不要）:
+{
+  "bank": "銀行名",
+  "branch": "支店名",
+  "accountType": "普通 or 当座",
+  "accountNumber": "口座番号（数字のみ）",
+  "accountHolder": "口座名義",
+  "totalAmount": 数値,
+  "clientName": "クライアント名 or null",
+  "propertyName": "物件名 or null",
+  "readConfidence": 0から1の数値,
+  "notes": "読み取りで気になった点（なければnull）"
+}`;
+
+  const messageContent = isImage
+    ? [
+        { type: 'image', source: { type: 'base64', media_type: fileMime, data: fileBase64 }},
+        { type: 'text',  text: '上記の明細書から情報を抽出してください。' }
+      ]
+    : [
+        { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: fileBase64 }},
+        { type: 'text',     text: '上記の明細書から情報を抽出してください。' }
+      ];
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1000,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: messageContent }]
+    })
+  });
+
+  if(!res.ok) throw new Error(`API error: ${res.status}`);
+  const data = await res.json();
+  const text = data.content[0].text.replace(/```json|```/g,'').trim();
+  const extracted = JSON.parse(text);
+
+  // 照合ロジック
+  return compareFields(agInput, extracted);
+}
+
+// ══════════════════════════════════════════════════════════════
+// 照合ロジック
+// ══════════════════════════════════════════════════════════════
+function normalize(str){
+  if(str==null) return '';
+  return String(str)
+    .replace(/[　 \s]/g,'')          // スペース除去
+    .replace(/[Ａ-Ｚａ-ｚ０-９]/g, c => // 全角英数→半角
+      String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
+    .replace(/銀行$/,'')              // 「銀行」suffix除去
+    .replace(/支店$/,'')              // 「支店」suffix除去
+    .toUpperCase();
+}
+
+function normalizeKana(str){
+  if(str==null) return '';
+  // 全角カナ→半角カナ変換テーブル（主要文字）
+  const table = {'ア':'ｱ','イ':'ｲ','ウ':'ｳ','エ':'ｴ','オ':'ｵ',
+    'カ':'ｶ','キ':'ｷ','ク':'ｸ','ケ':'ｹ','コ':'ｺ',
+    'サ':'ｻ','シ':'ｼ','ス':'ｽ','セ':'ｾ','ソ':'ｿ',
+    'タ':'ﾀ','チ':'ﾁ','ツ':'ﾂ','テ':'ﾃ','ト':'ﾄ',
+    'ナ':'ﾅ','ニ':'ﾆ','ヌ':'ﾇ','ネ':'ﾈ','ノ':'ﾉ',
+    'ハ':'ﾊ','ヒ':'ﾋ','フ':'ﾌ','ヘ':'ﾍ','ホ':'ﾎ',
+    'マ':'ﾏ','ミ':'ﾐ','ム':'ﾑ','メ':'ﾒ','モ':'ﾓ',
+    'ヤ':'ﾔ','ユ':'ﾕ','ヨ':'ﾖ',
+    'ラ':'ﾗ','リ':'ﾘ','ル':'ﾙ','レ':'ﾚ','ロ':'ﾛ',
+    'ワ':'ﾜ','ヲ':'ｦ','ン':'ﾝ',
+    'ガ':'ｶﾞ','ギ':'ｷﾞ','グ':'ｸﾞ','ゲ':'ｹﾞ','ゴ':'ｺﾞ',
+    'ザ':'ｻﾞ','ジ':'ｼﾞ','ズ':'ｽﾞ','ゼ':'ｾﾞ','ゾ':'ｿﾞ',
+    'ダ':'ﾀﾞ','ヂ':'ﾁﾞ','ヅ':'ﾂﾞ','デ':'ﾃﾞ','ド':'ﾄﾞ',
+    'バ':'ﾊﾞ','ビ':'ﾋﾞ','ブ':'ﾌﾞ','ベ':'ﾍﾞ','ボ':'ﾎﾞ',
+    'パ':'ﾊﾟ','ピ':'ﾋﾟ','プ':'ﾌﾟ','ペ':'ﾍﾟ','ポ':'ﾎﾟ',
+    'ッ':'ｯ','ャ':'ｬ','ュ':'ｭ','ョ':'ｮ','ー':'ｰ',
+    '（':'(','）':')','　':' ','・':'･',
+    '株式会社':'(ｶ)','合同会社':'(ﾄﾞ)','有限会社':'(ﾕ)',
+  };
+  let result = str;
+  for(const [k,v] of Object.entries(table)) result = result.split(k).join(v);
+  return normalize(result);
+}
+
+function compareFields(ag, scanned){
+  const fields = [
+    {
+      key: 'bank',
+      label: '銀行名',
+      agVal: ag.bank,
+      scanVal: scanned.bank,
+      compare: (a,b) => normalize(a) === normalize(b),
+    },
+    {
+      key: 'branch',
+      label: '支店名',
+      agVal: ag.branch,
+      scanVal: scanned.branch,
+      compare: (a,b) => !a || !b || normalize(a) === normalize(b),
+    },
+    {
+      key: 'type',
+      label: '口座種別',
+      agVal: ag.type,
+      scanVal: scanned.accountType,
+      compare: (a,b) => !b || normalize(a) === normalize(b),
+    },
+    {
+      key: 'number',
+      label: '口座番号',
+      agVal: ag.number,
+      scanVal: scanned.accountNumber,
+      compare: (a,b) => String(a).replace(/\D/g,'') === String(b||'').replace(/\D/g,''),
+    },
+    {
+      key: 'holder',
+      label: '口座名義',
+      agVal: ag.holder,
+      scanVal: scanned.accountHolder,
+      compare: (a,b) => !a || !b || normalizeKana(a) === normalizeKana(b),
+    },
+    {
+      key: 'amount',
+      label: '送金金額',
+      agVal: ag.amount,
+      scanVal: scanned.totalAmount,
+      compare: (a,b) => b != null && Math.abs(Number(a)-Number(b)) < 1,
+      format: v => v != null ? '¥'+Number(v).toLocaleString() : null,
+    },
+  ];
+
+  const results = fields.map(f => {
+    const isNull = f.scanVal == null || f.scanVal === '';
+    const match  = isNull ? null : f.compare(f.agVal, f.scanVal);
+    return { ...f, match, isNull };
+  });
+
+  const allOk  = results.every(r => r.match !== false);
+  const hasNg  = results.some(r => r.match === false);
+
+  return {
+    fields: results,
+    allOk, hasNg,
+    scanned,
+    confidence: scanned.readConfidence,
+    notes: scanned.notes,
+    clientName: scanned.clientName,
+    propertyName: scanned.propertyName,
+  };
+}
+
+// ══════════════════════════════════════════════════════════════
+// 結果レンダリング
+// ══════════════════════════════════════════════════════════════
+function renderResult(agInput, result){
+  const panel = document.getElementById('result-panel');
+  const ng = result.fields.filter(f=>f.match===false);
+  const ok = result.fields.filter(f=>f.match===true);
+  const un = result.fields.filter(f=>f.match===null);
+
+  // サマリーバナー
+  let bannerHtml = '';
+  if(!result.hasNg && ok.length > 0){
+    bannerHtml = `
+    <div class="summary-banner all-ok">
+      <div class="summary-icon">✅</div>
+      <div>
+        <div class="summary-title ok">全項目一致 — 送金OK</div>
+        <div class="summary-sub">
+          入力された口座情報と送金金額が明細と一致しています。<br>
+          ${un.length>0?`${un.length}項目は明細から読み取れませんでした（未確認）。`:''}
+        </div>
+      </div>
+    </div>`;
+  } else if(result.hasNg){
+    bannerHtml = `
+    <div class="summary-banner has-ng">
+      <div class="summary-icon">🚨</div>
+      <div>
+        <div class="summary-title ng">不一致あり — 送金を停止してください</div>
+        <div class="summary-sub">
+          <strong>${ng.map(f=>f.label).join('・')}</strong> が明細と一致しません。<br>
+          送金実行前に管理会社に電話で確認してください。
+        </div>
+      </div>
+    </div>`;
+  } else {
+    bannerHtml = `
+    <div class="summary-banner partial">
+      <div class="summary-icon">⚠️</div>
+      <div>
+        <div class="summary-title" style="color:var(--am)">一部読み取り不能</div>
+        <div class="summary-sub">
+          明細から読み取れない項目があります。手動で確認してください。
+        </div>
+      </div>
+    </div>`;
+  }
+
+  // AI読み取り情報
+  let scanInfoHtml = '';
+  if(result.clientName||result.propertyName){
+    scanInfoHtml = `
+    <div style="background:var(--cream2);border:1px solid var(--bd);border-radius:8px;
+      padding:10px 14px;margin-bottom:14px;font-size:11px">
+      <div style="font-size:9px;font-weight:700;color:var(--faint);margin-bottom:5px">明細から読み取れた情報</div>
+      ${result.propertyName?`<div>📍 物件名: <strong>${result.propertyName}</strong></div>`:''}
+      ${result.clientName?`<div>👤 クライアント名: <strong>${result.clientName}</strong></div>`:''}
+    </div>`;
+  }
+
+  // 列ヘッダー
+  const headerHtml = `
+  <div class="result-header">
+    <div class="result-header-cell">項目</div>
+    <div class="result-header-cell">AG入力値</div>
+    <div class="result-header-cell">明細読取値</div>
+    <div class="result-header-cell" style="text-align:center">判定</div>
+  </div>`;
+
+  // 各行
+  const rowsHtml = result.fields.map(f => {
+    const format = f.format || (v => v != null ? String(v) : null);
+    const agDisplay   = format(f.agVal) || '—';
+    const scanDisplay = f.isNull ? '（読み取れず）' : (format(f.scanVal) || '—');
+    const rowClass = f.match === true ? 'ok' : f.match === false ? 'ng' : 'loading';
+    const icon = f.match === true ? '✅' : f.match === false ? '🔴' : '—';
+
+    return `
+    <div class="result-row ${rowClass}">
+      <div class="result-cell result-label">${f.label}</div>
+      <div class="result-cell result-input-val">
+        <span style="font-family:'DM Mono',monospace;font-size:12px">${agDisplay}</span>
+      </div>
+      <div class="result-cell result-scan-val">
+        ${f.isNull
+          ? `<span style="color:var(--faint);font-style:italic">読み取れず</span>`
+          : `<span>${scanDisplay}</span>`}
+      </div>
+      <div class="result-cell result-status">${icon}</div>
+    </div>`;
+  }).join('');
+
+  // 信頼度
+  const confPct = Math.round((result.confidence||0)*100);
+  const confColor = confPct>=85?'var(--em)':confPct>=60?'var(--am)':'var(--rd)';
+  const confHtml = `
+  <div style="margin-top:14px;padding:10px 14px;background:var(--cream2);
+    border-radius:8px;display:flex;align-items:center;gap:12px">
+    <div style="font-size:10px;color:var(--muted);font-weight:600">AI読み取り信頼度</div>
+    <div style="flex:1;height:6px;background:var(--bd);border-radius:3px;overflow:hidden">
+      <div style="height:100%;border-radius:3px;width:${confPct}%;background:${confColor};transition:.8s"></div>
+    </div>
+    <div style="font-size:14px;font-weight:800;color:${confColor};font-variant-numeric:tabular-nums">
+      ${confPct}%</div>
+  </div>
+  ${result.notes?`<div style="margin-top:8px;font-size:10px;color:var(--am);
+    background:var(--am-bg);border-radius:7px;padding:8px 12px">⚠️ ${result.notes}</div>`:''}`;
+
+  // 再チェックボタン
+  const actionHtml = `
+  <div style="margin-top:14px;display:flex;gap:8px">
+    <button class="btn btn-ghost btn-sm" onclick="runCheck()">🔄 再照合</button>
+    ${result.hasNg
+      ? `<button class="btn btn-sm" style="background:var(--rd-bg);color:var(--rd);
+          border:1px solid rgba(220,38,38,.2)" onclick="showNgAlert()">
+          📞 管理会社確認メモを作成</button>`
+      : `<button class="btn btn-sm" style="background:var(--em-bg);color:var(--em);
+          border:1px solid rgba(5,150,105,.2)" onclick="showOkMemo()">
+          ✅ 確認完了メモを作成</button>`}
+  </div>`;
+
+  panel.innerHTML = bannerHtml + scanInfoHtml + headerHtml +
+    `<div class="result-grid">${rowsHtml}</div>` + confHtml + actionHtml;
+}
+
+// ══════════════════════════════════════════════════════════════
+// メモ生成
+// ══════════════════════════════════════════════════════════════
+function showNgAlert(){
+  const bank   = document.getElementById('in-bank').value;
+  const num    = document.getElementById('in-number').value;
+  const amount = document.getElementById('in-amount').value;
+  const caseNo = document.getElementById('in-case').value;
+  const msg = `【送金前確認が必要です】\n案件: ${caseNo||'—'}\n` +
+    `入力口座: ${bank} / ${num}\n送金予定: ¥${Number(amount).toLocaleString()}\n\n` +
+    `AIチェックで不一致が検出されました。送金前に管理会社に電話確認してください。`;
+  navigator.clipboard?.writeText(msg).then(()=>showToast('確認メモをコピーしました','info'));
+}
+function showOkMemo(){
+  const caseNo = document.getElementById('in-case').value;
+  const amount = document.getElementById('in-amount').value;
+  const now    = new Date().toLocaleString('ja-JP');
+  const msg = `【明細チェック完了】\n案件: ${caseNo||'—'}\n金額: ¥${Number(amount).toLocaleString()}\n` +
+    `確認日時: ${now}\nAI照合: 全項目一致 ✅`;
+  navigator.clipboard?.writeText(msg).then(()=>showToast('完了メモをコピーしました','success'));
+}
+
+// ══════════════════════════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════════════════════════
+function setStep(n){
+  for(let i=1;i<=4;i++){
+    const el = document.getElementById('step'+i);
+    el.classList.remove('active','done');
+    if(i<n) el.classList.add('done');
+    else if(i===n) el.classList.add('active');
+  }
+}
+
+function resetAll(){
+  uploadedFile=null; fileBase64=null; fileMime=null;
+  document.getElementById('upload-zone').classList.remove('has-file','drag');
+  document.getElementById('upload-icon').textContent='📄';
+  document.getElementById('upload-label').textContent='クリックまたはドラッグ＆ドロップ';
+  document.getElementById('upload-sub').textContent='JPG・PNG・HEIC・PDF 対応 / 写真でも可';
+  document.getElementById('preview-area').style.display='none';
+  document.getElementById('file-input').value='';
+  document.getElementById('result-panel').innerHTML=`
+    <div style="background:var(--cream2);border:1.5px dashed var(--bd2);
+      border-radius:12px;padding:48px;text-align:center;color:var(--faint)">
+      <div style="font-size:36px;margin-bottom:10px">🏦</div>
+      <div style="font-size:13px;font-weight:600;color:var(--muted)">入力と明細の照合結果がここに表示されます</div>
+      <div style="font-size:11px;margin-top:6px">左側の情報を入力して明細をアップロードしてください</div>
+    </div>`;
+  setStep(1);
+  document.getElementById('check-btn').disabled=true;
+}
+
+function showToast(msg, type='success'){
+  const t=document.getElementById('toast');
+  const c={success:'#059669',error:'#DC2626',info:'#0284C7'};
+  t.style.background=c[type]||c.success; t.style.color='#fff';
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3200);
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  ['in-bank','in-branch','in-number','in-holder','in-amount'].forEach(id=>{
+    document.getElementById(id)?.addEventListener('input', updateCheckBtn);
+  });
+});
+</script>
+</body>
+</html>
