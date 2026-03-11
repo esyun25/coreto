@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>COREBLDG — IT重説 予約受付</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600&family=Outfit:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0D1A2D;--navy-m:#152238;--gold:#C8A951;--gold-dim:rgba(200,169,81,.15);
+  --ink:#202124;--muted:#5F6368;--faint:#80868B;
+  --em:#059669;--em-bg:#ECFDF5;--am:#D97706;--am-bg:#FFFBEB;
+  --rd:#DC2626;--rd-bg:#FEF2F2;--sk:#0284C7;--sk-bg:#F0F9FF;
+  --vt:#7C3AED;--vt-bg:#F5F3FF;
+  --cream:#FFFFFF;--cream2:#F8F9FA;--bd:#E8EAED;--bd2:#DADCE0;--sw:240px;
+  --sh:0 1px 2px rgba(60,64,67,.1),0 1px 3px rgba(60,64,67,.06);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:var(--cream2)}
+.shell{display:flex;height:100vh}
+.sb{width:var(--sw);background:var(--navy);display:flex;flex-direction:column;flex-shrink:0;position:relative}
+.sb::after{content:'';position:absolute;top:0;right:0;width:1px;height:100%;background:linear-gradient(180deg,rgba(200,169,81,.25) 0%,rgba(200,169,81,.06) 50%,transparent 100%)}
+.sb-head{padding:24px 20px 18px;border-bottom:1px solid rgba(255,255,255,.06)}
+.sb-logo{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;letter-spacing:5px;color:var(--gold)}
+.sb-ver{font-size:9px;letter-spacing:2px;color:rgba(200,169,81,.3);font-family:'DM Mono',monospace;margin-top:2px}
+.sb-nav{flex:1;overflow-y:auto;padding:12px 10px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:8px;cursor:pointer;
+  font-size:12px;font-weight:500;color:rgba(255,255,255,.55);transition:.15s;text-decoration:none;margin-bottom:2px}
+.nav-item:hover{background:rgba(255,255,255,.06);color:rgba(255,255,255,.85)}
+.nav-item.active{background:var(--gold-dim);color:var(--gold)}
+.nav-sec{font-size:9px;font-weight:700;letter-spacing:1.5px;color:rgba(255,255,255,.2);padding:14px 11px 5px;text-transform:uppercase}
+.sb-foot{padding:14px 12px;border-top:1px solid rgba(255,255,255,.06)}
+.sb-user{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:9px 11px;display:flex;align-items:center;gap:9px}
+.sb-av{width:28px;height:28px;border-radius:50%;background:var(--gold-dim);border:1px solid rgba(200,169,81,.25);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--gold);flex-shrink:0}
+.sb-uname{font-size:11px;font-weight:600;color:rgba(255,255,255,.8)}
+.sb-urole{font-size:9px;color:rgba(255,255,255,.3);font-family:'DM Mono',monospace}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.top-bar{background:#fff;border-bottom:1px solid var(--bd);padding:0 28px;height:52px;
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.top-title{font-size:15px;font-weight:700;color:var(--navy)}
+.top-sub{font-size:10px;color:var(--muted);margin-top:1px}
+.content{flex:1;overflow-y:auto;padding:24px 28px}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.card{background:#fff;border:1px solid var(--bd);border-radius:12px;box-shadow:var(--sh);margin-bottom:18px;overflow:hidden}
+.card-head{padding:14px 18px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between}
+.card-title{font-size:13px;font-weight:700;color:var(--navy)}
+.card-body{padding:18px}
+.form-group{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.form-label{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.4px}
+.form-input{padding:9px 11px;border:1.5px solid var(--bd2);border-radius:8px;
+  font-size:13px;font-family:'Outfit',sans-serif;color:var(--ink);transition:.15s;background:#fff}
+.form-input:focus{outline:none;border-color:var(--navy);box-shadow:0 0 0 3px rgba(13,26,45,.06)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:8px;
+  font-size:12px;font-weight:700;font-family:'Outfit',sans-serif;cursor:pointer;
+  border:none;transition:.15s}
+.btn-navy{background:var(--navy);color:var(--gold)}
+.btn-navy:hover{background:var(--navy-m)}
+.btn-navy:disabled{opacity:.4;cursor:not-allowed}
+.btn-ghost{background:transparent;color:var(--muted);border:1.5px solid var(--bd2)}
+.btn-ghost:hover{border-color:var(--navy);color:var(--navy)}
+.btn-sm{padding:6px 13px;font-size:11px}
+.btn-em{background:var(--em-bg);color:var(--em);border:1px solid rgba(5,150,105,.2)}
+.btn-em:hover{background:#d1fae5}
+
+/* スロットカード */
+.slot-card{border:1.5px solid var(--bd);border-radius:10px;padding:12px 14px;cursor:pointer;
+  transition:.15s;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
+.slot-card:hover{border-color:var(--navy);background:#F0F4FF}
+.slot-card.selected{border-color:var(--navy);background:var(--sk-bg);box-shadow:0 0 0 3px rgba(2,132,199,.1)}
+.slot-date{font-size:13px;font-weight:700;color:var(--navy)}
+.slot-time{font-size:11px;color:var(--muted);margin-top:1px}
+.slot-takk{font-size:10px;color:var(--faint);margin-top:3px}
+
+/* 予約一覧行 */
+.bk-row{display:grid;grid-template-columns:90px 120px 1fr 100px 80px;
+  align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--bd);
+  font-size:12px;transition:.12s}
+.bk-row:last-child{border-bottom:none}
+.bk-row:hover{background:var(--cream2)}
+.bk-row.header{background:var(--cream2);font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.4px;padding:8px 14px}
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700}
+.badge-confirmed{background:var(--em-bg);color:var(--em)}
+.badge-pending{background:var(--am-bg);color:var(--am)}
+.badge-unmatched{background:var(--rd-bg);color:var(--rd)}
+.req-pill{display:inline-flex;padding:2px 8px;background:var(--sk-bg);color:var(--sk);
+  border-radius:12px;font-size:10px;margin:2px 3px 2px 0}
+
+/* タブ */
+.tab-bar{display:flex;border-bottom:2px solid var(--bd);margin-bottom:18px}
+.tab{padding:9px 18px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;
+  border-bottom:2px solid transparent;margin-bottom:-2px;transition:.15s}
+.tab.active{color:var(--navy);border-bottom-color:var(--navy)}
+
+.toast{position:fixed;bottom:24px;right:24px;background:var(--navy);color:#fff;
+  padding:11px 18px;border-radius:9px;font-size:12px;font-weight:600;
+  box-shadow:0 4px 20px rgba(0,0,0,.2);opacity:0;transition:.3s;z-index:999;pointer-events:none}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div class="shell">
+<div class="sb">
+  <div class="sb-head"><div class="sb-logo">CORETO</div><div class="sb-ver">COREBLDG v2</div></div>
+  <div class="sb-nav">
+    <div class="nav-sec">IT重説</div>
+    <a class="nav-item" href="coreto-itsetsu-schedule-v2.html">📅 シフト登録</a>
+    <a class="nav-item active" href="coreto-itsetsu-booking-v2.html">📋 予約受付</a>
+    <a class="nav-item" href="coreto-itsetsu-v2.html">🔑 IT重説チェック</a>
+    <div class="nav-sec">メニュー</div>
+    <a class="nav-item" href="coreto-hub-v2.html">🏠 ホーム</a>
+  </div>
+  <div class="sb-foot">
+    <div class="sb-user">
+      <div class="sb-av">木</div>
+      <div><div class="sb-uname">木下 大輔</div><div class="sb-urole">AG-10001</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="top-bar">
+    <div>
+      <div class="top-title">📋 IT重説 予約受付</div>
+      <div class="top-sub">クライアントの希望日程を選択・リクエスト送信してください</div>
+    </div>
+    <button class="btn btn-navy" onclick="showTab('new')">＋ 新規予約</button>
+  </div>
+  <div class="content">
+
+    <!-- タブ -->
+    <div class="tab-bar">
+      <div class="tab active" id="tab-list" onclick="showTab('list')">予約一覧</div>
+      <div class="tab" id="tab-new"  onclick="showTab('new')">新規予約</div>
+    </div>
+
+    <!-- 予約一覧 -->
+    <div id="view-list">
+      <div class="card">
+        <div class="card-head"><div class="card-title">予約・リクエスト一覧</div></div>
+        <div class="bk-row header">
+          <span>案件ID</span><span>クライアント</span><span>日程</span>
+          <span>ステータス</span><span>担当宅建士</span>
+        </div>
+        <div id="bk-list"></div>
+      </div>
+    </div>
+
+    <!-- 新規予約フォーム -->
+    <div id="view-new" style="display:none">
+      <div class="two-col">
+
+        <!-- 左: 案件・クライアント -->
+        <div>
+          <div class="card">
+            <div class="card-head"><div class="card-title">① 案件・クライアント情報</div></div>
+            <div class="card-body">
+              <div class="form-group">
+                <label class="form-label">案件ID</label>
+                <input id="bk-case-id" class="form-input" placeholder="RC-10042" oninput="lookupCase()">
+              </div>
+              <div id="case-info-box" style="display:none;background:var(--sk-bg);border:1px solid var(--bd);
+                border-radius:8px;padding:11px 13px;font-size:12px;margin-top:4px">
+                <div id="case-info-text"></div>
+              </div>
+              <div class="form-group" style="margin-top:12px">
+                <label class="form-label">担当AG</label>
+                <input id="bk-ag" class="form-input" placeholder="木下 大輔">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 右: 日程選択 -->
+        <div>
+          <div class="card">
+            <div class="card-head"><div class="card-title">② 日程選択</div></div>
+            <div class="card-body">
+              <div class="tab-bar" style="margin-bottom:14px">
+                <div class="tab active" id="btab-slots" onclick="switchBookTab('slots')">空き枠から選ぶ</div>
+                <div class="tab" id="btab-req" onclick="switchBookTab('req')">希望日時をリクエスト</div>
+              </div>
+
+              <!-- 空き枠一覧 -->
+              <div id="btab-slots-view">
+                <div style="font-size:10px;color:var(--muted);margin-bottom:10px">
+                  登録済みの空き枠から選択してください
+                </div>
+                <div id="avail-slots"></div>
+                <div id="selected-slot-info" style="display:none;margin-top:10px;
+                  background:var(--em-bg);border:1px solid rgba(5,150,105,.2);border-radius:8px;
+                  padding:10px 13px;font-size:12px;color:var(--em)"></div>
+              </div>
+
+              <!-- リクエスト -->
+              <div id="btab-req-view" style="display:none">
+                <div style="font-size:10px;color:var(--muted);margin-bottom:10px">
+                  希望日時を最大3件入力してください（48時間以内に確定）
+                </div>
+                <div id="req-slots">
+                  <div class="req-row" id="req-0" style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-bottom:8px">
+                    <input type="date" class="form-input req-date" style="font-size:12px">
+                    <input type="time" class="form-input req-time" style="font-size:12px" value="10:00">
+                    <button class="btn btn-ghost btn-sm" onclick="removeReq(0)" style="padding:0 10px">✕</button>
+                  </div>
+                </div>
+                <button class="btn btn-ghost btn-sm" onclick="addReqRow()" style="margin-top:4px">
+                  ＋ 希望日時を追加
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <button class="btn btn-navy" id="submit-btn" style="width:100%;justify-content:center" onclick="submitBooking()">
+            予約を送信する
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+const LS_SLOTS='ITSETSU_SLOTS', LS_BOOKINGS='ITSETSU_BOOKINGS';
+const CASE_DB_LOCAL=[
+  {caseId:'RC-10042',caseName:'田中 一郎',postal:'150-0001',address:'東京都渋谷区神宮前1-1-1',building:'代々木アパート 201号室',agent:'木下 大輔'},
+  {caseId:'RC-10047',caseName:'鈴木 花子',postal:'160-0023',address:'東京都新宿区西新宿2-5-10',building:'西新宿マンション 805号室',agent:'大橋 幸代'},
+  {caseId:'RC-10039',caseName:'高橋 誠',postal:'108-0023',address:'東京都港区芝浦3-4-1',building:'芝浦マンション 1203号室',agent:'木下 大輔'},
+  {caseId:'RC-10051',caseName:'伊藤 健司',postal:'141-0031',address:'東京都品川区西五反田2-11-8',building:'大崎アパート 302号室',agent:'木下 大輔'},
+  {caseId:'RC-10033',caseName:'山田 美穂',postal:'153-0051',address:'東京都目黒区上目黒3-6-18',building:'中目黒マンション 501号室',agent:'大橋 幸代'},
+];
+
+function lsGet(k){try{return JSON.parse(localStorage.getItem(k)||'null');}catch(e){return null;}}
+function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+function getSlots(){return lsGet(LS_SLOTS)||[];}
+function getBookings(){return lsGet(LS_BOOKINGS)||initDemoBookings();}
+function saveBookings(v){lsSet(LS_BOOKINGS,v);}
+
+function initDemoBookings(){
+  const b=[
+    {id:'BK-001',caseId:'RC-10042',caseName:'田中 一郎',agName:'木下 大輔',
+     status:'confirmed',slotId:'SL-004',takkId:'TK-002',takkName:'佐々木 美穂',
+     date:'2026-03-18',start:'10:00',end:'11:00',meetUrl:'https://meet.google.com/xxx-yyyy-zzz',createdAt:'2026-03-10 14:22'},
+    {id:'BK-002',caseId:'RC-10047',caseName:'鈴木 花子',agName:'大橋 幸代',
+     status:'pending',slotId:null,takkId:null,takkName:null,
+     requests:[{date:'2026-03-17',start:'13:00'},{date:'2026-03-18',start:'15:00'},{date:'2026-03-19',start:'10:00'}],
+     createdAt:'2026-03-10 16:05'},
+    {id:'BK-003',caseId:'RC-10039',caseName:'高橋 誠',agName:'木下 大輔',
+     status:'unmatched',slotId:null,takkId:null,takkName:null,
+     requests:[{date:'2026-03-15',start:'09:00'},{date:'2026-03-16',start:'18:00'}],
+     createdAt:'2026-03-09 11:30'},
+  ];
+  saveBookings(b); return b;
+}
+
+function fmtDate(d){
+  const dt=new Date(d+'T00:00:00');
+  return `${dt.getMonth()+1}/${dt.getDate()}（${'日月火水木金土'[dt.getDay()]}）`;
+}
+
+const STATUS_MAP={
+  confirmed:{label:'確定',cls:'confirmed'},
+  pending:  {label:'照合中',cls:'pending'},
+  unmatched:{label:'未マッチ',cls:'unmatched'},
+};
+
+let currentTab='list', bookTab='slots', selectedSlotId=null, reqCount=1;
+
+function showTab(t){
+  currentTab=t;
+  document.getElementById('view-list').style.display = t==='list'?'block':'none';
+  document.getElementById('view-new').style.display  = t==='new' ?'block':'none';
+  document.getElementById('tab-list').className = 'tab'+(t==='list'?' active':'');
+  document.getElementById('tab-new').className  = 'tab'+(t==='new' ?' active':'');
+  if(t==='list') renderBookings();
+  if(t==='new')  renderAvailSlots();
+}
+
+function renderBookings(){
+  const bks = getBookings().sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
+  const el = document.getElementById('bk-list');
+  if(!bks.length){
+    el.innerHTML='<div style="padding:28px;text-align:center;font-size:12px;color:var(--faint)">予約がありません</div>';
+    return;
+  }
+  el.innerHTML = bks.map(b=>{
+    const sm = STATUS_MAP[b.status]||{label:b.status,cls:'pending'};
+    const dateInfo = b.status==='confirmed'
+      ? `${fmtDate(b.date)} ${b.start}`
+      : b.requests
+        ? b.requests.map(r=>`<span class="req-pill">${fmtDate(r.date)} ${r.start}</span>`).join('')
+        : '—';
+    return `<div class="bk-row">
+      <span style="font-family:'DM Mono',monospace;font-size:10px">${b.caseId}</span>
+      <span style="font-weight:600">${b.caseName}</span>
+      <span>${dateInfo}</span>
+      <span><span class="badge badge-${sm.cls}">${sm.label}</span></span>
+      <span style="font-size:11px;color:var(--muted)">${b.takkName||'—'}</span>
+    </div>`;
+  }).join('');
+}
+
+function lookupCase(){
+  const id = document.getElementById('bk-case-id').value.trim().toUpperCase();
+  const cas = CASE_DB_LOCAL.find(c=>c.caseId===id);
+  const box = document.getElementById('case-info-box');
+  const txt = document.getElementById('case-info-text');
+  if(cas){
+    box.style.display='block';
+    txt.innerHTML=`<strong>${cas.caseName}</strong> 様　<span style="color:var(--muted);font-size:11px">${cas.address} ${cas.building}</span>`;
+    document.getElementById('bk-ag').value = cas.agent;
+  } else {
+    box.style.display='none';
+  }
+}
+
+function renderAvailSlots(){
+  const slots = getSlots().filter(s=>s.status==='open')
+    .sort((a,b)=>a.date.localeCompare(b.date)||a.start.localeCompare(b.start));
+  const el = document.getElementById('avail-slots');
+  if(!slots.length){
+    el.innerHTML='<div style="padding:20px;text-align:center;font-size:12px;color:var(--faint)">空き枠がありません。シフト登録ページで追加してください。</div>';
+    return;
+  }
+  el.innerHTML = slots.map(s=>`
+    <div class="slot-card${selectedSlotId===s.id?' selected':''}" onclick="selectSlot('${s.id}')">
+      <div>
+        <div class="slot-date">${fmtDate(s.date)} ${s.start}〜${s.end}</div>
+        <div class="slot-takk">担当: ${s.takkName}</div>
+      </div>
+      <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--faint)">${s.id}</div>
+    </div>`).join('');
+}
+
+function selectSlot(id){
+  selectedSlotId = selectedSlotId===id ? null : id;
+  renderAvailSlots();
+  const slots = getSlots();
+  const s = slots.find(sl=>sl.id===id);
+  const info = document.getElementById('selected-slot-info');
+  if(selectedSlotId && s){
+    info.style.display='block';
+    info.innerHTML=`✅ <strong>${fmtDate(s.date)} ${s.start}〜${s.end}</strong> (${s.takkName}) を選択中`;
+  } else {
+    info.style.display='none';
+  }
+}
+
+function switchBookTab(t){
+  bookTab=t;
+  document.getElementById('btab-slots-view').style.display = t==='slots'?'block':'none';
+  document.getElementById('btab-req-view').style.display   = t==='req'  ?'block':'none';
+  document.getElementById('btab-slots').className = 'tab'+(t==='slots'?' active':'');
+  document.getElementById('btab-req').className   = 'tab'+(t==='req'  ?' active':'');
+  if(t==='slots') renderAvailSlots();
+}
+
+function addReqRow(){
+  if(reqCount>=3){showToast('希望日時は最大3件です','warn');return;}
+  const container = document.getElementById('req-slots');
+  const div = document.createElement('div');
+  div.id='req-'+reqCount;
+  div.style.cssText='display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-bottom:8px';
+  const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate()+1);
+  div.innerHTML=`
+    <input type="date" class="form-input req-date" style="font-size:12px" value="${tomorrow.toISOString().slice(0,10)}">
+    <input type="time" class="form-input req-time" style="font-size:12px" value="10:00">
+    <button class="btn btn-ghost btn-sm" onclick="removeReq(${reqCount})" style="padding:0 10px">✕</button>`;
+  container.appendChild(div);
+  reqCount++;
+}
+
+function removeReq(i){
+  const el=document.getElementById('req-'+i);
+  if(el) el.remove();
+}
+
+function submitBooking(){
+  const caseId = document.getElementById('bk-case-id').value.trim().toUpperCase();
+  const agName = document.getElementById('bk-ag').value.trim();
+  if(!caseId){showToast('案件IDを入力してください','warn');return;}
+  const cas = CASE_DB_LOCAL.find(c=>c.caseId===caseId)||{caseName:'不明'};
+  const bookings = getBookings();
+  const id = 'BK-'+Date.now().toString().slice(-5);
+  const now = new Date().toLocaleString('ja-JP').slice(0,-3);
+
+  if(bookTab==='slots'){
+    if(!selectedSlotId){showToast('空き枠を選択してください','warn');return;}
+    const slots = getSlots();
+    const slot = slots.find(s=>s.id===selectedSlotId);
+    if(!slot){showToast('スロットが見つかりません','err');return;}
+    // スロットをbooked化
+    slot.status='booked'; slot.bookingId=id;
+    lsSet(LS_SLOTS, slots);
+    bookings.push({
+      id, caseId, caseName:cas.caseName, agName,
+      status:'confirmed', slotId:slot.id, takkId:slot.takkId, takkName:slot.takkName,
+      date:slot.date, start:slot.start, end:slot.end,
+      meetUrl:'（Google Meet URL は担当宅建士より送付されます）',
+      createdAt:now,
+    });
+    saveBookings(bookings);
+    showToast(`✅ ${fmtDate(slot.date)} ${slot.start} 予約確定！`);
+  } else {
+    const rows = document.querySelectorAll('.req-row,#req-slots > div');
+    const requests=[];
+    rows.forEach(r=>{
+      const d=r.querySelector('.req-date')?.value;
+      const t=r.querySelector('.req-time')?.value;
+      if(d&&t) requests.push({date:d,start:t});
+    });
+    if(!requests.length){showToast('希望日時を1件以上入力してください','warn');return;}
+    bookings.push({
+      id, caseId, caseName:cas.caseName, agName,
+      status:'pending', slotId:null, takkId:null, takkName:null,
+      requests, createdAt:now,
+    });
+    saveBookings(bookings);
+    // 自動マッチング試行
+    const matched = tryAutoMatch(id);
+    showToast(matched
+      ? `✅ 自動マッチング成立！${fmtDate(matched.date)} ${matched.start}`
+      : '📋 リクエスト送信。48時間以内に確定します。');
+  }
+  selectedSlotId=null;
+  document.getElementById('bk-case-id').value='';
+  document.getElementById('case-info-box').style.display='none';
+  setTimeout(()=>showTab('list'),1500);
+}
+
+function tryAutoMatch(bookingId){
+  const bookings=getBookings();
+  const bk=bookings.find(b=>b.id===bookingId);
+  if(!bk||bk.status!=='pending') return null;
+  const slots=getSlots().filter(s=>s.status==='open');
+  for(const req of bk.requests){
+    const match=slots.find(s=>s.date===req.date && s.start===req.start);
+    if(match){
+      match.status='booked'; match.bookingId=bookingId;
+      bk.status='confirmed'; bk.slotId=match.id;
+      bk.takkId=match.takkId; bk.takkName=match.takkName;
+      bk.date=match.date; bk.start=match.start; bk.end=match.end;
+      bk.meetUrl='（Google Meet URL は担当宅建士より送付されます）';
+      lsSet(LS_SLOTS,slots); saveBookings(bookings);
+      return match;
+    }
+  }
+  return null;
+}
+
+function showToast(msg,type){
+  const el=document.getElementById('toast');
+  el.textContent=msg;
+  el.style.background=type==='warn'?'#D97706':type==='err'?'#DC2626':'#0D1A2D';
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),3500);
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  renderBookings();
+  const tomorrow=new Date(); tomorrow.setDate(tomorrow.getDate()+1);
+  document.querySelector('.req-date').value=tomorrow.toISOString().slice(0,10);
+});
+</script>
+</body>
+</html>
