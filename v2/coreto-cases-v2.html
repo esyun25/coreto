@@ -703,13 +703,12 @@ window.addEventListener('DOMContentLoaded', function() {
               border:1px solid #E8EAED;object-fit:contain">
           </div>
 
-          <button id="inv-check-btn" onclick="invRunCheck()"
-            style="width:100%;margin-top:14px;padding:11px;background:#0D1A2D;color:#C8A951;
-              border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;
-              font-family:'Outfit',sans-serif;display:flex;align-items:center;
-              justify-content:center;gap:8px;opacity:.4;pointer-events:none">
-            ⏳ 口座情報・金額・明細が揃うと自動照合します
-          </button>
+          <!-- ボタンなし: アップロード完了時に自動照合 -->
+          <div id="inv-status-bar" style="margin-top:14px;padding:10px 13px;
+            border-radius:8px;background:#F8F9FA;border:1px solid #E8EAED;
+            font-size:11px;color:#5F6368;text-align:center">
+            ⏳ 口座情報・金額・明細が揃うと自動で照合します
+          </div>
         </div>
 
         <!-- 右: 照合結果 -->
@@ -783,16 +782,27 @@ function closeInvoiceModal(){
 }
 
 function invUpdateBtn(){
-  const hasFields = document.getElementById('inv-bank')?.value &&
-                    document.getElementById('inv-number')?.value &&
-                    document.getElementById('inv-amount')?.value;
+  const hasFields = !!(document.getElementById('inv-bank')?.value &&
+                       document.getElementById('inv-number')?.value &&
+                       document.getElementById('inv-amount')?.value);
   const hasFile   = !!_invBase64;
-  const btn = document.getElementById('inv-check-btn');
-  btn.style.opacity       = (hasFields && hasFile) ? '1' : '.4';
-  btn.style.pointerEvents = (hasFields && hasFile) ? 'auto' : 'none';
-
+  const bar = document.getElementById('inv-status-bar');
+  if(bar){
+    if(hasFields && hasFile){
+      bar.textContent = '🤖 照合を開始しています...';
+      bar.style.background='rgba(13,26,45,.06)';
+      bar.style.color='#0D1A2D';
+    } else if(hasFile && !hasFields){
+      bar.textContent = '📝 口座情報と送金金額を入力してください';
+    } else if(hasFields && !hasFile){
+      bar.textContent = '📄 管理会社の明細をアップロードしてください';
+    } else {
+      bar.textContent = '⏳ 口座情報・金額・明細が揃うと自動で照合します';
+      bar.style.background='#F8F9FA'; bar.style.color='#5F6368';
+    }
+  }
   // 条件が揃ったら自動実行
-  if(hasFields && hasFile && !_invRunning) {
+  if(hasFields && hasFile && !_invRunning){
     invRunCheck();
   }
 }
@@ -837,9 +847,9 @@ async function invRunCheck(){
     amount: parseInt(document.getElementById('inv-amount').value)||0,
   };
 
-  const btn = document.getElementById('inv-check-btn');
-  btn.textContent = '🤖 照合中... しばらくお待ちください';
-  btn.style.opacity='.7'; btn.style.pointerEvents='none';
+  const bar = document.getElementById('inv-status-bar');
+  if(bar){ bar.textContent='🤖 照合中... しばらくお待ちください';
+    bar.style.background='rgba(13,26,45,.06)'; bar.style.color='#0D1A2D'; }
 
   document.getElementById('inv-result-panel').innerHTML = `
     <div style="background:linear-gradient(135deg,#0D1A2D,#1E3252);border-radius:10px;
@@ -874,12 +884,24 @@ async function invRunCheck(){
       invSlackAlert(_invCaseId, agInput, result);
     }
   } catch(e){
+    const errBar = document.getElementById('inv-status-bar');
+    if(errBar){ errBar.textContent='❌ 照合に失敗しました。再度アップロードしてください';
+      errBar.style.background='#FEF2F2'; errBar.style.color='#DC2626'; }
     document.getElementById('inv-result-panel').innerHTML =
-      `<div style="color:#DC2626;font-size:12px;padding:16px">
-        ❌ AI照合失敗: ${e.message}</div>`;
+      `<div style="background:#FEF2F2;border:1.5px solid rgba(220,38,38,.2);
+        border-radius:10px;padding:24px;text-align:center">
+        <div style="font-size:24px;margin-bottom:8px">❌</div>
+        <div style="font-size:12px;font-weight:700;color:#DC2626">照合に失敗しました</div>
+        <div style="font-size:10px;color:#5F6368;margin-top:4px">
+          ファイルを確認して再度アップロードしてください</div>
+      </div>`;
   }
-  btn.textContent = '🔄 再照合する';
-  btn.style.opacity='1'; btn.style.pointerEvents='auto';
+  // AG側には完了メッセージのみ表示（結果詳細はHQへ）
+  if(bar){ bar.textContent = result.hasNg
+    ? '⚠️ アップロード完了 — 不一致を検出しました。HQが確認します。'
+    : '✅ アップロード完了 — 照合問題なし';
+    bar.style.background = result.hasNg ? '#FEF2F2' : '#ECFDF5';
+    bar.style.color      = result.hasNg ? '#DC2626'  : '#059669'; }
   _invRunning = false;
 }
 
@@ -1004,26 +1026,24 @@ function invRenderResult(result, ag){
   const conf = Math.round((result.confidence||0)*100);
   const confColor = conf>=85?'#059669':conf>=60?'#D97706':'#DC2626';
 
-  document.getElementById('inv-result-panel').innerHTML = banner +
-    `<table style="width:100%;border-collapse:collapse;border:1px solid #E8EAED;border-radius:8px;overflow:hidden;margin-bottom:10px">
-      <thead><tr style="background:#F8F9FA">
-        <th style="padding:7px 10px;font-size:9px;font-weight:700;color:#80868B;text-align:left;border-bottom:1px solid #E8EAED">項目</th>
-        <th style="padding:7px 10px;font-size:9px;font-weight:700;color:#80868B;text-align:left;border-bottom:1px solid #E8EAED">AG入力</th>
-        <th style="padding:7px 10px;font-size:9px;font-weight:700;color:#80868B;text-align:left;border-bottom:1px solid #E8EAED">明細読取</th>
-        <th style="padding:7px 10px;font-size:9px;font-weight:700;color:#80868B;text-align:center;border-bottom:1px solid #E8EAED">判定</th>
-      </tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
-    <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;
-      background:#F8F9FA;border-radius:7px">
-      <div style="font-size:9px;color:#5F6368;font-weight:600">AI読取信頼度</div>
-      <div style="flex:1;height:5px;background:#E8EAED;border-radius:3px;overflow:hidden">
-        <div style="height:100%;width:${conf}%;background:${confColor};border-radius:3px"></div>
-      </div>
-      <div style="font-size:12px;font-weight:800;color:${confColor}">${conf}%</div>
-    </div>
-    ${result.notes?`<div style="margin-top:8px;font-size:10px;color:#D97706;
-      background:#FFFBEB;border-radius:7px;padding:7px 10px">⚠️ ${result.notes}</div>`:''}`;
+  // AG側には結果詳細を表示しない（HQのみ確認）
+  document.getElementById('inv-result-panel').innerHTML = result.hasNg
+    ? `<div style="background:#FEF2F2;border:1.5px solid rgba(220,38,38,.2);
+        border-radius:10px;padding:28px;text-align:center">
+        <div style="font-size:32px;margin-bottom:10px">⚠️</div>
+        <div style="font-size:13px;font-weight:800;color:#DC2626;margin-bottom:6px">
+          アップロード完了</div>
+        <div style="font-size:11px;color:#5F6368;line-height:1.7">
+          HQが内容を確認します。<br>確認が取れるまで送金を保留してください。</div>
+      </div>`
+    : `<div style="background:#ECFDF5;border:1.5px solid rgba(5,150,105,.2);
+        border-radius:10px;padding:28px;text-align:center">
+        <div style="font-size:32px;margin-bottom:10px">✅</div>
+        <div style="font-size:13px;font-weight:800;color:#059669;margin-bottom:6px">
+          アップロード完了</div>
+        <div style="font-size:11px;color:#5F6368;line-height:1.7">
+          明細を受け付けました。<br>送金処理を進めてください。</div>
+      </div>`;
 }
 
 // ── Slack通知シミュレーション ──────────────────────────────
