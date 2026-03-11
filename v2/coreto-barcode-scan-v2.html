@@ -1375,32 +1375,186 @@ function printFlowA(docId){
   ]);
 }
 
+// ── ラベル共通HTML生成（80×115mm ロールラベルプリンター用）──────
+function buildLabelHtml(labels){
+  // labels = [{type, tag, tagCss, toSection, fromSection, bcCode, caseCorner}]
+  const labelCss = `
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Hiragino Kaku Gothic Pro','Noto Sans JP',sans-serif;background:#e5e7eb}
+    @page{size:80mm 115mm;margin:2mm}
+    @media print{
+      body{background:#fff}
+      .no-print{display:none!important}
+      .label{width:80mm;height:115mm;padding:0;margin:0;page-break-after:always;box-shadow:none;border:none}
+      .label:last-of-type{page-break-after:auto}
+    }
+    .preview-bar{background:#0D1A2D;color:#C8A951;padding:10px 16px;font-size:11px;font-weight:700;
+      display:flex;justify-content:space-between;align-items:center}
+    .preview-note{font-size:10px;color:rgba(255,255,255,.55);font-weight:400}
+    .label{width:80mm;height:115mm;background:#fff;margin:12px auto;padding:3mm 4mm;
+      box-shadow:0 2px 10px rgba(0,0,0,.18);display:flex;flex-direction:column;
+      position:relative;overflow:hidden}
+    .label::before{content:'';position:absolute;top:0;left:0;right:0;height:3mm}
+    .tag{font-size:6.5px;font-weight:700;letter-spacing:.4px;padding:1.5px 6px;border-radius:2px;
+      display:inline-block;margin-top:3.5mm;margin-bottom:2.5mm}
+    .sec-lbl{font-size:6px;font-weight:700;color:#9ca3af;letter-spacing:.6px;margin-bottom:1.5mm}
+    .postal{font-size:12px;font-weight:700;color:#111827;letter-spacing:2.5px;margin-bottom:1mm}
+    .addr{font-size:8px;color:#374151;line-height:1.55;margin-bottom:.8mm}
+    .to-name{font-size:15px;font-weight:800;color:#0D1A2D;line-height:1.25;margin-top:1.5mm}
+    .sub-name{font-size:9px;font-weight:500;color:#374151;margin-top:.5mm}
+    .div-line{border:none;border-top:1px dashed #d1d5db;margin:2.5mm 0;flex-shrink:0}
+    .from-name{font-size:9px;font-weight:700;color:#374151;line-height:1.5}
+    .from-addr{font-size:7.5px;color:#6b7280;line-height:1.55}
+    .bc-row{flex:1;display:flex;align-items:flex-end;justify-content:flex-end;padding-bottom:1mm}
+    .bc-inner{text-align:right}
+    .bc-id{font-family:monospace;font-size:7px;color:#9ca3af;margin-top:.5mm}
+  `;
+  const labelsHtml = labels.map((lb, i) => `
+    <div class="label" style="--bar:${lb.barColor}">
+      <style>.label:nth-child(${i+1})::before{background:${lb.barColor}}</style>
+      <span class="tag" style="${lb.tagCss}">${lb.tag}</span>
+      <div>
+        <div class="sec-lbl">お届け先</div>
+        ${lb.toSection}
+      </div>
+      <hr class="div-line">
+      <div>
+        <div class="sec-lbl">${lb.fromLabel || 'ご依頼主'}</div>
+        ${lb.fromSection}
+      </div>
+      <div class="bc-row"><div class="bc-inner">
+        <svg id="bc-svg-${i}"></svg>
+        <div class="bc-id">${lb.bcCode}</div>
+      </div></div>
+    </div>`).join('');
+
+  const bcScript = labels.map((lb, i) =>
+    `try{JsBarcode('#bc-svg-${i}','${lb.bcCode}',{format:'CODE128',width:1.3,height:28,displayValue:false,margin:2,lineColor:'#374151',background:'#ffffff'});}catch(e){}`
+  ).join('\n  ');
+
+  return `<!DOCTYPE html><html lang="ja"><head>
+<meta charset="UTF-8"><title>ラベル印刷</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"><\/script>
+<style>${labelCss}</style></head><body>
+<div class="no-print preview-bar">
+  <span>🖨️ ラベル印刷（${labels.length}枚）</span>
+  <span class="preview-note">80mm × 115mm ／ ロールラベルプリンター</span>
+</div>
+${labelsHtml}
+<div class="no-print" style="text-align:center;padding:14px;background:#e5e7eb;border-top:1px solid #d1d5db">
+  <div style="font-size:10px;color:#6b7280;margin-bottom:8px;line-height:1.7">
+    ⚠️ ラベルプリンターを選択して印刷してください<br>
+    用紙サイズ: <strong>80mm × 115mm</strong>（ロールラベル）
+  </div>
+  <button onclick="window.print()"
+    style="padding:9px 24px;background:#5b21b6;color:#fff;border:none;border-radius:7px;
+    font-size:13px;font-weight:700;cursor:pointer;margin-right:8px">
+    🏷️ ラベル印刷（${labels.length}枚）
+  </button>
+  <button onclick="window.close()"
+    style="padding:9px 16px;background:#E8EAED;color:#374151;border:none;border-radius:7px;font-size:13px;cursor:pointer">閉じる</button>
+</div>
+<script>window.addEventListener('load',function(){ ${bcScript} });<\/script>
+</body></html>`;
+}
+
+function openLabelWindow(html){
+  const w = window.open('','_blank','width=480,height=760');
+  w.document.write(html);
+  w.document.close();
+  return w;
+}
+
+// ── Bフロー: クライアント → 管理会社 ラベル（1枚）─────────────
 function printFlowB(docId){
   const doc = DOCS.find(d=>d.id===docId);
   if (!doc) return;
+  const cas = CASE_DB.find(c=>c.caseId===doc.caseId) || {};
   const bc = 'MGT-' + Date.now().toString().slice(-8);
-  openBcModal('🖨️ B: 管理会社ラベル印刷', docId, [
-    {label:'管理会社行ラベル', desc:`${doc.caseName} ／ 管理会社宛`, code:bc},
-  ]);
+  doc.mgmtTracking = bc;
+
+  const html = buildLabelHtml([{
+    tag: '📋 クライアント書類 → 管理会社',
+    tagCss: 'background:#fef3c7;color:#b45309',
+    barColor: '#f59e0b',
+    toSection: `
+      <div class="postal">〒${cas.mgmt?.postal||'—'}</div>
+      <div class="addr">${cas.mgmt?.address||'—'}</div>
+      <div class="to-name" style="font-size:13px">${cas.mgmt?.name||'管理会社'}
+        <div class="sub-name">管理部 ご担当者様</div>
+      </div>`,
+    fromSection: `
+      <div class="from-name">${CORETO_HQ.name}</div>
+      <div class="from-name">担当：${cas.agent?.name||'—'}（${cas.agent?.agId||'—'}）</div>
+      <div class="from-addr">〒${CORETO_HQ.postal}</div>
+      <div class="from-addr">${CORETO_HQ.address}</div>
+      <div class="from-addr">TEL ${CORETO_HQ.tel}</div>`,
+    bcCode: bc,
+  }]);
+  openLabelWindow(html);
+  showToast('🏷️ 管理会社宛ラベルを印刷ウィンドウで開きました');
 }
 
+// ── Cフロー: HQ → クライアント（鍵送付）ラベル（1枚）──────────
 function printFlowC(docId){
   const doc = DOCS.find(d=>d.id===docId);
   if (!doc) return;
+  const cas = CASE_DB.find(c=>c.caseId===doc.caseId) || {};
   const bc = 'KEY-' + Date.now().toString().slice(-8);
-  openBcModal('🖨️ C: ラベル印刷', docId, [
-    {label:'鍵送付ラベル', desc:`${doc.caseName} 宛`, code:bc},
-  ]);
+  doc.keyTracking = bc;
+
+  const html = buildLabelHtml([{
+    tag: '🔑 鍵送付 → お客様',
+    tagCss: 'background:#d1fae5;color:#065f46',
+    barColor: '#059669',
+    toSection: `
+      <div class="postal">〒${cas.postal||'—'}</div>
+      <div class="addr">${cas.address||'—'}</div>
+      <div class="addr">${cas.building||''}</div>
+      <div class="to-name">${cas.caseName||doc.caseName}
+        <span style="font-size:10px;font-weight:500">&nbsp;${cas.honorific||'様'}</span>
+      </div>`,
+    fromSection: `
+      <div class="from-name">${CORETO_HQ.name}</div>
+      <div class="from-name">担当：${cas.agent?.name||'—'}（${cas.agent?.agId||'—'}）</div>
+      <div class="from-addr">〒${CORETO_HQ.postal}</div>
+      <div class="from-addr">${CORETO_HQ.address}</div>
+      <div class="from-addr">TEL ${CORETO_HQ.tel}</div>`,
+    bcCode: bc,
+  }]);
+  openLabelWindow(html);
+  showToast('🏷️ 鍵送付ラベルを印刷ウィンドウで開きました');
 }
 
+// ── Dフロー: 再捺印 HQ → クライアント ラベル（1枚）────────────
 function printFlowD(docId){
   const doc = DOCS.find(d=>d.id===docId);
   if (!doc) return;
+  const cas = CASE_DB.find(c=>c.caseId===doc.caseId) || {};
   const bc = 'RESTAMP-' + Date.now().toString().slice(-6);
-  openBcModal('🖨️ D: 再捺印書類＋ラベル印刷', docId, [
-    {label:'再捺印お願い書類', desc:`${doc.caseName} 様 ／ BC付き`, code:doc.caseId},
-    {label:'往路ラベル',      desc:'HQ → クライアント',             code:bc},
-  ]);
+  doc.restampTracking = bc;
+
+  const html = buildLabelHtml([{
+    tag: '🔴 再捺印書類 → お客様',
+    tagCss: 'background:#fee2e2;color:#991b1b',
+    barColor: '#dc2626',
+    toSection: `
+      <div class="postal">〒${cas.postal||'—'}</div>
+      <div class="addr">${cas.address||'—'}</div>
+      <div class="addr">${cas.building||''}</div>
+      <div class="to-name">${cas.caseName||doc.caseName}
+        <span style="font-size:10px;font-weight:500">&nbsp;${cas.honorific||'様'}</span>
+      </div>`,
+    fromSection: `
+      <div class="from-name">${CORETO_HQ.name}</div>
+      <div class="from-name">担当：${cas.agent?.name||'—'}（${cas.agent?.agId||'—'}）</div>
+      <div class="from-addr">〒${CORETO_HQ.postal}</div>
+      <div class="from-addr">${CORETO_HQ.address}</div>
+      <div class="from-addr">TEL ${CORETO_HQ.tel}</div>`,
+    bcCode: bc,
+  }]);
+  openLabelWindow(html);
+  showToast('🏷️ 再捺印ラベルを印刷ウィンドウで開きました');
 }
 
 function openScanSend(docId, flow){
