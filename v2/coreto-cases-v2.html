@@ -618,7 +618,7 @@ window.addEventListener('DOMContentLoaded', function() {
 
           <div style="background:#F0F9FF;border:1px solid rgba(2,132,199,.15);
             border-radius:8px;padding:9px 12px;margin-bottom:14px;font-size:10px;color:#0284C7">
-            💡 送金依頼書に記載した内容をそのまま入力してください
+            💡 口座情報・金額を入力して明細をアップロードすると自動で照合します
           </div>
 
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
@@ -633,14 +633,15 @@ window.addEventListener('DOMContentLoaded', function() {
               <div style="font-size:9px;font-weight:700;color:#5F6368;margin-bottom:4px">支店名</div>
               <input id="inv-branch" type="text" placeholder="例: 渋谷支店"
                 style="width:100%;padding:8px 11px;border:1.5px solid #DADCE0;border-radius:7px;
-                  font-size:12px;font-family:'Outfit',sans-serif">
+                  font-size:12px;font-family:'Outfit',sans-serif"
+                oninput="invUpdateBtn()">
             </div>
           </div>
 
           <div style="display:grid;grid-template-columns:80px 1fr;gap:10px;margin-bottom:10px">
             <div>
               <div style="font-size:9px;font-weight:700;color:#5F6368;margin-bottom:4px">種別 *</div>
-              <select id="inv-type"
+              <select id="inv-type" onchange="invUpdateBtn()"
                 style="width:100%;padding:8px 11px;border:1.5px solid #DADCE0;border-radius:7px;
                   font-size:12px;font-family:'Outfit',sans-serif">
                 <option value="普通">普通</option>
@@ -660,7 +661,8 @@ window.addEventListener('DOMContentLoaded', function() {
             <div style="font-size:9px;font-weight:700;color:#5F6368;margin-bottom:4px">口座名義（カナ）</div>
             <input id="inv-holder" type="text" placeholder="例: ｶﾌﾞｼｷｶﾞｲｼｬ ﾀﾅｶﾌﾄﾞｳｻﾝ"
               style="width:100%;padding:8px 11px;border:1.5px solid #DADCE0;border-radius:7px;
-                font-size:12px;font-family:'DM Mono',monospace">
+                font-size:12px;font-family:'DM Mono',monospace"
+              oninput="invUpdateBtn()">
           </div>
 
           <div style="margin-bottom:16px">
@@ -706,7 +708,7 @@ window.addEventListener('DOMContentLoaded', function() {
               border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;
               font-family:'Outfit',sans-serif;display:flex;align-items:center;
               justify-content:center;gap:8px;opacity:.4;pointer-events:none">
-            🤖 AI照合を実行
+            ⏳ 口座情報・金額・明細が揃うと自動照合します
           </button>
         </div>
 
@@ -734,6 +736,7 @@ let _invCaseId   = null;
 let _invBase64   = null;
 let _invMime     = null;
 let _invChecks   = {}; // caseId → チェック結果
+let _invRunning  = false; // 二重実行防止フラグ
 
 const INV_LS = 'INVOICE_CHECKS';
 function invLsGet(){ try{ return JSON.parse(localStorage.getItem(INV_LS)||'{}'); }catch(e){return {};} }
@@ -780,13 +783,18 @@ function closeInvoiceModal(){
 }
 
 function invUpdateBtn(){
-  const ok = document.getElementById('inv-bank')?.value &&
-             document.getElementById('inv-number')?.value &&
-             document.getElementById('inv-amount')?.value &&
-             _invBase64;
+  const hasFields = document.getElementById('inv-bank')?.value &&
+                    document.getElementById('inv-number')?.value &&
+                    document.getElementById('inv-amount')?.value;
+  const hasFile   = !!_invBase64;
   const btn = document.getElementById('inv-check-btn');
-  btn.style.opacity       = ok ? '1' : '.4';
-  btn.style.pointerEvents = ok ? 'auto' : 'none';
+  btn.style.opacity       = (hasFields && hasFile) ? '1' : '.4';
+  btn.style.pointerEvents = (hasFields && hasFile) ? 'auto' : 'none';
+
+  // 条件が揃ったら自動実行
+  if(hasFields && hasFile && !_invRunning) {
+    invRunCheck();
+  }
 }
 
 function invHandleDrop(e){
@@ -818,6 +826,8 @@ function invProcessFile(file){
 
 // ── AI照合実行 ─────────────────────────────────────────────
 async function invRunCheck(){
+  if(_invRunning) return; // 二重実行防止
+  _invRunning = true;
   const agInput = {
     bank:   document.getElementById('inv-bank').value.trim(),
     branch: document.getElementById('inv-branch').value.trim(),
@@ -828,8 +838,8 @@ async function invRunCheck(){
   };
 
   const btn = document.getElementById('inv-check-btn');
-  btn.textContent = '🤖 照合中...';
-  btn.style.opacity='.6'; btn.style.pointerEvents='none';
+  btn.textContent = '🤖 照合中... しばらくお待ちください';
+  btn.style.opacity='.7'; btn.style.pointerEvents='none';
 
   document.getElementById('inv-result-panel').innerHTML = `
     <div style="background:linear-gradient(135deg,#0D1A2D,#1E3252);border-radius:10px;
@@ -868,8 +878,9 @@ async function invRunCheck(){
       `<div style="color:#DC2626;font-size:12px;padding:16px">
         ❌ AI照合失敗: ${e.message}</div>`;
   }
-  btn.textContent = '🤖 AI照合を実行';
+  btn.textContent = '🔄 再照合する';
   btn.style.opacity='1'; btn.style.pointerEvents='auto';
+  _invRunning = false;
 }
 
 // ── Claude Vision API ──────────────────────────────────────
