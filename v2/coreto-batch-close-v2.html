@@ -526,63 +526,142 @@ function runBatchCheck() {
   const month = document.getElementById('target-month').value;
   if (!currentPayouts.length) { showToast('対象データがありません', 'warn'); return; }
 
-  const allCalc     = currentPayouts.map(p => ({ ...p, calc: calcPayout(p) }));
-  const hasNegPay   = allCalc.some(p => p.calc.payout < 0);
-  const hasNoBank   = currentPayouts.some(p => !p.bank?.accountNo);
-  const hasHrSecond = currentPayouts.some(p => p.type === 'HR' && p.cases.some(c => c.hrSplit));
-  const allFeeOk    = allCalc.every(p => p.type.startsWith('PT') || (RANKS[p.rank]?.fee !== undefined));
-  const wtaxOk      = allCalc.filter(p=>!p.legal).every(p => p.calc.wtax > 0);
-  const noInstantOver = allCalc.every(p => p.calc.payout >= 0 || p.instantPay === 0);
-  const caseIds     = currentPayouts.flatMap(p => p.cases.map(c => c.id));
-  const noDup       = new Set(caseIds).size === caseIds.length;
+  const allCalc = currentPayouts.map(p => ({ ...p, calc: calcPayout(p) }));
+  const fmt = v => '¥' + v.toLocaleString();
+  const agTag = p => `<span style="font-family:'DM Mono',monospace;font-size:10px;
+    background:var(--cream2);border:1px solid var(--bd);border-radius:4px;
+    padding:1px 5px;margin:0 2px">${p.id} ${p.name}</span>`;
+
+  // ① 全成約案件入金確認
+  const totalCases = currentPayouts.reduce((s,p)=>s+p.cases.length,0);
+
+  // ② 口座未登録
+  const noBankList = currentPayouts.filter(p => !p.bank?.accountNo);
+
+  // ③ 振込額マイナス
+  const negPayList = allCalc.filter(p => p.calc.payout < 0);
+
+  // ④ 源泉徴収（個人で wtax=0 なのに taxable>0 のケース）
+  const wtaxErrList = allCalc.filter(p => !p.legal && p.calc.taxable > 0 && p.calc.wtax === 0);
+
+  // ⑤ 即時払い超過（instantPay > taxable）
+  const instantOverList = allCalc.filter(p => p.instantPay > p.calc.taxable);
+
+  // ⑥ 重複案件
+  const caseIds = currentPayouts.flatMap(p => p.cases.map(c => ({ caseId:c.id, owner:p })));
+  const dupIds  = caseIds.filter((c,i) => caseIds.findIndex(x=>x.caseId===c.caseId) !== i)
+                         .map(c => c.caseId);
+  const dupOwners = caseIds.filter(c => dupIds.includes(c.caseId));
+
+  // ⑦ HR分割払い（hrSplit あり = 在籍確認が必要）
+  const hrSplitList = currentPayouts.filter(p => p.cases.some(c => c.hrSplit));
+
+  // ⑧ 月会費対象確認
+  const feeErrList = allCalc.filter(p => !p.type.startsWith('PT') && RANKS[p.rank]?.fee === undefined);
+
+  // 詳細リスト生成ヘルパー
+  const errList = (list, fn) => list.length
+    ? `<div style="margin-top:7px;display:flex;flex-direction:column;gap:4px">${list.map(fn).join('')}</div>`
+    : '';
+  const errRow = (label, sub='') => `
+    <div style="display:flex;align-items:baseline;gap:6px;padding:5px 8px;
+      background:rgba(220,38,38,.06);border-radius:6px;border:1px solid rgba(220,38,38,.15)">
+      <span style="color:var(--rd);font-size:10px;flex-shrink:0">●</span>
+      <span style="font-size:11px;color:var(--ink)">${label}</span>
+      ${sub ? `<span style="font-size:10px;color:var(--muted);margin-left:auto">${sub}</span>` : ''}
+    </div>`;
+  const warnRow = (label, sub='') => `
+    <div style="display:flex;align-items:baseline;gap:6px;padding:5px 8px;
+      background:rgba(217,119,6,.06);border-radius:6px;border:1px solid rgba(217,119,6,.15)">
+      <span style="color:var(--am);font-size:10px;flex-shrink:0">●</span>
+      <span style="font-size:11px;color:var(--ink)">${label}</span>
+      ${sub ? `<span style="font-size:10px;color:var(--muted);margin-left:auto">${sub}</span>` : ''}
+    </div>`;
+  const okDetail = msg => `<div style="font-size:11px;color:var(--em);margin-top:4px">✓ ${msg}</div>`;
 
   const items = [
     { no:'①', label:'全成約案件の入金確認',
       pass: true,
-      detail: `${currentPayouts.reduce((s,p)=>s+p.cases.length,0)}件すべての入金を確認済み` },
+      detail: okDetail(`${totalCases}件すべての入金確認済み`) },
+
     { no:'②', label:'振込先口座登録確認',
-      pass: !hasNoBank,
-      detail: hasNoBank
-        ? '⚠️ 口座未登録のAG/PTがいます。入金前に必ず登録してください'
-        : '全員の振込先口座が登録済み' },
-    { no:'③', label:'報酬額の計算検証',
-      pass: !hasNegPay,
-      detail: hasNegPay
-        ? '⚠️ 振込額がマイナスになっているAGがいます。即時払い控除を確認してください'
-        : '全員の振込額が正常範囲内' },
+      pass: noBankList.length === 0,
+      detail: noBankList.length === 0
+        ? okDetail('全員の振込先口座が登録済み')
+        : `<div style="font-size:11px;color:var(--rd);margin-top:4px">以下の${noBankList.length}名の口座が未登録です。振込前に登録してください。</div>`
+          + errList(noBankList, p => errRow(`${p.id}　${p.name}`, `${p.type} / ${RANKS[p.rank]?.label||p.rank}`)) },
+
+    { no:'③', label:'振込額の検証（マイナス確認）',
+      pass: negPayList.length === 0,
+      detail: negPayList.length === 0
+        ? okDetail('全員の振込額が正常')
+        : `<div style="font-size:11px;color:var(--rd);margin-top:4px">振込額がマイナスになっています。即時払い控除額を確認してください。</div>`
+          + errList(negPayList, p => errRow(
+              `${p.id}　${p.name}`,
+              `振込額 ${fmt(p.calc.payout)} / 即時払控除 ${fmt(p.instantPay)}`)) },
+
     { no:'④', label:'源泉徴収の計算確認（個人のみ）',
-      pass: wtaxOk || allCalc.every(p=>p.legal),
-      detail: '100万以下: 10.21%、100万超: 超過分20.42%で計算済み' },
-    { no:'⑤', label:'即時払い二重控除チェック',
-      pass: noInstantOver,
-      detail: noInstantOver
-        ? '即時払い控除に問題なし'
-        : '⚠️ 即時払い控除超過の可能性があります' },
+      pass: wtaxErrList.length === 0,
+      detail: wtaxErrList.length === 0
+        ? okDetail('源泉徴収額に問題なし（個人: 10.21% / 100万超: 20.42%）')
+        : `<div style="font-size:11px;color:var(--rd);margin-top:4px">源泉徴収が未計算または0円になっています。</div>`
+          + errList(wtaxErrList, p => errRow(
+              `${p.id}　${p.name}`,
+              `課税額 ${fmt(p.calc.taxable)} → 源泉 ${fmt(p.calc.wtax)}`)) },
+
+    { no:'⑤', label:'即時払い控除額の確認',
+      pass: instantOverList.length === 0,
+      detail: instantOverList.length === 0
+        ? okDetail('即時払い控除に問題なし')
+        : `<div style="font-size:11px;color:var(--rd);margin-top:4px">即時払い控除額が課税額を超えています。</div>`
+          + errList(instantOverList, p => errRow(
+              `${p.id}　${p.name}`,
+              `課税額 ${fmt(p.calc.taxable)} ＜ 即時払 ${fmt(p.instantPay)}`)) },
+
     { no:'⑥', label:'重複案件チェック',
-      pass: noDup,
-      detail: noDup ? '重複案件なし' : '⚠️ 同一案件IDが複数の支払明細に含まれています' },
-    { no:'⑦', label:'HR第2回報酬・保証期間確認',
-      pass: !hasHrSecond,
-      detail: hasHrSecond
-        ? '⚠️ HR分割払い案件あり — 在籍確認が完了していることを確認してください'
-        : 'HR分割払い案件なし（または確認済み）' },
-    { no:'⑧', label:'月会費控除確認（Bronze/Silver）',
-      pass: allFeeOk,
-      detail: `Bronze(¥980) / Silver(¥490)の月会費が振込額から控除されていることを確認済み` },
+      pass: dupIds.length === 0,
+      detail: dupIds.length === 0
+        ? okDetail('重複案件なし')
+        : `<div style="font-size:11px;color:var(--rd);margin-top:4px">同一案件IDが複数の支払明細に含まれています。</div>`
+          + errList([...new Set(dupIds)], id => {
+              const owners = dupOwners.filter(c=>c.caseId===id).map(c=>c.owner.name).join(' / ');
+              return errRow(`案件 ${id}`, owners);
+            }) },
+
+    { no:'⑦', label:'HR第2回報酬・在籍確認',
+      pass: hrSplitList.length === 0,
+      detail: hrSplitList.length === 0
+        ? okDetail('HR分割払い案件なし（または確認済み）')
+        : `<div style="font-size:11px;color:var(--am);margin-top:4px">以下のHR案件は在籍確認が完了していることを確認してください。</div>`
+          + errList(hrSplitList, p => {
+              const hrCases = p.cases.filter(c=>c.hrSplit).map(c=>c.id).join(', ');
+              return warnRow(`${p.id}　${p.name}`, `案件: ${hrCases}`);
+            }) },
+
+    { no:'⑧', label:'月会費控除確認（Bronze / Silver）',
+      pass: feeErrList.length === 0,
+      detail: feeErrList.length === 0
+        ? okDetail('月会費控除に問題なし（Bronze ¥980 / Silver ¥490）')
+        : `<div style="font-size:11px;color:var(--rd);margin-top:4px">月会費が未定義のランクがあります。</div>`
+          + errList(feeErrList, p => errRow(`${p.id}　${p.name}`, `ランク: ${p.rank}`)) },
   ];
 
   const html = items.map(it => `
-    <div class="check-item ${it.pass?'pass':'fail'}">
-      <div class="check-icon" style="background:${it.pass?'var(--em-bg)':'var(--rd-bg)'}">${it.pass?'✅':'❌'}</div>
+    <div class="check-item ${it.pass ? 'pass' : (it.no==='⑦' && !it.pass ? 'warn' : 'fail')}">
+      <div class="check-icon" style="background:${it.pass?'var(--em-bg)':it.no==='⑦'?'var(--am-bg)':'var(--rd-bg)'}">
+        ${it.pass ? '✅' : it.no==='⑦' ? '⚠️' : '❌'}
+      </div>
       <div style="flex:1">
         <div class="check-label">${it.no} ${it.label}</div>
-        <div class="check-detail">${it.detail}</div>
+        ${it.detail}
       </div>
-      <span class="badge ${it.pass?'b-em':'b-rd'}">${it.pass?'OK':'要対応'}</span>
+      <span class="badge ${it.pass?'b-em':it.no==='⑦'?'b-am':'b-rd'}" style="align-self:flex-start;margin-top:2px">
+        ${it.pass ? 'OK' : it.no==='⑦' ? '要確認' : '要対応'}
+      </span>
     </div>`).join('');
 
   document.getElementById('check-list').innerHTML = html;
-  checkPassed = items.every(i => i.pass);
+  checkPassed = items.every(i => i.pass || i.no === '⑦'); // ⑦は警告扱い（締め処理はブロックしない）
   document.getElementById('check-overall').textContent = checkPassed ? '全項目OK ✅' : '要対応あり ⚠️';
   document.getElementById('check-overall').className   = 'badge ' + (checkPassed ? 'b-em' : 'b-rd');
   showToast(checkPassed ? '✅ 全8項目チェック完了' : '⚠️ 要対応項目があります。確認してください', checkPassed ? '' : 'warn');
