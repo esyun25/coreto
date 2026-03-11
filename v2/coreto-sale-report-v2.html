@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>売買・三為成約報告 — COREBLDG</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0D1A2D;--navy-l:#1E3252;--gold:#C8A951;--gold-dim:rgba(200,169,81,.15);--cream:#FFFFFF;--cream2:#F8F9FA;--white:#FFFFFF;--ink:#202124;--muted:#5F6368;--faint:#80868B;--em:#059669;--em-bg:#ECFDF5;--am:#D97706;--am-bg:#FFFBEB;--rd:#DC2626;--rd-bg:#FEF2F2;--sk:#0284C7;--sk-bg:#F0F9FF;--vt:#7C3AED;--vt-bg:#F5F3FF;--nt:#374151;--nt-bg:#F3F4F6;--bd:#E8EAED;--bd2:#DADCE0;--sw:240px;--r:10px;--r-sm:7px;--sh:0 1px 2px rgba(60,64,67,.1),0 1px 3px rgba(60,64,67,.06)}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:#fff}
+.shell{display:flex;height:100vh}
+.sb{width:var(--sw);background:var(--navy);display:flex;flex-direction:column;flex-shrink:0;position:relative}
+.sb::after{content:'';position:absolute;top:0;right:0;width:1px;height:100%;background:linear-gradient(180deg,transparent,rgba(200,169,81,.2),transparent)}
+.sb-head{padding:20px 18px 14px;border-bottom:1px solid rgba(255,255,255,.07)}
+.sb-logo{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:var(--gold);letter-spacing:2px;line-height:1.2}
+.sb-ver{font-size:9px;color:rgba(255,255,255,.25);margin-top:4px;letter-spacing:.5px}
+.sb-user{display:flex;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid rgba(255,255,255,.07)}
+.sb-av{width:32px;height:32px;border-radius:50%;background:rgba(200,169,81,.2);border:1.5px solid rgba(200,169,81,.4);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--gold);flex-shrink:0}
+.sb-nav{flex:1;overflow-y:auto;padding:10px 0}
+.content{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.topbar{display:flex;align-items:center;gap:12px;padding:0 24px;height:56px;border-bottom:1px solid var(--bd);background:#fff;flex-shrink:0}
+.mob-ham{display:none;flex-direction:column;gap:5px;background:none;border:none;cursor:pointer;padding:4px}
+.mob-ham span{display:block;width:20px;height:2px;background:var(--ink);border-radius:2px}
+.tb-title{font-size:15px;font-weight:700;color:var(--ink)}
+.tb-crumb{font-size:10px;color:var(--muted)}
+.tb-crumb a{color:var(--muted);text-decoration:none}
+.page{flex:1;overflow-y:auto;padding:24px;background:var(--cream2)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Outfit','Noto Sans JP',sans-serif;transition:.15s;border:none}
+.btn-primary{background:var(--navy);color:#fff}
+.btn-ghost{background:transparent;color:var(--ink);border:1.5px solid var(--bd)}
+.btn-em{background:var(--em);color:#fff}
+.btn-gold{background:var(--gold);color:var(--navy);font-weight:700}
+.btn-sm{padding:5px 12px;font-size:11px}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;font-family:'Outfit',sans-serif}
+.b-em{background:var(--em-bg);color:var(--em)}
+.b-rd{background:var(--rd-bg);color:var(--rd)}
+.b-am{background:var(--am-bg);color:var(--am)}
+.b-sk{background:var(--sk-bg);color:var(--sk)}
+.b-vt{background:var(--vt-bg);color:var(--vt)}
+.b-gold{background:var(--gold-dim);color:var(--am)}
+/* フォームカード */
+.form-wrap{max-width:760px;margin:0 auto}
+.form-card{background:#fff;border:1px solid var(--bd);border-radius:var(--r);box-shadow:var(--sh);margin-bottom:16px;overflow:hidden}
+.form-head{padding:13px 18px;border-bottom:1px solid var(--bd);background:var(--cream2);display:flex;align-items:center;gap:10px}
+.form-head-icon{font-size:16px}
+.form-head-title{font-size:12px;font-weight:700;color:var(--ink);text-transform:uppercase;letter-spacing:.5px}
+.form-head-badge{margin-left:auto}
+.form-body{padding:18px}
+.field{display:flex;flex-direction:column;gap:5px;flex:1}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.field-row:last-child{margin-bottom:0}
+.field-row.col3{grid-template-columns:1fr 1fr 1fr}
+.field-row.col1{grid-template-columns:1fr}
+label{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.3px}
+label.required::after{content:'*';color:var(--rd);margin-left:3px}
+.form-input{padding:9px 12px;border:1.5px solid var(--bd);border-radius:7px;font-size:13px;color:var(--ink);font-family:'Outfit','Noto Sans JP',sans-serif;outline:none;transition:.15s;background:#fff;width:100%}
+.form-input:focus{border-color:var(--navy);box-shadow:0 0 0 3px rgba(13,26,45,.08)}
+.form-input.num{font-variant-numeric:tabular-nums;text-align:right}
+select.form-input{cursor:pointer}
+textarea.form-input{min-height:80px;resize:vertical;line-height:1.6}
+.hint{font-size:10px;color:var(--faint);margin-top:3px}
+/* 取引形態セレクター */
+.deal-type-sel{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px}
+.deal-type-card{border:2px solid var(--bd);border-radius:9px;padding:14px 16px;cursor:pointer;transition:.15s;background:#fff}
+.deal-type-card:hover{border-color:var(--navy);background:var(--cream2)}
+.deal-type-card.selected{border-color:var(--navy);background:linear-gradient(135deg,rgba(13,26,45,.04),rgba(13,26,45,.02))}
+.deal-type-card .dt-title{font-size:13px;font-weight:700;color:var(--ink);margin-bottom:4px}
+.deal-type-card .dt-desc{font-size:10px;color:var(--muted);line-height:1.5}
+.deal-type-card .dt-icon{font-size:22px;margin-bottom:6px}
+/* 三為スプレッド */
+.spread-box{background:linear-gradient(135deg,rgba(13,26,45,.97),rgba(21,34,56,.97));border-radius:10px;padding:16px 20px;color:#fff;margin-top:4px}
+.spread-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:12px}
+.spread-row.total{border-top:1px solid rgba(255,255,255,.15);margin-top:6px;padding-top:10px}
+.spread-label{color:rgba(255,255,255,.55)}
+.spread-val{font-weight:700;font-variant-numeric:tabular-nums;font-family:'Outfit',sans-serif}
+.spread-val.gold{color:var(--gold);font-size:18px}
+.spread-val.em{color:#6EE7B7}
+.spread-val.rd{color:#FCA5A5}
+/* 報酬プレビュー */
+.reward-box{background:var(--cream2);border:1px solid var(--bd);border-radius:9px;padding:16px}
+.reward-row{display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-bottom:1px solid var(--bd)}
+.reward-row:last-child{border-bottom:none;font-weight:700;font-size:14px;padding-top:10px;margin-top:4px}
+.reward-label{color:var(--muted)}
+.reward-val{font-variant-numeric:tabular-nums;font-family:'Outfit',sans-serif;font-weight:600}
+/* 添付書類チェックリスト */
+.doc-list{display:flex;flex-direction:column;gap:8px}
+.doc-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--bd);border-radius:7px;background:#fff;transition:.15s}
+.doc-item:has(input:checked){background:var(--em-bg);border-color:rgba(5,150,105,.3)}
+.doc-item input[type=checkbox]{width:16px;height:16px;accent-color:var(--em);cursor:pointer;flex-shrink:0}
+.doc-label{font-size:12px;font-weight:600;color:var(--ink);flex:1}
+.doc-sub{font-size:10px;color:var(--muted)}
+.doc-req{font-size:9px;font-weight:700;padding:1px 6px;border-radius:10px;background:var(--rd-bg);color:var(--rd);flex-shrink:0}
+.doc-opt{font-size:9px;font-weight:700;padding:1px 6px;border-radius:10px;background:var(--cream2);color:var(--muted);border:1px solid var(--bd);flex-shrink:0}
+/* ステップバー */
+.step-bar{display:flex;align-items:center;gap:0;margin-bottom:20px}
+.step{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:600}
+.step-num{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;font-family:'Outfit',sans-serif}
+.step-line{flex:1;height:2px;background:var(--bd);min-width:20px}
+.step.done .step-num{background:var(--em);color:#fff}
+.step.done .step-label{color:var(--em)}
+.step.active .step-num{background:var(--navy);color:#fff}
+.step.active .step-label{color:var(--navy);font-weight:700}
+.step.todo .step-num{background:var(--bd);color:var(--muted)}
+.step.todo .step-label{color:var(--muted)}
+/* モバイル */
+.mob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:99}
+@media(max-width:768px){
+  .mob-ham{display:flex}
+  .sb{position:fixed;left:-100%;top:0;bottom:0;z-index:100;transition:.25s}
+  .sb.open{left:0}
+  .mob-overlay.show{display:block}
+  .field-row,.field-row.col3{grid-template-columns:1fr}
+  .deal-type-sel{grid-template-columns:1fr}
+  .page{padding:16px}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+<nav class="sb">
+  <div class="sb-head">
+    <div class="sb-logo">CORE<br>BLDG</div>
+    <div class="sb-ver">v2.0 — CORETO</div>
+  </div>
+  <div class="sb-user">
+    <div class="sb-av" id="sb-av">AG</div>
+    <div>
+      <div id="sb-uname" style="font-size:11px;font-weight:600;color:rgba(255,255,255,.8)">山田 誠</div>
+      <div id="sb-role" style="font-size:9px;color:rgba(255,255,255,.3);font-family:'DM Mono',monospace">AG-0042</div>
+    </div>
+  </div>
+  <div class="sb-nav" id="sb-nav"><!-- CNAV --></div>
+</nav>
+
+<div class="content">
+  <div class="topbar">
+    <button class="mob-ham" onclick="toggleSb()"><span></span><span></span><span></span></button>
+    <div>
+      <div class="tb-title">売買・三為 成約報告</div>
+      <div class="tb-crumb">
+        <a href="coreto-hub-v2.html">COREBLDG</a> ›
+        <a href="coreto-contract-report-v2.html">成約報告</a> › 売買・三為
+      </div>
+    </div>
+  </div>
+
+  <div class="page">
+  <div class="form-wrap" id="form-root"></div>
+  </div>
+</div>
+</div>
+
+<div class="mob-overlay" onclick="toggleSb()"></div>
+<div id="sr-toast" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--navy);color:#fff;padding:10px 20px;border-radius:8px;font-size:12px;font-weight:600;opacity:0;transition:.3s;z-index:999;pointer-events:none;white-space:nowrap"></div>
+
+<script src="coreto-nav-v2.js"></script>
+<script>
+function toggleSb(){ document.querySelector('.sb').classList.toggle('open'); document.querySelector('.mob-overlay').classList.toggle('show'); }
+function showToast(msg, type){
+  const t = document.getElementById('sr-toast');
+  t.textContent = msg;
+  t.style.background = type==='err' ? 'var(--rd)' : type==='warn' ? 'var(--am)' : 'var(--navy)';
+  t.style.opacity='1'; t.style.transform='translateX(-50%) translateY(0)';
+  setTimeout(()=>{ t.style.opacity='0'; t.style.transform='translateX(-50%) translateY(10px)'; },3200);
+}
+
+// ── マスターデータ ────────────────────────────────────────
+const AGENT = { id:'AG-0042', name:'山田 誠', rank:'gold' };
+const RANK_RATE_SALE = { bronze:.80, silver:.85, gold:.85, platinum:.90 };
+
+let dealType = 'brokerage'; // brokerage | sannai
+
+// ── 手数料上限計算（売買仲介：3%+6万+消費税）────────────
+function calcBrokerageFee(price) {
+  if (!price || price <= 0) return 0;
+  const base = price <= 2000000
+    ? price * 0.05
+    : price <= 4000000
+    ? price * 0.04 + 20000
+    : price * 0.03 + 60000;
+  return Math.floor(base * 1.1); // 税込
+}
+
+// ── スプレッド計算（三為）────────────────────────────────
+function calcSpread() {
+  const buy  = parseMoney('sannai-buy');
+  const sell = parseMoney('sannai-sell');
+  if (!buy || !sell) { renderSpread(0,0,0,0); return; }
+  const spread   = sell - buy;
+  const feeLimit = calcBrokerageFee(sell);
+  const rate     = RANK_RATE_SALE[AGENT.rank] || 0.85;
+  const reward   = Math.round(spread * rate);
+  renderSpread(buy, sell, spread, reward, feeLimit);
+}
+
+function renderSpread(buy, sell, spread, reward, feeLimit) {
+  const el = document.getElementById('spread-preview');
+  if (!el) return;
+  const fmt = v => v ? '¥' + v.toLocaleString() : '—';
+  const rate = RANK_RATE_SALE[AGENT.rank] || 0.85;
+  el.innerHTML = `
+    <div class="spread-row"><span class="spread-label">仕入金額（A→B）</span><span class="spread-val">${fmt(buy)}</span></div>
+    <div class="spread-row"><span class="spread-label">売出金額（B→C）</span><span class="spread-val">${fmt(sell)}</span></div>
+    <div class="spread-row"><span class="spread-label">スプレッド</span>
+      <span class="spread-val ${spread>=0?'em':'rd'}">${fmt(spread)}</span></div>
+    ${feeLimit ? `<div class="spread-row"><span class="spread-label" style="font-size:10px">買主側仲介料上限（参考）</span>
+      <span class="spread-val" style="font-size:11px;color:rgba(255,255,255,.5)">${fmt(feeLimit)}</span></div>` : ''}
+    <div class="spread-row total">
+      <span class="spread-label" style="font-size:13px">想定報酬（${Math.round(rate*100)}%）</span>
+      <span class="spread-val gold">${fmt(reward)}</span>
+    </div>`;
+}
+
+// ── 仲介料報酬計算（売買仲介）────────────────────────────
+function calcBrokerageReward() {
+  const price   = parseMoney('sale-price');
+  const feeEl   = document.getElementById('brokerage-fee');
+  const sideEl  = document.getElementById('brokerage-side');
+  if (!price) { renderBrokerageReward(0,0,0,''); return; }
+
+  const feeLimit = calcBrokerageFee(price);
+  const fee      = parseMoney('brokerage-fee') || feeLimit;
+  const side     = sideEl?.value || 'both';
+  const sideRate = side==='both' ? 1 : 0.5; // 両手 or 片手
+  const adjFee   = Math.round(fee * sideRate);
+  const rate     = RANK_RATE_SALE[AGENT.rank] || 0.85;
+  const reward   = Math.round(adjFee * rate);
+
+  // 上限額を自動セット
+  if (feeEl && !feeEl.dataset.manual) feeEl.value = feeLimit.toLocaleString();
+  renderBrokerageReward(price, adjFee, reward, side, feeLimit);
+}
+
+function renderBrokerageReward(price, fee, reward, side, feeLimit) {
+  const el = document.getElementById('reward-preview');
+  if (!el) return;
+  const fmt = v => v ? '¥' + v.toLocaleString() : '—';
+  const rate = RANK_RATE_SALE[AGENT.rank] || 0.85;
+  el.innerHTML = `
+    <div class="reward-row">
+      <span class="reward-label">売買価格</span>
+      <span class="reward-val">${fmt(price)}</span>
+    </div>
+    <div class="reward-row">
+      <span class="reward-label">手数料上限（税込）</span>
+      <span class="reward-val" style="color:var(--muted);font-size:11px">${fmt(feeLimit)}</span>
+    </div>
+    <div class="reward-row">
+      <span class="reward-label">仲介料（${side==='both'?'両手':'片手'}）</span>
+      <span class="reward-val">${fmt(fee)}</span>
+    </div>
+    <div class="reward-row">
+      <span class="reward-label">報酬率（${AGENT.rank.charAt(0).toUpperCase()+AGENT.rank.slice(1)}）</span>
+      <span class="reward-val">${Math.round(rate*100)}%</span>
+    </div>
+    <div class="reward-row">
+      <span class="reward-label" style="font-size:13px;color:var(--ink)">想定報酬</span>
+      <span class="reward-val" style="font-size:18px;color:var(--em)">${fmt(reward)}</span>
+    </div>`;
+}
+
+function parseMoney(id) {
+  const el = document.getElementById(id);
+  if (!el) return 0;
+  return parseInt(el.value.replace(/[^0-9]/g,'')) || 0;
+}
+
+// ── 取引形態切替 ──────────────────────────────────────────
+function selectDealType(type) {
+  dealType = type;
+  document.querySelectorAll('.deal-type-card').forEach(el => {
+    el.classList.toggle('selected', el.dataset.type === type);
+  });
+  document.getElementById('brokerage-fields').style.display = type==='brokerage' ? '' : 'none';
+  document.getElementById('sannai-fields').style.display    = type==='sannai'    ? '' : 'none';
+  updateDocList();
+}
+
+// ── 添付書類リスト更新 ────────────────────────────────────
+const DOCS_BROKERAGE = [
+  { id:'d1', label:'売買契約書', sub:'署名・捺印済みのもの（全ページ）', req:true },
+  { id:'d2', label:'重要事項説明書', sub:'宅建士署名・捺印済み', req:true },
+  { id:'d3', label:'登記事項証明書', sub:'取得日から3ヶ月以内', req:true },
+  { id:'d4', label:'物件状況報告書', sub:'売主記入済みのもの', req:true },
+  { id:'d5', label:'付帯設備表', sub:'売主記入済みのもの', req:true },
+  { id:'d6', label:'公図・測量図', sub:'土地の場合は必須', req:false },
+  { id:'d7', label:'建築確認済証・検査済証', sub:'建物がある場合', req:false },
+  { id:'d8', label:'管理規約・総会議事録', sub:'区分マンションの場合', req:false },
+];
+const DOCS_SANNAI = [
+  { id:'d1', label:'売買契約書（A→B）', sub:'仕入側の契約書（全ページ）', req:true },
+  { id:'d2', label:'売買契約書（B→C）', sub:'売出側の契約書（全ページ）', req:true },
+  { id:'d3', label:'重要事項説明書', sub:'宅建士署名・捺印済み', req:true },
+  { id:'d4', label:'登記事項証明書', sub:'取得日から3ヶ月以内', req:true },
+  { id:'d5', label:'物件状況報告書', sub:'売主記入済みのもの', req:true },
+  { id:'d6', label:'付帯設備表', sub:'売主記入済みのもの', req:true },
+  { id:'d7', label:'決済確認書', sub:'A→B・B→C両決済の確認書', req:true },
+  { id:'d8', label:'公図・測量図', sub:'土地の場合', req:false },
+];
+
+function updateDocList() {
+  const docs = dealType==='sannai' ? DOCS_SANNAI : DOCS_BROKERAGE;
+  document.getElementById('doc-list').innerHTML = docs.map(d=>`
+    <div class="doc-item">
+      <input type="checkbox" id="doc-${d.id}" onchange="checkDocComplete()">
+      <div style="flex:1">
+        <div class="doc-label">${d.label}</div>
+        <div class="doc-sub">${d.sub}</div>
+      </div>
+      <span class="${d.req?'doc-req':'doc-opt'}">${d.req?'必須':'任意'}</span>
+    </div>`).join('');
+}
+
+function checkDocComplete() {
+  const docs   = dealType==='sannai' ? DOCS_SANNAI : DOCS_BROKERAGE;
+  const reqIds = docs.filter(d=>d.req).map(d=>d.id);
+  const allReq = reqIds.every(id => document.getElementById('doc-'+id)?.checked);
+  const badge  = document.getElementById('doc-badge');
+  if (badge) {
+    badge.textContent = allReq ? '必須書類 完了 ✅' : `必須書類 未完了`;
+    badge.className   = 'badge ' + (allReq ? 'b-em' : 'b-rd');
+  }
+}
+
+// ── 提出バリデーション ────────────────────────────────────
+function validateAndSubmit() {
+  const caseId   = document.getElementById('case-id')?.value.trim();
+  const closedAt = document.getElementById('closed-at')?.value;
+  const clientNm = document.getElementById('client-name')?.value.trim();
+
+  if (!caseId)   { showToast('案件IDを入力してください', 'warn'); return; }
+  if (!closedAt) { showToast('成約日を入力してください', 'warn'); return; }
+  if (!clientNm) { showToast('クライアント名を入力してください', 'warn'); return; }
+
+  if (dealType === 'brokerage') {
+    if (!parseMoney('sale-price')) { showToast('売買金額を入力してください', 'warn'); return; }
+  } else {
+    if (!parseMoney('sannai-buy'))  { showToast('仕入金額を入力してください', 'warn'); return; }
+    if (!parseMoney('sannai-sell')) { showToast('売出金額を入力してください', 'warn'); return; }
+  }
+
+  const docs    = dealType==='sannai' ? DOCS_SANNAI : DOCS_BROKERAGE;
+  const reqIds  = docs.filter(d=>d.req).map(d=>d.id);
+  const allReq  = reqIds.every(id => document.getElementById('doc-'+id)?.checked);
+  if (!allReq)  { showToast('必須書類にチェックを入れてください', 'warn'); return; }
+
+  renderComplete();
+}
+
+// ── 提出完了画面 ──────────────────────────────────────────
+function renderComplete() {
+  const isDeal   = dealType === 'sannai';
+  const price    = isDeal ? parseMoney('sannai-sell') : parseMoney('sale-price');
+  const fee      = isDeal ? (parseMoney('sannai-sell') - parseMoney('sannai-buy')) : parseMoney('brokerage-fee');
+  const rate     = RANK_RATE_SALE[AGENT.rank] || 0.85;
+  const reward   = Math.round(fee * rate);
+  const rptId    = 'RPT-' + Date.now().toString().slice(-8);
+  const caseId   = document.getElementById('case-id')?.value.trim() || 'SALE-0000';
+  const clientNm = document.getElementById('client-name')?.value.trim() || '—';
+  const fmt      = v => '¥' + v.toLocaleString();
+
+  document.getElementById('form-root').innerHTML = `
+    <div style="text-align:center;padding:60px 20px">
+      <div style="font-size:52px;margin-bottom:16px">🎉</div>
+      <div style="font-size:26px;font-weight:300;color:var(--ink);margin-bottom:8px">
+        成約報告を提出しました</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:28px">
+        HQが確認後、報酬額が確定されます。通常1〜2営業日以内に通知されます。</div>
+
+      <div style="background:#fff;border:1px solid var(--bd);border-radius:var(--r);
+        padding:20px 28px;display:inline-block;text-align:left;min-width:340px;
+        margin-bottom:28px;box-shadow:var(--sh)">
+        <div style="font-size:10px;color:var(--faint);margin-bottom:12px;
+          text-transform:uppercase;letter-spacing:.5px">報告サマリー</div>
+        ${[
+          ['報告ID', `<span style="font-family:'DM Mono',monospace">${rptId}</span>`],
+          ['取引形態', isDeal ? '<span class="badge b-vt">三為</span>' : '<span class="badge b-sk">売買仲介</span>'],
+          ['案件ID / クライアント', `${caseId} / ${clientNm}`],
+          ['売買価格', fmt(price)],
+          [isDeal ? 'スプレッド' : '仲介料', fmt(fee)],
+        ].map(([l,v])=>`
+          <div style="display:flex;justify-content:space-between;align-items:center;
+            font-size:12px;padding:6px 0;border-bottom:1px solid var(--bd)">
+            <span style="color:var(--muted)">${l}</span><span>${v}</span>
+          </div>`).join('')}
+        <div style="display:flex;justify-content:space-between;align-items:center;
+          font-size:13px;font-weight:700;padding:10px 0">
+          <span style="color:var(--ink)">想定報酬（${Math.round(rate*100)}%）</span>
+          <span style="font-size:20px;font-weight:300;color:var(--em);
+            font-variant-numeric:tabular-nums">${fmt(reward)}</span>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+        <button class="btn btn-ghost" onclick="renderForm()">続けて報告する</button>
+        <button class="btn btn-primary" onclick="window.location.href='coreto-contract-report-v2.html'">
+          成約報告一覧へ</button>
+        <button class="btn btn-ghost" onclick="window.location.href='coreto-hub-v2.html'">
+          ダッシュボードへ</button>
+      </div>
+    </div>`;
+}
+
+// ── メインフォーム描画 ────────────────────────────────────
+function renderForm() {
+  document.getElementById('form-root').innerHTML = `
+
+    <!-- ステップバー -->
+    <div class="step-bar">
+      <div class="step active"><div class="step-num">1</div><div class="step-label">取引情報</div></div>
+      <div class="step-line"></div>
+      <div class="step todo"><div class="step-num">2</div><div class="step-label">報酬確認</div></div>
+      <div class="step-line"></div>
+      <div class="step todo"><div class="step-num">3</div><div class="step-label">書類確認</div></div>
+      <div class="step-line"></div>
+      <div class="step todo"><div class="step-num">4</div><div class="step-label">提出完了</div></div>
+    </div>
+
+    <!-- 取引形態 -->
+    <div class="form-card">
+      <div class="form-head">
+        <div class="form-head-icon">🏷️</div>
+        <div class="form-head-title">取引形態</div>
+      </div>
+      <div class="form-body">
+        <div class="deal-type-sel">
+          <div class="deal-type-card selected" data-type="brokerage" onclick="selectDealType('brokerage')">
+            <div class="dt-icon">🏠</div>
+            <div class="dt-title">売買仲介</div>
+            <div class="dt-desc">売主・買主の間に立ち仲介。<br>手数料（上限3%+6万+税）を受領。</div>
+          </div>
+          <div class="deal-type-card" data-type="sannai" onclick="selectDealType('sannai')">
+            <div class="dt-icon">🔄</div>
+            <div class="dt-title">三為（さんため）</div>
+            <div class="dt-desc">A→B→Cの転売構造。<br>仕入・売出のスプレッドが報酬源。</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 案件基本情報 -->
+    <div class="form-card">
+      <div class="form-head">
+        <div class="form-head-icon">📋</div>
+        <div class="form-head-title">案件情報</div>
+      </div>
+      <div class="form-body">
+        <div class="field-row">
+          <div class="field">
+            <label class="required">案件ID</label>
+            <input id="case-id" class="form-input" placeholder="SALE-0001">
+          </div>
+          <div class="field">
+            <label class="required">成約日</label>
+            <input id="closed-at" type="date" class="form-input" value="${new Date().toISOString().slice(0,10)}">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label class="required">クライアント名（買主）</label>
+            <input id="client-name" class="form-input" placeholder="田中 太郎">
+          </div>
+          <div class="field">
+            <label>クライアントID</label>
+            <input id="client-id" class="form-input" placeholder="CLI-0001">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>売主名</label>
+            <input id="seller-name" class="form-input" placeholder="山田 花子">
+          </div>
+          <div class="field">
+            <label>PT紹介</label>
+            <select id="pt-referral" class="form-input">
+              <option value="none">なし</option>
+              <option value="pt">あり（PT紹介案件）</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 物件情報 -->
+    <div class="form-card">
+      <div class="form-head">
+        <div class="form-head-icon">🏢</div>
+        <div class="form-head-title">物件情報</div>
+      </div>
+      <div class="form-body">
+        <div class="field-row">
+          <div class="field">
+            <label class="required">物件住所</label>
+            <input class="form-input" placeholder="渋谷区代々木1丁目XX-XX">
+          </div>
+          <div class="field">
+            <label>物件名</label>
+            <input class="form-input" placeholder="代々木パークタワー 401号">
+          </div>
+        </div>
+        <div class="field-row col3">
+          <div class="field">
+            <label class="required">物件種別</label>
+            <select class="form-input">
+              <option>区分マンション</option>
+              <option>一戸建て</option>
+              <option>土地</option>
+              <option>一棟マンション</option>
+              <option>一棟アパート</option>
+              <option>事務所・店舗</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>専有面積（㎡）</label>
+            <input class="form-input num" placeholder="65.40">
+          </div>
+          <div class="field">
+            <label>築年数</label>
+            <input class="form-input" placeholder="築12年">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>重要事項説明実施日</label>
+            <input type="date" class="form-input">
+          </div>
+          <div class="field">
+            <label>決済予定日</label>
+            <input type="date" class="form-input">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 売買仲介フィールド -->
+    <div id="brokerage-fields" class="form-card">
+      <div class="form-head">
+        <div class="form-head-icon">💴</div>
+        <div class="form-head-title">売買価格・仲介料</div>
+      </div>
+      <div class="form-body">
+        <div class="field-row">
+          <div class="field">
+            <label class="required">売買金額（税抜）</label>
+            <input id="sale-price" class="form-input num" placeholder="85,000,000"
+              oninput="calcBrokerageReward()">
+          </div>
+          <div class="field">
+            <label>仲介形態</label>
+            <select id="brokerage-side" class="form-input" onchange="calcBrokerageReward()">
+              <option value="both">両手（売主・買主双方）</option>
+              <option value="one">片手（買主側のみ）</option>
+              <option value="seller">片手（売主側のみ）</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>仲介料（税込）</label>
+            <input id="brokerage-fee" class="form-input num" placeholder="自動計算"
+              oninput="this.dataset.manual='1';calcBrokerageReward()">
+            <div class="hint">空欄の場合は上限額（3%+6万+消費税）が自動入力されます</div>
+          </div>
+          <div class="field" style="justify-content:flex-end">
+            <div id="reward-preview" style="background:var(--cream2);border:1px solid var(--bd);
+              border-radius:9px;padding:14px;font-size:12px;color:var(--muted);text-align:center">
+              売買金額を入力すると自動計算されます
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 三為フィールド -->
+    <div id="sannai-fields" class="form-card" style="display:none">
+      <div class="form-head">
+        <div class="form-head-icon">🔄</div>
+        <div class="form-head-title">三為スプレッド計算</div>
+      </div>
+      <div class="form-body">
+        <div class="field-row">
+          <div class="field">
+            <label class="required">仕入金額（A→B）</label>
+            <input id="sannai-buy" class="form-input num" placeholder="75,000,000"
+              oninput="calcSpread()">
+            <div class="hint">売主から仕入れる金額</div>
+          </div>
+          <div class="field">
+            <label class="required">売出金額（B→C）</label>
+            <input id="sannai-sell" class="form-input num" placeholder="85,000,000"
+              oninput="calcSpread()">
+            <div class="hint">買主への売出金額</div>
+          </div>
+        </div>
+        <div id="spread-preview" class="spread-box" style="color:var(--muted);font-size:12px;
+          text-align:center;background:var(--cream2);color:var(--muted);border:1px solid var(--bd);
+          border-radius:10px;padding:14px">
+          仕入・売出金額を入力するとスプレッドを自動計算します
+        </div>
+      </div>
+    </div>
+
+    <!-- 添付書類チェックリスト -->
+    <div class="form-card">
+      <div class="form-head">
+        <div class="form-head-icon">📎</div>
+        <div class="form-head-title">添付書類チェックリスト</div>
+        <div class="form-head-badge">
+          <span id="doc-badge" class="badge b-rd">必須書類 未完了</span>
+        </div>
+      </div>
+      <div class="form-body">
+        <div id="doc-list" class="doc-list"></div>
+        <div style="margin-top:14px">
+          <div class="field">
+            <label>その他添付ファイル（PDF・画像）</label>
+            <input type="file" accept=".pdf,image/*" multiple class="form-input"
+              style="padding:7px;font-size:12px">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 備考 -->
+    <div class="form-card">
+      <div class="form-head">
+        <div class="form-head-icon">📝</div>
+        <div class="form-head-title">HQへの連絡事項</div>
+      </div>
+      <div class="form-body">
+        <div class="field">
+          <textarea class="form-input" placeholder="特記事項・HQへの確認事項があれば記入してください"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:4px;margin-bottom:32px">
+      <button class="btn btn-ghost" onclick="renderForm()">リセット</button>
+      <button class="btn btn-primary" onclick="validateAndSubmit()">
+        成約報告を提出する →
+      </button>
+    </div>`;
+
+  // 初期化
+  dealType = 'brokerage';
+  updateDocList();
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  renderForm();
+  CNAV.init('contract_report');
+});
+</script>
+</body>
+</html>
