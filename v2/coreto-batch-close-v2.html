@@ -548,11 +548,20 @@ function runBatchCheck() {
   // ⑤ 即時払い超過（instantPay > taxable）
   const instantOverList = allCalc.filter(p => p.instantPay > p.calc.taxable);
 
-  // ⑥ 重複案件
-  const caseIds = currentPayouts.flatMap(p => p.cases.map(c => ({ caseId:c.id, owner:p })));
-  const dupIds  = caseIds.filter((c,i) => caseIds.findIndex(x=>x.caseId===c.caseId) !== i)
-                         .map(c => c.caseId);
-  const dupOwners = caseIds.filter(c => dupIds.includes(c.caseId));
+  // ⑥ 重複案件（AG同士・PT同士の同一種別内のみチェック。AG×PTの共有は正常のため除外）
+  const agCaseIds = currentPayouts
+    .filter(p => !p.type.startsWith('PT'))
+    .flatMap(p => p.cases.map(c => ({ caseId:c.id, owner:p })));
+  const ptCaseIds = currentPayouts
+    .filter(p => p.type.startsWith('PT'))
+    .flatMap(p => p.cases.map(c => ({ caseId:c.id, owner:p })));
+
+  const findDups = list => list
+    .filter((c,i) => list.findIndex(x=>x.caseId===c.caseId) !== i)
+    .map(c => c.caseId);
+
+  const dupIds    = [...new Set([...findDups(agCaseIds), ...findDups(ptCaseIds)])];
+  const dupOwners = [...agCaseIds, ...ptCaseIds].filter(c => dupIds.includes(c.caseId));
 
   // ⑦ HR分割払い（hrSplit あり = 在籍確認が必要）
   const hrSplitList = currentPayouts.filter(p => p.cases.some(c => c.hrSplit));
