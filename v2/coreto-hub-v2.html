@@ -1091,6 +1091,8 @@ function hqNav() { return [
     { icon:'🏢', label:'AG管理（権限・育成）',    page:'hq_admin' },
     { icon:'🤝', label:'PT管理',                   page:'pt_mgmt' },
     { icon:'🎓', label:'インターン管理',            page:'intern' },
+    { icon:'📨', label:'AG招待・新規登録',          page:'agent_invite' },
+    { icon:'📨', label:'PT招待・新規登録',          page:'pt_invite' },
   ]},
   { section: '財務 / 報酬', items: [
     { icon:'💴', label:'月次報酬確定・振込',       page:'payroll' },
@@ -1286,6 +1288,9 @@ function routePage(page) {
     account:         'coreto-account-v2.html',
     kyc:             'coreto-kyc-v2.html',
     faq:             'coreto-faq-v2.html',
+    id_manager:      'coreto-id-manager-v2.html',
+    batch_close:     'coreto-batch-close-v2.html',
+    agent_retention: 'coreto-agent-retention-v2.html',
   };
   if (externalLinks[page]) { window.location.href = externalLinks[page]; return; }
 
@@ -1301,6 +1306,8 @@ function routePage(page) {
     users:        'ユーザー管理',
     notif:        '通知ログ',
     onboard_mgmt: '研修コンテンツ管理',
+    agent_invite: 'AG招待・新規登録',
+    pt_invite:    'PT招待・新規登録',
     // AG共通
     rank:         'ランク・報酬明細',
     onboard:      'マニュアル・研修',
@@ -1349,6 +1356,9 @@ function routePage(page) {
   // ── HQ専用ページ：PT管理 ─────────────────────────
   if (page === 'pt_mgmt') { renderPTMgmt(); return; }
 
+  // ── HQ専用ページ：AG/PT招待 ──────────────────────
+  if (page === 'agent_invite' || page === 'pt_invite') { renderInvitePanel(page); return; }
+
   // ── 汎用プレースホルダー ─────────────────────────
   document.getElementById('page-content').innerHTML = `
     <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:300px;gap:12px">
@@ -1356,6 +1366,181 @@ function routePage(page) {
       <div style="font-size:18px;font-weight:600;color:var(--ink);font-family:'Outfit','Noto Sans JP',sans-serif;font-variant-numeric:tabular-nums">${titles[page]||page}</div>
       <div style="font-size:13px;color:var(--muted)">このページは個別ファイルで実装予定です</div>
     </div>`;
+}
+
+// ═══════════════════════════════════════════
+// AG / PT 招待パネル
+// ═══════════════════════════════════════════
+function renderInvitePanel(page) {
+  const isAG   = page === 'agent_invite';
+  const label  = isAG ? 'AG（エージェント）' : 'PT（パートナー）';
+  const target = isAG ? 'coreto-agent-signup-v2.html' : 'coreto-partner-signup-v2.html';
+
+  function genToken() {
+    const seg = () => Math.random().toString(36).slice(2,6).toUpperCase();
+    const prefix = isAG ? 'CORETO' : 'COREPT';
+    return `${prefix}-${seg()}-${seg()}`;
+  }
+
+  document.getElementById('topbar-actions').innerHTML = `
+    <button class="topbar-btn ghost" onclick="window.location.href='coreto-id-manager-v2.html'">
+      🪪 ID管理台帳
+    </button>`;
+
+  document.getElementById('page-content').innerHTML = `
+    <div style="max-width:680px">
+
+      <!-- 説明 -->
+      <div style="background:#fff;border:1px solid var(--border);border-radius:10px;
+        padding:16px 20px;margin-bottom:16px;display:flex;align-items:flex-start;gap:14px">
+        <div style="font-size:28px;flex-shrink:0">${isAG ? '🤝' : '🌐'}</div>
+        <div>
+          <div style="font-size:14px;font-weight:700;color:var(--ink);margin-bottom:4px">
+            ${label}の招待フロー</div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.8">
+            招待コードを発行 → URLをSMSまたはコピーして候補者に送付。<br>
+            候補者が招待コードを入力すると入会申込フォーム（${isAG?'8':'5'}ステップ）が開きます。
+          </div>
+        </div>
+      </div>
+
+      <!-- 招待コード発行 -->
+      <div style="background:#fff;border:1px solid var(--border);border-radius:10px;
+        overflow:hidden;margin-bottom:16px">
+        <div style="padding:12px 18px;border-bottom:1px solid var(--border);
+          background:var(--cream2);font-size:11px;font-weight:700;color:var(--ink);
+          text-transform:uppercase;letter-spacing:.5px">
+          🎫 招待コード発行
+        </div>
+        <div style="padding:18px">
+          <div style="display:grid;grid-template-columns:1fr auto;gap:10px;margin-bottom:12px">
+            <div>
+              <label style="font-size:11px;font-weight:700;color:var(--muted);display:block;margin-bottom:5px">
+                候補者氏名（任意・メモ用）</label>
+              <input id="invite-name" type="text" placeholder="例：田中 太郎"
+                style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:7px;
+                  font-size:13px;font-family:'Outfit','Noto Sans JP',sans-serif;outline:none">
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:700;color:var(--muted);display:block;margin-bottom:5px">
+                種別</label>
+              <select id="invite-type" style="padding:9px 12px;border:1.5px solid var(--border);border-radius:7px;
+                font-size:13px;font-family:'Outfit','Noto Sans JP',sans-serif;
+                background:#fff;cursor:pointer;outline:none">
+                ${isAG
+                  ? '<option value="re">RE-AG（不動産）</option><option value="hr">HR-AG（人材）</option>'
+                  : '<option value="individual">個人PT</option><option value="corporate">法人PT</option>'}
+              </select>
+            </div>
+          </div>
+          <button class="topbar-btn primary" onclick="generateInvite('${target}')"
+            style="width:100%;justify-content:center;padding:10px">
+            ＋ 招待コードを発行する
+          </button>
+        </div>
+      </div>
+
+      <!-- 発行済みコード -->
+      <div style="background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden">
+        <div style="padding:12px 18px;border-bottom:1px solid var(--border);
+          background:var(--cream2);font-size:11px;font-weight:700;color:var(--ink);
+          text-transform:uppercase;letter-spacing:.5px;display:flex;justify-content:space-between;
+          align-items:center">
+          📋 発行済みコード
+          <span style="font-size:10px;color:var(--muted);font-weight:400;text-transform:none">
+            有効期限：発行から72時間</span>
+        </div>
+        <div id="invite-list" style="padding:14px 18px">
+          <div style="text-align:center;padding:24px;font-size:12px;color:var(--muted)">
+            招待コードを発行するとここに表示されます
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function generateInvite(targetUrl) {
+  const seg = () => Math.random().toString(36).slice(2,6).toUpperCase();
+  const typeEl = document.getElementById('invite-type');
+  const nameEl = document.getElementById('invite-name');
+  const isAG   = targetUrl.includes('agent');
+  const prefix = isAG ? 'CORETO' : 'COREPT';
+  const token  = `${prefix}-${seg()}-${seg()}`;
+  const type   = typeEl?.value || '';
+  const name   = nameEl?.value.trim() || '（氏名未入力）';
+  const url    = `${location.origin}${location.pathname.replace(/[^/]*$/','')}${targetUrl}?invite=${token}`;
+  const typeLabel = { re:'RE-AG', hr:'HR-AG', individual:'個人PT', corporate:'法人PT' }[type] || type;
+  const now    = new Date();
+  const expire = new Date(now.getTime() + 72*60*60*1000);
+  const fmtDt  = d => `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
+
+  const list = document.getElementById('invite-list');
+  // 空状態メッセージ削除
+  const empty = list.querySelector('div[style*="text-align:center"]');
+  if (empty) empty.remove();
+
+  const card = document.createElement('div');
+  card.style.cssText = 'border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:10px;background:var(--cream2)';
+  card.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div>
+        <div style="font-size:12px;font-weight:700;color:var(--ink)">${name}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px">
+          ${typeLabel} ／ 発行: ${fmtDt(now)} ／ 期限: ${fmtDt(expire)}
+        </div>
+      </div>
+      <span style="background:var(--em-bg);color:var(--em);font-size:10px;font-weight:700;
+        padding:2px 8px;border-radius:20px">有効</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <div style="font-family:'DM Mono',monospace;font-size:15px;font-weight:700;
+        color:var(--navy);letter-spacing:2px;background:#fff;border:1.5px solid var(--border);
+        border-radius:7px;padding:8px 14px;flex:1;text-align:center">
+        ${token}
+      </div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="topbar-btn ghost" style="flex:1;justify-content:center;font-size:11px"
+        onclick="copyToken('${token}')">
+        📋 コードをコピー
+      </button>
+      <button class="topbar-btn ghost" style="flex:1;justify-content:center;font-size:11px"
+        onclick="copyInviteUrl('${url}')">
+        🔗 URLをコピー
+      </button>
+      <button class="topbar-btn primary" style="flex:1;justify-content:center;font-size:11px"
+        onclick="openSignup('${url}')">
+        🚀 申込フォームを開く
+      </button>
+    </div>`;
+  list.insertBefore(card, list.firstChild);
+
+  // 入力欄リセット
+  if (document.getElementById('invite-name')) document.getElementById('invite-name').value = '';
+  showToastHub('✅ 招待コードを発行しました');
+}
+
+function copyToken(token) {
+  navigator.clipboard.writeText(token).then(() => showToastHub('📋 招待コードをコピーしました'));
+}
+function copyInviteUrl(url) {
+  navigator.clipboard.writeText(url).then(() => showToastHub('🔗 招待URLをコピーしました'));
+}
+function openSignup(url) {
+  window.open(url, '_blank');
+}
+
+function showToastHub(msg) {
+  let t = document.getElementById('hub-toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'hub-toast';
+    t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--navy);color:#fff;padding:10px 20px;border-radius:8px;font-size:12px;font-weight:600;opacity:0;transition:.3s;z-index:9999;pointer-events:none;white-space:nowrap';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1'; t.style.transform = 'translateX(-50%) translateY(0)';
+  setTimeout(() => { t.style.opacity='0'; t.style.transform='translateX(-50%) translateY(10px)'; }, 3000);
 }
 
 // ═══════════════════════════════════════════
@@ -1617,6 +1802,28 @@ function renderHQDash() {
             <div class="stat-row">
               <div class="stat-label">AG報酬総額（確定）</div>
               <div class="stat-val">¥2,140,000</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Invite quick action -->
+        <div class="section">
+          <div class="section-header">
+            <div class="section-title">AG / PT 招待</div>
+          </div>
+          <div class="card" style="padding:14px 16px">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.6">
+              面接合格者に招待コードを発行してSMSで送付します。
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <button class="topbar-btn primary" style="justify-content:center;width:100%"
+                onclick="navClick('agent_invite', document.querySelector('.nav-item') || document.createElement('div'))">
+                🤝 AG を招待する
+              </button>
+              <button class="topbar-btn ghost" style="justify-content:center;width:100%"
+                onclick="navClick('pt_invite', document.querySelector('.nav-item') || document.createElement('div'))">
+                🌐 PT を招待する
+              </button>
             </div>
           </div>
         </div>
