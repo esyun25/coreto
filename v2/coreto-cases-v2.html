@@ -352,7 +352,8 @@ body, input, select, textarea, button { font-family:'Outfit','Noto Sans JP',sans
           <div class="case-meta-item"><div class="case-meta-label">担当AG</div><div class="case-meta-val" style="font-family:'DM Mono',monospace;font-size:11px">AG-0042</div></div>
           <div class="case-meta-item"><div class="case-meta-label">送金期限</div><div class="case-meta-val" style="color:var(--rd);font-size:11px">本日</div></div>
         </div>
-        <button class="btn btn-sm" style="background:rgba(200,169,81,.12);color:var(--gold);border:1px solid rgba(200,169,81,.25);font-size:10px;flex-shrink:0" onclick="event.stopPropagation();showAIStagnationAdvice('RENT-0192','高橋 美咲様',15)">✨ AI停滞アドバイス</button>
+        <button class="btn btn-sm" style="background:rgba(200,169,81,.12);color:var(--gold);border:1px solid rgba(200,169,81,.25);font-size:10px;flex-shrink:0" onclick="event.stopPropagation();openInvoiceCheck('RENT-0192')" style="background:var(--sk-bg);color:var(--sk);border:1px solid rgba(2,132,199,.2);font-size:10px;flex-shrink:0">🏦 明細チェック</button>
+        <button class="btn btn-sm" onclick="event.stopPropagation();showAIStagnationAdvice('RENT-0192','高橋 美咲様',15)">✨ AI停滞アドバイス</button>
         <div class="case-arrow">›</div>
       </div>
       <!-- Sale -->
@@ -584,5 +585,587 @@ window.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 <div class="mob-overlay" onclick="toggleSb()"></div>
+
+<!-- ── 初期費用明細チェック モーダル ── -->
+<div id="invoice-modal" style="display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,.55);z-index:400;align-items:flex-start;
+  justify-content:center;overflow-y:auto;padding:20px">
+  <div style="background:#fff;border-radius:16px;width:780px;max-width:100%;
+    box-shadow:0 20px 60px rgba(0,0,0,.3);margin:auto">
+
+    <!-- モーダルヘッダー -->
+    <div style="background:linear-gradient(135deg,#0D1A2D,#1E3252);padding:18px 24px;
+      border-radius:16px 16px 0 0;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-family:'Cormorant Garamond',serif;font-size:17px;font-weight:600;
+          letter-spacing:3px;color:#C8A951">初期費用 明細チェック</div>
+        <div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:2px;
+          font-family:'DM Mono',monospace" id="inv-case-id-label">—</div>
+      </div>
+      <button onclick="closeInvoiceModal()" style="background:rgba(255,255,255,.1);border:none;
+        color:rgba(255,255,255,.7);width:30px;height:30px;border-radius:50%;
+        cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">✕</button>
+    </div>
+
+    <div style="padding:24px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+
+        <!-- 左: AG入力 + アップロード -->
+        <div>
+          <div style="font-size:11px;font-weight:700;color:#0D1A2D;
+            letter-spacing:.5px;margin-bottom:10px;padding-bottom:6px;
+            border-bottom:1px solid #E8EAED">① 送金依頼に記載した口座情報</div>
+
+          <div style="background:#F0F9FF;border:1px solid rgba(2,132,199,.15);
+            border-radius:8px;padding:9px 12px;margin-bottom:14px;font-size:10px;color:#0284C7">
+            💡 送金依頼書に記載した内容をそのまま入力してください
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+            <div>
+              <div style="font-size:9px;font-weight:700;color:#5F6368;margin-bottom:4px">銀行名 *</div>
+              <input id="inv-bank" type="text" placeholder="例: 三菱UFJ銀行"
+                style="width:100%;padding:8px 11px;border:1.5px solid #DADCE0;border-radius:7px;
+                  font-size:12px;font-family:'Outfit',sans-serif"
+                oninput="invUpdateBtn()">
+            </div>
+            <div>
+              <div style="font-size:9px;font-weight:700;color:#5F6368;margin-bottom:4px">支店名</div>
+              <input id="inv-branch" type="text" placeholder="例: 渋谷支店"
+                style="width:100%;padding:8px 11px;border:1.5px solid #DADCE0;border-radius:7px;
+                  font-size:12px;font-family:'Outfit',sans-serif">
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:80px 1fr;gap:10px;margin-bottom:10px">
+            <div>
+              <div style="font-size:9px;font-weight:700;color:#5F6368;margin-bottom:4px">種別 *</div>
+              <select id="inv-type"
+                style="width:100%;padding:8px 11px;border:1.5px solid #DADCE0;border-radius:7px;
+                  font-size:12px;font-family:'Outfit',sans-serif">
+                <option value="普通">普通</option>
+                <option value="当座">当座</option>
+              </select>
+            </div>
+            <div>
+              <div style="font-size:9px;font-weight:700;color:#5F6368;margin-bottom:4px">口座番号 *</div>
+              <input id="inv-number" type="text" placeholder="例: 1234567" maxlength="8"
+                style="width:100%;padding:8px 11px;border:1.5px solid #DADCE0;border-radius:7px;
+                  font-size:12px;font-family:'DM Mono',monospace;letter-spacing:2px"
+                oninput="invUpdateBtn()">
+            </div>
+          </div>
+
+          <div style="margin-bottom:10px">
+            <div style="font-size:9px;font-weight:700;color:#5F6368;margin-bottom:4px">口座名義（カナ）</div>
+            <input id="inv-holder" type="text" placeholder="例: ｶﾌﾞｼｷｶﾞｲｼｬ ﾀﾅｶﾌﾄﾞｳｻﾝ"
+              style="width:100%;padding:8px 11px;border:1.5px solid #DADCE0;border-radius:7px;
+                font-size:12px;font-family:'DM Mono',monospace">
+          </div>
+
+          <div style="margin-bottom:16px">
+            <div style="font-size:9px;font-weight:700;color:#5F6368;margin-bottom:4px">送金要請金額（円） *</div>
+            <div style="position:relative">
+              <span style="position:absolute;left:11px;top:50%;transform:translateY(-50%);
+                font-size:12px;color:#5F6368;font-weight:600">¥</span>
+              <input id="inv-amount" type="number" placeholder="例: 380000"
+                style="width:100%;padding:8px 11px 8px 24px;border:1.5px solid #DADCE0;
+                  border-radius:7px;font-size:14px;font-family:'DM Mono',monospace;font-weight:600"
+                oninput="invUpdateBtn()">
+            </div>
+          </div>
+
+          <!-- アップロードゾーン -->
+          <div style="font-size:11px;font-weight:700;color:#0D1A2D;
+            letter-spacing:.5px;margin-bottom:10px;padding-bottom:6px;
+            border-bottom:1px solid #E8EAED">② 管理会社の明細をアップロード</div>
+
+          <div id="inv-upload-zone"
+            style="border:2px dashed #DADCE0;border-radius:10px;padding:20px;
+              text-align:center;cursor:pointer;background:#F8F9FA;position:relative;
+              transition:.2s"
+            ondragover="event.preventDefault();this.style.borderColor='#0D1A2D'"
+            ondragleave="this.style.borderColor='#DADCE0'"
+            ondrop="invHandleDrop(event)">
+            <input type="file" id="inv-file-input" accept="image/*,.pdf"
+              style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%"
+              onchange="invHandleFile(event)">
+            <div style="font-size:24px;margin-bottom:6px" id="inv-upload-icon">📄</div>
+            <div style="font-size:12px;font-weight:600;color:#5F6368" id="inv-upload-label">
+              クリックまたはドラッグ＆ドロップ</div>
+            <div style="font-size:10px;color:#80868B;margin-top:3px">JPG・PNG・HEIC・PDF 対応</div>
+          </div>
+
+          <div id="inv-preview" style="display:none;margin-top:10px;text-align:center">
+            <img id="inv-img" style="max-width:100%;max-height:200px;border-radius:8px;
+              border:1px solid #E8EAED;object-fit:contain">
+          </div>
+
+          <button id="inv-check-btn" onclick="invRunCheck()"
+            style="width:100%;margin-top:14px;padding:11px;background:#0D1A2D;color:#C8A951;
+              border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;
+              font-family:'Outfit',sans-serif;display:flex;align-items:center;
+              justify-content:center;gap:8px;opacity:.4;pointer-events:none">
+            🤖 AI照合を実行
+          </button>
+        </div>
+
+        <!-- 右: 照合結果 -->
+        <div id="inv-result-panel">
+          <div style="background:#F8F9FA;border:1.5px dashed #DADCE0;border-radius:10px;
+            padding:36px;text-align:center;color:#80868B;height:100%;
+            display:flex;flex-direction:column;align-items:center;justify-content:center">
+            <div style="font-size:30px;margin-bottom:8px">🏦</div>
+            <div style="font-size:12px;font-weight:600;color:#5F6368">照合結果がここに表示されます</div>
+            <div style="font-size:10px;margin-top:4px">入力して明細をアップロードしてください</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// 初期費用明細チェック — インラインシステム
+// ══════════════════════════════════════════════════════════════
+let _invCaseId   = null;
+let _invBase64   = null;
+let _invMime     = null;
+let _invChecks   = {}; // caseId → チェック結果
+
+const INV_LS = 'INVOICE_CHECKS';
+function invLsGet(){ try{ return JSON.parse(localStorage.getItem(INV_LS)||'{}'); }catch(e){return {};} }
+function invLsSave(d){ try{ localStorage.setItem(INV_LS,JSON.stringify(d)); }catch(e){} }
+
+function openInvoiceModal(caseId){
+  _invCaseId = caseId;
+  _invBase64 = null; _invMime = null;
+
+  // 保存済みデータがあれば復元
+  const saved = invLsGet()[caseId];
+  document.getElementById('inv-bank').value   = saved?.bank   || '';
+  document.getElementById('inv-branch').value = saved?.branch || '';
+  document.getElementById('inv-type').value   = saved?.acType || '普通';
+  document.getElementById('inv-number').value = saved?.number || '';
+  document.getElementById('inv-holder').value = saved?.holder || '';
+  document.getElementById('inv-amount').value = saved?.amount || '';
+  document.getElementById('inv-case-id-label').textContent = caseId;
+
+  // アップロードゾーンリセット
+  document.getElementById('inv-upload-icon').textContent  = '📄';
+  document.getElementById('inv-upload-label').textContent = 'クリックまたはドラッグ＆ドロップ';
+  document.getElementById('inv-upload-zone').style.borderColor = '#DADCE0';
+  document.getElementById('inv-upload-zone').style.background  = '#F8F9FA';
+  document.getElementById('inv-preview').style.display = 'none';
+  document.getElementById('inv-file-input').value = '';
+
+  // 保存済み結果があれば表示
+  if(saved?.result) invRenderResult(saved.result, saved.agInput);
+  else document.getElementById('inv-result-panel').innerHTML = `
+    <div style="background:#F8F9FA;border:1.5px dashed #DADCE0;border-radius:10px;
+      padding:36px;text-align:center;color:#80868B;height:100%;
+      display:flex;flex-direction:column;align-items:center;justify-content:center">
+      <div style="font-size:30px;margin-bottom:8px">🏦</div>
+      <div style="font-size:12px;font-weight:600;color:#5F6368">照合結果がここに表示されます</div>
+    </div>`;
+
+  invUpdateBtn();
+  document.getElementById('invoice-modal').style.display = 'flex';
+}
+
+function closeInvoiceModal(){
+  document.getElementById('invoice-modal').style.display = 'none';
+}
+
+function invUpdateBtn(){
+  const ok = document.getElementById('inv-bank')?.value &&
+             document.getElementById('inv-number')?.value &&
+             document.getElementById('inv-amount')?.value &&
+             _invBase64;
+  const btn = document.getElementById('inv-check-btn');
+  btn.style.opacity       = ok ? '1' : '.4';
+  btn.style.pointerEvents = ok ? 'auto' : 'none';
+}
+
+function invHandleDrop(e){
+  e.preventDefault();
+  document.getElementById('inv-upload-zone').style.borderColor='#DADCE0';
+  const file = e.dataTransfer.files[0];
+  if(file) invProcessFile(file);
+}
+function invHandleFile(e){ const f=e.target.files[0]; if(f) invProcessFile(f); }
+
+function invProcessFile(file){
+  _invMime = file.type||'image/jpeg';
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    _invBase64 = e.target.result.split(',')[1];
+    const zone = document.getElementById('inv-upload-zone');
+    zone.style.borderColor = '#059669'; zone.style.borderStyle='solid';
+    zone.style.background  = '#ECFDF5';
+    document.getElementById('inv-upload-icon').textContent  = '✅';
+    document.getElementById('inv-upload-label').textContent = file.name;
+    if(file.type.startsWith('image/')){
+      document.getElementById('inv-img').src = e.target.result;
+      document.getElementById('inv-preview').style.display = 'block';
+    }
+    invUpdateBtn();
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── AI照合実行 ─────────────────────────────────────────────
+async function invRunCheck(){
+  const agInput = {
+    bank:   document.getElementById('inv-bank').value.trim(),
+    branch: document.getElementById('inv-branch').value.trim(),
+    acType: document.getElementById('inv-type').value,
+    number: document.getElementById('inv-number').value.trim(),
+    holder: document.getElementById('inv-holder').value.trim(),
+    amount: parseInt(document.getElementById('inv-amount').value)||0,
+  };
+
+  const btn = document.getElementById('inv-check-btn');
+  btn.textContent = '🤖 照合中...';
+  btn.style.opacity='.6'; btn.style.pointerEvents='none';
+
+  document.getElementById('inv-result-panel').innerHTML = `
+    <div style="background:linear-gradient(135deg,#0D1A2D,#1E3252);border-radius:10px;
+      padding:16px 18px;display:flex;align-items:center;gap:10px">
+      <div style="display:flex;gap:4px" id="inv-dots">
+        <span style="width:6px;height:6px;border-radius:50%;background:#C8A951;
+          animation:db 1.4s infinite ease-in-out;display:inline-block"></span>
+        <span style="width:6px;height:6px;border-radius:50%;background:#C8A951;
+          animation:db 1.4s .2s infinite ease-in-out;display:inline-block"></span>
+        <span style="width:6px;height:6px;border-radius:50%;background:#C8A951;
+          animation:db 1.4s .4s infinite ease-in-out;display:inline-block"></span>
+      </div>
+      <div style="color:rgba(255,255,255,.75);font-size:12px">明細を読み取り・照合中...</div>
+    </div>`;
+
+  try {
+    const scanned  = await invExtractFromImage(agInput);
+    const result   = invCompare(agInput, scanned);
+
+    // 保存
+    const all = invLsGet();
+    all[_invCaseId] = { bank:agInput.bank, branch:agInput.branch, acType:agInput.acType,
+      number:agInput.number, holder:agInput.holder, amount:agInput.amount,
+      result, agInput, checkedAt: new Date().toLocaleString('ja-JP'),
+      filePreview: _invMime?.startsWith('image/') ? document.getElementById('inv-img')?.src : null };
+    invLsSave(all);
+
+    invRenderResult(result, agInput);
+
+    // 不一致があればHQ Slack通知
+    if(result.hasNg){
+      invSlackAlert(_invCaseId, agInput, result);
+    }
+  } catch(e){
+    document.getElementById('inv-result-panel').innerHTML =
+      `<div style="color:#DC2626;font-size:12px;padding:16px">
+        ❌ AI照合失敗: ${e.message}</div>`;
+  }
+  btn.textContent = '🤖 AI照合を実行';
+  btn.style.opacity='1'; btn.style.pointerEvents='auto';
+}
+
+// ── Claude Vision API ──────────────────────────────────────
+async function invExtractFromImage(agInput){
+  const isImg = _invMime?.startsWith('image/');
+  const content = isImg
+    ? [{ type:'image', source:{ type:'base64', media_type:_invMime, data:_invBase64 }},
+       { type:'text',  text:'この明細書から振込先口座情報と合計請求金額を抽出してください。' }]
+    : [{ type:'document', source:{ type:'base64', media_type:'application/pdf', data:_invBase64 }},
+       { type:'text',     text:'この明細書から振込先口座情報と合計請求金額を抽出してください。' }];
+
+  const res = await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      model:'claude-sonnet-4-20250514', max_tokens:800,
+      system:`不動産初期費用明細書の読み取り専門AIです。以下のJSON形式のみで返答してください（前置き不要）:
+{"bank":"銀行名","branch":"支店名","accountType":"普通 or 当座","accountNumber":"口座番号（数字のみ）",
+"accountHolder":"口座名義","totalAmount":数値,"readConfidence":0から1,"notes":"気になる点またはnull"}`,
+      messages:[{ role:'user', content }]
+    })
+  });
+  if(!res.ok) throw new Error('API '+res.status);
+  const data = await res.json();
+  return JSON.parse(data.content[0].text.replace(/```json|```/g,'').trim());
+}
+
+// ── 照合ロジック ───────────────────────────────────────────
+function invNorm(s){
+  return String(s||'').replace(/[　\s]/g,'').replace(/銀行$|支店$/,'')
+    .replace(/[Ａ-Ｚａ-ｚ０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).toUpperCase();
+}
+function invNormKana(s){
+  const t={'ア':'ｱ','イ':'ｲ','ウ':'ｳ','エ':'ｴ','オ':'ｵ','カ':'ｶ','キ':'ｷ','ク':'ｸ','ケ':'ｹ','コ':'ｺ',
+    'サ':'ｻ','シ':'ｼ','ス':'ｽ','セ':'ｾ','ソ':'ｿ','タ':'ﾀ','チ':'ﾁ','ツ':'ﾂ','テ':'ﾃ','ト':'ﾄ',
+    'ナ':'ﾅ','ニ':'ﾆ','ヌ':'ﾇ','ネ':'ﾈ','ノ':'ﾉ','ハ':'ﾊ','ヒ':'ﾋ','フ':'ﾌ','ヘ':'ﾍ','ホ':'ﾎ',
+    'マ':'ﾏ','ミ':'ﾐ','ム':'ﾑ','メ':'ﾒ','モ':'ﾓ','ヤ':'ﾔ','ユ':'ﾕ','ヨ':'ﾖ',
+    'ラ':'ﾗ','リ':'ﾘ','ル':'ﾙ','レ':'ﾚ','ロ':'ﾛ','ワ':'ﾜ','ン':'ﾝ',
+    'ガ':'ｶﾞ','ギ':'ｷﾞ','グ':'ｸﾞ','ゲ':'ｹﾞ','ゴ':'ｺﾞ','ザ':'ｻﾞ','ジ':'ｼﾞ','ズ':'ｽﾞ','ゼ':'ｾﾞ','ゾ':'ｿﾞ',
+    'ダ':'ﾀﾞ','デ':'ﾃﾞ','ド':'ﾄﾞ','バ':'ﾊﾞ','ビ':'ﾋﾞ','ブ':'ﾌﾞ','ベ':'ﾍﾞ','ボ':'ﾎﾞ',
+    'パ':'ﾊﾟ','ピ':'ﾋﾟ','プ':'ﾌﾟ','ペ':'ﾍﾟ','ポ':'ﾎﾟ','ッ':'ｯ','ャ':'ｬ','ュ':'ｭ','ョ':'ｮ','ー':'ｰ',
+    '株式会社':'(ｶ)','合同会社':'(ﾄﾞ)','有限会社':'(ﾕ)'};
+  let r=s||'';
+  for(const[k,v]of Object.entries(t)) r=r.split(k).join(v);
+  return invNorm(r);
+}
+
+function invCompare(ag, sc){
+  const fields=[
+    {key:'bank',   label:'銀行名',   ag:ag.bank,   sc:sc.bank,
+     cmp:(a,b)=>invNorm(a)===invNorm(b)},
+    {key:'branch', label:'支店名',   ag:ag.branch, sc:sc.branch,
+     cmp:(a,b)=>!a||!b||invNorm(a)===invNorm(b)},
+    {key:'acType', label:'口座種別', ag:ag.acType, sc:sc.accountType,
+     cmp:(a,b)=>!b||invNorm(a)===invNorm(b)},
+    {key:'number', label:'口座番号', ag:ag.number, sc:sc.accountNumber,
+     cmp:(a,b)=>String(a).replace(/\D/g,'')=== String(b||'').replace(/\D/g,''),
+     fmt:v=>v},
+    {key:'holder', label:'口座名義', ag:ag.holder, sc:sc.accountHolder,
+     cmp:(a,b)=>!a||!b||invNormKana(a)===invNormKana(b)},
+    {key:'amount', label:'送金金額', ag:ag.amount, sc:sc.totalAmount,
+     cmp:(a,b)=>b!=null&&Math.abs(Number(a)-Number(b))<1,
+     fmt:v=>v!=null?'¥'+Number(v).toLocaleString():null},
+  ];
+  const rows = fields.map(f=>{
+    const isNull = f.sc==null||f.sc==='';
+    const match  = isNull ? null : f.cmp(f.ag, f.sc);
+    return {...f, match, isNull};
+  });
+  return { rows, hasNg:rows.some(r=>r.match===false),
+    allOk:rows.every(r=>r.match!==false),
+    confidence:sc.readConfidence, notes:sc.notes };
+}
+
+// ── 結果レンダリング ───────────────────────────────────────
+function invRenderResult(result, ag){
+  const ng = result.rows.filter(r=>r.match===false);
+  const banner = result.hasNg
+    ? `<div style="background:#FEF2F2;border:1.5px solid rgba(220,38,38,.25);
+        border-radius:10px;padding:14px 16px;margin-bottom:14px;
+        display:flex;align-items:center;gap:12px">
+        <div style="font-size:28px">🚨</div>
+        <div>
+          <div style="font-size:13px;font-weight:800;color:#DC2626">不一致あり — 送金を停止</div>
+          <div style="font-size:10px;color:#5F6368;margin-top:3px">
+            <strong>${ng.map(r=>r.label).join('・')}</strong>が明細と一致しません。<br>
+            HQへSlack通知を送信しました。管理会社に確認してください。
+          </div>
+        </div>
+      </div>`
+    : `<div style="background:#ECFDF5;border:1.5px solid rgba(5,150,105,.25);
+        border-radius:10px;padding:14px 16px;margin-bottom:14px;
+        display:flex;align-items:center;gap:12px">
+        <div style="font-size:28px">✅</div>
+        <div>
+          <div style="font-size:13px;font-weight:800;color:#059669">全項目一致 — 送金OK</div>
+          <div style="font-size:10px;color:#5F6368;margin-top:2px">
+            入力情報と明細が一致しています。</div>
+        </div>
+      </div>`;
+
+  // 結果テーブル
+  const rows = result.rows.map(r=>{
+    const fmt = r.fmt||(v=>v!=null?String(v):null);
+    const ag_d  = fmt(r.ag)||'—';
+    const sc_d  = r.isNull ? '読み取れず' : (fmt(r.sc)||'—');
+    const icon  = r.match===true?'✅':r.match===false?'🔴':'—';
+    const bgRow = r.match===true?'rgba(5,150,105,.04)':r.match===false?'rgba(220,38,38,.04)':'';
+    const ngStyle = r.match===false?'color:#DC2626;font-weight:700':'';
+    return `<tr style="background:${bgRow}">
+      <td style="padding:8px 10px;font-size:10px;font-weight:700;color:#5F6368;
+        border-bottom:1px solid #E8EAED;white-space:nowrap">${r.label}</td>
+      <td style="padding:8px 10px;font-size:11px;font-family:'DM Mono',monospace;
+        border-bottom:1px solid #E8EAED">${ag_d}</td>
+      <td style="padding:8px 10px;font-size:11px;font-family:'DM Mono',monospace;
+        border-bottom:1px solid #E8EAED;${ngStyle}">${sc_d}</td>
+      <td style="padding:8px 10px;text-align:center;border-bottom:1px solid #E8EAED;
+        font-size:16px">${icon}</td>
+    </tr>`;
+  }).join('');
+
+  const conf = Math.round((result.confidence||0)*100);
+  const confColor = conf>=85?'#059669':conf>=60?'#D97706':'#DC2626';
+
+  document.getElementById('inv-result-panel').innerHTML = banner +
+    `<table style="width:100%;border-collapse:collapse;border:1px solid #E8EAED;border-radius:8px;overflow:hidden;margin-bottom:10px">
+      <thead><tr style="background:#F8F9FA">
+        <th style="padding:7px 10px;font-size:9px;font-weight:700;color:#80868B;text-align:left;border-bottom:1px solid #E8EAED">項目</th>
+        <th style="padding:7px 10px;font-size:9px;font-weight:700;color:#80868B;text-align:left;border-bottom:1px solid #E8EAED">AG入力</th>
+        <th style="padding:7px 10px;font-size:9px;font-weight:700;color:#80868B;text-align:left;border-bottom:1px solid #E8EAED">明細読取</th>
+        <th style="padding:7px 10px;font-size:9px;font-weight:700;color:#80868B;text-align:center;border-bottom:1px solid #E8EAED">判定</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;
+      background:#F8F9FA;border-radius:7px">
+      <div style="font-size:9px;color:#5F6368;font-weight:600">AI読取信頼度</div>
+      <div style="flex:1;height:5px;background:#E8EAED;border-radius:3px;overflow:hidden">
+        <div style="height:100%;width:${conf}%;background:${confColor};border-radius:3px"></div>
+      </div>
+      <div style="font-size:12px;font-weight:800;color:${confColor}">${conf}%</div>
+    </div>
+    ${result.notes?`<div style="margin-top:8px;font-size:10px;color:#D97706;
+      background:#FFFBEB;border-radius:7px;padding:7px 10px">⚠️ ${result.notes}</div>`:''}`;
+}
+
+// ── Slack通知シミュレーション ──────────────────────────────
+function invSlackAlert(caseId, ag, result){
+  const ng = result.rows.filter(r=>r.match===false);
+  const all = invLsGet();
+  const saved = all[caseId];
+
+  // HQ通知キューに追加
+  const HQ_ALERTS = 'HQ_INVOICE_ALERTS';
+  let alerts = [];
+  try{ alerts=JSON.parse(localStorage.getItem(HQ_ALERTS)||'[]'); }catch(e){}
+  alerts.unshift({
+    id: 'ALT-'+Date.now(),
+    caseId,
+    ngFields: ng.map(r=>r.label),
+    agInput: ag,
+    checkedAt: new Date().toLocaleString('ja-JP'),
+    filePreview: saved?.filePreview || null,
+    read: false,
+  });
+  localStorage.setItem(HQ_ALERTS, JSON.stringify(alerts));
+
+  // トースト（Slack通知シミュレーション）
+  const toastEl = document.createElement('div');
+  toastEl.style.cssText = `position:fixed;bottom:80px;right:24px;width:320px;
+    background:#fff;border:1.5px solid #DC2626;border-radius:12px;padding:14px 16px;
+    box-shadow:0 8px 30px rgba(0,0,0,.2);z-index:500;animation:slideIn .3s ease`;
+  toastEl.innerHTML = `
+    <div style="display:flex;align-items:flex-start;gap:10px">
+      <div style="font-size:20px">🔴</div>
+      <div style="flex:1">
+        <div style="font-size:12px;font-weight:800;color:#DC2626">Slack通知送信 — HQ要確認</div>
+        <div style="font-size:10px;color:#5F6368;margin-top:3px;line-height:1.6">
+          案件 <strong>${caseId}</strong><br>
+          不一致項目: <strong>${ng.map(r=>r.label).join('・')}</strong><br>
+          #hq-invoice-check に送信しました
+        </div>
+        <div style="margin-top:8px;display:flex;gap:6px">
+          <button onclick="openHQAlertView()" style="font-size:10px;padding:4px 10px;
+            background:#DC2626;color:#fff;border:none;border-radius:6px;cursor:pointer;
+            font-family:'Outfit',sans-serif;font-weight:700">HQ確認画面を開く</button>
+          <button onclick="this.closest('div[style*=position]').remove()"
+            style="font-size:10px;padding:4px 10px;background:#F8F9FA;color:#5F6368;
+            border:1px solid #E8EAED;border-radius:6px;cursor:pointer;font-family:'Outfit',sans-serif">閉じる</button>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(toastEl);
+  setTimeout(()=>toastEl.style.opacity='0', 8000);
+  setTimeout(()=>toastEl.remove(), 8500);
+}
+
+// ── HQアラート確認ビュー ───────────────────────────────────
+function openHQAlertView(){
+  const HQ_ALERTS = 'HQ_INVOICE_ALERTS';
+  let alerts = [];
+  try{ alerts=JSON.parse(localStorage.getItem(HQ_ALERTS)||'[]'); }catch(e){}
+
+  if(!alerts.length){
+    alert('未確認のアラートはありません');
+    return;
+  }
+
+  const modal = document.createElement('div');
+  modal.id = 'hq-alert-modal';
+  modal.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,.6);
+    z-index:600;display:flex;align-items:center;justify-content:center;padding:20px`;
+
+  const content = alerts.map(a=>`
+    <div style="border:1.5px solid ${a.read?'#E8EAED':'#DC2626'};border-radius:10px;
+      padding:14px 16px;margin-bottom:10px;background:${a.read?'#F8F9FA':'#FFF8F8'}">
+      <div style="display:flex;align-items:flex-start;gap:12px">
+        ${a.filePreview?`
+        <div style="flex-shrink:0">
+          <img src="${a.filePreview}" style="width:80px;height:80px;object-fit:cover;
+            border-radius:7px;border:1px solid #E8EAED;cursor:pointer"
+            onclick="invExpandImg('${a.filePreview}')" title="クリックで拡大">
+          <div style="font-size:9px;color:#5F6368;text-align:center;margin-top:3px">明細画像</div>
+        </div>`:
+        `<div style="width:80px;height:80px;background:#F8F9FA;border:1px solid #E8EAED;
+          border-radius:7px;display:flex;align-items:center;justify-content:center;
+          font-size:10px;color:#80868B;text-align:center;flex-shrink:0">PDF<br>添付</div>`}
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+            <span style="font-size:12px;font-weight:800;color:#DC2626">🔴 不一致検出</span>
+            <span style="font-family:'DM Mono',monospace;font-size:10px;color:#5F6368">${a.caseId}</span>
+            ${a.read?'':`<span style="background:#DC2626;color:#fff;font-size:9px;
+              padding:1px 7px;border-radius:10px;font-weight:700">未読</span>`}
+          </div>
+          <div style="font-size:11px;color:#5F6368;margin-bottom:6px;line-height:1.6">
+            不一致項目: <strong style="color:#DC2626">${a.ngFields.join('・')}</strong><br>
+            AG入力口座: ${a.agInput.bank} ${a.agInput.branch} ${a.agInput.acType} ${a.agInput.number}<br>
+            送金要請額: ¥${Number(a.agInput.amount).toLocaleString()}<br>
+            確認日時: ${a.checkedAt}
+          </div>
+          <div style="display:flex;gap:6px">
+            <button onclick="invMarkRead('${a.id}')"
+              style="font-size:10px;padding:5px 12px;background:#0D1A2D;color:#C8A951;
+              border:none;border-radius:6px;cursor:pointer;font-family:'Outfit',sans-serif;font-weight:700">
+              ✅ 確認済みにする</button>
+            <button onclick="invOpenCase('${a.caseId}')"
+              style="font-size:10px;padding:5px 12px;background:#F0F9FF;color:#0284C7;
+              border:1px solid rgba(2,132,199,.2);border-radius:6px;cursor:pointer;
+              font-family:'Outfit',sans-serif;font-weight:600">
+              📁 案件を開く</button>
+          </div>
+        </div>
+      </div>
+    </div>`).join('');
+
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:16px;width:640px;max-height:85vh;
+      overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+      <div style="background:linear-gradient(135deg,#0D1A2D,#1E3252);padding:16px 22px;
+        border-radius:16px 16px 0 0;display:flex;justify-content:space-between;align-items:center">
+        <div style="font-family:'Cormorant Garamond',serif;font-size:16px;font-weight:600;
+          letter-spacing:3px;color:#C8A951">HQ — 明細不一致アラート</div>
+        <button onclick="document.getElementById('hq-alert-modal').remove()"
+          style="background:rgba(255,255,255,.1);border:none;color:rgba(255,255,255,.7);
+          width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:14px">✕</button>
+      </div>
+      <div style="padding:20px">${content}</div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+function invExpandImg(src){
+  const ov = document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:700;display:flex;align-items:center;justify-content:center;cursor:zoom-out';
+  ov.innerHTML=`<img src="${src}" style="max-width:90vw;max-height:90vh;border-radius:8px;object-fit:contain">`;
+  ov.onclick=()=>ov.remove();
+  document.body.appendChild(ov);
+}
+
+function invMarkRead(alertId){
+  const HQ_ALERTS='HQ_INVOICE_ALERTS';
+  let alerts=[];
+  try{alerts=JSON.parse(localStorage.getItem(HQ_ALERTS)||'[]');}catch(e){}
+  alerts=alerts.map(a=>a.id===alertId?{...a,read:true}:a);
+  localStorage.setItem(HQ_ALERTS,JSON.stringify(alerts));
+  document.getElementById('hq-alert-modal')?.remove();
+  openHQAlertView();
+}
+
+function invOpenCase(caseId){
+  document.getElementById('hq-alert-modal')?.remove();
+  closeInvoiceModal();
+  // 該当案件行にスクロール（list view）
+  const el = document.querySelector(`[data-case="${caseId}"]`)||
+             document.querySelector(`tr:has(*:contains("${caseId}"))`);
+  if(el) el.scrollIntoView({behavior:'smooth',block:'center'});
+}
+</script>
 </body>
 </html>
