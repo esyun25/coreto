@@ -826,7 +826,10 @@ function validateS4() {
   if (DATA.kycStatus === 'failed') {
     showToast('⚠️ 書類の読み取りに失敗しました。鮮明な画像で再度アップロードしてください','warn'); return;
   }
-  // passed または pending（解析前）でも進めるが、HQが最終判断
+  // AI確認が通過済みでないと次へ進めない
+  if (DATA.kycStatus !== 'passed') {
+    showToast('⚠️ 書類の確認が完了していません。アップロードしてAI確認を通過してください','warn'); return;
+  }
   next();
 }
 
@@ -1126,37 +1129,82 @@ function submitForm() {
   if (!document.getElementById('agree-cb')?.checked) {
     showToast('⚠️ 規約への同意が必要です','warn'); return;
   }
-  const isSennin = DATA.type === 're' && DATA.takken === 'あり' && DATA.takkenType === '専任';
-  const msg = isSennin
-    ? '専任宅建士登録の審査後、本部より連絡いたします。\n審査完了後にIDとパスワードをメールでお送りします。'
-    : '本部の最終確認後、IDとパスワードをメールでお送りします。\n通常1営業日以内にご連絡いたします。';
 
   document.getElementById('step-content').innerHTML = `
   <div class="card">
     <div class="complete-wrap">
-      <div class="complete-icon">🎉</div>
-      <div class="complete-title">申込が完了しました</div>
-      <div class="complete-msg">${msg.replace(/\n/g,'<br>')}</div>
-      <div style="margin-top:24px;padding:16px;background:var(--cream2,#F8F9FA);
-        border-radius:10px;font-size:11px;color:var(--muted);line-height:2.2">
-        <div>申込者：<strong>${DATA.lastName} ${DATA.firstName}</strong></div>
-        <div>メール：<strong>${DATA.email}</strong></div>
-        <div>申込日時：<strong>${new Date().toLocaleString('ja-JP')}</strong></div>
+      <div class="complete-icon">📋</div>
+      <div class="complete-title">申込を受け付けました</div>
+      <div class="complete-msg">
+        書類の内容を本部が確認します。<br>
+        承認後にIDとパスワードをメールでお送りします。
       </div>
-      <p style="font-size:11px;color:var(--faint);margin-top:16px;line-height:1.8">
-        ご不明な点は
-        <a href="mailto:info@coreto.jp" style="color:var(--navy)">info@coreto.jp</a>
-        までお問い合わせください
-      </p>
+
+      <!-- ステータスタイムライン -->
+      <div style="margin:28px auto;max-width:340px;text-align:left">
+
+        <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:16px">
+          <div style="width:28px;height:28px;border-radius:50%;background:#ECFDF5;
+            border:1.5px solid rgba(5,150,105,.3);display:flex;align-items:center;
+            justify-content:center;font-size:13px;flex-shrink:0">✅</div>
+          <div style="padding-top:4px">
+            <div style="font-size:12px;font-weight:700;color:#059669">申込情報・書類 提出完了</div>
+            <div style="font-size:10px;color:#5F6368;margin-top:2px">AI書類確認済み</div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:16px">
+          <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0">
+            <div style="width:1px;height:16px;background:#E8EAED;margin-bottom:0;margin-top:-14px;margin-left:13px"></div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:16px">
+          <div style="width:28px;height:28px;border-radius:50%;background:#FFFBEB;
+            border:1.5px solid rgba(217,119,6,.3);display:flex;align-items:center;
+            justify-content:center;font-size:13px;flex-shrink:0;animation:pulse 2s infinite">⏳</div>
+          <div style="padding-top:4px">
+            <div style="font-size:12px;font-weight:700;color:#D97706">本部確認中</div>
+            <div style="font-size:10px;color:#5F6368;margin-top:2px">
+              通常1営業日以内に完了します<br>
+              審査結果はSlackでお知らせします</div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="width:28px;height:28px;border-radius:50%;background:#F8F9FA;
+            border:1.5px solid #E8EAED;display:flex;align-items:center;
+            justify-content:center;font-size:13px;flex-shrink:0;color:#DADCE0">🔑</div>
+          <div style="padding-top:4px">
+            <div style="font-size:12px;font-weight:700;color:#80868B">IDとパスワードの発行</div>
+            <div style="font-size:10px;color:#80868B;margin-top:2px">承認後にメールでお送りします</div>
+          </div>
+        </div>
+
+      </div>
+
+      <div style="background:#F0F9FF;border:1px solid rgba(2,132,199,.15);
+        border-radius:10px;padding:14px 18px;text-align:left;max-width:340px;margin:0 auto">
+        <div style="font-size:10px;font-weight:700;color:#0284C7;margin-bottom:6px">
+          ℹ️ アカウントが発行されるまでの間
+        </div>
+        <div style="font-size:11px;color:#5F6368;line-height:1.8">
+          • システムへのログインはできません<br>
+          • 承認メールが届いてから業務を開始してください<br>
+          • ご不明な点はSlackでHQまでご連絡ください
+        </div>
+      </div>
+
     </div>
   </div>`;
 
-  // ステップバーを完了状態に
-  STEP = 9;
-  renderStepBar();
-  document.getElementById('prog-fill').style.width = '100%';
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  // プログレスバーを完了状態に
+  const pf = document.querySelector('.prog-fill');
+  if(pf) pf.style.width = '100%';
+  // ナビボタン非表示
+  document.getElementById('nav-btns')?.remove();
 }
+
 
 // ═══════════════════════════════════════════════════════
 // 都道府県リスト

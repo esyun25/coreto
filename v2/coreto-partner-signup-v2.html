@@ -691,6 +691,7 @@ function validateS3() {
     if (!DATA.selfie) { showToast('⚠️ 自撮り写真をアップロードしてください','warn'); return; }
     if (DATA.kycStatus === 'analyzing') { showToast('⏳ AI確認中です。しばらくお待ちください','warn'); return; }
     if (DATA.kycStatus === 'failed') { showToast('⚠️ 書類の読み取りに失敗しました。再度アップロードしてください','warn'); return; }
+    if (DATA.kycStatus !== 'passed') { showToast('⚠️ 書類の確認が完了していません。アップロードしてAI確認を通過してください','warn'); return; }
   } else {
     if (!DATA.corpDoc) { showToast('⚠️ 登記簿謄本をアップロードしてください','warn'); return; }
     if (!DATA.repIdFront) { showToast('⚠️ 代表者身分証（表面）をアップロードしてください','warn'); return; }
@@ -821,117 +822,67 @@ function submitForm() {
   if (!document.getElementById('agree-cb')?.checked) {
     showToast('⚠️ 規約への同意が必要です','warn'); return;
   }
-  const isInd = DATA.entity === 'individual';
-  const name  = isInd ? `${DATA.lastName} ${DATA.firstName}` : DATA.corpName;
 
   document.getElementById('step-content').innerHTML = `
   <div class="card">
     <div class="complete-wrap">
-      <div class="complete-icon">🎉</div>
-      <div class="complete-title">申込が完了しました</div>
+      <div class="complete-icon">📋</div>
+      <div class="complete-title">申込を受け付けました</div>
       <div class="complete-msg">
-        本部でeKYC確認後、IDとパスワードをメールでお送りします。<br>
-        通常1〜2営業日でご連絡いたします。
+        書類の内容を本部が確認します。<br>
+        承認後にIDとパスワードをメールでお送りします。
       </div>
-      <div style="margin-top:24px;padding:16px;background:#F8F9FA;border-radius:10px;font-size:11px;color:var(--muted);line-height:2.2">
-        <div>申込者：<strong>${name}</strong></div>
-        <div>メール：<strong>${DATA.email}</strong></div>
-        <div>申込日時：<strong>${new Date().toLocaleString('ja-JP')}</strong></div>
+
+      <div style="margin:28px auto;max-width:340px;text-align:left">
+        <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:16px">
+          <div style="width:28px;height:28px;border-radius:50%;background:#ECFDF5;
+            border:1.5px solid rgba(5,150,105,.3);display:flex;align-items:center;
+            justify-content:center;font-size:13px;flex-shrink:0">✅</div>
+          <div style="padding-top:4px">
+            <div style="font-size:12px;font-weight:700;color:#059669">申込情報・書類 提出完了</div>
+            <div style="font-size:10px;color:#5F6368;margin-top:2px">AI書類確認済み</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:16px">
+          <div style="width:28px;height:28px;border-radius:50%;background:#FFFBEB;
+            border:1.5px solid rgba(217,119,6,.3);display:flex;align-items:center;
+            justify-content:center;font-size:13px;flex-shrink:0;animation:pulse 2s infinite">⏳</div>
+          <div style="padding-top:4px">
+            <div style="font-size:12px;font-weight:700;color:#D97706">本部確認中</div>
+            <div style="font-size:10px;color:#5F6368;margin-top:2px">
+              通常1営業日以内に完了します<br>審査結果はSlackでお知らせします</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="width:28px;height:28px;border-radius:50%;background:#F8F9FA;
+            border:1.5px solid #E8EAED;display:flex;align-items:center;
+            justify-content:center;font-size:13px;flex-shrink:0;color:#DADCE0">🔑</div>
+          <div style="padding-top:4px">
+            <div style="font-size:12px;font-weight:700;color:#80868B">IDとパスワードの発行</div>
+            <div style="font-size:10px;color:#80868B;margin-top:2px">承認後にメールでお送りします</div>
+          </div>
+        </div>
       </div>
-      <p style="font-size:11px;color:var(--faint);margin-top:16px;line-height:1.8">
-        ご不明な点は
-        <a href="mailto:info@coreto.jp" style="color:var(--navy)">info@coreto.jp</a>
-        までお問い合わせください
-      </p>
+
+      <div style="background:#F0F9FF;border:1px solid rgba(2,132,199,.15);
+        border-radius:10px;padding:14px 18px;text-align:left;max-width:340px;margin:0 auto">
+        <div style="font-size:10px;font-weight:700;color:#0284C7;margin-bottom:6px">
+          ℹ️ アカウントが発行されるまでの間
+        </div>
+        <div style="font-size:11px;color:#5F6368;line-height:1.8">
+          • システムへのログインはできません<br>
+          • 承認メールが届いてから業務を開始してください<br>
+          • ご不明な点はSlackでHQまでご連絡ください
+        </div>
+      </div>
     </div>
   </div>`;
 
-  STEP = 6;
-  renderStepBar();
-  document.getElementById('prog-fill').style.width = '100%';
-  window.scrollTo({top:0, behavior:'smooth'});
+  const pf = document.querySelector('.prog-fill');
+  if(pf) pf.style.width = '100%';
+  document.getElementById('nav-btns')?.remove();
 }
 
-// ════════════════════════════════════════════════
-// 都道府県リスト
-// ════════════════════════════════════════════════
-const PREFS = ['選択してください','北海道','青森県','岩手県','宮城県','秋田県','山形県','福島県',
-  '茨城県','栃木県','群馬県','埼玉県','千葉県','東京都','神奈川県','新潟県','富山県','石川県',
-  '福井県','山梨県','長野県','岐阜県','静岡県','愛知県','三重県','滋賀県','京都府','大阪府',
-  '兵庫県','奈良県','和歌山県','鳥取県','島根県','岡山県','広島県','山口県','徳島県','香川県',
-  '愛媛県','高知県','福岡県','佐賀県','長崎県','熊本県','大分県','宮崎県','鹿児島県','沖縄県'];
-
-// ══════════════════════════════════════════════════════════════
-// STEP 3（個人）— KYC AI自動照合
-// ══════════════════════════════════════════════════════════════
-async function kycSignupAnalyze() {
-  DATA.kycStatus = 'analyzing';
-  const statusEl = document.getElementById('kyc-ai-status');
-  if (statusEl) {
-    statusEl.style.display = 'block';
-    statusEl.innerHTML = `
-      <div style="background:linear-gradient(135deg,#0D1A2D,#1E3252);border-radius:10px;
-        padding:13px 16px;display:flex;align-items:center;gap:10px">
-        <div style="display:flex;gap:4px">
-          <span style="width:6px;height:6px;border-radius:50%;background:#C8A951;
-            animation:db 1.4s infinite ease-in-out;display:inline-block"></span>
-          <span style="width:6px;height:6px;border-radius:50%;background:#C8A951;
-            animation:db 1.4s .2s infinite ease-in-out;display:inline-block"></span>
-          <span style="width:6px;height:6px;border-radius:50%;background:#C8A951;
-            animation:db 1.4s .4s infinite ease-in-out;display:inline-block"></span>
-        </div>
-        <div style="color:rgba(255,255,255,.75);font-size:12px">
-          🤖 書類を確認中... そのままお待ちください
-        </div>
-      </div>`;
-  }
-  try {
-    const toB64 = file => new Promise((res,rej)=>{
-      const r = new FileReader();
-      r.onload = ()=> res({ b64: r.result.split(',')[1], mime: file.type||'image/jpeg' });
-      r.onerror = rej;
-      r.readAsDataURL(file);
-    });
-    const front = await toB64(DATA.idFront);
-    const regName  = (DATA.repLastName||DATA.lastName||'') + (DATA.repFirstName||DATA.firstName||'');
-    const regBirth = DATA.repDob||DATA.dob||'';
-    const resp = await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({
-        model:'claude-sonnet-4-20250514', max_tokens:400,
-        system:'日本の本人確認書類の読み取り専門AIです。JSONのみで返答してください。',
-        messages:[{ role:'user', content:[
-          { type:'image', source:{ type:'base64', media_type:front.mime, data:front.b64 }},
-          { type:'text', text:'{"name_kanji":"氏名","birth":"生年月日 YYYY/MM/DD","expiry":"有効期限またはnull","is_expired":bool,"is_clear":bool,"confidence":0-1}' }
-        ]}]
-      })
-    });
-    const data = await resp.json();
-    const raw  = data.content?.find(b=>b.type==='text')?.text||'{}';
-    const res  = JSON.parse(raw.replace(/```json|```/g,'').trim());
-    const conf = Math.round((res.confidence||0.8)*100);
-    DATA.kycResult = res;
-    if (conf < 30 || res.is_clear === false) {
-      DATA.kycStatus = 'failed';
-      if(statusEl) statusEl.innerHTML = `<div style="background:#FFFBEB;border:1.5px solid rgba(217,119,6,.25);
-        border-radius:10px;padding:14px 16px;font-size:11px;color:#D97706">
-        📄 画像が不鮮明です。明るい場所で再度撮影してください。</div>`;
-      return;
-    }
-    DATA.kycStatus = 'passed';
-    if(statusEl) statusEl.innerHTML = `<div style="background:#ECFDF5;border:1.5px solid rgba(5,150,105,.2);
-      border-radius:10px;padding:14px 16px;display:flex;align-items:center;gap:12px">
-      <div style="font-size:24px">✅</div>
-      <div><div style="font-size:12px;font-weight:700;color:#059669">書類の確認が完了しました</div>
-      <div style="font-size:10px;color:#5F6368;margin-top:3px">次のステップに進んでください</div></div>
-    </div>`;
-    showToast('✅ 書類の確認が完了しました');
-  } catch(e) {
-    DATA.kycStatus = 'pending';
-    if(statusEl) statusEl.innerHTML = `<div style="background:#FEF2F2;border-radius:10px;
-      padding:12px 14px;font-size:11px;color:#DC2626">❌ 確認に失敗しました。再度アップロードしてください。</div>`;
-  }
-}
 </script>
 </body>
 </html>
