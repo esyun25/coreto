@@ -1600,11 +1600,14 @@ window.addEventListener('load',function(){
   w.document.close();
 }
 
-// ── ラベル2枚（A6・ラベルプリンター用・手動印刷）──────────
-// @page size: 105mm 148mm （A6）
-// レターパック宛名欄（約125×65mm）に対応したレイアウト
+// ── ラベル2枚（ロールラベルプリンター用: 80mm×115mm）────────
+// レターパック宛名欄 実寸:
+//   お届け先欄 ≈ 65mm高  / ご依頼主欄 ≈ 50mm高  / 合計 ≈ 115mm ✓
+//   横幅 ≈ 125mm → 80mm幅ラベルを左寄せで貼付
+// 対応機種例: Brother QL-1110NWB (102mm幅), TD-4550DNWB
+//             EPSON LW-Z5010 / Godex 等 80mm幅ロール対応機
 function printLabels(cas, trackingCode){
-  const w = window.open('','_blank','width=500,height=800');
+  const w = window.open('','_blank','width=480,height=760');
   w.document.write(`<!DOCTYPE html><html lang="ja"><head>
 <meta charset="UTF-8">
 <title>ラベル印刷 — ${cas.caseId}</title>
@@ -1613,132 +1616,191 @@ function printLabels(cas, trackingCode){
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:'Hiragino Kaku Gothic Pro','Noto Sans JP',sans-serif;background:#e5e7eb}
 
-  /* ラベルプリンター用: A6 = 105mm × 148mm */
-  @page{size:105mm 148mm;margin:4mm}
+  /* ロールラベルプリンター: 80mm × 115mm  */
+  @page{ size:80mm 115mm; margin:2mm }
   @media print{
     body{background:#fff}
-    .label-wrap{width:105mm;height:148mm;padding:0;margin:0;page-break-after:always;box-shadow:none}
-    .label-wrap:last-of-type{page-break-after:auto}
     .no-print{display:none!important}
+    .label{
+      width:80mm; height:115mm;
+      padding:0; margin:0;
+      page-break-after:always;
+      box-shadow:none;
+      border:none;
+    }
+    .label:last-of-type{page-break-after:auto}
+    /* 区切り線は印刷でも表示 */
   }
 
-  /* 画面プレビュー用 */
-  .preview-bar{background:#0D1A2D;color:#C8A951;padding:12px 20px;font-size:11px;font-weight:700;display:flex;justify-content:space-between;align-items:center}
-  .preview-note{font-size:10px;color:rgba(255,255,255,.6);font-weight:400}
-  .label-wrap{width:105mm;height:148mm;background:#fff;margin:16px auto;padding:6mm;
-    box-shadow:0 2px 12px rgba(0,0,0,.15);position:relative;overflow:hidden}
+  /* ── 画面プレビュー ── */
+  .preview-bar{
+    background:#0D1A2D;color:#C8A951;
+    padding:10px 16px;font-size:11px;font-weight:700;
+    display:flex;justify-content:space-between;align-items:center
+  }
+  .preview-note{font-size:10px;color:rgba(255,255,255,.55);font-weight:400}
 
-  /* ラベル上部カラーバー */
-  .label-wrap::before{content:'';position:absolute;top:0;left:0;right:0;height:4mm}
-  .label-out::before{background:#3b82f6}
-  .label-ret::before{background:#8b5cf6}
+  /* ラベル本体 */
+  .label{
+    width:80mm; height:115mm;
+    background:#fff;
+    margin:12px auto;
+    padding:3mm 4mm;
+    box-shadow:0 2px 10px rgba(0,0,0,.18);
+    display:flex; flex-direction:column;
+    position:relative; overflow:hidden;
+  }
 
-  .type-tag{font-size:7px;font-weight:700;letter-spacing:.5px;padding:2px 7px;border-radius:2px;
-    display:inline-block;margin-bottom:4mm;margin-top:3mm}
-  .tag-out{background:#dbeafe;color:#1d4ed8}
-  .tag-ret{background:#ede9fe;color:#6d28d9}
+  /* 上端カラーバー */
+  .label::before{
+    content:''; position:absolute;
+    top:0; left:0; right:0; height:3mm;
+  }
+  .label-out::before{background:#2563eb}
+  .label-ret::before{background:#7c3aed}
 
-  /* 宛先 */
-  .postal{font-size:13px;color:#374151;letter-spacing:3px;font-weight:600;margin-bottom:1.5mm}
-  .addr{font-size:9px;color:#374151;line-height:1.6;margin-bottom:1.5mm}
-  .to-name{font-size:17px;font-weight:700;color:#111827;line-height:1.3;margin-bottom:3mm}
-  .sub-name{font-size:10px;font-weight:500;margin-top:1mm}
+  /* 種別タグ */
+  .type-tag{
+    font-size:6.5px; font-weight:700; letter-spacing:.4px;
+    padding:1.5px 6px; border-radius:2px;
+    display:inline-block; margin-top:3.5mm; margin-bottom:2.5mm;
+  }
+  .tag-out{background:#dbeafe;color:#1e40af}
+  .tag-ret{background:#ede9fe;color:#5b21b6}
+
+  /* ─── お届け先セクション（上段 約65mm） ─── */
+  .to-section{flex:0 0 auto}
+  .sec-label{
+    font-size:6px; font-weight:700; color:#9ca3af;
+    letter-spacing:.6px; margin-bottom:1.5mm; text-transform:uppercase;
+  }
+  .postal{
+    font-size:12px; font-weight:700; color:#111827;
+    letter-spacing:2.5px; margin-bottom:1mm;
+  }
+  .addr-line{font-size:8px; color:#374151; line-height:1.55; margin-bottom:.8mm}
+  .to-name{
+    font-size:15px; font-weight:800; color:#0D1A2D;
+    line-height:1.25; margin-top:1.5mm;
+  }
+  .sub-name{font-size:9px; font-weight:500; color:#374151; margin-top:.5mm}
 
   /* 区切り線 */
-  .div{border:none;border-top:.5px solid #d1d5db;margin:3mm 0}
+  .div-line{
+    border:none; border-top:1px dashed #d1d5db;
+    margin:2.5mm 0; flex-shrink:0;
+  }
 
-  /* 差出人 */
-  .from-lbl{font-size:7px;color:#9ca3af;letter-spacing:.5px;margin-bottom:1.5mm}
-  .from-name{font-size:9px;font-weight:700;color:#374151;line-height:1.5}
-  .from-addr{font-size:8px;color:#6b7280;line-height:1.5}
+  /* ─── ご依頼主セクション（下段 約50mm） ─── */
+  .from-section{flex:0 0 auto}
+  .from-name{font-size:9px; font-weight:700; color:#374151; line-height:1.5}
+  .from-addr{font-size:7.5px; color:#6b7280; line-height:1.55}
 
-  /* バーコード */
-  .bc-area{text-align:center;margin-top:3mm}
-  .bc-id{font-family:monospace;font-size:8px;color:#9ca3af;margin-top:1mm}
-
-  /* 案件コーナー */
-  .case-corner{position:absolute;bottom:3mm;right:4mm;font-size:7px;color:#d1d5db;text-align:right;line-height:1.4}
+  /* バーコード + ID */
+  .bc-row{
+    flex:1; display:flex; align-items:flex-end;
+    justify-content:flex-end; padding-bottom:1mm;
+  }
+  .bc-inner{text-align:right}
+  .bc-id{font-family:monospace; font-size:7px; color:#9ca3af; margin-top:.5mm}
 </style></head><body>
 
 <div class="no-print preview-bar">
-  <span>🖨️ ラベル印刷プレビュー ／ ${cas.caseId}</span>
-  <span class="preview-note">A6（105×148mm）ラベルプリンター用 ／ 2枚</span>
+  <span>🖨️ ラベル印刷 ／ ${cas.caseId}</span>
+  <span class="preview-note">80mm × 115mm ／ 2枚（往路・返送）</span>
 </div>
 
-<!-- ラベル1: 往路（HQ → クライアント） -->
-<div class="label-wrap label-out">
+<!-- ══ ラベル① 往路: HQ → クライアント ══ -->
+<div class="label label-out">
   <span class="type-tag tag-out">📄 契約書送付 → お客様</span>
 
-  <div>
+  <!-- お届け先 -->
+  <div class="to-section">
+    <div class="sec-label">お届け先</div>
     <div class="postal">〒${cas.postal}</div>
-    <div class="addr">${cas.address}</div>
-    <div class="addr">${cas.building}</div>
+    <div class="addr-line">${cas.address}</div>
+    <div class="addr-line">${cas.building}</div>
     <div class="to-name">${cas.caseName}
-      <span style="font-size:11px;font-weight:400">&nbsp;${cas.honorific}</span>
+      <span style="font-size:10px;font-weight:500">&nbsp;${cas.honorific}</span>
     </div>
   </div>
 
-  <hr class="div">
+  <hr class="div-line">
 
-  <div>
-    <div class="from-lbl">差 出 人</div>
+  <!-- ご依頼主 -->
+  <div class="from-section">
+    <div class="sec-label">ご依頼主</div>
     <div class="from-name">${CORETO_HQ.name}</div>
     <div class="from-name">担当：${cas.agent.name}（${cas.agent.agId}）</div>
     <div class="from-addr">〒${CORETO_HQ.postal}</div>
     <div class="from-addr">${CORETO_HQ.address}</div>
-    <div class="from-addr">TEL：${CORETO_HQ.tel}</div>
+    <div class="from-addr">TEL ${CORETO_HQ.tel}</div>
   </div>
 
-  <div class="bc-area">
-    <svg id="bc-out"></svg>
-    <div class="bc-id">OUT-${trackingCode}</div>
-  </div>
-  <div class="case-corner">${cas.caseId}<br>${cas.propertyName}</div>
-</div>
-
-<!-- ラベル2: 返送（クライアント → HQ、同封） -->
-<div class="label-wrap label-ret">
-  <span class="type-tag tag-ret">↩️ 返信用（署名済み書類の返送）</span>
-
-  <div>
-    <div class="postal">〒${CORETO_HQ.postal}</div>
-    <div class="addr">${CORETO_HQ.address}</div>
-    <div class="to-name">${CORETO_HQ.name}
-      <div class="sub-name">契約書受付 係</div>
+  <div class="bc-row">
+    <div class="bc-inner">
+      <svg id="bc-out"></svg>
+      <div class="bc-id">OUT-${trackingCode}</div>
     </div>
   </div>
-
-  <hr class="div">
-
-  <div>
-    <div class="from-lbl">差出人（ご記入ください）</div>
-    <div class="from-name">${cas.caseName} ${cas.honorific}</div>
-    <div class="from-addr">〒${cas.postal}</div>
-    <div class="from-addr">${cas.address} ${cas.building}</div>
-  </div>
-
-  <div class="bc-area">
-    <svg id="bc-ret"></svg>
-    <div class="bc-id">RET-${trackingCode}</div>
-  </div>
-  <div class="case-corner">${cas.caseId} 返送用<br>署名後にご投函ください</div>
 </div>
 
-<div class="no-print" style="text-align:center;padding:16px;background:#e5e7eb">
-  <div style="font-size:11px;color:#6b7280;margin-bottom:10px">
-    ⚠️ ラベルプリンターを選択して印刷してください（A6 / 105×148mm）
+<!-- ══ ラベル② 返送: クライアント → HQ ══ -->
+<div class="label label-ret">
+  <span class="type-tag tag-ret">↩️ 返信用（署名済み書類の返送）</span>
+
+  <!-- お届け先 -->
+  <div class="to-section">
+    <div class="sec-label">お届け先</div>
+    <div class="postal">〒${CORETO_HQ.postal}</div>
+    <div class="addr-line">${CORETO_HQ.address}</div>
+    <div class="to-name">${CORETO_HQ.name}</div>
+    <div class="sub-name">契約書受付 係</div>
+  </div>
+
+  <hr class="div-line">
+
+  <!-- ご依頼主 -->
+  <div class="from-section">
+    <div class="sec-label">ご依頼主（差出人）</div>
+    <div class="from-name">${cas.caseName} ${cas.honorific}</div>
+    <div class="from-addr">〒${cas.postal}</div>
+    <div class="from-addr">${cas.address}</div>
+    <div class="from-addr">${cas.building}</div>
+  </div>
+
+  <div class="bc-row">
+    <div class="bc-inner">
+      <svg id="bc-ret"></svg>
+      <div class="bc-id">RET-${trackingCode}</div>
+    </div>
+  </div>
+</div>
+
+<!-- 印刷ボタン -->
+<div class="no-print"
+  style="text-align:center;padding:14px 16px;background:#e5e7eb;border-top:1px solid #d1d5db">
+  <div style="font-size:10px;color:#6b7280;margin-bottom:8px;line-height:1.7">
+    ⚠️ ラベルプリンターを選択して印刷してください<br>
+    用紙サイズ: <strong>80mm × 115mm</strong>（ロールラベル）
   </div>
   <button onclick="window.print()"
-    style="padding:10px 28px;background:#6D28D9;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;margin-right:10px">
-    🖨️ ラベル印刷（ラベルプリンター・A6）
+    style="padding:9px 24px;background:#5b21b6;color:#fff;border:none;border-radius:7px;
+    font-size:13px;font-weight:700;cursor:pointer;margin-right:8px">
+    🏷️ ラベル印刷（2枚）
   </button>
   <button onclick="window.close()"
-    style="padding:10px 18px;background:#E8EAED;color:#202124;border:none;border-radius:8px;font-size:13px;cursor:pointer">閉じる</button>
+    style="padding:9px 16px;background:#E8EAED;color:#374151;border:none;border-radius:7px;
+    font-size:13px;cursor:pointer">閉じる</button>
 </div>
 
 <script>
 window.addEventListener('load',function(){
-  const opt={format:'CODE128',width:1.6,height:38,displayValue:false,margin:3,lineColor:'#0D1A2D',background:'#ffffff'};
+  const opt={
+    format:'CODE128', width:1.3, height:28,
+    displayValue:false, margin:2,
+    lineColor:'#374151', background:'#ffffff'
+  };
   try{JsBarcode('#bc-out','OUT-${trackingCode}',opt);}catch(e){}
   try{JsBarcode('#bc-ret','RET-${trackingCode}',opt);}catch(e){}
 });
