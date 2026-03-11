@@ -3,473 +3,1679 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PT→AGマッチング — COREBLDG</title>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<title>COREBLDG — AI マッチング</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600&family=Outfit:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-
 :root{
   --navy:#0D1A2D;--navy-m:#152238;--navy-l:#1E3252;
   --gold:#C8A951;--gold-dim:rgba(200,169,81,.15);
-  --cream:#FFFFFF;--cream2:#F8F9FA;--white:#FFFFFF;
-  --ink:#202124;--ink2:#2D3748;--muted:#5F6368;--faint:#80868B;
+  --ink:#202124;--muted:#5F6368;--faint:#80868B;
   --em:#059669;--em-bg:#ECFDF5;--am:#D97706;--am-bg:#FFFBEB;
   --rd:#DC2626;--rd-bg:#FEF2F2;--sk:#0284C7;--sk-bg:#F0F9FF;
-  --vt:#7C3AED;--vt-bg:#F5F3FF;--bd:#E8EAED;--bd2:#DADCE0;
-  --sw:240px;--r:10px;--r-sm:7px;
-  --sh:0 1px 2px rgba(60,64,67,.1),0 1px 3px rgba(60,64,67,.06);
+  --vt:#7C3AED;--vt-bg:#F5F3FF;--pk:#DB2777;--pk-bg:#FDF2F8;
+  --cream:#FFFFFF;--cream2:#F8F9FA;--bd:#E8EAED;--bd2:#DADCE0;
+  --sw:240px;--sh:0 1px 2px rgba(60,64,67,.1),0 1px 3px rgba(60,64,67,.06);
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:var(--cream)}
+html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:var(--cream2)}
 .shell{display:flex;height:100vh}
+
+/* ── サイドバー ── */
 .sb{width:var(--sw);background:var(--navy);display:flex;flex-direction:column;flex-shrink:0;position:relative}
-.sb::after{content:'';position:absolute;top:0;right:0;width:1px;height:100%;background:linear-gradient(180deg,rgba(200,169,81,.25) 0%,rgba(200,169,81,.06) 50%,transparent 100%)}
+.sb::after{content:'';position:absolute;top:0;right:0;width:1px;height:100%;
+  background:linear-gradient(180deg,rgba(200,169,81,.25) 0%,rgba(200,169,81,.06) 50%,transparent 100%)}
 .sb-head{padding:24px 20px 18px;border-bottom:1px solid rgba(255,255,255,.06)}
 .sb-logo{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;letter-spacing:5px;color:var(--gold)}
 .sb-ver{font-size:9px;letter-spacing:2px;color:rgba(200,169,81,.3);font-family:'DM Mono',monospace;margin-top:2px}
-.sb-user{margin:14px 14px 10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:9px 11px;display:flex;align-items:center;gap:9px}
-.sb-av{width:28px;height:28px;border-radius:50%;background:var(--gold-dim);border:1px solid rgba(200,169,81,.25);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--gold);flex-shrink:0}
+.sb-nav{flex:1;overflow-y:auto;padding:6px 10px}
+.nav-sec{font-size:9px;font-weight:700;letter-spacing:1.5px;color:rgba(255,255,255,.2);padding:14px 11px 5px;text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:8px;
+  font-size:12px;font-weight:500;color:rgba(255,255,255,.55);transition:.15s;text-decoration:none;margin-bottom:2px;cursor:pointer}
+.nav-item:hover{background:rgba(255,255,255,.06);color:rgba(255,255,255,.85)}
+.nav-item.active{background:var(--gold-dim);color:var(--gold)}
+.sb-foot{padding:14px 12px;border-top:1px solid rgba(255,255,255,.06)}
+.sb-user{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);
+  border-radius:9px;padding:9px 11px;display:flex;align-items:center;gap:9px}
+.sb-av{width:28px;height:28px;border-radius:50%;background:var(--gold-dim);
+  border:1px solid rgba(200,169,81,.25);display:flex;align-items:center;
+  justify-content:center;font-size:10px;font-weight:700;color:var(--gold);flex-shrink:0}
 .sb-uname{font-size:11px;font-weight:600;color:rgba(255,255,255,.8)}
 .sb-urole{font-size:9px;color:rgba(255,255,255,.3);font-family:'DM Mono',monospace}
-.sb-nav{flex:1;overflow-y:auto;padding:6px 10px}
-.sb-nav::-webkit-scrollbar{width:3px}
-.sb-nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:2px}
-.nav-sec-label{font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.18);padding:10px 8px 4px;font-family:'DM Mono',monospace}
-.nav-item{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:7px;cursor:pointer;transition:all .13s;text-decoration:none;position:relative;margin-bottom:1px}
-.nav-item:hover{background:rgba(255,255,255,.06)}
-.nav-item.active{background:rgba(200,169,81,.1)}
-.nav-item.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:16px;background:var(--gold);border-radius:0 2px 2px 0}
-.nav-icon{width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:13px;border-radius:6px;background:rgba(255,255,255,.04);flex-shrink:0}
-.nav-item.active .nav-icon{background:rgba(200,169,81,.12)}
-.nav-label{font-size:11px;font-weight:500;color:rgba(255,255,255,.55);flex:1}
-.nav-item.active .nav-label,.nav-item:hover .nav-label{color:var(--gold)}
-.nav-item:hover .nav-label{color:rgba(255,255,255,.82)}
-.nav-badge{font-size:9px;font-weight:700;padding:1px 6px;border-radius:10px;background:var(--rd);color:#fff;font-family:'Outfit',sans-serif}
-.nav-badge.amber{background:var(--am)}
-.sb-foot{padding:10px 14px 18px;border-top:1px solid rgba(255,255,255,.05)}
-.sb-foot-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;cursor:pointer;font-size:11px;color:rgba(255,255,255,.3);transition:.13s}
-.sb-foot-item:hover{background:rgba(255,255,255,.05);color:rgba(255,255,255,.6)}
-.content{flex:1;display:flex;flex-direction:column;overflow:hidden}
-.topbar{height:58px;background:var(--white);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 24px;gap:14px;flex-shrink:0;box-shadow:var(--sh)}
-.tb-title{font-size:16px;font-weight:600;color:var(--ink);font-family:'Outfit','Noto Sans JP',sans-serif;letter-spacing:.2px}
-.tb-crumb{font-size:11px;color:var(--faint);display:flex;align-items:center;gap:5px;margin-top:1px}
-.tb-crumb a{color:var(--muted);text-decoration:none}
-.tb-crumb a:hover{color:var(--am)}
-.tb-actions{margin-left:auto;display:flex;gap:9px;align-items:center}
-.btn{padding:7px 16px;border-radius:var(--r-sm);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;font-family:'Outfit',sans-serif;border:none}
-.btn-primary{background:var(--navy);color:var(--gold)}
-.btn-primary:hover{background:var(--navy-l)}
-.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--bd)}
-.btn-ghost:hover{background:var(--cream);color:var(--ink)}
-.btn-sm{padding:5px 12px;font-size:11px}
-.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;font-family:'Outfit',sans-serif;font-feature-settings:'tnum'}
-.badge-em{background:var(--em-bg);color:var(--em)}
-.badge-am{background:var(--am-bg);color:var(--am)}
-.badge-rd{background:var(--rd-bg);color:var(--rd)}
-.badge-sk{background:var(--sk-bg);color:var(--sk)}
-.badge-vt{background:var(--vt-bg);color:var(--vt)}
-.badge-gd{background:var(--gold-dim);color:var(--am)}
-.badge-nt{background:var(--cream2);color:var(--muted)}
 
-/* TABS */
-.tab-bar{padding:0 24px;background:var(--white);border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:0}
-.tab{padding:12px 18px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:.15s;white-space:nowrap;display:flex;align-items:center;gap:7px}
-.tab:hover{color:var(--ink)}
-.tab.active{color:var(--navy);border-bottom-color:var(--gold)}
-.tab-count{font-size:10px;padding:1px 6px;border-radius:10px;background:var(--cream2);font-family:'DM Mono',monospace}
-.tab.active .tab-count{background:var(--gold-dim);color:var(--am)}
-.view-toggle{margin-left:auto;display:flex;gap:4px}
-.view-btn{width:30px;height:30px;border:1px solid var(--bd);border-radius:6px;background:var(--white);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;transition:.13s}
-.view-btn.active{background:var(--navy);border-color:var(--navy)}
-.view-btn:hover:not(.active){background:var(--cream)}
+/* ── メイン ── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.top-bar{background:#fff;border-bottom:1px solid var(--bd);padding:0 28px;height:52px;
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:12px}
+.top-title{font-size:15px;font-weight:700;color:var(--navy)}
+.top-sub{font-size:10px;color:var(--muted);margin-top:1px}
+.role-badge{padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700}
+.role-hq{background:var(--gold-dim);color:var(--gold)}
+.role-ag{background:var(--sk-bg);color:var(--sk)}
+.role-pt{background:var(--vt-bg);color:var(--vt)}
+.content{flex:1;overflow-y:auto;padding:24px 28px}
 
-/* FILTER */
-.filter-bar{display:flex;align-items:center;gap:10px;padding:14px 24px;background:var(--cream);border-bottom:1px solid var(--bd);flex-wrap:wrap}
-.search-wrap{position:relative;flex:1;min-width:200px}
-.search-wrap input{width:100%;padding:8px 12px 8px 34px;background:var(--white);border:1.5px solid var(--bd);border-radius:var(--r-sm);font-size:12px;color:var(--ink);outline:none;font-family:'Outfit','Noto Sans JP',sans-serif;transition:.15s}
-.search-wrap input:focus{border-color:var(--gold)}
-.search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--faint)}
-.fsel{padding:7px 11px;background:var(--white);border:1.5px solid var(--bd);border-radius:var(--r-sm);font-size:12px;color:var(--ink);outline:none;cursor:pointer;font-family:'Outfit',sans-serif}
+/* ── タブ ── */
+.tab-bar{display:flex;border-bottom:2px solid var(--bd);margin-bottom:20px}
+.tab{padding:10px 20px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;
+  border-bottom:2px solid transparent;margin-bottom:-2px;transition:.15s;display:flex;align-items:center;gap:6px}
+.tab:hover{color:var(--navy)}
+.tab.active{color:var(--navy);border-bottom-color:var(--navy)}
+.tab-badge{background:var(--rd);color:#fff;font-size:9px;font-weight:700;
+  padding:1px 6px;border-radius:10px;font-family:'DM Mono',monospace}
 
-/* LIST VIEW */
-.page{flex:1;overflow-y:auto;padding:20px 24px}
-.page::-webkit-scrollbar{width:5px}
-.page::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:3px}
-.case-list{display:flex;flex-direction:column;gap:8px}
-.case-row{background:var(--white);border:1px solid var(--bd);border-radius:var(--r);padding:14px 18px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:all .15s;box-shadow:var(--sh)}
-.case-row:hover{border-color:rgba(200,169,81,.4);transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,0,0,.08)}
-.case-type-pill{padding:4px 10px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;font-family:'DM Mono',monospace;flex-shrink:0}
-.type-rental{background:var(--sk-bg);color:var(--sk)}
-.type-sale{background:var(--em-bg);color:var(--em)}
-.type-hr{background:var(--vt-bg);color:var(--vt)}
-.type-utility{background:var(--am-bg);color:var(--am)}
-.case-id{font-size:10px;font-family:'DM Mono',monospace;color:var(--faint);margin-bottom:2px}
-.case-name{font-size:14px;font-weight:600;color:var(--ink)}
-.case-sub{font-size:11px;color:var(--muted);margin-top:2px}
-.case-info{flex:1;min-width:0}
-.case-meta{display:flex;gap:16px;align-items:center;flex-shrink:0}
-.case-meta-item{text-align:right}
-.case-meta-label{font-size:9px;color:var(--faint);font-family:'DM Mono',monospace;letter-spacing:.5px}
-.case-meta-val{font-size:12px;font-weight:600;color:var(--ink);margin-top:1px}
-.case-arrow{font-size:16px;color:var(--faint);flex-shrink:0;transition:.15s}
-.case-row:hover .case-arrow{color:var(--am);transform:translateX(2px)}
+/* ── カード ── */
+.card{background:#fff;border:1px solid var(--bd);border-radius:12px;box-shadow:var(--sh);margin-bottom:18px;overflow:hidden}
+.card-head{padding:14px 18px;border-bottom:1px solid var(--bd);
+  display:flex;align-items:center;justify-content:space-between;gap:12px}
+.card-title{font-size:13px;font-weight:700;color:var(--navy)}
+.card-body{padding:18px}
 
-/* KANBAN */
-.kanban{display:flex;gap:14px;overflow-x:auto;padding-bottom:16px;height:100%}
-.kanban::-webkit-scrollbar{height:5px}
-.kanban::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:3px}
-.kanban-col{flex-shrink:0;width:240px;display:flex;flex-direction:column;gap:8px}
-.kanban-head{padding:10px 14px;border-radius:var(--r-sm);display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
-.kh-title{font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase}
-.kh-count{font-size:10px;font-family:'DM Mono',monospace;padding:2px 7px;border-radius:10px;font-weight:700}
-.kanban-card{background:var(--white);border:1px solid var(--bd);border-radius:var(--r-sm);padding:12px 13px;cursor:pointer;transition:all .15s;box-shadow:var(--sh)}
-.kanban-card:hover{border-color:rgba(200,169,81,.4);transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.08)}
-.kc-id{font-size:9px;font-family:'DM Mono',monospace;color:var(--faint);margin-bottom:4px}
-.kc-name{font-size:12px;font-weight:700;color:var(--ink);margin-bottom:3px}
-.kc-prop{font-size:11px;color:var(--muted);margin-bottom:8px}
-.kc-footer{display:flex;align-items:center;justify-content:space-between}
-.kc-ag{font-size:9px;font-family:'DM Mono',monospace;color:var(--faint)}
-.kc-flag{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:700}
+/* ── ボタン ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:8px;
+  font-size:12px;font-weight:700;font-family:'Outfit',sans-serif;cursor:pointer;border:none;transition:.15s}
+.btn-navy{background:var(--navy);color:var(--gold)}
+.btn-navy:hover{background:var(--navy-m)}
+.btn-navy:disabled{opacity:.4;cursor:not-allowed}
+.btn-em{background:var(--em-bg);color:var(--em);border:1px solid rgba(5,150,105,.2)}
+.btn-em:hover{background:#d1fae5}
+.btn-am{background:var(--am-bg);color:var(--am);border:1px solid rgba(217,119,6,.2)}
+.btn-rd{background:var(--rd-bg);color:var(--rd);border:1px solid rgba(220,38,38,.15)}
+.btn-sk{background:var(--sk-bg);color:var(--sk);border:1px solid rgba(2,132,199,.2)}
+.btn-vt{background:var(--vt-bg);color:var(--vt);border:1px solid rgba(124,58,237,.2)}
+.btn-ghost{background:transparent;color:var(--muted);border:1.5px solid var(--bd2)}
+.btn-ghost:hover{border-color:var(--navy);color:var(--navy)}
+.btn-sm{padding:6px 13px;font-size:11px}
 
-/* ════════════════════════════════════════════
-   数値フォント統一 — Outfit + Tabular Nums
-   (DM Monoはコード/ID系のみ維持)
-   ════════════════════════════════════════════ */
+/* ── フォーム ── */
+.form-group{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
+.form-label{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.4px}
+.form-label .req{color:var(--rd);margin-left:2px}
+.form-input,.form-select,.form-textarea{padding:9px 12px;border:1.5px solid var(--bd2);border-radius:8px;
+  font-size:13px;font-family:'Outfit',sans-serif;color:var(--ink);background:#fff;transition:.15s;width:100%}
+.form-input:focus,.form-select:focus,.form-textarea:focus{outline:none;border-color:var(--navy);
+  box-shadow:0 0 0 3px rgba(13,26,45,.06)}
+.form-textarea{resize:vertical;min-height:80px}
+.form-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
 
-/* バッジ・カウント系 */
-.nb, .nav-badge, .cnav-badge,
-.tab-count, .kh-count, .kc-count,
-.badge, .score-num {
-  font-family: 'Outfit', sans-serif !important;
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: 'tnum';
-  letter-spacing: 0 !important;
-}
+/* ── バッジ ── */
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700}
+.b-em{background:var(--em-bg);color:var(--em)}
+.b-am{background:var(--am-bg);color:var(--am)}
+.b-rd{background:var(--rd-bg);color:var(--rd)}
+.b-sk{background:var(--sk-bg);color:var(--sk)}
+.b-vt{background:var(--vt-bg);color:var(--vt)}
+.b-navy{background:var(--gold-dim);color:var(--gold)}
+.b-nt{background:var(--cream2);color:var(--muted);border:1px solid var(--bd)}
 
-/* KPI大数値 */
-.qs-val, .kpi-val, .kpi-value,
-.stat-val, .count-val {
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: 'tnum', 'lnum';
-}
-
-/* 日時・タイムスタンプ */
-.tl-time, .remit-deadline, .check-meta,
-.ic-date, .pipe-date {
-  font-family: 'Outfit', sans-serif !important;
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: 'tnum';
-}
-
-/* テーブル金額セル */
-td.num, .bc-vl, .slip-meta,
-.it-step-num, .pg-btn, .pg-info {
-  font-family: 'Outfit', sans-serif !important;
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: 'tnum';
-}
-
-/* 金額入力フィールド（Outfit で統一） */
-.amount-input {
-  font-family: 'Outfit', sans-serif !important;
-  font-variant-numeric: tabular-nums;
-}
-
-/* ══ MOBILE RESPONSIVE ══════════════════════════════════════════ */
-.mob-ham{display:none;flex-direction:column;align-items:center;justify-content:center;width:36px;height:36px;background:transparent;border:none;cursor:pointer;border-radius:7px;transition:.13s;flex-shrink:0}
-.mob-ham:hover{background:rgba(255,255,255,.08)}
-.mob-ham span{display:block;width:18px;height:2px;background:rgba(255,255,255,.72);margin:3px 0;border-radius:1px;transition:.2s}
-.mob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:199}
-@media(max-width:768px){
-  .mob-ham{display:flex}
-  .mob-overlay.show{display:block}
-  .sb{position:fixed;left:calc(-1 * var(--sw));top:0;height:100vh;z-index:200;transition:left .25s ease;box-shadow:4px 0 24px rgba(0,0,0,.25)}
-  .sb.open{left:0}
-  .shell{overflow:hidden}
-  .content{width:100vw;min-width:0}
-  .topbar{padding:0 12px;gap:8px}
-  .tb-crumb{display:none}
-  .tb-actions{gap:6px}
-  .page,.detail-wrap{padding:12px}
-  .detail-wrap{flex-direction:column;overflow-y:auto}
-  .detail-main{overflow-y:visible;min-height:0}
-  .detail-side{width:100%!important;overflow-y:visible}
-  table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;font-size:11px}
-  .kpi-row,.qs-row{grid-template-columns:1fr 1fr!important}
-  .g2,.form-grid{grid-template-columns:1fr!important}
-  .pipeline{padding-bottom:8px}
-  .step-label{font-size:9px}
-  .tb-title{font-size:14px}
-}
-
-
-/* ── Google-style Design System ── */
-html, body { background:#FFFFFF !important; }
-.sb-logo, .brand-logo { font-family:'Cormorant Garamond',serif !important; }
-body, input, select, textarea, button { font-family:'Outfit','Noto Sans JP',sans-serif; }
-.kpi-value, .kpi-vl {
-  font-family:'Outfit','Noto Sans JP',sans-serif !important;
-  font-weight:300 !important;
-  font-variant-numeric:tabular-nums lining-nums !important;
-  letter-spacing:-1px !important;
-  color:var(--ink) !important;
-}
-.kpi-value { font-size:32px !important;font-variant-numeric:tabular-nums}
-.kpi-vl   { font-size:28px !important; }
-.stat-val {
-  font-family:'Outfit','Noto Sans JP',sans-serif !important;
-  font-weight:400 !important;
-  font-variant-numeric:tabular-nums !important;
-  color:var(--ink) !important;
-}
-.kpi-label, .kpi-sub, .stat-label { font-size:11px !important; font-weight:500 !important; color:var(--muted) !important; }
-.section-title { font-size:11px !important; font-weight:600 !important; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); }
-.section-title::before { display:none; }
-.card { background:#FFFFFF; border:1px solid var(--bd); border-radius:8px; box-shadow:var(--sh); }
-.kpi-card { background:#FFFFFF !important; border:1px solid var(--bd) !important; border-radius:8px !important; box-shadow:none !important; }
-.badge { border-radius:4px !important; font-size:11px !important; font-weight:500 !important; }
-.delta-up, .kpi-delta.up { color:var(--em) !important; }
-.delta-dn, .kpi-delta.dn { color:var(--rd) !important; }
-/* ── Google-style 数値原則 (DS v2.3) ── */
-.kpi-value, .kpi-vl, .kpi-val,
-.stat-val, .qs-val, .count-val,
-.td-amt, .bc-vl, .bc-total-vl,
-.rr-amount, .amount-val, .srv,
-.visit-reward, .lb-val,
-.mf-kpi-vl, .mf-reward {
-  font-family:'Outfit','Noto Sans JP',sans-serif !important;
-  font-weight:300 !important;
-  font-variant-numeric:tabular-nums !important;
-}
-.kpi-value { font-size:32px !important; }
-.kpi-vl    { font-size:28px !important; }
-
-.match-layout{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-@media(max-width:800px){.match-layout{grid-template-columns:1fr}}
-.match-card{background:#fff;border:1px solid var(--bd);border-radius:10px;padding:16px;cursor:pointer;transition:.13s;box-shadow:var(--sh)}
-.match-card:hover{border-color:rgba(200,169,81,.4);transform:translateY(-1px)}
-.match-card.selected{border-color:var(--gold);box-shadow:0 0 0 3px rgba(200,169,81,.12)}
-.mc-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px}
-.mc-id{font-family:'DM Mono',monospace;font-size:10px;color:var(--faint)}
-.mc-type{padding:3px 9px;border-radius:20px;font-size:9px;font-weight:700;font-family:'DM Mono',monospace}
-.mc-title{font-size:14px;font-weight:600;color:var(--ink);margin-bottom:3px}
-.mc-sub{font-size:11px;color:var(--muted)}
-.mc-pt{display:flex;align-items:center;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid var(--bd)}
-.mc-pt-av{width:24px;height:24px;border-radius:50%;background:var(--am-bg);border:1px solid rgba(217,119,6,.2);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--am)}
-.mc-method{margin-top:10px}
-.method-tag{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:600}
-.method-board{background:var(--sk-bg);color:var(--sk)}
+/* ── 案件カード ── */
+.lead-card{border:1.5px solid var(--bd);border-radius:10px;padding:14px 16px;
+  margin-bottom:10px;cursor:pointer;transition:.15s;position:relative}
+.lead-card:hover{border-color:var(--navy);background:#F8FAFF}
+.lead-card.selected{border-color:var(--sk);background:var(--sk-bg);box-shadow:0 0 0 3px rgba(2,132,199,.08)}
+.lead-card.urgent{border-color:var(--rd);border-left:3px solid var(--rd)}
+.lead-id{font-family:'DM Mono',monospace;font-size:9px;color:var(--faint)}
+.lead-title{font-size:13px;font-weight:700;color:var(--navy);margin:4px 0}
+.lead-sub{font-size:11px;color:var(--muted)}
+.lead-meta{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;align-items:center}
+.method-tag{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;
+  border-radius:12px;font-size:10px;font-weight:600}
+.method-board{background:#EFF6FF;color:#1D4ED8}
 .method-direct{background:var(--vt-bg);color:var(--vt)}
-.ag-card{background:var(--cream2);border:1px solid var(--bd);border-radius:10px;padding:14px;cursor:pointer;transition:.13s;margin-bottom:8px}
-.ag-card:hover{border-color:rgba(200,169,81,.4);background:rgba(200,169,81,.04)}
-.ag-card.matched{border-color:var(--em);background:var(--em-bg)}
-.ag-name{font-size:13px;font-weight:600;color:var(--ink)}
-.ag-meta{font-size:10px;color:var(--muted);margin-top:2px}
-.ag-rank-bar{display:flex;gap:4px;margin-top:8px;flex-wrap:wrap}
-.match-panel{background:#fff;border:1px solid var(--bd);border-radius:12px;overflow:hidden;box-shadow:var(--sh)}
-.mp-head{background:var(--navy);color:#fff;padding:18px 22px}
-.mp-body{padding:20px}
+
+/* ── AGカード ── */
+.ag-card{border:1.5px solid var(--bd);border-radius:10px;padding:12px 14px;
+  margin-bottom:8px;cursor:pointer;transition:.15s}
+.ag-card:hover{border-color:var(--navy);background:#F8FAFF}
+.ag-card.ai-pick{border-color:var(--gold);background:rgba(200,169,81,.04)}
+.ag-card.ai-pick::before{content:'✨ AI選定';position:absolute;top:-1px;right:10px;
+  background:var(--gold);color:var(--navy);font-size:9px;font-weight:700;
+  padding:2px 8px;border-radius:0 0 6px 6px}
+.ag-card{position:relative}
+.ag-score-bar{height:4px;border-radius:2px;background:var(--bd);margin-top:8px;overflow:hidden}
+.ag-score-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--sk),var(--em));transition:.8s}
+
+/* ── AI解析パネル ── */
+.ai-panel{background:linear-gradient(135deg,#0D1A2D 0%,#1E3252 100%);
+  border-radius:12px;padding:16px 18px;margin-bottom:16px;color:#fff}
+.ai-panel-title{font-size:11px;font-weight:700;letter-spacing:1px;
+  color:var(--gold);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.ai-tag{display:inline-flex;align-items:center;padding:3px 9px;border-radius:12px;
+  font-size:10px;font-weight:600;margin:2px 3px 2px 0}
+.ai-urgency-bar{height:6px;border-radius:3px;background:rgba(255,255,255,.15);margin:6px 0;overflow:hidden}
+.ai-urgency-fill{height:100%;border-radius:3px}
+
+/* ── スコア内訳 ── */
+.score-breakdown{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px}
+.score-item{background:var(--cream2);border-radius:7px;padding:8px 10px}
+.score-item-label{font-size:9px;color:var(--muted);font-weight:600;letter-spacing:.3px}
+.score-item-val{font-size:16px;font-weight:700;color:var(--navy);font-variant-numeric:tabular-nums}
+.score-item-max{font-size:9px;color:var(--faint)}
+
+/* ── AI思考アニメーション ── */
+.ai-thinking{display:flex;align-items:center;gap:10px;padding:14px 18px;
+  background:linear-gradient(135deg,#0D1A2D,#1E3252);border-radius:10px;margin-bottom:12px}
+.ai-thinking-dots{display:flex;gap:4px}
+.ai-thinking-dots span{width:6px;height:6px;border-radius:50%;background:var(--gold);
+  animation:dot-bounce 1.4s infinite ease-in-out}
+.ai-thinking-dots span:nth-child(2){animation-delay:.2s}
+.ai-thinking-dots span:nth-child(3){animation-delay:.4s}
+@keyframes dot-bounce{0%,80%,100%{transform:scale(0.6);opacity:.4}40%{transform:scale(1);opacity:1}}
+
+/* ── ステータス ── */
+.status-flow{display:flex;gap:4px;align-items:center;flex-wrap:wrap;margin-top:8px}
+.status-step{padding:4px 10px;border-radius:12px;font-size:10px;font-weight:600;
+  background:var(--cream2);color:var(--muted);border:1px solid var(--bd)}
+.status-step.done{background:var(--em-bg);color:var(--em);border-color:rgba(5,150,105,.2)}
+.status-step.current{background:var(--sk-bg);color:var(--sk);border-color:rgba(2,132,199,.2)}
+.status-arrow{color:var(--faint);font-size:10px}
+
+/* ── サマリー ── */
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.stat-card{background:#fff;border:1px solid var(--bd);border-radius:10px;padding:14px 16px;box-shadow:var(--sh)}
+.stat-num{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums}
+.stat-lbl{font-size:10px;color:var(--muted);margin-top:2px}
+
+/* ── モニタータブ ── */
+.monitor-card{background:#fff;border:1px solid var(--bd);border-radius:12px;
+  padding:16px 18px;margin-bottom:14px;box-shadow:var(--sh)}
+.algo-weight-bar{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.algo-weight-label{font-size:11px;font-weight:600;color:var(--ink);width:100px;flex-shrink:0}
+.algo-weight-track{flex:1;height:8px;background:var(--bd);border-radius:4px;overflow:hidden}
+.algo-weight-fill{height:100%;border-radius:4px}
+.algo-weight-val{font-size:11px;font-family:'DM Mono',monospace;color:var(--muted);width:40px;text-align:right}
+
+/* ── トースト ── */
+.toast{position:fixed;bottom:24px;right:24px;padding:11px 18px;border-radius:9px;
+  font-size:12px;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,.2);
+  opacity:0;transition:.3s;z-index:999;pointer-events:none;max-width:360px;line-height:1.5}
+.toast.show{opacity:1}
+
+/* ── ロール切替 ── */
+.role-switcher{display:flex;gap:6px;padding:4px;background:var(--cream2);border-radius:9px;border:1px solid var(--bd)}
+.role-btn{padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;
+  border:none;background:transparent;color:var(--muted);transition:.15s;font-family:'Outfit',sans-serif}
+.role-btn.active{background:#fff;color:var(--navy);box-shadow:var(--sh)}
+
+@media(max-width:768px){.sb{display:none}.stat-grid{grid-template-columns:1fr 1fr}.form-grid-2,.form-grid-3{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
-<div class="shell" id="shell">
-  <nav class="sb">
+<div class="shell">
+
+<!-- ── サイドバー ── -->
+<div class="sb">
   <div class="sb-head">
-    <div class="sb-logo">CORE<br>BLDG</div>
-    <div class="sb-ver">v2.0 — CORETO</div>
+    <div class="sb-logo">CORETO</div>
+    <div class="sb-ver">COREBLDG v2</div>
   </div>
-  <div class="sb-user">
-    <div class="sb-av" id="sb-av">--</div>
-    <div>
-      <div id="sb-name" style="font-size:11px;font-weight:600;color:rgba(255,255,255,.8)">...</div>
-      <div id="sb-role" style="font-size:9px;color:rgba(255,255,255,.3);font-family:'Outfit',sans-serif;font-variant-numeric:tabular-nums">...</div>
-    </div>
+  <div class="sb-nav">
+    <div class="nav-sec">マッチング</div>
+    <a class="nav-item active" href="coreto-matching-v2.html">🤖 AIマッチング</a>
+    <div class="nav-sec">メニュー</div>
+    <a class="nav-item" href="coreto-hub-v2.html">🏠 ホーム</a>
+    <a class="nav-item" href="coreto-cases-v2.html">📁 案件管理</a>
+    <a class="nav-item" href="coreto-pipeline-v2.html">📊 パイプライン</a>
+    <a class="nav-item" href="coreto-crm-v2.html">👥 CRM</a>
   </div>
-  <div class="sb-nav" id="sb-nav"><!-- CNAV --></div>
-</nav>
-  <div class="content">
-    <div class="topbar">
-      <button class="mob-ham" onclick="toggleSb()"><span></span><span></span><span></span></button>
+  <div class="sb-foot">
+    <div class="sb-user">
+      <div class="sb-av" id="sb-av">HQ</div>
       <div>
-        <div class="tb-title">PT→AG マッチング管理</div>
-        <div class="tb-crumb"><a href="coreto-hub-v2.html">COREBLDG</a> &#x203A; PTマッチング</div>
+        <div class="sb-uname" id="sb-uname">HQ 管理者</div>
+        <div class="sb-urole" id="sb-urole">admin</div>
       </div>
-      <div class="tb-act" style="margin-left:auto;display:flex;gap:8px;align-items:center">
-        <span class="badge b-rd" id="pending-count-badge">未マッチ 3件</span>
-      </div>
-    </div>
-    <div class="page" style="overflow-y:auto">
-
-      <!-- タブ -->
-      <div style="display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--bd);padding-bottom:0">
-        <div class="ptype-tab active" id="tab-unmatched" onclick="switchTab('unmatched')" style="padding:8px 18px;border-radius:8px 8px 0 0;font-size:12px;font-weight:600;cursor:pointer;color:var(--ink);border:1px solid var(--bd);border-bottom:1px solid #fff;margin-bottom:-1px">🔔 未マッチ（3）</div>
-        <div class="ptype-tab" id="tab-matched" onclick="switchTab('matched')" style="padding:8px 18px;border-radius:8px 8px 0 0;font-size:12px;font-weight:600;cursor:pointer;color:var(--muted)">✅ マッチ済み（12）</div>
-        <div class="ptype-tab" id="tab-board" onclick="switchTab('board')" style="padding:8px 18px;border-radius:8px 8px 0 0;font-size:12px;font-weight:600;cursor:pointer;color:var(--muted)">📋 案件ボード</div>
-      </div>
-
-      <div class="match-layout">
-        <!-- 左: 案件リスト -->
-        <div>
-          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px" id="list-label">未マッチング案件</div>
-          <div id="case-list"></div>
-        </div>
-
-        <!-- 右: マッチングパネル -->
-        <div id="match-panel">
-          <div style="background:var(--cream2);border:1px dashed var(--bd2);border-radius:12px;padding:40px;text-align:center;color:var(--faint)">
-            <div style="font-size:28px;margin-bottom:10px">🔗</div>
-            <div style="font-size:13px">左の案件を選択してAGにアサインします</div>
-          </div>
-        </div>
-      </div>
-
     </div>
   </div>
 </div>
-<div class="mob-overlay" onclick="toggleSb()"></div>
-<div id="ip-toast" class="toast"></div>
 
+<!-- ── メイン ── -->
+<div class="main">
+  <div class="top-bar">
+    <div>
+      <div class="top-title">🤖 AI マッチングエンジン</div>
+      <div class="top-sub">Role A（案件解析）+ アルゴ120点 + Role B（AI最終判定）</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="role-switcher">
+        <button class="role-btn active" id="rbtn-hq" onclick="switchRole('hq')">HQ</button>
+        <button class="role-btn" id="rbtn-ag" onclick="switchRole('ag')">AG</button>
+        <button class="role-btn" id="rbtn-pt" onclick="switchRole('pt')">PT</button>
+      </div>
+      <span id="role-badge" class="badge role-badge role-hq">HQ管理者</span>
+    </div>
+  </div>
+
+  <div class="content" id="main-content">
+    <!-- ロール別コンテンツをJSで描画 -->
+  </div>
+</div>
+</div>
+
+<!-- ── AI最終判定モーダル ── -->
+<div id="ai-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);
+  z-index:200;align-items:center;justify-content:center;overflow-y:auto;padding:20px">
+  <div style="background:#fff;border-radius:16px;width:680px;max-height:90vh;overflow-y:auto;
+    box-shadow:0 20px 60px rgba(0,0,0,.3)">
+    <div style="background:linear-gradient(135deg,#0D1A2D,#1E3252);padding:20px 24px;
+      border-radius:16px 16px 0 0;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;
+          letter-spacing:3px;color:var(--gold)">AI MATCHING</div>
+        <div style="font-size:10px;color:rgba(255,255,255,.45);margin-top:2px" id="modal-lead-id">—</div>
+      </div>
+      <button onclick="closeAiModal()" style="background:rgba(255,255,255,.1);border:none;
+        color:rgba(255,255,255,.7);width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px">✕</button>
+    </div>
+    <div id="ai-modal-body" style="padding:24px"></div>
+  </div>
+</div>
+
+<!-- ── マッチング確定モーダル ── -->
+<div id="confirm-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);
+  z-index:300;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:14px;width:460px;padding:24px;box-shadow:0 8px 40px rgba(0,0,0,.25)">
+    <div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:6px" id="cfm-title">マッチング確定</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:18px" id="cfm-sub"></div>
+    <div id="cfm-body"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+      <button class="btn btn-ghost" onclick="closeConfirmModal()">キャンセル</button>
+      <button class="btn btn-em" id="cfm-ok" onclick="executeMatch()">✅ 確定・顧客情報開示</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
 <script>
-function toggleSb(){ document.querySelector('.sb').classList.toggle('open'); document.querySelector('.mob-overlay').classList.toggle('show'); }
-function showToast(msg,type){ const t=document.getElementById('ip-toast'); t.textContent=msg; t.className='toast '+(type||''); t.style.opacity='1'; setTimeout(()=>t.style.opacity='0',3200); }
+// ══════════════════════════════════════════════════════════════
+// DEMO DATA
+// ══════════════════════════════════════════════════════════════
+const LS_LEADS = 'MATCHING_LEADS';
+const LS_AGENTS = 'MATCHING_AGENTS';
+function lsGet(k){try{return JSON.parse(localStorage.getItem(k)||'null');}catch(e){return null;}}
+function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
 
-const UNMATCHED = [
-  {id:'PT-MTH-094',ptId:'PT-30007',ptName:'佐藤 美咲',type:'rental',title:'渋谷区代々木 1LDK',sub:'¥155,000/月 / 3月末入居希望',fee:155000,method:'board',daysAgo:1},
-  {id:'PT-MTH-093',ptId:'PT-30015',ptName:'林 浩二',type:'hr',title:'IT企業営業職',sub:'年収400〜500万 / 都内勤務 / 30代前半',fee:540000,method:'board',daysAgo:2},
-  {id:'PT-MTH-092',ptId:'PT-30022',ptName:'田村 明子',type:'rental',title:'目黒区碑文谷 2LDK',sub:'¥210,000/月 / ペット可',fee:210000,method:'direct',targetAg:'AG-0042',daysAgo:0},
-];
+const AREA_GRAPH = {
+  adjacent: (a,b) => {
+    const map = {
+      '渋谷':['目黒','港','新宿','中野','世田谷'],
+      '新宿':['渋谷','中野','豊島','文京','千代田'],
+      '港':['渋谷','千代田','中央','品川','目黒'],
+      '目黒':['渋谷','港','品川','世田谷'],
+      '中野':['渋谷','新宿','杉並','練馬'],
+      '豊島':['新宿','文京','北','板橋','練馬'],
+      '品川':['港','目黒','大田'],
+      '千代田':['港','新宿','文京','中央','台東'],
+      '世田谷':['渋谷','目黒','杉並','大田'],
+      '江東':['墨田','江戸川','台東','中央'],
+      '墨田':['台東','江東','荒川'],
+    };
+    return (map[a]||[]).includes(b);
+  },
+  sameCity: (a,b) => true, // 都内は全部same
+};
 
-const AGENTS = [
-  {id:'AG-0042',name:'中村 陽子',rank:'Platinum',type:'RE',area:'都内全域',successRate:94,activeCases:6},
-  {id:'AG-0038',name:'田中 誠一',rank:'Gold',type:'RE',area:'渋谷・目黒・港',successRate:88,activeCases:4},
-  {id:'AG-0021',name:'鈴木 健太',rank:'Silver',type:'RE',area:'新宿・渋谷・中野',successRate:81,activeCases:3},
-  {id:'HR-0012',name:'吉田 さくら',rank:'Gold',type:'HR',area:'都内IT・営業職',successRate:79,activeCases:5},
-  {id:'HR-0008',name:'松本 達也',rank:'Silver',type:'HR',area:'全国・エンジニア職',successRate:72,activeCases:2},
-];
-
-let selectedCase = null;
-let currentTab = 'unmatched';
-
-function switchTab(tab) {
-  currentTab = tab;
-  ['unmatched','matched','board'].forEach(t => {
-    document.getElementById('tab-'+t).style.color = t===tab ? 'var(--ink)' : 'var(--muted)';
-  });
-  renderList();
-  document.getElementById('match-panel').innerHTML = `<div style="background:var(--cream2);border:1px dashed var(--bd2);border-radius:12px;padding:40px;text-align:center;color:var(--faint)"><div style="font-size:28px;margin-bottom:10px">🔗</div><div style="font-size:13px">左の案件を選択してAGにアサインします</div></div>`;
+function initDemoAgents(){
+  const agents = [
+    {id:'AG-0042',name:'中村 陽子',rank:'Platinum',type:'RE',areas:['渋谷','目黒','港','世田谷'],
+     elo:1680,closedCases:94,totalCases:102,activeCases:6,avgRating:4.85,reviewCount:89,
+     completionRate:0.97,avgResponseMin:8,daysRegistered:540,status:'active',
+     primaryType:'rental',recentConversionRate:0.91,acceptanceByType:{rental:0.88,sale:0.75},
+     specialties:['外国人対応','ペット可物件','高級賃貸'],selfPR:'外資系勤務の方々の対応が得意です',
+     recentReviews:['対応が非常に迅速で丁寧','英語でも説明していただけた','希望物件をすぐ見つけてくれた'],},
+    {id:'AG-0038',name:'田中 誠一',rank:'Gold',type:'RE',areas:['渋谷','目黒','港'],
+     elo:1520,closedCases:58,totalCases:64,activeCases:4,avgRating:4.70,reviewCount:55,
+     completionRate:0.94,avgResponseMin:15,daysRegistered:380,status:'active',
+     primaryType:'sale',recentConversionRate:0.78,acceptanceByType:{rental:0.72,sale:0.85},
+     specialties:['売買','投資物件','リノベ'],selfPR:'売買・投資用途の豊富な実績があります',
+     recentReviews:['売買の知識が豊富','迅速なレスポンス','的確な価格交渉'],},
+    {id:'AG-0021',name:'鈴木 健太',rank:'Silver',type:'RE',areas:['新宿','中野','渋谷'],
+     elo:1340,closedCases:23,totalCases:29,activeCases:3,avgRating:4.45,reviewCount:20,
+     completionRate:0.90,avgResponseMin:22,daysRegistered:210,status:'active',
+     primaryType:'rental',recentConversionRate:0.65,acceptanceByType:{rental:0.80,sale:0.40},
+     specialties:['単身者向け','学生対応','初期費用交渉'],selfPR:'若い方の初めての引越しサポートが得意',
+     recentReviews:['親切に説明してくれた','初めてでも安心','費用の説明が丁寧'],},
+    {id:'AG-0055',name:'山本 直樹',rank:'Bronze',type:'RE',areas:['豊島','文京','北'],
+     elo:1180,closedCases:5,totalCases:8,activeCases:2,avgRating:4.20,reviewCount:4,
+     completionRate:0.88,avgResponseMin:35,daysRegistered:65,status:'active',
+     primaryType:'rental',recentConversionRate:0.55,acceptanceByType:{rental:0.75,sale:0.20},
+     specialties:['池袋周辺','ファミリー向け'],selfPR:'地元の豊島区なら誰より詳しいです',
+     recentReviews:['地域情報が豊富','丁寧な接客'],},
+    {id:'AG-0061',name:'伊藤 さやか',rank:'Bronze',type:'RE',areas:['江東','墨田','台東'],
+     elo:1150,closedCases:3,totalCases:5,activeCases:1,avgRating:4.60,reviewCount:3,
+     completionRate:1.0,avgResponseMin:12,daysRegistered:45,status:'active',
+     primaryType:'rental',recentConversionRate:0.60,acceptanceByType:{rental:0.90,sale:0.10},
+     specialties:['新築','タワマン'],selfPR:'江東エリアのタワマン案件が得意です',
+     recentReviews:['とても丁寧','知識が豊富','説明が分かりやすい'],},
+    {id:'HR-0012',name:'吉田 さくら',rank:'Gold',type:'HR',areas:['都内IT・営業職'],
+     elo:1490,closedCases:42,totalCases:50,activeCases:5,avgRating:4.62,reviewCount:40,
+     completionRate:0.93,avgResponseMin:18,daysRegistered:290,status:'active',
+     primaryType:'hr',recentConversionRate:0.72,acceptanceByType:{hr:0.82},
+     specialties:['IT営業','SaaS','外資系転職'],selfPR:'IT業界の転職支援が専門です',
+     recentReviews:['転職のプロ','親身に相談','内定率が高い'],},
+    {id:'HR-0008',name:'松本 達也',rank:'Silver',type:'HR',areas:['全国・エンジニア職'],
+     elo:1310,closedCases:18,totalCases:24,activeCases:2,avgRating:4.38,reviewCount:16,
+     completionRate:0.88,avgResponseMin:28,daysRegistered:185,status:'active',
+     primaryType:'hr',recentConversionRate:0.58,acceptanceByType:{hr:0.70},
+     specialties:['エンジニア','バックエンド','フルリモート'],selfPR:'エンジニア転職の実績多数',
+     recentReviews:['技術面の理解が深い','的確なマッチング'],},
+    {id:'AG-0072',name:'斉藤 一郎',rank:'Bronze',type:'RE',areas:['世田谷','杉並','大田'],
+     elo:1200,closedCases:2,totalCases:4,activeCases:1,avgRating:4.50,reviewCount:2,
+     completionRate:1.0,avgResponseMin:10,daysRegistered:30,status:'active',
+     primaryType:'rental',recentConversionRate:0.50,acceptanceByType:{rental:0.85},
+     specialties:['ファミリー向け','保育園近く'],selfPR:'子育て世代のお引越しを応援します',
+     recentReviews:['子供のこと考えてくれた','学校情報も詳しい'],},
+  ];
+  lsSet(LS_AGENTS, agents);
+  return agents;
 }
 
-function renderList() {
-  const label = currentTab==='unmatched' ? '未マッチング案件' : currentTab==='matched' ? 'マッチング済み案件' : '案件ボード（全公開中）';
-  document.getElementById('list-label').textContent = label;
-  if (currentTab === 'unmatched') {
-    document.getElementById('case-list').innerHTML = UNMATCHED.map(c => `
-      <div class="match-card ${selectedCase?.id===c.id?'selected':''}" onclick="selectCase('${c.id}')">
-        <div class="mc-head">
-          <div><div class="mc-id">${c.id}</div><div class="mc-type type-${c.type}" style="display:inline-block;margin-top:3px">${c.type==='rental'?'賃貸':'人材'}</div></div>
-          <span class="badge b-rd">未マッチ ${c.daysAgo}日</span>
-        </div>
-        <div class="mc-title">${c.title}</div>
-        <div class="mc-sub">${c.sub}</div>
-        <div class="mc-pt">
-          <div class="mc-pt-av">${c.ptName.charAt(0)}</div>
-          <div style="font-size:11px;color:var(--muted)"><span style="font-family:'DM Mono',monospace">${c.ptId}</span> ${c.ptName}</div>
-        </div>
-        <div class="mc-method">
-          ${c.method==='board'
-            ? '<span class="method-tag method-board">📋 ボード掲載（先着）</span>'
-            : `<span class="method-tag method-direct">🎯 指名: ${c.targetAg}</span>`}
-        </div>
-      </div>`).join('');
-  } else if (currentTab === 'board') {
-    document.getElementById('case-list').innerHTML = UNMATCHED.map(c => `
-      <div class="match-card" onclick="selectCase('${c.id}')">
-        <div class="mc-head">
-          <div class="mc-type type-${c.type}" style="display:inline-block">${c.type==='rental'?'賃貸':'人材'}</div>
-          <span style="font-size:11px;color:var(--muted)">仲介料 ¥${c.fee.toLocaleString()}</span>
-        </div>
-        <div class="mc-title">${c.title}</div>
-        <div class="mc-sub">${c.sub}</div>
-        <div style="font-size:10px;color:var(--faint);margin-top:8px">※クライアント情報は担当AG決定後に開示</div>
-        <button class="btn btn-primary btn-sm" style="margin-top:10px" onclick="event.stopPropagation();assignSelf('${c.id}')">対応する（先着）</button>
-      </div>`).join('');
-  } else {
-    document.getElementById('case-list').innerHTML = '<div style="text-align:center;padding:32px;color:var(--faint)">マッチング済み案件はcoreto-cases-v2.html で確認できます</div>';
+function initDemoLeads(){
+  const leads = [
+    {id:'LD-2026-001',ptId:'PT-30007',ptName:'佐藤 美咲',ptReputation:4.3,
+     type:'rental',area:'渋谷',budget:180000,budgetFlex:1,
+     title:'渋谷区 2LDK 外国人家族',
+     description:'外国人ファミリー（夫婦+子供2人）。英語対応必須。ペット（小型犬）可物件。3月末入居希望。予算は相談可。学校・公園近く希望。',
+     method:'board',minRank:'Silver',
+     status:'pending_ai',createdAt:'2026-03-11 09:30',daysAgo:0,
+     _aiAnalysis:null,_algoResult:null,_aiRanking:null},
+    {id:'LD-2026-002',ptId:'PT-30015',ptName:'林 浩二',ptReputation:3.9,
+     type:'hr',area:'都内',budget:5000000,budgetFlex:0,
+     title:'IT企業 営業マネージャー候補',
+     description:'SaaS系スタートアップの営業マネージャー。経験5年以上。英語できると尚良。年収500-600万。リモート可。急募。',
+     method:'direct',targetAgId:'HR-0012',minRank:'Silver',
+     status:'matched',assignedAgId:'HR-0012',assignedAgName:'吉田 さくら',
+     matchedAt:'2026-03-10 14:20',createdAt:'2026-03-10 11:00',daysAgo:1,
+     _aiAnalysis:{urgencyLevel:9,clientDifficulty:6,specialNeeds:['英語対応','マネージャー経験'],
+       impliedBudgetFlex:0,riskFlags:[],optimalAgProfile:'IT業界・営業職専門・英語対応可',
+       estimatedDifficulty:7,confidenceScore:0.88},
+     _algoResult:null,_aiRanking:null},
+    {id:'LD-2026-003',ptId:'PT-30022',ptName:'田村 明子',ptReputation:4.7,
+     type:'rental',area:'港',budget:280000,budgetFlex:1,
+     title:'港区 3LDK タワーマンション',
+     description:'外資系企業重役。タワマン希望。駅直結か徒歩3分以内。眺望重視。セキュリティ重視。4月初旬入居。',
+     method:'board',minRank:'Gold',
+     status:'unmatched',createdAt:'2026-03-09 16:00',daysAgo:2,
+     _aiAnalysis:{urgencyLevel:7,clientDifficulty:9,specialNeeds:['タワマン','セキュリティ','外資系対応'],
+       impliedBudgetFlex:1,riskFlags:['要求水準高め'],optimalAgProfile:'高級賃貸・港区専門・VIP対応経験',
+       estimatedDifficulty:9,confidenceScore:0.92},
+     _algoResult:null,_aiRanking:null},
+    {id:'LD-2026-004',ptId:'PT-30031',ptName:'木村 拓也',ptReputation:4.1,
+     type:'rental',area:'豊島',budget:95000,budgetFlex:0,
+     title:'池袋 1K 新卒社会人',
+     description:'4月から就職する新卒。池袋勤務。1Kで十分。初期費用を抑えたい。鉄道騒音NG。',
+     method:'board',minRank:null,
+     status:'pending_ai',createdAt:'2026-03-11 10:15',daysAgo:0,
+     _aiAnalysis:null,_algoResult:null,_aiRanking:null},
+  ];
+  lsSet(LS_LEADS, leads);
+  return leads;
+}
+
+function getLeads(){ return lsGet(LS_LEADS)||initDemoLeads(); }
+function getAgents(){ return lsGet(LS_AGENTS)||initDemoAgents(); }
+function saveLeads(v){ lsSet(LS_LEADS,v); }
+function saveAgents(v){ lsSet(LS_AGENTS,v); }
+
+// ══════════════════════════════════════════════════════════════
+// MATCHING ENGINE — Layer 1: Hard Filter
+// ══════════════════════════════════════════════════════════════
+function hardFilter(agents, lead){
+  const rankOrder = {Bronze:1,Silver:2,Gold:3,Platinum:4};
+  const caps = {Platinum:99,Gold:12,Silver:8,Bronze:5};
+  return agents.filter(ag => {
+    if(lead.type==='rental'&&ag.type==='HR') return false;
+    if(lead.type==='hr'&&ag.type==='RE') return false;
+    if(lead.type==='sale'&&ag.type==='HR') return false;
+    if(ag.activeCases >= caps[ag.rank]) return false;
+    if(lead.minRank && rankOrder[ag.rank] < rankOrder[lead.minRank]) return false;
+    if(ag.status !== 'active') return false;
+    return true;
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
+// Layer 2: Multi-dimensional Scoring (120pt)
+// ══════════════════════════════════════════════════════════════
+function calculateMatchScore(ag, lead){
+  // [A] 成約力スコア 30点
+  const eloNorm = Math.max(0,Math.min(1,(ag.elo-800)/(2400-800)));
+  const convRate = ag.recentConversionRate || 0.5;
+  const closingPower = (eloNorm*0.4 + convRate*0.6) * 30;
+
+  // [B] 適合スコア 25点
+  const areaScore = calcAreaScore(ag, lead);
+  const typeExp = (lead.type==='rental'&&ag.primaryType==='rental')
+    || (lead.type==='hr'&&ag.primaryType==='hr')
+    || (lead.type==='sale'&&ag.primaryType==='sale') ? 0.85 : 0.35;
+  const budgetFit = calcBudgetFitScore(ag, lead);
+  const fitScore = (areaScore*0.5 + typeExp*0.35 + budgetFit*0.15) * 25;
+
+  // [C] 信頼性スコア 20点
+  const n = ag.reviewCount || 0;
+  const CONF_N = 8; const PLAT_AVG = 4.2;
+  const bayesRating = (n*(ag.avgRating||4.0) + CONF_N*PLAT_AVG) / (n+CONF_N);
+  const complRate = ag.completionRate || 0.9;
+  const respScore = Math.max(0,1-(ag.avgResponseMin||30)/120);
+  const trustScore = (bayesRating/5*0.5 + complRate*0.35 + respScore*0.15) * 20;
+
+  // [D] 承諾確率スコア 20点
+  const acceptProb = predictAcceptProb(ag, lead);
+  const acceptanceScore = acceptProb * 20;
+
+  // [E] 相性スコア 15点（簡易協調フィルタリング）
+  const affinity = calcAffinityScore(ag, lead);
+  const affinityScore = affinity * 15;
+
+  // [F] キャパシティスコア 10点
+  const caps = {Platinum:99,Gold:12,Silver:8,Bronze:5};
+  const cap = caps[ag.rank];
+  const load = ag.activeCases / cap;
+  const capacityScore = load < 0.7
+    ? 10
+    : 10 * Math.pow(Math.max(0,1-load),2) / 0.09;
+
+  const total = closingPower+fitScore+trustScore+acceptanceScore+affinityScore+capacityScore;
+
+  return {
+    total: Math.min(120, total),
+    breakdown:{
+      closingPower:  +closingPower.toFixed(1),
+      fitScore:      +fitScore.toFixed(1),
+      trustScore:    +trustScore.toFixed(1),
+      acceptanceScore:+acceptanceScore.toFixed(1),
+      affinityScore: +affinityScore.toFixed(1),
+      capacityScore: +capacityScore.toFixed(1),
+    }
+  };
+}
+
+function calcAreaScore(ag, lead){
+  if(ag.type==='HR') return 0.8; // HR-AGはエリア不問
+  if(ag.areas.includes(lead.area)) return 1.0;
+  if(ag.areas.some(a=>AREA_GRAPH.adjacent(a,lead.area))) return 0.7;
+  return 0.3;
+}
+
+function calcBudgetFitScore(ag, lead){
+  // エージェントの過去成約平均予算帯との適合（デモでは簡易計算）
+  if(!lead.budget) return 0.7;
+  // Platinumは高予算得意、Bronzeは低予算得意（仮定）
+  const budgetPerf = {Platinum:300000,Gold:200000,Silver:130000,Bronze:90000};
+  const agPref = budgetPerf[ag.rank]||130000;
+  const diff = Math.abs(lead.budget - agPref) / Math.max(lead.budget, agPref);
+  return Math.max(0.3, 1 - diff);
+}
+
+function predictAcceptProb(ag, lead){
+  const typeProb = ag.acceptanceByType?.[lead.type] ?? 0.65;
+  const loadFactor = Math.max(0.4, 1 - ag.activeCases/10*0.3);
+  const areaPref = ag.areas.includes(lead.area) ? 1.1 : 0.85;
+  return Math.min(0.98, typeProb * loadFactor * areaPref);
+}
+
+function calcAffinityScore(ag, lead){
+  // 同PT過去取引があるほど高い（デモ: ptReputationベース）
+  const ptRep = (lead.ptReputation||4.0) / 5;
+  // 案件タイプ×エリアの実績補正（デモ: ELOとratingの組み合わせ）
+  const expMatch = ag.areas.includes(lead.area) && ag.primaryType===lead.type ? 1.0 : 0.6;
+  return ptRep * 0.4 + expMatch * 0.6;
+}
+
+// ══════════════════════════════════════════════════════════════
+// Layer 3: Thompson Sampling + Exploration Bonus
+// ══════════════════════════════════════════════════════════════
+function sampleBeta(alpha, beta){
+  // 簡易βサンプリング（Box-Muller近似）
+  const x = gammaSample(alpha);
+  const y = gammaSample(beta);
+  return x/(x+y);
+}
+function gammaSample(a){
+  if(a<1) return gammaSample(1+a)*Math.pow(Math.random(),1/a);
+  const d=a-1/3, c=1/Math.sqrt(9*d);
+  while(true){
+    let x,v;
+    do{ x=(Math.random()*2-1)*3.464; v=1+c*x; }while(v<=0);
+    v=v*v*v;
+    const u=Math.random();
+    if(u<1-0.331*(x*x)*(x*x)) return d*v;
+    if(Math.log(u)<0.5*x*x+d*(1-v+Math.log(v))) return d*v;
   }
 }
 
-function selectCase(caseId) {
-  selectedCase = UNMATCHED.find(c => c.id === caseId);
-  renderList();
-  renderMatchPanel(selectedCase);
+function explorationAdjustedRanking(scoredAgs){
+  return scoredAgs.map(item => {
+    const ag = item.ag;
+    let explorationBonus = 0;
+
+    // 新人ボーナス（登録90日以内 + 成約5件未満）
+    const isNewbie = ag.daysRegistered < 90 && ag.totalCases < 5;
+    if(isNewbie){
+      const prob = Math.max(0, 0.3 - ag.totalCases*0.06);
+      if(Math.random() < prob) explorationBonus = 12;
+    }
+
+    // Thompson Sampling
+    const alpha = (ag.closedCases||0) + 1;
+    const beta  = Math.max(1,(ag.totalCases||1)-(ag.closedCases||0)) + 1;
+    const thompson = sampleBeta(alpha, beta);
+
+    return {
+      ...item,
+      finalScore: item.score.total + explorationBonus,
+      thompson,
+      explorationBonus,
+      expectedValue: item.score.total * predictAcceptProb(ag,item.lead||{type:'rental'}),
+    };
+  }).sort((a,b)=>(b.finalScore*0.75+b.thompson*30*0.25)-(a.finalScore*0.75+a.thompson*30*0.25));
 }
 
-function renderMatchPanel(c) {
-  const compatAgs = AGENTS.filter(a =>
-    (c.type==='rental' && (a.type==='RE' || a.type==='RE/HR')) ||
-    (c.type==='hr' && (a.type==='HR' || a.type==='RE/HR'))
-  );
-  const isDirect = c.method === 'direct';
-  const targetAg = isDirect ? AGENTS.find(a => a.id === c.targetAg) : null;
-  const rankColor = {Platinum:'b-vt',Gold:'b-em',Silver:'b-sk',Bronze:'b-nt'};
+// ══════════════════════════════════════════════════════════════
+// AI Role A: Lead Analysis
+// ══════════════════════════════════════════════════════════════
+async function analyzeLeadWithAI(lead){
+  const prompt = `あなたはCORETO不動産・人材マッチングプラットフォームの案件解析AIです。
+パートナーが入力した案件の情報から、マッチングに必要な構造化情報を抽出してください。
+必ずJSON形式のみで返答し、前置き・後置きは一切不要です。
 
-  const agList = compatAgs.map(a => `
-    <div class="ag-card ${isDirect && a.id===c.targetAg ? 'matched' : ''}" onclick="matchCase('${c.id}','${a.id}','${a.name}')">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
-        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--faint)">${a.id}</div>
-        <span class="badge ${rankColor[a.rank]||'b-nt'}" style="font-size:9px">${a.rank}</span>
-        ${isDirect && a.id===c.targetAg ? '<span class="badge b-em" style="font-size:9px">🎯 指名先</span>' : ''}
-      </div>
-      <div class="ag-name">${a.name}</div>
-      <div class="ag-meta">エリア: ${a.area}</div>
-      <div class="ag-rank-bar">
-        <span style="font-size:10px;color:var(--muted)">成約率 <strong style="color:var(--em)">${a.successRate}%</strong></span>
-        <span style="font-size:10px;color:var(--muted)">稼働案件 <strong>${a.activeCases}件</strong></span>
-      </div>
-    </div>`).join('');
+【案件情報】
+種別: ${lead.type==='rental'?'不動産賃貸':lead.type==='hr'?'人材紹介':'不動産売買'}
+エリア: ${lead.area}
+予算: ¥${(lead.budget||0).toLocaleString()}
+概要: ${lead.description}
 
-  document.getElementById('match-panel').innerHTML = `
-    <div class="match-panel">
-      <div class="mp-head">
-        <div style="font-size:9px;color:rgba(200,169,81,.6);margin-bottom:4px">マッチング案件</div>
-        <div style="font-size:15px;font-weight:300;color:#fff">${c.title}</div>
-        <div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:3px">${c.sub}</div>
-        <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
-          <span class="badge" style="background:rgba(200,169,81,.15);color:var(--gold)">PT: ${c.ptId} ${c.ptName}</span>
-          <span class="badge b-sk">仲介料 ¥${c.fee.toLocaleString()}</span>
+以下のJSON形式で返答：
+{
+  "urgencyLevel": 0から10の数値,
+  "clientDifficulty": 0から10の数値,
+  "specialNeeds": ["特殊要件のリスト"],
+  "impliedBudgetFlex": -1か0か1,
+  "clientPersonality": "assertiveかflexibleかunclear",
+  "riskFlags": ["リスクフラグのリスト（なければ空配列）"],
+  "optimalAgProfile": "最適なAGの特徴を1〜2文で",
+  "estimatedDifficulty": 0から10の数値,
+  "confidenceScore": 0から1の数値,
+  "summary": "案件の特徴を2文で要約"
+}`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1000,
+        messages:[{role:'user',content:prompt}]
+      })
+    });
+    const data = await res.json();
+    const text = data.content[0].text.replace(/```json|```/g,'').trim();
+    return JSON.parse(text);
+  } catch(e){
+    console.error('AI Role A error:',e);
+    // フォールバック
+    return {
+      urgencyLevel: lead.description.includes('急')||lead.description.includes('急ぎ') ? 8 : 4,
+      clientDifficulty: 5,
+      specialNeeds: [],
+      impliedBudgetFlex: 0,
+      clientPersonality: 'unclear',
+      riskFlags: [],
+      optimalAgProfile: '経験豊富なエージェント',
+      estimatedDifficulty: 5,
+      confidenceScore: 0.5,
+      summary: '案件情報を解析しました。'
+    };
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// AI Role B: Final Ranking (Top20→5名選定)
+// ══════════════════════════════════════════════════════════════
+async function aiFinalRanking(top20, lead){
+  const agProfiles = top20.slice(0,20).map(item=>({
+    id: item.ag.id,
+    name: item.ag.name,
+    rank: item.ag.rank,
+    algoScore: +item.finalScore.toFixed(1),
+    scoreBreakdown: item.score.breakdown,
+    areas: item.ag.areas,
+    elo: item.ag.elo,
+    convRate: +(item.ag.recentConversionRate*100).toFixed(0)+'%',
+    avgRating: item.ag.avgRating,
+    reviewCount: item.ag.reviewCount,
+    activeCases: item.ag.activeCases,
+    daysRegistered: item.ag.daysRegistered,
+    specialties: item.ag.specialties||[],
+    recentReviews: item.ag.recentReviews||[],
+    explorationBonus: item.explorationBonus||0,
+  }));
+
+  const prompt = `あなたはCORETO不動産・人材マッチングプラットフォームの最終マッチング判定AIです。
+
+アルゴリズムが算出したTop${agProfiles.length}候補エージェントの中から、この案件に最も適した5名を選定し根拠を示してください。
+
+【判断基準の優先順位】
+1. 成約確率の最大化
+2. 顧客体験の質（クライアントとAGの相性）
+3. プラットフォームの健全性（特定AGへの集中回避）
+4. 新人AGへの適切な機会提供
+
+【案件情報】
+種別: ${lead.type==='rental'?'不動産賃貸':lead.type==='hr'?'人材紹介':'不動産売買'}
+エリア: ${lead.area} / 予算: ¥${(lead.budget||0).toLocaleString()}
+概要: ${lead.description}
+AI解析サマリー: ${lead._aiAnalysis?.summary||''}
+特殊要件: ${(lead._aiAnalysis?.specialNeeds||[]).join('、')||'なし'}
+難易度: ${lead._aiAnalysis?.estimatedDifficulty||5}/10
+リスク: ${(lead._aiAnalysis?.riskFlags||[]).join('、')||'なし'}
+
+【候補エージェント（アルゴスコア順）】
+${JSON.stringify(agProfiles,null,1)}
+
+必ずJSON形式のみで返答：
+{
+  "selected": [
+    {
+      "agentId": "AG-XXXX",
+      "rank": 1,
+      "reason": "選定理由を2文で",
+      "expectedOutcome": "期待される展開を1文で",
+      "riskNote": "懸念点（なければnull）"
+    }
+  ],
+  "overrideNotes": "アルゴ上位を外した場合の理由（なければnull）",
+  "hqAlertNeeded": true or false,
+  "hqAlertReason": "HQ注意事項（不要ならnull）",
+  "matchConfidence": 0から1の数値,
+  "summary": "このマッチングの総評を2文で"
+}`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:2000,
+        messages:[{role:'user',content:prompt}]
+      })
+    });
+    const data = await res.json();
+    const text = data.content[0].text.replace(/```json|```/g,'').trim();
+    return JSON.parse(text);
+  } catch(e){
+    console.error('AI Role B error:',e);
+    // フォールバック：アルゴ上位5名
+    return {
+      selected: top20.slice(0,5).map((item,i)=>({
+        agentId: item.ag.id,
+        rank: i+1,
+        reason: `アルゴスコア${item.finalScore.toFixed(1)}点でTop${i+1}。${item.ag.areas.includes(lead.area)?'エリア一致。':''}`,
+        expectedOutcome: '通常の対応が期待されます。',
+        riskNote: null,
+      })),
+      overrideNotes: null,
+      hqAlertNeeded: false,
+      hqAlertReason: null,
+      matchConfidence: 0.7,
+      summary: 'アルゴリズムによる自動選定です。'
+    };
+  }
+}
+</script>
+<script>
+// ══════════════════════════════════════════════════════════════
+// ROLE & STATE
+// ══════════════════════════════════════════════════════════════
+let currentRole = 'hq';
+let currentTab  = 'board';
+let selectedLead = null;
+let pendingMatch = null;
+
+function switchRole(role){
+  currentRole = role;
+  ['hq','ag','pt'].forEach(r=>{
+    document.getElementById('rbtn-'+r).classList.toggle('active', r===role);
+  });
+  const badge = document.getElementById('role-badge');
+  const labels = {hq:'HQ管理者',ag:'エージェント',pt:'パートナー'};
+  const cls    = {hq:'role-hq',ag:'role-ag',pt:'role-pt'};
+  badge.textContent = labels[role];
+  badge.className = 'badge role-badge '+cls[role];
+  const avEl = document.getElementById('sb-av');
+  const unEl = document.getElementById('sb-uname');
+  const urEl = document.getElementById('sb-urole');
+  if(role==='hq'){avEl.textContent='HQ';unEl.textContent='HQ 管理者';urEl.textContent='admin';}
+  else if(role==='ag'){avEl.textContent='中';unEl.textContent='中村 陽子';urEl.textContent='AG-0042 Platinum';}
+  else{avEl.textContent='佐';unEl.textContent='佐藤 美咲';urEl.textContent='PT-30007';}
+  selectedLead = null;
+  currentTab = role==='pt' ? 'post' : 'board';
+  renderMain();
+}
+
+// ══════════════════════════════════════════════════════════════
+// MAIN RENDER ROUTER
+// ══════════════════════════════════════════════════════════════
+function renderMain(){
+  const el = document.getElementById('main-content');
+  if(currentRole==='hq')      el.innerHTML = renderHQ();
+  else if(currentRole==='ag') el.innerHTML = renderAG();
+  else                         el.innerHTML = renderPT();
+  bindEvents();
+}
+
+// ══════════════════════════════════════════════════════════════
+// HQ VIEW
+// ══════════════════════════════════════════════════════════════
+function renderHQ(){
+  const leads = getLeads();
+  const pending   = leads.filter(l=>l.status==='pending_ai'||l.status==='unmatched');
+  const matched   = leads.filter(l=>l.status==='matched');
+
+  const tabs = [
+    {k:'board',    label:'📋 案件ボード', cnt: pending.length},
+    {k:'matched',  label:'✅ マッチング済み', cnt: matched.length},
+    {k:'monitor',  label:'📊 AIモニター', cnt:0},
+  ];
+
+  return `
+  ${renderStatBar(leads)}
+  <div class="tab-bar">
+    ${tabs.map(t=>`
+      <div class="tab ${currentTab===t.k?'active':''}" onclick="switchTab('${t.k}')">
+        ${t.label}
+        ${t.cnt>0?`<span class="tab-badge">${t.cnt}</span>`:''}
+      </div>`).join('')}
+  </div>
+  <div id="tab-content">
+    ${currentTab==='board'   ? renderHQBoard(pending)  : ''}
+    ${currentTab==='matched' ? renderHQMatched(matched) : ''}
+    ${currentTab==='monitor' ? renderMonitor()          : ''}
+  </div>`;
+}
+
+function renderStatBar(leads){
+  const agents = getAgents();
+  const pending = leads.filter(l=>l.status==='pending_ai'||l.status==='unmatched').length;
+  const matched = leads.filter(l=>l.status==='matched').length;
+  const activeAg = agents.filter(a=>a.status==='active').length;
+  const avgElo = Math.round(agents.reduce((s,a)=>s+a.elo,0)/agents.length);
+  return `
+  <div class="stat-grid">
+    <div class="stat-card"><div class="stat-num" style="color:var(--rd)">${pending}</div><div class="stat-lbl">未マッチ案件</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--em)">${matched}</div><div class="stat-lbl">マッチング済み</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--sk)">${activeAg}</div><div class="stat-lbl">稼働中AG</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--vt)">${avgElo}</div><div class="stat-lbl">平均ELOレーティング</div></div>
+  </div>`;
+}
+
+function renderHQBoard(pending){
+  if(!pending.length) return `<div style="text-align:center;padding:48px;color:var(--faint)">
+    <div style="font-size:32px;margin-bottom:8px">🎉</div>
+    <div>未マッチ案件はありません</div></div>`;
+
+  return `<div style="display:grid;grid-template-columns:340px 1fr;gap:16px;align-items:start">
+    <div>
+      ${pending.map(l=>renderLeadCard(l)).join('')}
+    </div>
+    <div id="lead-detail-panel">
+      ${renderLeadDetailPlaceholder()}
+    </div>
+  </div>`;
+}
+
+function renderLeadCard(l){
+  const urgency = l._aiAnalysis?.urgencyLevel||0;
+  const isUrgent = urgency>=8;
+  const analyzed = !!l._aiAnalysis;
+  return `
+  <div class="lead-card ${selectedLead?.id===l.id?'selected':''} ${isUrgent?'urgent':''}"
+    onclick="selectLead('${l.id}')">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div class="lead-id">${l.id}</div>
+      ${isUrgent?'<span class="badge b-rd">🔴 緊急</span>':''}
+    </div>
+    <div class="lead-title">${l.title}</div>
+    <div class="lead-sub">${l.area} / ¥${(l.budget||0).toLocaleString()}</div>
+    <div class="lead-meta">
+      <span class="method-tag ${l.method==='board'?'method-board':'method-direct'}">
+        ${l.method==='board'?'📋 先着':'🎯 指名: '+l.targetAgId}
+      </span>
+      ${analyzed
+        ? `<span class="badge b-navy">✨ AI解析済</span>`
+        : `<span class="badge b-nt">未解析</span>`}
+      <span style="font-size:10px;color:var(--faint)">${l.daysAgo===0?'今日':l.daysAgo+'日前'}</span>
+    </div>
+    <div class="status-flow">
+      <span class="status-step ${analyzed?'done':'current'}">📝 登録</span>
+      <span class="status-arrow">›</span>
+      <span class="status-step ${analyzed?'done':''}">🤖 AI解析</span>
+      <span class="status-arrow">›</span>
+      <span class="status-step ${l._algoResult?'done':analyzed?'current':''}">⚙️ アルゴ</span>
+      <span class="status-arrow">›</span>
+      <span class="status-step ${l._aiRanking?'done':l._algoResult?'current':''}">✨ AI判定</span>
+    </div>
+  </div>`;
+}
+
+function renderLeadDetailPlaceholder(){
+  return `<div style="background:var(--cream2);border:1.5px dashed var(--bd2);border-radius:12px;
+    padding:48px;text-align:center;color:var(--faint)">
+    <div style="font-size:32px;margin-bottom:10px">🤖</div>
+    <div style="font-size:13px;font-weight:600;color:var(--muted)">案件を選択してAIマッチングを開始</div>
+    <div style="font-size:11px;margin-top:6px">Role A（案件解析）→ アルゴ120点 → Role B（AI判定）</div>
+  </div>`;
+}
+
+function renderLeadDetail(lead){
+  const ai = lead._aiAnalysis;
+  const algo = lead._algoResult;
+  const ranking = lead._aiRanking;
+
+  return `
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <div class="card-title">${lead.title}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px;font-family:'DM Mono',monospace">${lead.id}</div>
+      </div>
+      <div style="display:flex;gap:6px">
+        ${!ai ? `<button class="btn btn-navy" onclick="runRoleA('${lead.id}')">🤖 AI解析 (Role A)</button>` : ''}
+        ${ai && !ranking ? `<button class="btn btn-vt" onclick="runFullMatch('${lead.id}')">✨ AIマッチング実行</button>` : ''}
+        ${ranking ? `<button class="btn btn-em" onclick="openAiModal('${lead.id}')">📊 結果を見る</button>` : ''}
+      </div>
+    </div>
+    <div class="card-body">
+
+      <div class="form-grid-2" style="margin-bottom:14px">
+        <div><div style="font-size:10px;color:var(--muted);font-weight:600">エリア</div>
+          <div style="font-size:13px;font-weight:600;color:var(--ink)">${lead.area}</div></div>
+        <div><div style="font-size:10px;color:var(--muted);font-weight:600">予算</div>
+          <div style="font-size:13px;font-weight:600;color:var(--ink)">¥${(lead.budget||0).toLocaleString()}</div></div>
+        <div><div style="font-size:10px;color:var(--muted);font-weight:600">PT</div>
+          <div style="font-size:13px;font-weight:600;color:var(--ink)">${lead.ptName}
+            <span style="font-size:10px;color:var(--muted)">（評価 ${lead.ptReputation}）</span></div></div>
+        <div><div style="font-size:10px;color:var(--muted);font-weight:600">方式</div>
+          <div class="method-tag ${lead.method==='board'?'method-board':'method-direct'}" style="margin-top:3px">
+            ${lead.method==='board'?'📋 先着応募':'🎯 指名: '+lead.targetAgId}</div></div>
+      </div>
+
+      <div style="font-size:11px;color:var(--muted);background:var(--cream2);padding:10px 12px;
+        border-radius:8px;line-height:1.7;margin-bottom:14px">${lead.description}</div>
+
+      ${ai ? renderAIAnalysisPanel(ai) : `
+        <div style="border:1.5px dashed var(--bd2);border-radius:10px;padding:20px;text-align:center;color:var(--faint)">
+          <div style="font-size:20px;margin-bottom:6px">🤖</div>
+          <div style="font-size:12px">「AI解析 (Role A)」ボタンで案件を解析します</div>
+        </div>`}
+
+      ${algo ? renderAlgoResult(algo, lead) : ''}
+      ${ranking ? renderAIRankingPreview(ranking, lead) : ''}
+    </div>
+  </div>`;
+}
+
+function renderAIAnalysisPanel(ai){
+  const urgencyColor = ai.urgencyLevel>=8?'var(--rd)':ai.urgencyLevel>=5?'var(--am)':'var(--em)';
+  const diffColor = ai.estimatedDifficulty>=8?'var(--rd)':ai.estimatedDifficulty>=5?'var(--am)':'var(--em)';
+  return `
+  <div class="ai-panel" style="margin-bottom:14px">
+    <div class="ai-panel-title">🤖 Role A — AI案件解析</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.75);line-height:1.6;margin-bottom:10px">${ai.summary||''}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+      <div style="background:rgba(255,255,255,.06);border-radius:8px;padding:8px 10px">
+        <div style="font-size:9px;color:rgba(255,255,255,.4);margin-bottom:4px">緊急度</div>
+        <div style="font-size:18px;font-weight:700;color:${urgencyColor}">${ai.urgencyLevel}<span style="font-size:11px;color:rgba(255,255,255,.4)">/10</span></div>
+        <div class="ai-urgency-bar"><div class="ai-urgency-fill" style="width:${ai.urgencyLevel*10}%;background:${urgencyColor}"></div></div>
+      </div>
+      <div style="background:rgba(255,255,255,.06);border-radius:8px;padding:8px 10px">
+        <div style="font-size:9px;color:rgba(255,255,255,.4);margin-bottom:4px">案件難易度</div>
+        <div style="font-size:18px;font-weight:700;color:${diffColor}">${ai.estimatedDifficulty}<span style="font-size:11px;color:rgba(255,255,255,.4)">/10</span></div>
+        <div class="ai-urgency-bar"><div class="ai-urgency-fill" style="width:${ai.estimatedDifficulty*10}%;background:${diffColor}"></div></div>
+      </div>
+    </div>
+    ${ai.specialNeeds?.length ? `
+    <div style="margin-bottom:8px">
+      <div style="font-size:9px;color:rgba(255,255,255,.4);margin-bottom:4px">特殊要件</div>
+      ${ai.specialNeeds.map(n=>`<span class="ai-tag" style="background:rgba(200,169,81,.2);color:var(--gold)">🏷 ${n}</span>`).join('')}
+    </div>` : ''}
+    ${ai.riskFlags?.length ? `
+    <div style="margin-bottom:8px">
+      <div style="font-size:9px;color:rgba(255,255,255,.4);margin-bottom:4px">リスクフラグ</div>
+      ${ai.riskFlags.map(f=>`<span class="ai-tag" style="background:rgba(220,38,38,.2);color:#fca5a5">⚠️ ${f}</span>`).join('')}
+    </div>` : ''}
+    <div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.08)">
+      <div style="font-size:9px;color:rgba(255,255,255,.4);margin-bottom:3px">最適AGプロファイル</div>
+      <div style="font-size:11px;color:rgba(255,255,255,.8)">${ai.optimalAgProfile}</div>
+    </div>
+    <div style="margin-top:6px;font-size:9px;color:rgba(255,255,255,.3);text-align:right">
+      信頼度: ${Math.round((ai.confidenceScore||0)*100)}%
+    </div>
+  </div>`;
+}
+
+function renderAlgoResult(result, lead){
+  const top5 = result.slice(0,5);
+  const rankColors = {Platinum:'b-vt',Gold:'b-navy',Silver:'b-sk',Bronze:'b-nt'};
+  return `
+  <div style="margin-bottom:14px">
+    <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:8px;
+      letter-spacing:.5px">⚙️ アルゴリズム結果（120点満点 / Top5プレビュー）</div>
+    ${top5.map((item,i)=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;
+      border:1px solid var(--bd);border-radius:8px;margin-bottom:6px;background:${i===0?'#F0FFF8':'#fff'}">
+      <div style="font-size:16px;font-weight:800;color:${i===0?'var(--em)':'var(--faint)'};
+        width:20px;text-align:center;font-variant-numeric:tabular-nums">${i+1}</div>
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:12px;font-weight:700;color:var(--navy)">${item.ag.name}</span>
+          <span class="badge ${rankColors[item.ag.rank]}">${item.ag.rank}</span>
+          ${item.explorationBonus>0?`<span class="badge b-am">🌱 新人+${item.explorationBonus}</span>`:''}
+        </div>
+        <div style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace">${item.ag.id}</div>
+        <div class="ag-score-bar" style="margin-top:4px">
+          <div class="ag-score-fill" style="width:${(item.finalScore/120*100).toFixed(0)}%"></div>
         </div>
       </div>
-      <div class="mp-body">
-        ${isDirect ? `<div class="al al-info" style="margin-bottom:14px">🎯 指名マッチング案件です。指名先AG（${c.targetAg}）が承認待ちです。</div>` : '<div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:12px">対応可能なAG一覧（先着マッチング）</div>'}
-        ${agList}
-        <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--bd)">
-          <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:6px">LINE WORKSトークルーム作成メモ</div>
-          <div style="background:var(--cream2);border-radius:7px;padding:10px;font-size:10px;color:var(--muted);line-height:1.8">
-            マッチング確定後、LINE WORKSで<br>
-            AG（${c.type==='rental'?'不動産':'人材'}担当）+ PT（${c.ptName}）+ HQの<br>
-            3者トークルームを作成してください。<br>
-            ルーム名: 【案件】${c.title.slice(0,10)}_${c.id}
+      <div style="text-align:right">
+        <div style="font-size:18px;font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums">
+          ${item.finalScore.toFixed(1)}</div>
+        <div style="font-size:9px;color:var(--faint)">/ 120</div>
+      </div>
+    </div>`).join('')}
+    ${result.length>5?`<div style="font-size:10px;color:var(--faint);text-align:center">他${result.length-5}名が候補</div>`:''}
+  </div>`;
+}
+
+function renderAIRankingPreview(ranking, lead){
+  const agents = getAgents();
+  const conf = Math.round((ranking.matchConfidence||0)*100);
+  const confColor = conf>=80?'var(--em)':conf>=60?'var(--am)':'var(--rd)';
+  return `
+  <div class="ai-panel">
+    <div class="ai-panel-title">✨ Role B — AI最終判定</div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+      <div style="font-size:11px;color:rgba(255,255,255,.7)">${ranking.summary}</div>
+      <div style="flex-shrink:0;text-align:center">
+        <div style="font-size:20px;font-weight:800;color:${confColor}">${conf}%</div>
+        <div style="font-size:9px;color:rgba(255,255,255,.35)">信頼度</div>
+      </div>
+    </div>
+    ${ranking.hqAlertNeeded?`
+    <div style="background:rgba(220,38,38,.15);border:1px solid rgba(220,38,38,.3);
+      border-radius:8px;padding:8px 10px;margin-bottom:10px;font-size:11px;color:#fca5a5">
+      ⚠️ HQアラート: ${ranking.hqAlertReason}</div>`:''} 
+    ${ranking.selected.slice(0,3).map((s,i)=>{
+      const ag = agents.find(a=>a.id===s.agentId)||{name:s.agentId,rank:'—'};
+      const rankColors = {Platinum:'b-vt',Gold:'b-navy',Silver:'b-sk',Bronze:'b-nt'};
+      return `
+      <div style="background:rgba(255,255,255,.06);border-radius:9px;padding:10px 12px;margin-bottom:7px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+          <div style="font-size:14px;font-weight:800;color:var(--gold)">#${s.rank}</div>
+          <div style="font-size:12px;font-weight:700;color:#fff">${ag.name}</div>
+          <span class="badge ${rankColors[ag.rank]||'b-nt'}">${ag.rank}</span>
+        </div>
+        <div style="font-size:10px;color:rgba(255,255,255,.65);line-height:1.6">${s.reason}</div>
+        <div style="font-size:10px;color:rgba(200,169,81,.8);margin-top:4px">→ ${s.expectedOutcome}</div>
+        ${s.riskNote?`<div style="font-size:10px;color:#fca5a5;margin-top:3px">⚠️ ${s.riskNote}</div>`:''}
+      </div>`}).join('')}
+    ${ranking.selected.length>3?`<div style="font-size:10px;color:rgba(255,255,255,.3);text-align:center">
+      他${ranking.selected.length-3}名 → 詳細を見るで確認</div>`:''}
+    <div style="margin-top:12px;display:flex;gap:8px">
+      <button class="btn btn-em" onclick="openAiModal('${lead.id}')">📊 全結果を確認・確定</button>
+      <button class="btn btn-ghost btn-sm" onclick="runFullMatch('${lead.id}')">🔄 再実行</button>
+    </div>
+  </div>`;
+}
+
+function renderHQMatched(matched){
+  if(!matched.length) return `<div style="text-align:center;padding:48px;color:var(--faint)">マッチング済み案件はありません</div>`;
+  return matched.map(l=>`
+  <div class="card" style="margin-bottom:12px">
+    <div class="card-body" style="display:flex;align-items:center;gap:16px">
+      <div style="flex:1">
+        <div style="font-size:12px;font-weight:700;color:var(--navy)">${l.title}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px;font-family:'DM Mono',monospace">${l.id}</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:10px;color:var(--muted)">担当AG</div>
+        <div style="font-size:12px;font-weight:700;color:var(--em)">${l.assignedAgName}</div>
+        <div style="font-size:9px;color:var(--faint);font-family:'DM Mono',monospace">${l.assignedAgId}</div>
+      </div>
+      <span class="badge b-em">✅ マッチング済</span>
+    </div>
+  </div>`).join('');
+}
+
+function renderMonitor(){
+  const agents = getAgents();
+  const weights = [
+    {label:'成約力スコア', val:30,max:30,color:'#059669'},
+    {label:'適合スコア',   val:25,max:30,color:'#0284C7'},
+    {label:'信頼性スコア', val:20,max:25,color:'#7C3AED'},
+    {label:'承諾確率スコア',val:20,max:20,color:'#D97706'},
+    {label:'相性スコア',   val:15,max:15,color:'#DB2777'},
+    {label:'キャパシティ', val:10,max:10,color:'#6B7280'},
+  ];
+  const eloTop = [...agents].sort((a,b)=>b.elo-a.elo).slice(0,3);
+  return `
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div class="monitor-card">
+      <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:12px">⚙️ アルゴリズム重み（120点満点）</div>
+      ${weights.map(w=>`
+      <div class="algo-weight-bar">
+        <div class="algo-weight-label">${w.label}</div>
+        <div class="algo-weight-track">
+          <div class="algo-weight-fill" style="width:${w.val/30*100}%;background:${w.color}"></div>
+        </div>
+        <div class="algo-weight-val">${w.val}pt</div>
+      </div>`).join('')}
+      <div style="margin-top:14px">
+        <button class="btn btn-navy btn-sm" onclick="runWeeklyReview()">🤖 AI重み最適化分析</button>
+      </div>
+    </div>
+    <div class="monitor-card">
+      <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:12px">🏆 ELOランキング TOP3</div>
+      ${eloTop.map((ag,i)=>`
+      <div style="display:flex;align-items:center;gap:10px;padding:8px;
+        background:${i===0?'var(--gold-dim)':'var(--cream2)'};border-radius:8px;margin-bottom:6px">
+        <div style="font-size:18px;font-weight:800;color:${i===0?'var(--gold)':'var(--faint)'}">
+          ${['🥇','🥈','🥉'][i]}</div>
+        <div style="flex:1">
+          <div style="font-size:12px;font-weight:700;color:var(--navy)">${ag.name}</div>
+          <div style="font-size:9px;color:var(--muted);font-family:'DM Mono',monospace">${ag.id} / ${ag.rank}</div>
+        </div>
+        <div style="font-size:18px;font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums">${ag.elo}</div>
+      </div>`).join('')}
+      <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--bd)">
+        <div style="font-size:10px;color:var(--muted)">Thompson Sampling（探索 vs 活用）</div>
+        <div style="display:flex;gap:6px;margin-top:6px;align-items:center">
+          <div style="flex:1;height:8px;background:var(--bd);border-radius:4px;overflow:hidden">
+            <div style="width:75%;height:100%;background:linear-gradient(90deg,var(--navy),var(--sk));border-radius:4px"></div>
+          </div>
+          <div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--muted)">75%活用 / 25%探索</div>
+        </div>
+      </div>
+    </div>
+    <div class="monitor-card" style="grid-column:1/-1">
+      <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:10px">📈 プラットフォーム健全性</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+        ${[
+          {label:'平均成約率',val:'71%',color:'var(--em)'},
+          {label:'平均ELO',val:Math.round(agents.reduce((s,a)=>s+a.elo,0)/agents.length),color:'var(--sk)'},
+          {label:'新人AG比率',val:Math.round(agents.filter(a=>a.daysRegistered<90).length/agents.length*100)+'%',color:'var(--am)'},
+          {label:'平均応答(分)',val:Math.round(agents.reduce((s,a)=>s+a.avgResponseMin,0)/agents.length),color:'var(--vt)'},
+        ].map(s=>`<div style="text-align:center;background:var(--cream2);border-radius:8px;padding:10px">
+          <div style="font-size:20px;font-weight:800;color:${s.color}">${s.val}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px">${s.label}</div>
+        </div>`).join('')}
+      </div>
+      <div id="monitor-ai-result" style="margin-top:14px"></div>
+    </div>
+  </div>`;
+}
+</script>
+<script>
+// ══════════════════════════════════════════════════════════════
+// AG VIEW
+// ══════════════════════════════════════════════════════════════
+function renderAG(){
+  const leads = getLeads();
+  const myId = 'AG-0042'; // デモ: 中村陽子
+  const board = leads.filter(l=>(l.status==='pending_ai'||l.status==='unmatched')&&l.method==='board');
+  const directed = leads.filter(l=>l.targetAgId===myId&&l.status!=='matched');
+
+  const tabs=[
+    {k:'board',  label:'📋 案件ボード',cnt:board.length},
+    {k:'direct', label:'🎯 指名通知',cnt:directed.length},
+  ];
+  return `
+  <div class="tab-bar">
+    ${tabs.map(t=>`
+    <div class="tab ${currentTab===t.k?'active':''}" onclick="switchTab('${t.k}')">
+      ${t.label}${t.cnt>0?`<span class="tab-badge">${t.cnt}</span>`:''}
+    </div>`).join('')}
+  </div>
+  ${currentTab==='board' ? renderAGBoard(board) : renderAGDirect(directed)}`;
+}
+
+function renderAGBoard(board){
+  if(!board.length) return `<div style="text-align:center;padding:48px;color:var(--faint)">
+    <div style="font-size:32px;margin-bottom:8px">📋</div>
+    <div>現在掲載中の案件はありません</div></div>`;
+
+  return `
+  <div style="background:var(--am-bg);border:1px solid rgba(217,119,6,.2);border-radius:10px;
+    padding:11px 16px;margin-bottom:16px;font-size:11px;color:var(--am)">
+    💡 クライアント情報はマッチング確定後に開示されます。先着順に「対応する」をクリックしてください。
+  </div>
+  ${board.map(l=>renderAGLeadCard(l)).join('')}`;
+}
+
+function renderAGLeadCard(l){
+  const ai = l._aiAnalysis;
+  return `
+  <div class="card" style="margin-bottom:12px">
+    <div class="card-body">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--navy)">${l.title}</div>
+          <div style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace">${l.id} / ${l.area} / ¥${(l.budget||0).toLocaleString()}</div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center">
+          ${l.minRank?`<span class="badge b-vt">最低: ${l.minRank}</span>`:''}
+          ${ai?.urgencyLevel>=8?'<span class="badge b-rd">🔴 急案件</span>':''}
+        </div>
+      </div>
+      ${ai ? `
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+        ${(ai.specialNeeds||[]).map(n=>`<span class="badge b-navy">${n}</span>`).join('')}
+        <span class="badge b-nt">難易度 ${ai.estimatedDifficulty}/10</span>
+      </div>
+      <div style="font-size:11px;color:var(--muted);background:var(--cream2);
+        padding:8px 10px;border-radius:7px;margin-bottom:10px;line-height:1.6">${ai.summary}</div>
+      ` : `<div style="font-size:11px;color:var(--muted);margin-bottom:10px">
+        ※ クライアント詳細はマッチング確定後に開示されます</div>`}
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-em" onclick="agAccept('${l.id}')">✅ 対応する（先着）</button>
+        <button class="btn btn-ghost btn-sm" onclick="agPass('${l.id}')">⏭ パス</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderAGDirect(directed){
+  if(!directed.length) return `<div style="text-align:center;padding:48px;color:var(--faint)">
+    <div style="font-size:32px;margin-bottom:8px">🎯</div>
+    <div>指名通知はありません</div></div>`;
+
+  return directed.map(l=>`
+  <div class="card" style="margin-bottom:12px;border-color:var(--vt)">
+    <div class="card-head">
+      <div>
+        <div class="card-title">${l.title}</div>
+        <div style="font-size:10px;color:var(--muted)">PT: ${l.ptName} からの指名</div>
+      </div>
+      <span class="badge b-vt">🎯 指名案件</span>
+    </div>
+    <div class="card-body">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:12px">${l.description}</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-em" onclick="agAcceptDirect('${l.id}')">✅ 承諾する</button>
+        <button class="btn btn-rd btn-sm" onclick="agDeclineDirect('${l.id}')">✕ 辞退する</button>
+      </div>
+    </div>
+  </div>`).join('');
+}
+
+// ══════════════════════════════════════════════════════════════
+// PT VIEW
+// ══════════════════════════════════════════════════════════════
+function renderPT(){
+  const leads = getLeads();
+  const myLeads = leads.filter(l=>l.ptId==='PT-30007'); // デモ: 佐藤美咲
+  const tabs=[
+    {k:'post',label:'✏️ 案件投稿'},
+    {k:'mycase',label:'📁 マイ案件',cnt:myLeads.length},
+  ];
+  return `
+  <div class="tab-bar">
+    ${tabs.map(t=>`
+    <div class="tab ${currentTab===t.k?'active':''}" onclick="switchTab('${t.k}')">
+      ${t.label}${t.cnt?`<span class="tab-badge">${t.cnt}</span>`:''}
+    </div>`).join('')}
+  </div>
+  ${currentTab==='post' ? renderPTPostForm() : renderPTMyCase(myLeads)}`;
+}
+
+function renderPTPostForm(){
+  return `
+  <div class="card" style="max-width:660px">
+    <div class="card-head">
+      <div class="card-title">✏️ 新規案件投稿</div>
+      <span class="badge b-navy" style="font-size:9px">🤖 AIが自動解析</span>
+    </div>
+    <div class="card-body">
+      <div class="form-group">
+        <label class="form-label">案件種別<span class="req">*</span></label>
+        <select class="form-select" id="pt-type" onchange="updatePTForm()">
+          <option value="">選択してください</option>
+          <option value="rental">不動産賃貸</option>
+          <option value="sale">不動産売買</option>
+          <option value="hr">人材紹介</option>
+        </select>
+      </div>
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label">エリア<span class="req">*</span></label>
+          <select class="form-select" id="pt-area">
+            <option value="">選択</option>
+            ${['渋谷','新宿','港','目黒','品川','千代田','中央','台東','墨田','江東',
+               '豊島','文京','北','荒川','板橋','練馬','杉並','中野','世田谷','大田'].map(a=>
+               `<option value="${a}">${a}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">予算 / 想定年収</label>
+          <input type="number" class="form-input" id="pt-budget" placeholder="例: 150000">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">案件概要<span class="req">*</span></label>
+        <textarea class="form-textarea" id="pt-desc" rows="4"
+          placeholder="顧客の希望・条件・特記事項を詳しく記載してください。AIが解析して最適なエージェントを選定します。"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">マッチング方式<span class="req">*</span></label>
+        <div style="display:flex;gap:10px;margin-top:4px">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;
+            padding:9px 14px;border:1.5px solid var(--bd2);border-radius:8px;flex:1;transition:.15s"
+            id="lbl-board" onclick="selectMethod('board')">
+            <input type="radio" name="method" value="board" style="display:none">
+            <span style="font-size:16px">📋</span>
+            <div><div style="font-size:11px;font-weight:700">先着ボード</div>
+              <div style="font-size:9px;color:var(--muted)">全AGに公開・先着で担当決定</div></div>
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;
+            padding:9px 14px;border:1.5px solid var(--bd2);border-radius:8px;flex:1;transition:.15s"
+            id="lbl-direct" onclick="selectMethod('direct')">
+            <input type="radio" name="method" value="direct" style="display:none">
+            <span style="font-size:16px">🎯</span>
+            <div><div style="font-size:11px;font-weight:700">AG指名</div>
+              <div style="font-size:9px;color:var(--muted)">特定のAGに直接依頼</div></div>
+          </label>
+        </div>
+      </div>
+      <div id="pt-direct-field" style="display:none" class="form-group">
+        <label class="form-label">指名AG-ID<span class="req">*</span></label>
+        <input type="text" class="form-input" id="pt-target-ag" placeholder="例: AG-0042">
+      </div>
+      <div style="margin-top:6px">
+        <button class="btn btn-navy" onclick="submitPTLead()" id="pt-submit-btn">
+          🤖 投稿してAIマッチングを開始
+        </button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderPTMyCase(myLeads){
+  if(!myLeads.length) return `<div style="text-align:center;padding:48px;color:var(--faint)">
+    投稿中の案件はありません</div>`;
+  const statusMap = {
+    pending_ai:'🤖 AI解析中',unmatched:'🔍 マッチング中',
+    matched:'✅ 担当AG決定',closed:'🏁 成約'
+  };
+  const statusCls = {pending_ai:'b-am',unmatched:'b-sk',matched:'b-em',closed:'b-nt'};
+  return myLeads.map(l=>`
+  <div class="card" style="margin-bottom:12px">
+    <div class="card-body">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--navy)">${l.title}</div>
+          <div style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace">${l.id}</div>
+        </div>
+        <span class="badge ${statusCls[l.status]||'b-nt'}">${statusMap[l.status]||l.status}</span>
+      </div>
+      ${l.assignedAgName?`
+      <div style="margin-top:10px;padding:10px 12px;background:var(--em-bg);
+        border-radius:8px;border:1px solid rgba(5,150,105,.2)">
+        <div style="font-size:10px;color:var(--em);font-weight:700">担当エージェント</div>
+        <div style="font-size:12px;font-weight:700;color:var(--navy);margin-top:2px">
+          ${l.assignedAgName} <span style="font-size:9px;font-family:'DM Mono',monospace;
+          color:var(--muted)">${l.assignedAgId}</span></div>
+      </div>`:``}
+    </div>
+  </div>`).join('');
+}
+
+// ══════════════════════════════════════════════════════════════
+// ACTIONS
+// ══════════════════════════════════════════════════════════════
+function switchTab(tab){
+  currentTab = tab;
+  renderMain();
+}
+
+function selectLead(id){
+  const leads = getLeads();
+  selectedLead = leads.find(l=>l.id===id);
+  renderMain();
+  // パネル更新
+  const panel = document.getElementById('lead-detail-panel');
+  if(panel) panel.innerHTML = renderLeadDetail(selectedLead);
+}
+
+let ptMethod = 'board';
+function selectMethod(m){
+  ptMethod = m;
+  const bl = document.getElementById('lbl-board');
+  const dl = document.getElementById('lbl-direct');
+  const df = document.getElementById('pt-direct-field');
+  if(bl) bl.style.borderColor = m==='board'?'var(--navy)':'var(--bd2)';
+  if(dl) dl.style.borderColor = m==='direct'?'var(--navy)':'var(--bd2)';
+  if(df) df.style.display = m==='direct'?'block':'none';
+}
+
+async function submitPTLead(){
+  const type   = document.getElementById('pt-type')?.value;
+  const area   = document.getElementById('pt-area')?.value;
+  const budget = parseInt(document.getElementById('pt-budget')?.value)||0;
+  const desc   = document.getElementById('pt-desc')?.value;
+  const targetAg = document.getElementById('pt-target-ag')?.value;
+
+  if(!type||!area||!desc){ showToast('種別・エリア・概要は必須です','error'); return; }
+
+  const btn = document.getElementById('pt-submit-btn');
+  btn.disabled = true; btn.textContent = '🤖 AI解析中...';
+
+  const leads = getLeads();
+  const newId = 'LD-2026-'+ String(leads.length+1).padStart(3,'0');
+  const newLead = {
+    id:newId, ptId:'PT-30007', ptName:'佐藤 美咲', ptReputation:4.3,
+    type, area, budget, title:`${area} ${type==='rental'?'賃貸':type==='sale'?'売買':'人材'}`,
+    description:desc, method:ptMethod,
+    targetAgId: ptMethod==='direct'?targetAg:null, minRank:null,
+    status:'pending_ai', createdAt:new Date().toLocaleString('ja-JP'), daysAgo:0,
+    _aiAnalysis:null, _algoResult:null, _aiRanking:null
+  };
+
+  showToast('🤖 AI Role A — 案件を解析しています...','info');
+  const ai = await analyzeLeadWithAI(newLead);
+  newLead._aiAnalysis = ai;
+
+  if(ai.estimatedDifficulty>=8 && !newLead.minRank) newLead.minRank='Silver';
+  if(ai.urgencyLevel>=8) newLead._urgent=true;
+
+  leads.push(newLead);
+  saveLeads(leads);
+
+  showToast(`✅ 投稿完了！難易度 ${ai.estimatedDifficulty}/10 / 緊急度 ${ai.urgencyLevel}/10`,'success');
+  btn.disabled=false; btn.textContent='🤖 投稿してAIマッチングを開始';
+  currentTab='mycase';
+  renderMain();
+}
+
+async function runRoleA(leadId){
+  const leads = getLeads();
+  const lead = leads.find(l=>l.id===leadId);
+  if(!lead) return;
+
+  const panel = document.getElementById('lead-detail-panel');
+  if(panel) panel.innerHTML = `<div class="ai-thinking" style="height:80px">
+    <div class="ai-thinking-dots"><span></span><span></span><span></span></div>
+    <div style="color:rgba(255,255,255,.7);font-size:12px">🤖 Role A — 案件を解析しています...</div>
+  </div>`;
+
+  showToast('🤖 AI Role A 実行中...','info');
+  const ai = await analyzeLeadWithAI(lead);
+  lead._aiAnalysis = ai;
+  if(ai.estimatedDifficulty>=8&&!lead.minRank) lead.minRank='Silver';
+  saveLeads(leads);
+  showToast(`✅ 解析完了！難易度 ${ai.estimatedDifficulty}/10`,'success');
+  selectedLead = lead;
+  if(panel) panel.innerHTML = renderLeadDetail(lead);
+}
+
+async function runFullMatch(leadId){
+  const leads = getLeads();
+  const lead = leads.find(l=>l.id===leadId);
+  if(!lead) return;
+
+  const panel = document.getElementById('lead-detail-panel');
+
+  // Step1: Role A（未済なら）
+  if(!lead._aiAnalysis){
+    if(panel) panel.innerHTML=`<div class="ai-thinking" style="height:80px">
+      <div class="ai-thinking-dots"><span></span><span></span><span></span></div>
+      <div style="color:rgba(255,255,255,.7);font-size:12px">🤖 Role A — 案件解析中...</div></div>`;
+    showToast('🤖 Role A: 案件解析中...','info');
+    lead._aiAnalysis = await analyzeLeadWithAI(lead);
+  }
+
+  // Step2: アルゴ
+  if(panel) panel.innerHTML=`<div class="ai-thinking" style="height:80px">
+    <div class="ai-thinking-dots"><span></span><span></span><span></span></div>
+    <div style="color:rgba(255,255,255,.7);font-size:12px">⚙️ アルゴリズム — 120点スコアリング中...</div></div>`;
+  showToast('⚙️ 120点スコアリング実行中...','info');
+  await new Promise(r=>setTimeout(r,600));
+
+  const agents = getAgents();
+  const filtered = hardFilter(agents, lead);
+  const scored = filtered.map(ag=>({ag, lead, score:calculateMatchScore(ag,lead)}));
+  const ranked = explorationAdjustedRanking(scored);
+  lead._algoResult = ranked;
+
+  // Step3: AI Role B
+  if(panel) panel.innerHTML=`<div class="ai-thinking" style="height:80px">
+    <div class="ai-thinking-dots"><span></span><span></span><span></span></div>
+    <div style="color:rgba(255,255,255,.7);font-size:12px">✨ Role B — AI最終判定中...</div></div>`;
+  showToast('✨ Role B: AI最終判定中...','info');
+
+  const ranking = await aiFinalRanking(ranked, lead);
+  lead._aiRanking = ranking;
+  lead.status = 'pending_confirm';
+
+  saveLeads(leads);
+  selectedLead = lead;
+  showToast('🎉 AIマッチング完了！結果を確認してください','success');
+  if(panel) panel.innerHTML = renderLeadDetail(lead);
+}
+
+function openAiModal(leadId){
+  const leads = getLeads();
+  const lead = leads.find(l=>l.id===leadId);
+  if(!lead||!lead._aiRanking) return;
+
+  const agents = getAgents();
+  const ranking = lead._aiRanking;
+  const rankColors = {Platinum:'b-vt',Gold:'b-navy',Silver:'b-sk',Bronze:'b-nt'};
+
+  document.getElementById('modal-lead-id').textContent = lead.id+' — '+lead.title;
+
+  const body = document.getElementById('ai-modal-body');
+  body.innerHTML = `
+    <div style="margin-bottom:14px">
+      <div class="ai-panel">
+        <div class="ai-panel-title">✨ Role B — AI最終判定結果</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.75);margin-bottom:8px">${ranking.summary}</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="font-size:11px;color:rgba(255,255,255,.5)">マッチング信頼度</div>
+          <div style="flex:1;height:6px;background:rgba(255,255,255,.15);border-radius:3px;overflow:hidden">
+            <div style="height:100%;border-radius:3px;width:${Math.round(ranking.matchConfidence*100)}%;
+              background:linear-gradient(90deg,var(--am),var(--em))"></div>
+          </div>
+          <div style="font-size:14px;font-weight:800;color:var(--gold)">${Math.round(ranking.matchConfidence*100)}%</div>
+        </div>
+        ${ranking.hqAlertNeeded?`<div style="margin-top:8px;padding:8px;background:rgba(220,38,38,.15);
+          border-radius:7px;font-size:10px;color:#fca5a5">⚠️ ${ranking.hqAlertReason}</div>`:''}
+        ${ranking.overrideNotes?`<div style="margin-top:6px;font-size:10px;color:rgba(255,255,255,.5)">
+          💡 ${ranking.overrideNotes}</div>`:''}
+      </div>
+    </div>
+    <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:8px">AI選定: 通知エージェント（${ranking.selected.length}名）</div>
+    ${ranking.selected.map(s=>{
+      const ag = agents.find(a=>a.id===s.agentId)||{name:s.agentId,rank:'—',elo:0,avgRating:0,activeCases:0};
+      const algoItem = lead._algoResult?.find(r=>r.ag.id===s.agentId);
+      return `
+      <div style="border:1.5px solid ${s.rank===1?'var(--gold)':'var(--bd)'};
+        border-radius:10px;padding:12px 14px;margin-bottom:8px;
+        background:${s.rank===1?'rgba(200,169,81,.04)':'#fff'}">
+        <div style="display:flex;align-items:flex-start;gap:10px">
+          <div style="font-size:20px;font-weight:800;color:${s.rank===1?'var(--gold)':'var(--faint)'};
+            width:24px;text-align:center;flex-shrink:0">#${s.rank}</div>
+          <div style="flex:1">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap">
+              <span style="font-size:13px;font-weight:700;color:var(--navy)">${ag.name}</span>
+              <span class="badge ${rankColors[ag.rank]||'b-nt'}">${ag.rank}</span>
+              <span style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace">${ag.id}</span>
+            </div>
+            ${algoItem?`<div class="score-breakdown">
+              ${Object.entries(algoItem.score.breakdown).map(([k,v])=>{
+                const labels={closingPower:'成約力',fitScore:'適合',trustScore:'信頼性',
+                  acceptanceScore:'承諾確率',affinityScore:'相性',capacityScore:'余力'};
+                const maxes={closingPower:30,fitScore:25,trustScore:20,acceptanceScore:20,affinityScore:15,capacityScore:10};
+                return `<div class="score-item">
+                  <div class="score-item-label">${labels[k]||k}</div>
+                  <div style="display:flex;align-items:baseline;gap:2px">
+                    <div class="score-item-val">${v}</div>
+                    <div class="score-item-max">/${maxes[k]}</div>
+                  </div></div>`;
+              }).join('')}
+              <div class="score-item" style="background:var(--navy);color:#fff;grid-column:1/-1">
+                <div style="font-size:9px;color:rgba(255,255,255,.5)">TOTAL</div>
+                <div style="display:flex;align-items:baseline;gap:2px">
+                  <div style="font-size:20px;font-weight:800">${algoItem.finalScore.toFixed(1)}</div>
+                  <div style="font-size:9px;color:rgba(255,255,255,.4)">/120</div>
+                </div>
+              </div>
+            </div>`:``}
+            <div style="font-size:10px;color:var(--muted);line-height:1.7;margin-top:8px;
+              background:var(--cream2);padding:8px;border-radius:7px">${s.reason}</div>
+            <div style="font-size:10px;color:var(--em);margin-top:4px">→ ${s.expectedOutcome}</div>
+            ${s.riskNote?`<div style="font-size:10px;color:var(--rd);margin-top:3px">⚠️ ${s.riskNote}</div>`:''}
+          </div>
+          <div style="flex-shrink:0">
+            <button class="btn btn-em btn-sm" onclick="prepareConfirmMatch('${lead.id}','${ag.id}','${ag.name}')">
+              確定→
+            </button>
           </div>
         </div>
-      </div>
+      </div>`}).join('')}`;
+
+  document.getElementById('ai-modal').style.display='flex';
+}
+
+function closeAiModal(){ document.getElementById('ai-modal').style.display='none'; }
+
+function prepareConfirmMatch(leadId, agId, agName){
+  pendingMatch = {leadId, agId, agName};
+  document.getElementById('cfm-title').textContent = 'マッチング確定';
+  document.getElementById('cfm-sub').textContent = `${agName}（${agId}）をこの案件の担当AGとして確定しますか？`;
+  document.getElementById('cfm-body').innerHTML = `
+    <div style="background:var(--em-bg);border:1px solid rgba(5,150,105,.2);border-radius:8px;padding:12px 14px;font-size:11px;color:var(--em);line-height:1.7">
+      ✅ 確定後: Slackに通知 → クライアント情報を担当AGに開示 → LINEトークルーム作成
     </div>`;
+  document.getElementById('confirm-modal').style.display='flex';
 }
 
-function matchCase(caseId, agId, agName) {
-  showToast(`✅ ${agName} (${agId}) にアサインしました。LINE WORKSトークルームを作成してください。`);
-  UNMATCHED.splice(UNMATCHED.findIndex(c=>c.id===caseId), 1);
-  document.getElementById('pending-count-badge').textContent = `未マッチ ${UNMATCHED.length}件`;
-  selectedCase = null;
-  renderList();
-  document.getElementById('match-panel').innerHTML = `<div style="background:var(--em-bg);border:1px solid rgba(5,150,105,.2);border-radius:12px;padding:32px;text-align:center"><div style="font-size:24px;margin-bottom:8px">✅</div><div style="font-size:13px;font-weight:700;color:var(--em)">マッチング完了</div><div style="font-size:11px;color:var(--muted);margin-top:6px">${agName} にアサインしました</div></div>`;
+function closeConfirmModal(){ document.getElementById('confirm-modal').style.display='none'; }
+
+function executeMatch(){
+  if(!pendingMatch) return;
+  const leads = getLeads();
+  const agents = getAgents();
+  const lead = leads.find(l=>l.id===pendingMatch.leadId);
+  const ag = agents.find(a=>a.id===pendingMatch.agId);
+  if(!lead||!ag) return;
+
+  lead.status = 'matched';
+  lead.assignedAgId = ag.id;
+  lead.assignedAgName = ag.name;
+  lead.matchedAt = new Date().toLocaleString('ja-JP');
+  ag.activeCases = (ag.activeCases||0)+1;
+
+  saveLeads(leads); saveAgents(agents);
+  closeConfirmModal(); closeAiModal();
+  selectedLead = null;
+  showToast(`🎉 マッチング確定！${ag.name} が担当します。Slack通知を送信しました。`,'success');
+  renderMain();
 }
 
-function assignSelf(caseId) { showToast('✅ 案件を取得しました。クライアント情報が開示されました。'); }
+function agAccept(leadId){
+  const leads = getLeads();
+  const lead = leads.find(l=>l.id===leadId);
+  if(!lead) return;
+  lead.status='matched';
+  lead.assignedAgId='AG-0042';
+  lead.assignedAgName='中村 陽子';
+  lead.matchedAt=new Date().toLocaleString('ja-JP');
+  saveLeads(leads);
+  showToast('✅ 対応を承諾しました。クライアント情報が開示されます。','success');
+  renderMain();
+}
+function agPass(leadId){ showToast('⏭ パスしました','info'); }
+function agAcceptDirect(leadId){ agAccept(leadId); }
+function agDeclineDirect(leadId){
+  showToast('辞退しました。HQに通知されます。','info');
+  const leads=getLeads();
+  const lead=leads.find(l=>l.id===leadId);
+  if(lead){ lead.status='unmatched'; lead.method='board'; saveLeads(leads); renderMain(); }
+}
 
-window.addEventListener('DOMContentLoaded', () => {
-  renderList();
-  CNAV.init('matching');
+async function runWeeklyReview(){
+  const el = document.getElementById('monitor-ai-result');
+  if(!el) return;
+  el.innerHTML = `<div class="ai-thinking">
+    <div class="ai-thinking-dots"><span></span><span></span><span></span></div>
+    <div style="color:rgba(255,255,255,.7);font-size:12px">🤖 AIがアルゴリズムを分析中...</div>
+  </div>`;
+
+  const agents = getAgents();
+  const prompt = `あなたはCORETO マッチングアルゴリズムの改善提案AIです。
+現在のエージェントデータを分析し、アルゴリズムの改善提案を日本語で簡潔に提示してください。
+
+現在の重み配分（120点満点）:
+- 成約力スコア（ELO×成約率）: 30点
+- 適合スコア（エリア×タイプ×予算）: 25点
+- 信頼性スコア（ベイズ評価×完走率×応答速度）: 20点
+- 承諾確率スコア: 20点
+- 相性スコア（協調フィルタリング）: 15点
+- キャパシティスコア: 10点
+
+エージェントデータ（一部）:
+${JSON.stringify(agents.map(a=>({id:a.id,rank:a.rank,elo:a.elo,
+  convRate:a.recentConversionRate,activeCases:a.activeCases,
+  daysRegistered:a.daysRegistered,avgRating:a.avgRating})),null,1)}
+
+以下を分析してください:
+1. 現在の重み配分で見落とされている要素
+2. 新人AG（daysRegistered<90）への機会配分の評価
+3. ELO分布の健全性
+4. 推奨する重み調整案（1〜2点のみ変更）
+5. 来週の注目点
+
+250文字程度で簡潔に日本語で回答してください。`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:600,
+        messages:[{role:'user',content:prompt}]})
+    });
+    const data = await res.json();
+    const text = data.content[0].text;
+    el.innerHTML=`<div class="ai-panel"><div class="ai-panel-title">🤖 AI週次分析レポート</div>
+      <div style="font-size:11px;color:rgba(255,255,255,.8);line-height:1.8;white-space:pre-wrap">${text}</div>
+    </div>`;
+  } catch(e){
+    el.innerHTML=`<div style="color:var(--rd);font-size:11px">AI分析に失敗しました: ${e.message}</div>`;
+  }
+}
+
+function bindEvents(){ /* イベント委譲は onclick属性で処理済み */ }
+
+function showToast(msg, type='success'){
+  const t = document.getElementById('toast');
+  const colors = {success:'#059669',error:'#DC2626',info:'#0284C7'};
+  t.style.background = colors[type]||colors.success;
+  t.style.color = '#fff';
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3500);
+}
+
+// ══════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded',()=>{
+  initDemoAgents();
+  initDemoLeads();
+  renderMain();
 });
 </script>
-<script src="coreto-nav-v2.js"></script>
 </body>
 </html>
