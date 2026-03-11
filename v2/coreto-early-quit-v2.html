@@ -373,6 +373,36 @@ body, input, select, textarea, button { font-family:'Outfit','Noto Sans JP',sans
         </div>
       </div>
 
+
+      <!-- 🤖 AIリスクスコア分析セクション -->
+      <div style="margin-top:24px">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;
+          letter-spacing:.5px;margin-bottom:12px">🤖 AI早期退職リスクスコア</div>
+
+        <div style="background:#fff;border:1.5px solid rgba(200,169,81,.35);border-radius:12px;
+          overflow:hidden;box-shadow:var(--sh)">
+          <div style="background:linear-gradient(135deg,rgba(13,26,45,.97),rgba(21,34,56,.97));
+            padding:14px 20px;display:flex;align-items:center;justify-content:space-between">
+            <div>
+              <div style="font-size:12px;font-weight:700;color:var(--gold)">在籍中AG リスク分析</div>
+              <div style="font-size:10px;color:rgba(255,255,255,.45);margin-top:2px">
+                AGのプロフィールをAIが分析し、早期退職リスクを0〜100でスコアリング</div>
+            </div>
+            <button id="ai-risk-btn" onclick="runRiskScoreAI()"
+              style="background:var(--gold);color:var(--navy);border:none;font-size:10px;
+                font-weight:700;padding:7px 16px;border-radius:20px;cursor:pointer;
+                font-family:'Outfit',sans-serif">
+              ✨ AI分析実行
+            </button>
+          </div>
+          <div id="ai-risk-result" style="padding:16px">
+            <div style="text-align:center;font-size:11px;color:var(--muted);padding:12px 0">
+              「AI分析実行」を押すと在籍AGのリスクスコアを算出します
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -393,6 +423,169 @@ function confirmZaiki(id) { showToast('✅ 在籍確認完了。第2回報酬（
 function reportQuit(caseId) { showToast('退職報告登録フォームを表示します（本番時はモーダル表示）'); }
 function contactAgent(caseId) { showToast('📨 担当AGにSlack通知を送信しました'); }
 window.addEventListener('DOMContentLoaded', () => { CNAV.init('early_quit'); });
+
+// ══════════════════════════════════════════════════════════
+// AI 早期退職リスクスコア分析
+// ══════════════════════════════════════════════════════════
+
+// 在籍中AGのデモデータ（実運用はKintoneから取得）
+const ACTIVE_HR_AGENTS = [
+  { id:'HR-0089', name:'小林 雄太', company:'株式会社ABC', role:'営業職',
+    joinDate:'2026-01-05', guarantee:'3ヶ月',
+    loginFreq:'週3回', lastLogin:'3日前',
+    responseTime:'6時間', caseCount:2, closedCount:0,
+    notes:'入社後2週間で有給申請あり' },
+  { id:'HR-0095', name:'伊藤 美咲', company:'株式会社DEF', role:'事務職',
+    joinDate:'2026-02-10', guarantee:'3ヶ月',
+    loginFreq:'毎日', lastLogin:'本日',
+    responseTime:'1時間', caseCount:4, closedCount:1,
+    notes:'特記事項なし' },
+  { id:'HR-0102', name:'渡辺 翔', company:'株式会社GHI', role:'IT職',
+    joinDate:'2026-02-20', guarantee:'3ヶ月',
+    loginFreq:'週1回', lastLogin:'8日前',
+    responseTime:'24時間超', caseCount:1, closedCount:0,
+    notes:'担当AGから連絡が取れないと報告あり' },
+];
+
+async function runRiskScoreAI() {
+  const btn    = document.getElementById('ai-risk-btn');
+  const result = document.getElementById('ai-risk-result');
+  btn.disabled = true;
+  btn.textContent = '⏳ 分析中...';
+
+  result.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;padding:12px 0;color:var(--muted);font-size:12px">
+      <div style="display:flex;gap:4px">
+        ${[0,.2,.4].map(d=>`<span style="width:6px;height:6px;border-radius:50%;background:var(--gold);
+          animation:db 1.4s ${d}s infinite ease-in-out;display:inline-block"></span>`).join('')}
+      </div>
+      AIが各AGのリスクを分析中...
+    </div>`;
+
+  const prompt = `あなたは人材紹介会社の早期退職リスク分析AIです。
+以下の在籍AG（成約後・保証期間中の入社者）のデータを分析し、各人の早期退職リスクスコアを算出してください。
+
+スコア基準:
+- 70以上: 高リスク（要即対応）
+- 40〜69: 中リスク（要注視）
+- 39以下: 低リスク
+
+【分析対象AG一覧】
+${ACTIVE_HR_AGENTS.map((a,i)=>`
+[${i+1}] ${a.name}（${a.id}）
+  - 企業/職種: ${a.company} / ${a.role}
+  - 入社日: ${a.joinDate} / 保証期間: ${a.guarantee}
+  - ログイン頻度: ${a.loginFreq} / 最終ログイン: ${a.lastLogin}
+  - 平均応答時間: ${a.responseTime}
+  - 案件数/成約数: ${a.caseCount}件/${a.closedCount}件
+  - 特記事項: ${a.notes}`).join('
+')}
+
+以下のJSONのみで返答（前置き不要）:
+{
+  "agents": [
+    {
+      "id": "HR-XXXX",
+      "score": 0から100の整数,
+      "level": "high / mid / low",
+      "top_risk": "最大リスク要因（20文字以内）",
+      "action": "推奨対応（25文字以内）",
+      "factors": ["リスク因子1","リスク因子2"]
+    }
+  ],
+  "summary": "全体所見（40文字以内）"
+}`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:800,
+        messages:[{role:'user', content:prompt}] })
+    });
+    const data = await resp.json();
+    const raw  = data.content?.find(b=>b.type==='text')?.text||'{}';
+    const res  = JSON.parse(raw.replace(/```json|```/g,'').trim());
+
+    const levelColor = { high:'var(--rd)', mid:'var(--am)', low:'var(--em)' };
+    const levelBg    = { high:'var(--rd-bg)', mid:'var(--am-bg)', low:'var(--em-bg)' };
+    const levelLabel = { high:'高リスク', mid:'中リスク', low:'低リスク' };
+
+    result.innerHTML = `
+      ${res.summary ? `<div style="background:var(--navy);border-radius:8px;padding:10px 14px;
+        margin-bottom:14px;font-size:10px;color:rgba(255,255,255,.7);line-height:1.6">
+        🤖 ${res.summary}</div>` : ''}
+      <div style="display:flex;flex-direction:column;gap:10px">
+        ${(res.agents||[]).map(a => {
+          const ag = ACTIVE_HR_AGENTS.find(x=>x.id===a.id)||{};
+          const pct = Math.min(100, Math.max(0, a.score));
+          const col = levelColor[a.level]||'var(--muted)';
+          const bg  = levelBg[a.level]||'var(--cream2)';
+          return `
+            <div style="border:1.5px solid ${a.level==='high'?'rgba(220,38,38,.25)':
+              a.level==='mid'?'rgba(217,119,6,.25)':'var(--bd)'};
+              border-radius:10px;overflow:hidden">
+              <div style="padding:12px 14px;background:${bg};
+                display:flex;align-items:center;gap:12px">
+                <!-- スコアゲージ -->
+                <div style="position:relative;width:52px;height:52px;flex-shrink:0">
+                  <svg width="52" height="52" viewBox="0 0 52 52">
+                    <circle cx="26" cy="26" r="22" fill="none" stroke="rgba(0,0,0,.08)" stroke-width="5"/>
+                    <circle cx="26" cy="26" r="22" fill="none" stroke="${col}" stroke-width="5"
+                      stroke-dasharray="${Math.round(2*Math.PI*22*pct/100)} 999"
+                      stroke-linecap="round" transform="rotate(-90 26 26)"/>
+                  </svg>
+                  <div style="position:absolute;inset:0;display:flex;align-items:center;
+                    justify-content:center;font-size:12px;font-weight:700;color:${col};
+                    font-family:'Outfit',sans-serif">${pct}</div>
+                </div>
+                <div style="flex:1">
+                  <div style="display:flex;align-items:center;gap:7px;margin-bottom:3px">
+                    <span style="font-size:13px;font-weight:700;color:var(--ink)">${ag.name||a.id}</span>
+                    <span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;
+                      background:${col}20;color:${col}">${levelLabel[a.level]||''}</span>
+                  </div>
+                  <div style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace">
+                    ${a.id} / ${ag.company||''}</div>
+                  <div style="font-size:11px;color:${col};font-weight:600;margin-top:4px">
+                    ⚠️ ${a.top_risk||''}</div>
+                </div>
+              </div>
+              <div style="padding:10px 14px;background:#fff">
+                <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:5px">
+                  リスク因子</div>
+                <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px">
+                  ${(a.factors||[]).map(f=>`
+                    <span style="font-size:9px;padding:2px 8px;border-radius:10px;
+                      background:var(--cream2);border:1px solid var(--bd);color:var(--ink)">
+                      ${f}</span>`).join('')}
+                </div>
+                <div style="display:flex;align-items:center;justify-content:space-between">
+                  <div style="font-size:10px;color:var(--navy);font-weight:600">
+                    → ${a.action||''}</div>
+                  <button onclick="contactAgent('${a.id}')"
+                    style="font-size:10px;padding:5px 12px;background:var(--navy);color:#fff;
+                      border:none;border-radius:6px;cursor:pointer;font-family:'Outfit',sans-serif">
+                    📨 AG連絡
+                  </button>
+                </div>
+              </div>
+            </div>`;
+        }).join('')}
+      </div>
+      <button onclick="runRiskScoreAI()"
+        style="width:100%;margin-top:12px;padding:8px;background:none;
+          border:1px solid var(--bd);border-radius:8px;font-size:10px;
+          color:var(--muted);cursor:pointer;font-family:'Outfit',sans-serif">
+        🔄 再分析
+      </button>`;
+
+  } catch(e) {
+    result.innerHTML = `<div style="font-size:11px;color:var(--rd);padding:8px">
+      ❌ 分析エラー: ${e.message}</div>`;
+  }
+  btn.disabled = false;
+  btn.textContent = '✨ AI分析実行';
+}
 </script>
 <script src="coreto-nav-v2.js"></script>
 </body>

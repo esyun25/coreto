@@ -423,9 +423,12 @@ function submitBooking(){
     saveBookings(bookings);
     // 自動マッチング試行
     const matched = tryAutoMatch(id);
-    showToast(matched
-      ? `✅ 自動マッチング成立！${fmtDate(matched.date)} ${matched.start}`
-      : '📋 リクエスト送信。48時間以内に確定します。');
+    if(matched){
+      showToast(`✅ マッチング成立！${fmtDate(matched.date)} ${matched.start}`);
+    } else {
+      showToast('📋 リクエスト送信。AIが最適スロットを提案します...');
+      setTimeout(()=>tryAISlotSuggest(id), 1800);
+    }
   }
   selectedSlotId=null;
   document.getElementById('bk-case-id').value='';
@@ -433,6 +436,7 @@ function submitBooking(){
   setTimeout(()=>showTab('list'),1500);
 }
 
+// ── ルールベースマッチング（同期・即時）
 function tryAutoMatch(bookingId){
   const bookings=getBookings();
   const bk=bookings.find(b=>b.id===bookingId);
@@ -451,6 +455,143 @@ function tryAutoMatch(bookingId){
     }
   }
   return null;
+}
+
+// ── AIスロット最適マッチング（ルールで一致なしの場合に非同期で提案）
+async function tryAISlotSuggest(bookingId){
+  const bookings = getBookings();
+  const bk = bookings.find(b=>b.id===bookingId);
+  if(!bk) return;
+  const openSlots = getSlots().filter(s=>s.status==='open');
+  if(!openSlots.length){ showToast('⚠️ 現在空き枠がありません。HQに連絡してください'); return; }
+
+  // AI提案バナーを表示
+  const listEl = document.getElementById('view-list');
+  let banner = document.getElementById('ai-slot-banner');
+  if(!banner){
+    banner = document.createElement('div');
+    banner.id = 'ai-slot-banner';
+    banner.style.cssText = 'margin:12px 0;';
+    listEl?.prepend(banner);
+  }
+  banner.innerHTML = `
+    <div style="background:linear-gradient(135deg,#0D1A2D,#1E3252);border-radius:10px;
+      padding:13px 16px;display:flex;align-items:center;gap:10px">
+      <div style="display:flex;gap:4px">
+        ${[0,.2,.4].map(d=>`<span style="width:6px;height:6px;border-radius:50%;background:#C8A951;
+          animation:db 1.4s ${d}s infinite ease-in-out;display:inline-block"></span>`).join('')}
+      </div>
+      <div style="color:rgba(255,255,255,.75);font-size:12px">
+        🤖 AIが最適なスロットを選定中...</div>
+    </div>`;
+
+  const prompt = `IT重説（インターネット重要事項説明）の予約調整AIです。
+以下の情報を元に最適なスロットを選定してください。
+
+【AGの希望日時】
+${bk.requests.map((r,i)=>`第${i+1}希望: ${r.date} ${r.start}`).join('
+')}
+
+【空き枠一覧】
+${openSlots.map(s=>`${s.date} ${s.start}〜${s.end} / 宅建士: ${s.takkName}(${s.takkId})`).join('
+')}
+
+【案件ID】${bk.caseId} / 【AG】${bk.agName}
+
+以下のJSONのみで返答（前置き不要）:
+{
+  "best_slot_index": 最適スロットの配列インデックス（0始まり）,
+  "reason": "選定理由（20文字以内）",
+  "alternatives": [次点スロットのインデックス（最大2件）],
+  "note": "AGへのひと言アドバイス（20文字以内、なければnull）"
+}`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:400,
+        messages:[{role:'user', content:prompt}] })
+    });
+    const data = await resp.json();
+    const raw  = data.content?.find(b=>b.type==='text')?.text||'{}';
+    const res  = JSON.parse(raw.replace(/```json|```/g,'').trim());
+
+    const best = openSlots[res.best_slot_index];
+    const alts = (res.alternatives||[]).map(i=>openSlots[i]).filter(Boolean);
+
+    if(!best){ banner.innerHTML=''; return; }
+
+    banner.innerHTML = `
+      <div style="background:#fff;border:1.5px solid rgba(200,169,81,.35);border-radius:10px;overflow:hidden">
+        <div style="background:linear-gradient(135deg,rgba(13,26,45,.97),rgba(21,34,56,.97));
+          padding:10px 16px;display:flex;align-items:center;justify-content:space-between">
+          <div style="font-size:11px;font-weight:700;color:var(--gold)">🤖 AI最適スロット提案</div>
+          <button onclick="document.getElementById('ai-slot-banner').remove()"
+            style="background:none;border:none;color:rgba(255,255,255,.4);cursor:pointer;font-size:14px">✕</button>
+        </div>
+        <div style="padding:14px 16px">
+          <div style="background:var(--em-bg);border:1px solid rgba(5,150,105,.2);
+            border-radius:8px;padding:12px 14px;margin-bottom:10px">
+            <div style="font-size:10px;font-weight:700;color:var(--em);margin-bottom:6px">
+              ✅ 最適スロット — ${res.reason||''}</div>
+            <div style="font-size:13px;font-weight:700;color:var(--ink)">
+              ${fmtDate(best.date)} ${best.start}〜${best.end}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:3px">
+              宅建士: ${best.takkName}（${best.takkId}）</div>
+            <button onclick="aiConfirmSlot('${bk.id}','${best.id}')"
+              style="margin-top:10px;padding:7px 16px;background:var(--em);color:#fff;border:none;
+                border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;
+                font-family:'Outfit',sans-serif">
+              このスロットで確定する
+            </button>
+          </div>
+          ${alts.length ? `
+          <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:6px">次点候補</div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            ${alts.map(s=>`
+              <div style="display:flex;align-items:center;justify-content:space-between;
+                padding:8px 12px;background:var(--cream2);border-radius:7px;
+                border:1px solid var(--bd)">
+                <div>
+                  <div style="font-size:11px;font-weight:600;color:var(--ink)">
+                    ${fmtDate(s.date)} ${s.start}〜${s.end}</div>
+                  <div style="font-size:10px;color:var(--muted)">${s.takkName}</div>
+                </div>
+                <button onclick="aiConfirmSlot('${bk.id}','${s.id}')"
+                  style="padding:5px 12px;background:var(--cream);border:1px solid var(--bd);
+                    border-radius:6px;font-size:10px;cursor:pointer;
+                    font-family:'Outfit',sans-serif;color:var(--navy)">
+                  選択
+                </button>
+              </div>`).join('')}
+          </div>` : ''}
+          ${res.note ? `<div style="margin-top:10px;font-size:10px;color:var(--muted);
+            padding:7px 10px;background:var(--cream2);border-radius:6px">
+            💬 ${res.note}</div>` : ''}
+        </div>
+      </div>`;
+  } catch(e) {
+    banner.innerHTML = `<div style="padding:10px;font-size:11px;color:var(--rd)">
+      AI提案エラー: ${e.message}</div>`;
+  }
+}
+
+// AIが提案したスロットを確定する
+function aiConfirmSlot(bookingId, slotId){
+  const bookings = getBookings();
+  const slots    = getSlots();
+  const bk       = bookings.find(b=>b.id===bookingId);
+  const slot     = slots.find(s=>s.id===slotId);
+  if(!bk||!slot){ showToast('確定に失敗しました','err'); return; }
+  slot.status='booked'; slot.bookingId=bookingId;
+  bk.status='confirmed'; bk.slotId=slot.id;
+  bk.takkId=slot.takkId; bk.takkName=slot.takkName;
+  bk.date=slot.date; bk.start=slot.start; bk.end=slot.end;
+  bk.meetUrl='（Google Meet URL は担当宅建士より送付されます）';
+  lsSet(LS_SLOTS,slots); saveBookings(bookings);
+  document.getElementById('ai-slot-banner')?.remove();
+  renderBookings();
+  showToast(`✅ ${fmtDate(slot.date)} ${slot.start} — 予約確定！`);
 }
 
 function showToast(msg,type){

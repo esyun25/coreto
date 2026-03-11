@@ -568,6 +568,26 @@ html, body { background:#FFFFFF !important; }
         </div>
       </div>
 
+
+      <!-- 🤖 AI ネクストアクション -->
+      <div class="sec-card" style="border-color:rgba(200,169,81,.35)">
+        <div class="sec-head" style="background:linear-gradient(135deg,rgba(13,26,45,.97),rgba(21,34,56,.97))">
+          <div class="sec-title" style="color:var(--gold)">
+            <span class="sec-title-icon">🤖</span>AIネクストアクション
+          </div>
+          <button id="ai-next-btn" onclick="runNextActionAI()"
+            style="background:var(--gold);color:var(--navy);border:none;font-size:9px;font-weight:700;
+              padding:4px 10px;border-radius:20px;cursor:pointer;font-family:'Outfit',sans-serif">
+            ✨ 生成
+          </button>
+        </div>
+        <div id="ai-next-result" style="padding:14px 16px">
+          <div style="font-size:10px;color:var(--muted);text-align:center;padding:8px 0">
+            「✨ 生成」を押すとAIが最適なアクションを提案します
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -583,6 +603,117 @@ function toggleSb(){
 window.addEventListener('DOMContentLoaded', function() {
   CNAV.init('crm');
 });
+
+// ══════════════════════════════════════════════════════════
+// AI ネクストアクション生成
+// ══════════════════════════════════════════════════════════
+async function runNextActionAI() {
+  const btn = document.getElementById('ai-next-btn');
+  const result = document.getElementById('ai-next-result');
+  btn.textContent = '⏳';
+  btn.disabled = true;
+
+  // クライアント情報をページから収集
+  const clientName  = document.querySelector('.ph-name')?.textContent || '—';
+  const clientId    = document.querySelector('.ph-id')?.textContent   || '—';
+  const tags        = [...document.querySelectorAll('.ph-tags .badge')].map(b=>b.textContent).join(', ');
+  const scoreEl     = document.querySelector('.score-inner');
+  const score       = scoreEl?.textContent || '—';
+  const todos       = [...document.querySelectorAll('.sec-card input[type=checkbox]')]
+    .map(cb => ({ done: cb.checked, text: cb.nextElementSibling?.textContent || '' }));
+  const todoText    = todos.map(t=>`[${t.done?'✓':'　'}] ${t.text}`).join('
+');
+
+  // タイムライン（活動履歴）
+  const tlItems     = [...document.querySelectorAll('.tl-item')]
+    .slice(0,5).map(el => el.textContent.replace(/[ \t\n\r]+/g,' ').trim()).join('
+');
+
+  const prompt = `あなたはCORETO不動産仲介プラットフォームのAIアシスタントです。
+以下のクライアント情報をもとに、担当エージェントが今すぐ取るべきネクストアクションを3件提案してください。
+
+【クライアント情報】
+名前: ${clientName}
+ID: ${clientId}
+ステータス・タグ: ${tags}
+リードスコア: ${score}点
+
+【直近のTODO状況】
+${todoText}
+
+【最近の活動履歴】
+${tlItems}
+
+以下のJSONのみで返答（前置き不要）:
+{
+  "actions": [
+    {
+      "priority": 1,
+      "icon": "絵文字1文字",
+      "title": "アクション名（10文字以内）",
+      "desc": "具体的な行動内容（30文字以内）",
+      "timing": "今日中 / 明日中 / 今週中",
+      "type": "contact / document / visit / admin"
+    }
+  ],
+  "insight": "このクライアントへの総合的な所見（40文字以内）"
+}`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514', max_tokens: 600,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await resp.json();
+    const raw  = data.content?.find(b => b.type === 'text')?.text || '{}';
+    const res  = JSON.parse(raw.replace(/```json|```/g, '').trim());
+
+    const typeColor = { contact:'#0284C7', document:'#D97706', visit:'#059669', admin:'#5F6368' };
+    const typeLabel = { contact:'連絡', document:'書類', visit:'内見', admin:'管理' };
+    const timingColor = t => t==='今日中' ? 'var(--rd)' : t==='明日中' ? 'var(--am)' : 'var(--muted)';
+
+    result.innerHTML = `
+      ${res.insight ? `<div style="background:var(--navy);border-radius:8px;padding:10px 12px;
+        margin-bottom:12px;font-size:10px;color:rgba(255,255,255,.7);line-height:1.6">
+        🤖 ${res.insight}</div>` : ''}
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${(res.actions||[]).map((a,i) => `
+          <div style="background:var(--cream2);border:1px solid var(--bd);border-radius:8px;
+            padding:10px 12px;display:flex;align-items:flex-start;gap:10px">
+            <div style="width:32px;height:32px;border-radius:8px;
+              background:${typeColor[a.type]||'#5F6368'}20;
+              display:flex;align-items:center;justify-content:center;
+              font-size:16px;flex-shrink:0">${a.icon||'📌'}</div>
+            <div style="flex:1">
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+                <span style="font-size:11px;font-weight:700;color:var(--ink)">${a.title}</span>
+                <span style="font-size:9px;padding:1px 6px;border-radius:10px;
+                  background:${typeColor[a.type]||'#5F6368'}20;
+                  color:${typeColor[a.type]||'#5F6368'};font-weight:700">
+                  ${typeLabel[a.type]||a.type}</span>
+              </div>
+              <div style="font-size:10px;color:var(--muted);margin-bottom:4px">${a.desc}</div>
+              <div style="font-size:9px;font-weight:700;color:${timingColor(a.timing)}">
+                ⏰ ${a.timing}</div>
+            </div>
+          </div>`).join('')}
+      </div>
+      <button onclick="runNextActionAI()" style="width:100%;margin-top:10px;padding:7px;
+        background:none;border:1px solid var(--bd);border-radius:7px;
+        font-size:10px;color:var(--muted);cursor:pointer;font-family:'Outfit',sans-serif">
+        🔄 再生成
+      </button>`;
+  } catch(e) {
+    result.innerHTML = `<div style="font-size:10px;color:var(--rd);padding:8px">
+      ❌ エラー: ${e.message}</div>`;
+  }
+  btn.textContent = '✨ 生成';
+  btn.disabled = false;
+}
 </script>
 <div class="mob-overlay" onclick="toggleSb()"></div>
 </body>
