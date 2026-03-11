@@ -608,12 +608,10 @@ const FLOW_DEFS = {
     label:'HQ→クライアント',
     color:'var(--navy)',
     steps:[
-      {key:'arrived',   label:'書類到着',    icon:'📦'},
-      {key:'stamped',   label:'仲介印\n捺印', icon:'🔴'},
-      {key:'scanned',   label:'PDF\nアップロード', icon:'📷'},
-      {key:'ai_done',   label:'AI\n案件判定', icon:'🤖', aiStep:true},
-      {key:'confirmed', label:'HQ承認\n自動印刷', icon:'✅'},
-      {key:'sent',      label:'発送\n済み',   icon:'📮'},
+      {key:'stamped',   label:'仲介印\n捺印',     icon:'🔴'},
+      {key:'ai_wait',   label:'AI\n判定中',        icon:'🤖', aiStep:true},
+      {key:'confirmed', label:'HQ承認\n自動印刷',  icon:'✅'},
+      {key:'sent',      label:'発送\n済み',         icon:'📮'},
     ],
   },
   B: {
@@ -657,7 +655,7 @@ const FLOW_DEFS = {
 let DOCS = [
   {
     id:'DOC-001', caseId:'RC-10042', caseName:'田中 様 ／ 渋谷区代々木アパート',
-    flow:'A', stepIdx:6,
+    flow:'A', stepIdx:4,
     aiResult:{caseId:'RC-10042', caseName:'田中 様 ／ 渋谷区代々木アパート', confidence:97},
     outboundTracking:'1234-5678-9012', returnTracking:'9876-5432-1098',
     arrivedAt:'03/05 10:30', lastUpdated:'03/05 14:00',
@@ -665,7 +663,7 @@ let DOCS = [
   },
   {
     id:'DOC-002', caseId:'RC-10047', caseName:'鈴木 様 ／ 新宿区西新宿マンション',
-    flow:'A', stepIdx:4,
+    flow:'A', stepIdx:3,
     aiResult:{caseId:'RC-10047', caseName:'鈴木 様 ／ 新宿区西新宿マンション', confidence:94},
     outboundTracking:'', returnTracking:'',
     arrivedAt:'03/08 14:20', lastUpdated:'03/08 15:10',
@@ -682,7 +680,7 @@ let DOCS = [
   {
     id:'DOC-004', caseId:'RC-10051', caseName:'伊藤 様 ／ 品川区大崎アパート',
     flow:'A', stepIdx:2,
-    aiResult:null,
+    aiResult:{caseId:'RC-10051', caseName:'伊藤 様 ／ 品川区大崎アパート', confidence:88},
     outboundTracking:'', returnTracking:'',
     arrivedAt:'03/10 09:00', lastUpdated:'03/10 09:05',
     hankoOk:false, extraStamp:false,
@@ -892,30 +890,8 @@ function renderStepAction(doc){
       <button class="act-btn act-primary" onclick="advance('${doc.id}')">
         🔴 仲介印 捺印完了
       </button>`;
-    if (doc.stepIdx===1) return `
-      <div>
-        <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:8px">
-          📄 契約書＋重要事項説明書（2枚）をアップロード
-        </div>
-        <label style="display:block;border:2px dashed var(--bd2);border-radius:10px;
-          padding:16px;text-align:center;cursor:pointer;transition:.15s;background:#F8F9FA"
-          id="upload-label-${doc.id}"
-          onmouseenter="this.style.borderColor='var(--navy)'"
-          onmouseleave="this.style.borderColor='var(--bd2)'">
-          <input type="file" accept="application/pdf" multiple style="display:none"
-            onchange="handlePdfUpload(event,'${doc.id}')">
-          <div id="upload-status-${doc.id}" style="font-size:12px;color:var(--muted)">
-            📁 PDFを選択（クリックまたはドロップ）<br>
-            <span style="font-size:10px;color:var(--faint)">契約書.pdf ／ 重要事項説明書.pdf</span>
-          </div>
-        </label>
-        <button class="act-btn act-ai" style="margin-top:10px;width:100%;justify-content:center"
-          id="ai-scan-btn-${doc.id}" disabled onclick="runAiScan('${doc.id}')">
-          🤖 AIで案件を判定する
-        </button>
-      </div>`;
-    if (doc.stepIdx===2) return '<span class="badge badge-ai">🤖 AI判定中...</span>';
-    if (doc.stepIdx===3) return `
+    if (doc.stepIdx===1) return '<span class="badge badge-ai">🤖 AI判定中...</span>';
+    if (doc.stepIdx===2) return `
       <div>
         <div class="ai-panel">
           <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.5);margin-bottom:8px">
@@ -937,11 +913,11 @@ function renderStepAction(doc){
           </button>
         </div>
       </div>`;
-    if (doc.stepIdx===4) return `
+    if (doc.stepIdx===3) return `
       <button class="act-btn act-primary" onclick="openScanSend('${doc.id}','A')">
         📷 バーコードリーダーで読み取り・発送登録
       </button>`;
-    if (doc.stepIdx===5) return '<span class="badge badge-done">📮 発送済み</span>';
+    if (doc.stepIdx===4) return '<span class="badge badge-done">📮 発送済み</span>';
   }
 
   // Flow B
@@ -1153,26 +1129,27 @@ function runKeyAiScan(docId){
   }, 1500);
 }
 
-function runAiScan(docId){
+function runAiScan(docId){ runAiScanById(docId); }
+
+function runAiScanById(docId){
   const doc = DOCS.find(d=>d.id===docId);
   if (!doc) return;
-  // スキャン→AI判定（デモ: 1秒後にAI完了）
-  doc.stepIdx = 2; // スキャン完了
+  doc.stepIdx = 1; // AI判定中
   doc.lastUpdated = new Date().toLocaleString('ja-JP').slice(5,-3);
-  showToast('📷 スキャン完了。AI判定中...');
-  refreshCurrentTab();
+  showToast('🤖 AI判定中...');
+  renderStats(); refreshCurrentTab();
   setTimeout(()=>{
-    // AI判定結果を設定
-    const caseMap = {
-      'DOC-004': {caseId:'RC-10051', caseName:'伊藤 様 ／ 品川区大崎アパート', confidence:91},
-    };
-    doc.aiResult = caseMap[docId] || {caseId:'RC-XXXX', caseName:'未特定', confidence:72};
-    doc.stepIdx = 3; // AI判定完了→HQ承認待ち
+    const SAMPLE = [
+      {caseId:'RC-10055', caseName:'中村 様 ／ 世田谷区三軒茶屋アパート', confidence:93},
+      {caseId:'RC-10060', caseName:'小林 様 ／ 江東区豊洲マンション',     confidence:87},
+      {caseId:'RC-10065', caseName:'加藤 様 ／ 杉並区荻窪アパート',       confidence:96},
+    ];
+    doc.aiResult = SAMPLE[Math.floor(Math.random()*SAMPLE.length)];
+    doc.stepIdx  = 2; // AI判定完了 → HQ承認待ち
     doc.lastUpdated = new Date().toLocaleString('ja-JP').slice(5,-3);
     showToast('🤖 AI判定完了 — HQ承認をお願いします', 'ok');
-    renderStats();
-    refreshCurrentTab();
-  }, 1500);
+    renderStats(); refreshCurrentTab();
+  }, 1800);
 }
 
 function approveAi(docId){
@@ -1482,10 +1459,62 @@ function startFlowB(){
   refreshCurrentTab();
 }
 
-// 新規受付
+// 新規受付 → まずPDFアップロードモーダルを表示
 function startNewFlow(){
+  document.getElementById('scan-modal-title').textContent = '📦 新規受付 — 書類スキャンアップロード';
+  document.getElementById('scan-modal-body').innerHTML = `
+    <div style="font-size:11px;color:var(--muted);margin-bottom:14px;line-height:1.8">
+      コピー機でスキャンしたPDFをアップロードしてください。<br>
+      AIが書類の内容から案件を自動判定します。
+    </div>
+    <label id="new-upload-label"
+      style="display:block;border:2px dashed var(--bd2);border-radius:12px;
+      padding:24px;text-align:center;cursor:pointer;transition:.2s;background:#F8F9FA"
+      onmouseenter="this.style.borderColor='var(--navy)';this.style.background='#EEF2FF'"
+      onmouseleave="this.style.borderColor='var(--bd2)';this.style.background='#F8F9FA'">
+      <input type="file" accept="application/pdf" multiple style="display:none"
+        onchange="handleNewUpload(event)">
+      <div style="font-size:28px;margin-bottom:8px">📁</div>
+      <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:4px">
+        PDFをクリックして選択
+      </div>
+      <div id="new-upload-status" style="font-size:11px;color:var(--muted)">
+        契約書.pdf ／ 重要事項説明書.pdf（複数選択可）
+      </div>
+    </label>
+    <button class="act-btn act-ai"
+      id="new-upload-submit" disabled
+      style="margin-top:14px;width:100%;justify-content:center;opacity:.45"
+      onclick="submitNewUpload()">
+      🤖 アップロードしてAI判定を開始
+    </button>
+    <button class="act-btn act-ghost"
+      style="margin-top:8px;width:100%;justify-content:center"
+      onclick="closeScanModal()">キャンセル</button>`;
+  document.getElementById('scan-modal').style.display = 'flex';
+}
+
+let _newUploadFiles = [];
+
+function handleNewUpload(event){
+  _newUploadFiles = Array.from(event.target.files);
+  if (!_newUploadFiles.length) return;
+  const names = _newUploadFiles.map(f=>f.name).join('、');
+  const statusEl = document.getElementById('new-upload-status');
+  const btnEl    = document.getElementById('new-upload-submit');
+  const label    = document.getElementById('new-upload-label');
+  if (statusEl) statusEl.innerHTML =
+    `<span style="color:var(--em);font-weight:700">✅ ${_newUploadFiles.length}件選択済み</span><br>
+     <span style="font-size:10px">${names}</span>`;
+  if (btnEl) { btnEl.disabled=false; btnEl.style.opacity='1'; }
+  if (label) label.style.borderColor = 'var(--em)';
+}
+
+function submitNewUpload(){
+  if (!_newUploadFiles.length) return;
+  closeScanModal();
   const newDoc = {
-    id:'DOC-'+String(DOCS.length+1).padStart(3,'0'),
+    id:'DOC-'+String(Date.now()).slice(-5),
     caseId:'', caseName:'',
     flow:'A', stepIdx:0,
     aiResult:null,
@@ -1496,8 +1525,11 @@ function startNewFlow(){
   };
   DOCS.unshift(newDoc);
   renderStats();
-  showToast('📦 新規受付を登録しました。仲介印捺印へ');
+  showToast(`📦 受付登録完了（${_newUploadFiles.length}件）— AI判定を開始します`);
+  _newUploadFiles = [];
   refreshCurrentTab();
+  // 1.5秒後にAI判定完了（デモ）
+  setTimeout(()=>{ runAiScanById(newDoc.id); }, 1500);
 }
 
 // ══════════════════════════════════════════════════════════
