@@ -332,6 +332,11 @@ body, input, select, textarea, button { font-family:'Outfit','Noto Sans JP',sans
     </div>
     <div class="tb-act" style="margin-left:auto;display:flex;gap:8px;align-items:center">
       <button class="btn btn-ghost btn-sm" onclick="exportCSV()">📤 CSVエクスポート</button>
+      <button class="btn btn-sm" onclick="showAgentRiskPanel()"
+        style="background:linear-gradient(135deg,var(--navy),#1E3252);color:var(--gold);
+          border:none;font-weight:700">
+        🤖 AG離脱リスク
+      </button>
     </div>
   </div>
 
@@ -624,6 +629,205 @@ window.addEventListener('DOMContentLoaded', () => {
   renderAll();
   CNAV.init('pipeline');
 });
+
+// ══════════════════════════════════════════════════════════
+// AG離脱リスク分析
+// 目的: 活動が落ちているAGを早期検知 → HQがフォローして
+//       案件数を伸ばし、プラットフォームから離脱させない
+// ══════════════════════════════════════════════════════════
+
+function showAgentRiskPanel() {
+  document.getElementById('agent-risk-overlay').style.display = 'block';
+}
+
+async function runAgentRiskAI() {
+  const btn     = document.getElementById('agent-risk-run-btn');
+  const content = document.getElementById('agent-risk-content');
+  btn.disabled  = true;
+  btn.textContent = '⏳ 分析中...';
+
+  content.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;padding:16px 0;
+      color:var(--muted);font-size:12px">
+      <div style="display:flex;gap:4px">
+        ${[0,.2,.4].map(d=>`<span style="width:6px;height:6px;border-radius:50%;
+          background:var(--gold);animation:db 1.4s ${d}s infinite ease-in-out;
+          display:inline-block"></span>`).join('')}
+      </div>
+      AGの活動データを分析中...
+    </div>`;
+
+  // CASESからAGごとの活動データを集計
+  const agMap = {};
+  CASES.forEach(cas => {
+    const agRaw = cas.ag; // "AG-0021 木下" 形式
+    const agId  = agRaw.split(' ')[0];
+    const agName= agRaw.split(' ').slice(1).join(' ');
+    if (!agMap[agId]) {
+      agMap[agId] = {
+        id: agId, name: agName,
+        totalCases: 0, activeCases: 0, stalledCases: 0,
+        closedCases: 0, totalFee: 0,
+        types: new Set(),
+      };
+    }
+    agMap[agId].totalCases++;
+    agMap[agId].totalFee += cas.fee || 0;
+    agMap[agId].types.add(cas.type);
+    if (cas.daysOld >= 14) agMap[agId].stalledCases++;
+    if (cas.step === 99 || cas.status === 'won') agMap[agId].closedCases++;
+    else agMap[agId].activeCases++;
+  });
+
+  const agList = Object.values(agMap).map(a => ({
+    ...a, types: [...a.types]
+  }));
+
+  if (!agList.length) {
+    content.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:16px">案件データなし</div>';
+    btn.disabled = false; btn.textContent = '✨ AI分析実行';
+    return;
+  }
+
+  const prompt = `あなたはCORETO不動産仲介プラットフォームのHQ管理AIです。
+以下はCOREBLDGシステムに登録されているエージェント（AG）の活動データです。
+各AGがプラットフォームから離脱するリスク（活動停止・退会リスク）を分析してください。
+
+【背景】
+- COREBLDGはAGが案件を自主的に動かすプラットフォーム
+- 案件数が少ない・停滞案件が多い・特定種別しか扱っていないAGは活動意欲が下がりやすい
+- HQがフォローして案件を増やすサポートをすることで離脱を防ぎたい
+
+【AG活動データ】
+${agList.map(a => `
+${a.id}（${a.name}）
+  総案件数: ${a.totalCases}件 / 活動中: ${a.activeCases}件 / 停滞案件: ${a.stalledCases}件
+  成約件数: ${a.closedCases}件
+  扱い種別: ${a.types.join('/')}
+  報酬見込み合計: ¥${(a.totalFee/10000).toFixed(0)}万円`).join('
+')}
+
+以下のJSONのみで返答（前置き不要）:
+{
+  "agents": [
+    {
+      "id": "AG-XXXX",
+      "score": 0から100の整数（高いほど離脱リスク大）,
+      "level": "high / mid / low",
+      "reason": "離脱リスクの主因（20文字以内）",
+      "action": "HQが取るべきフォロー内容（30文字以内）",
+      "potential": "このAGの伸びしろ・強化ポイント（25文字以内）"
+    }
+  ],
+  "summary": "全体所見と優先フォロー方針（50文字以内）"
+}`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:900,
+        messages:[{role:'user', content:prompt}] })
+    });
+    const data = await resp.json();
+    const raw  = data.content?.find(b=>b.type==='text')?.text||'{}';
+    const res  = JSON.parse(raw.replace(/```json|```/g,'').trim());
+
+    const levelColor = { high:'var(--rd)', mid:'var(--am)', low:'var(--em)' };
+    const levelBg    = { high:'var(--rd-bg)', mid:'var(--am-bg)', low:'var(--em-bg)' };
+    const levelLabel = { high:'要即フォロー', mid:'要注視', low:'安定' };
+
+    // スコア順にソート
+    const sorted = (res.agents||[]).sort((a,b)=>b.score-a.score);
+
+    content.innerHTML = `
+      ${res.summary ? `
+        <div style="background:var(--navy);border-radius:8px;padding:10px 14px;
+          margin-bottom:16px;font-size:10px;color:rgba(255,255,255,.75);line-height:1.7">
+          🤖 ${res.summary}
+        </div>` : ''}
+      <div style="display:flex;flex-direction:column;gap:10px">
+        ${sorted.map(ag => {
+          const agData = agMap[ag.id] || {};
+          const pct    = Math.min(100, Math.max(0, ag.score));
+          const col    = levelColor[ag.level] || 'var(--muted)';
+          const bg     = levelBg[ag.level]    || 'var(--cream2)';
+          return `
+            <div style="border:1.5px solid ${
+              ag.level==='high'?'rgba(220,38,38,.25)':
+              ag.level==='mid' ?'rgba(217,119,6,.25)':'var(--bd)'};
+              border-radius:10px;overflow:hidden">
+              <div style="padding:12px 14px;background:${bg};
+                display:flex;align-items:center;gap:12px">
+                <!-- スコアゲージ -->
+                <div style="position:relative;width:52px;height:52px;flex-shrink:0">
+                  <svg width="52" height="52" viewBox="0 0 52 52">
+                    <circle cx="26" cy="26" r="21" fill="none"
+                      stroke="rgba(0,0,0,.08)" stroke-width="5"/>
+                    <circle cx="26" cy="26" r="21" fill="none"
+                      stroke="${col}" stroke-width="5"
+                      stroke-dasharray="${Math.round(2*Math.PI*21*pct/100)} 999"
+                      stroke-linecap="round" transform="rotate(-90 26 26)"/>
+                  </svg>
+                  <div style="position:absolute;inset:0;display:flex;align-items:center;
+                    justify-content:center;font-size:12px;font-weight:700;
+                    color:${col};font-family:'Outfit',sans-serif">${pct}</div>
+                </div>
+                <div style="flex:1">
+                  <div style="display:flex;align-items:center;gap:7px;margin-bottom:3px">
+                    <span style="font-size:13px;font-weight:700;color:var(--ink)">
+                      ${agData.name||''}</span>
+                    <span style="font-size:9px;font-weight:700;padding:2px 7px;
+                      border-radius:10px;background:${col}22;color:${col}">
+                      ${levelLabel[ag.level]||''}</span>
+                  </div>
+                  <div style="font-size:10px;color:var(--faint);font-family:'DM Mono',monospace;
+                    margin-bottom:4px">${ag.id}</div>
+                  <div style="display:flex;gap:12px;font-size:10px;color:var(--muted)">
+                    <span>案件 ${agData.totalCases||0}件</span>
+                    <span>停滞 ${agData.stalledCases||0}件</span>
+                    <span>成約 ${agData.closedCases||0}件</span>
+                  </div>
+                </div>
+              </div>
+              <div style="padding:10px 14px;background:#fff;
+                display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+                <div style="flex:1">
+                  <div style="font-size:10px;color:${col};font-weight:700;margin-bottom:3px">
+                    ⚠️ ${ag.reason||''}</div>
+                  <div style="font-size:10px;color:var(--navy);font-weight:600;margin-bottom:2px">
+                    → ${ag.action||''}</div>
+                  <div style="font-size:10px;color:var(--em)">
+                    💡 ${ag.potential||''}</div>
+                </div>
+                <button onclick="notifyAgentFollow('${ag.id}','${agData.name||''}')"
+                  style="font-size:10px;padding:6px 12px;background:var(--navy);color:#fff;
+                    border:none;border-radius:6px;cursor:pointer;flex-shrink:0;
+                    font-family:'Outfit',sans-serif;white-space:nowrap">
+                  📨 フォロー通知
+                </button>
+              </div>
+            </div>`;
+        }).join('')}
+      </div>
+      <button onclick="runAgentRiskAI()"
+        style="width:100%;margin-top:14px;padding:8px;background:none;
+          border:1px solid var(--bd);border-radius:8px;font-size:10px;
+          color:var(--muted);cursor:pointer;font-family:'Outfit',sans-serif">
+        🔄 再分析
+      </button>`;
+
+  } catch(e) {
+    content.innerHTML = `<div style="font-size:11px;color:var(--rd);padding:8px">
+      ❌ 分析エラー: ${e.message}</div>`;
+  }
+  btn.disabled = false;
+  btn.textContent = '✨ AI分析実行';
+}
+
+function notifyAgentFollow(agId, agName) {
+  showToast(`📨 ${agName}（${agId}）にフォロー通知を送信しました`);
+}
+
 </script>
 
 <script src="coreto-nav-v2.js"></script>
