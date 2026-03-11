@@ -94,6 +94,7 @@ const NAV = {
     ]},
     { section:'スタッフ管理', items:[
       { icon:'🏢', label:'AG管理（権限・育成）',   href:'coreto-hq-admin-v2.html',     key:'hq_admin' },
+      { icon:'📉', label:'AG離脱リスク管理',         href:'coreto-agent-retention-v2.html', key:'agent_retention' },
       { icon:'🤝', label:'PT管理',                 href:'coreto-hub-v2.html#pt_mgmt',  key:'pt_mgmt' },
       { icon:'🎓', label:'インターン管理',          href:'coreto-intern-v2.html',       key:'intern' },
     ]},

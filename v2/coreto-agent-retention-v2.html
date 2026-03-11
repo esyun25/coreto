@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AG離脱リスク管理 — COREBLDG</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0D1A2D;--navy-l:#1E3252;--gold:#C8A951;--gold-dim:rgba(200,169,81,.15);--cream:#FFFFFF;--cream2:#F8F9FA;--white:#FFFFFF;--ink:#202124;--muted:#5F6368;--faint:#80868B;--em:#059669;--em-bg:#ECFDF5;--am:#D97706;--am-bg:#FFFBEB;--rd:#DC2626;--rd-bg:#FEF2F2;--sk:#0284C7;--sk-bg:#F0F9FF;--bd:#E8EAED;--bd2:#DADCE0;--sw:240px;--r:10px;--r-sm:7px;--sh:0 1px 2px rgba(60,64,67,.1),0 1px 3px rgba(60,64,67,.06)}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:#fff}
+.shell{display:flex;height:100vh}
+.sb{width:var(--sw);background:var(--navy);display:flex;flex-direction:column;flex-shrink:0;position:relative}
+.sb::after{content:'';position:absolute;top:0;right:0;width:1px;height:100%;background:linear-gradient(180deg,transparent,rgba(200,169,81,.2),transparent)}
+.sb-head{padding:20px 18px 14px;border-bottom:1px solid rgba(255,255,255,.07)}
+.sb-logo{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:var(--gold);letter-spacing:2px;line-height:1.2}
+.sb-ver{font-size:9px;color:rgba(255,255,255,.25);margin-top:4px;letter-spacing:.5px}
+.sb-user{display:flex;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid rgba(255,255,255,.07)}
+.sb-av{width:32px;height:32px;border-radius:50%;background:rgba(200,169,81,.2);border:1.5px solid rgba(200,169,81,.4);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--gold);flex-shrink:0}
+.sb-nav{flex:1;overflow-y:auto;padding:10px 0}
+.content{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.topbar{display:flex;align-items:center;gap:12px;padding:0 24px;height:56px;border-bottom:1px solid var(--bd);background:#fff;flex-shrink:0}
+.mob-ham{display:none;flex-direction:column;gap:5px;background:none;border:none;cursor:pointer;padding:4px}
+.mob-ham span{display:block;width:20px;height:2px;background:var(--ink);border-radius:2px}
+.tb-title{font-size:15px;font-weight:700;color:var(--ink)}
+.tb-crumb{font-size:10px;color:var(--muted)}
+.tb-crumb a{color:var(--muted);text-decoration:none}
+.page{flex:1;overflow-y:auto;padding:24px;background:var(--cream2)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Outfit','Noto Sans JP',sans-serif;transition:.15s;border:none}
+.btn-primary{background:var(--navy);color:#fff}
+.btn-ghost{background:transparent;color:var(--ink);border:1.5px solid var(--bd)}
+.btn-sm{padding:5px 12px;font-size:11px}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;font-family:'Outfit',sans-serif}
+.b-rd{background:var(--rd-bg);color:var(--rd)}
+.b-am{background:var(--am-bg);color:var(--am)}
+.b-em{background:var(--em-bg);color:var(--em)}
+.b-muted{background:var(--cream2);color:var(--muted);border:1px solid var(--bd)}
+.card{background:#fff;border:1px solid var(--bd);border-radius:var(--r);box-shadow:var(--sh)}
+.card-head{padding:14px 18px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;background:var(--cream2)}
+.card-title{font-size:12px;font-weight:700;color:var(--ink);text-transform:uppercase;letter-spacing:.5px}
+.al{display:flex;align-items:flex-start;gap:10px;padding:12px 16px;border-radius:8px;font-size:12px;margin-bottom:16px}
+.al-info{background:var(--sk-bg);border:1px solid rgba(2,132,199,.15);color:var(--sk)}
+/* KPIグリッド */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.kpi-card{background:#fff;border:1px solid var(--bd);border-radius:var(--r);padding:16px;box-shadow:var(--sh)}
+.kpi-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
+.kpi-val{font-size:24px;font-weight:300;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1}
+.kpi-sub{font-size:10px;color:var(--muted);margin-top:5px}
+/* AGリストテーブル */
+.ag-table{width:100%;border-collapse:collapse}
+.ag-table th{padding:10px 14px;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--bd);text-align:left;background:var(--cream2);white-space:nowrap}
+.ag-table td{padding:12px 14px;border-bottom:1px solid var(--bd);font-size:12px;color:var(--ink);vertical-align:middle}
+.ag-table tr:hover td{background:#F8F9FF}
+.ag-table tr:last-child td{border-bottom:none}
+.ag-name{font-weight:700;font-size:13px}
+.ag-id{font-family:'DM Mono',monospace;font-size:10px;color:var(--faint)}
+/* リスクゲージ */
+.risk-gauge{display:flex;align-items:center;gap:8px}
+.gauge-bar{flex:1;height:6px;background:var(--bd);border-radius:3px;overflow:hidden;min-width:60px}
+.gauge-fill{height:100%;border-radius:3px;transition:.4s}
+.gauge-num{font-size:11px;font-weight:700;font-family:'Outfit',sans-serif;font-variant-numeric:tabular-nums;width:26px;text-align:right}
+/* AIパネル */
+.ai-panel{background:#fff;border:1.5px solid rgba(200,169,81,.35);border-radius:12px;overflow:hidden;margin-bottom:20px;box-shadow:var(--sh)}
+.ai-panel-head{background:linear-gradient(135deg,#0D1A2D,#1E3252);padding:16px 20px;display:flex;align-items:center;justify-content:space-between}
+.ai-result-card{border:1.5px solid var(--bd);border-radius:10px;overflow:hidden;margin-bottom:10px}
+.ai-result-head{padding:12px 14px;display:flex;align-items:center;gap:12px}
+.ai-result-body{padding:10px 14px;background:#fff;border-top:1px solid var(--bd)}
+/* アニメーション */
+@keyframes db{0%,80%,100%{transform:scale(0);opacity:.3}40%{transform:scale(1);opacity:1}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+/* モバイル */
+.mob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:99}
+@media(max-width:768px){
+  .mob-ham{display:flex}
+  .sb{position:fixed;left:-100%;top:0;bottom:0;z-index:100;transition:.25s;width:240px}
+  .sb.open{left:0}
+  .mob-overlay.show{display:block}
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .page{padding:16px}
+}
+</style>
+</head>
+<body>
+<div class="shell" id="shell">
+<nav class="sb">
+  <div class="sb-head">
+    <div class="sb-logo">CORE<br>BLDG</div>
+    <div class="sb-ver">v2.0 — CORETO</div>
+  </div>
+  <div class="sb-user">
+    <div class="sb-av" id="sb-av">HQ</div>
+    <div>
+      <div id="sb-uname" style="font-size:11px;font-weight:600;color:rgba(255,255,255,.8)">本部 管理者</div>
+      <div id="sb-role" style="font-size:9px;color:rgba(255,255,255,.3);font-family:'Outfit',sans-serif">HQ-0001</div>
+    </div>
+  </div>
+  <div class="sb-nav" id="sb-nav"><!-- CNAV --></div>
+</nav>
+
+<div class="content">
+  <div class="topbar">
+    <button class="mob-ham" onclick="toggleSb()"><span></span><span></span><span></span></button>
+    <div>
+      <div class="tb-title">AG離脱リスク管理</div>
+      <div class="tb-crumb"><a href="coreto-hub-v2.html">COREBLDG</a> › AG離脱リスク管理</div>
+    </div>
+    <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+      <span class="badge b-rd" id="high-risk-badge" style="display:none">⚠️ 要フォロー 0件</span>
+    </div>
+  </div>
+
+  <div class="page">
+
+    <div class="al al-info">
+      ℹ️ 活動状況が落ちているAGを早期に検知し、HQがサポートすることで離脱を防ぎます。
+      AIがアクティブなAGの案件数・成約率・停滞状況を分析してリスクスコアを算出します。
+    </div>
+
+    <!-- KPIサマリー -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">登録AG総数</div>
+        <div class="kpi-val" id="kpi-total">—</div>
+        <div class="kpi-sub">アクティブ</div>
+      </div>
+      <div class="kpi-card" style="border-color:rgba(220,38,38,.25)">
+        <div class="kpi-label" style="color:var(--rd)">高リスク</div>
+        <div class="kpi-val" id="kpi-high" style="color:var(--rd)">—</div>
+        <div class="kpi-sub">要即フォロー</div>
+      </div>
+      <div class="kpi-card" style="border-color:rgba(217,119,6,.25)">
+        <div class="kpi-label" style="color:var(--am)">中リスク</div>
+        <div class="kpi-val" id="kpi-mid" style="color:var(--am)">—</div>
+        <div class="kpi-sub">要注視</div>
+      </div>
+      <div class="kpi-card" style="border-color:rgba(5,150,105,.25)">
+        <div class="kpi-label" style="color:var(--em)">低リスク</div>
+        <div class="kpi-val" id="kpi-low" style="color:var(--em)">—</div>
+        <div class="kpi-sub">安定</div>
+      </div>
+    </div>
+
+    <!-- AI分析パネル -->
+    <div class="ai-panel">
+      <div class="ai-panel-head">
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--gold)">🤖 AI離脱リスク分析</div>
+          <div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:3px">
+            案件数・成約率・停滞案件・扱い種別からAIがスコアリング。フォローが必要なAGを特定します。
+          </div>
+        </div>
+        <button id="ai-run-btn" onclick="runRetentionAI()"
+          style="background:var(--gold);color:var(--navy);border:none;font-size:11px;
+            font-weight:700;padding:8px 18px;border-radius:20px;cursor:pointer;
+            font-family:'Outfit',sans-serif;white-space:nowrap">
+          ✨ AI分析実行
+        </button>
+      </div>
+      <div id="ai-result" style="padding:18px">
+        <div style="text-align:center;font-size:12px;color:var(--muted);padding:12px 0">
+          「AI分析実行」を押すと全AGの離脱リスクを算出します
+        </div>
+      </div>
+    </div>
+
+    <!-- AGリスト一覧 -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">AG一覧（活動状況）</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select id="filter-level" onchange="renderTable()"
+            style="font-size:11px;padding:5px 10px;border:1px solid var(--bd);
+              border-radius:6px;background:#fff;font-family:'Outfit',sans-serif;
+              color:var(--ink);cursor:pointer">
+            <option value="all">すべて</option>
+            <option value="high">高リスクのみ</option>
+            <option value="mid">中リスクのみ</option>
+            <option value="low">低リスクのみ</option>
+          </select>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="ag-table">
+          <thead>
+            <tr>
+              <th>AG</th>
+              <th>種別</th>
+              <th>活動中案件</th>
+              <th>停滞案件</th>
+              <th>直近成約</th>
+              <th>離脱リスク</th>
+              <th>フォロー</th>
+            </tr>
+          </thead>
+          <tbody id="ag-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /page -->
+</div><!-- /content -->
+</div><!-- /shell -->
+
+<div class="mob-overlay" onclick="toggleSb()"></div>
+<div id="ret-toast" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(10px);
+  background:var(--navy);color:#fff;padding:10px 20px;border-radius:8px;font-size:12px;
+  font-weight:600;opacity:0;transition:.3s;z-index:999;pointer-events:none;white-space:nowrap"></div>
+
+<script src="coreto-nav-v2.js"></script>
+<script>
+
+function toggleSb(){
+  document.querySelector('.sb').classList.toggle('open');
+  document.querySelector('.mob-overlay').classList.toggle('show');
+}
+function showToast(msg){
+  const t = document.getElementById('ret-toast');
+  t.textContent = msg; t.style.opacity='1'; t.style.transform='translateX(-50%) translateY(0)';
+  setTimeout(()=>{ t.style.opacity='0'; t.style.transform='translateX(-50%) translateY(10px)'; },3200);
+}
+
+// ── AGデモデータ（実運用: Kintone APIから取得）──────────────
+const AG_DATA = [
+  { id:'AG-0021', name:'木下 拓也', type:'re',   typeLabel:'不動産',
+    activeCases:5, stalledCases:0, closedLast30:2, joinedDays:180,
+    lastCaseDate:'2日前', score:null, level:null, reason:null, action:null, potential:null },
+  { id:'AG-0034', name:'大橋 恵子', type:'re',   typeLabel:'不動産',
+    activeCases:3, stalledCases:2, closedLast30:0, joinedDays:90,
+    lastCaseDate:'12日前', score:null, level:null, reason:null, action:null, potential:null },
+  { id:'AG-0055', name:'山本 浩二', type:'hr',   typeLabel:'人材',
+    activeCases:1, stalledCases:1, closedLast30:0, joinedDays:45,
+    lastCaseDate:'20日前', score:null, level:null, reason:null, action:null, potential:null },
+  { id:'AG-0042', name:'田中 誠',   type:'re',   typeLabel:'不動産',
+    activeCases:8, stalledCases:1, closedLast30:3, joinedDays:365,
+    lastCaseDate:'本日', score:null, level:null, reason:null, action:null, potential:null },
+  { id:'AG-0088', name:'佐藤 由美', type:'re',   typeLabel:'不動産',
+    activeCases:2, stalledCases:2, closedLast30:0, joinedDays:30,
+    lastCaseDate:'8日前', score:null, level:null, reason:null, action:null, potential:null },
+  { id:'AG-0099', name:'渡辺 健',   type:'hr',   typeLabel:'人材',
+    activeCases:0, stalledCases:0, closedLast30:0, joinedDays:14,
+    lastCaseDate:'登録のみ', score:null, level:null, reason:null, action:null, potential:null },
+];
+
+const levelColor = { high:'var(--rd)', mid:'var(--am)', low:'var(--em)' };
+const levelBg    = { high:'var(--rd-bg)', mid:'var(--am-bg)', low:'var(--em-bg)' };
+const levelLabel = { high:'高リスク', mid:'中リスク', low:'低リスク' };
+
+// ── テーブル描画 ──────────────────────────────────────────
+function renderTable() {
+  const filter  = document.getElementById('filter-level').value;
+  const tbody   = document.getElementById('ag-tbody');
+  const visible = filter === 'all' ? AG_DATA : AG_DATA.filter(a=>a.level===filter);
+
+  if (!visible.length) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:24px;
+      color:var(--muted);font-size:12px">該当するAGがいません</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = visible.map(ag => {
+    const col  = ag.level ? (levelColor[ag.level]||'var(--muted)') : 'var(--bd)';
+    const pct  = ag.score ?? 0;
+    const fill = ag.level === 'high' ? 'var(--rd)' :
+                 ag.level === 'mid'  ? 'var(--am)' :
+                 ag.level === 'low'  ? 'var(--em)' : 'var(--bd)';
+    return `<tr>
+      <td>
+        <div class="ag-name">${ag.name}</div>
+        <div class="ag-id">${ag.id} / 入会${ag.joinedDays}日</div>
+      </td>
+      <td><span class="badge b-muted">${ag.typeLabel}</span></td>
+      <td style="font-variant-numeric:tabular-nums">
+        <span style="font-size:16px;font-weight:300">${ag.activeCases}</span>
+        <span style="font-size:10px;color:var(--muted)">件</span>
+        <div style="font-size:10px;color:var(--muted)">最終: ${ag.lastCaseDate}</div>
+      </td>
+      <td>
+        ${ag.stalledCases > 0
+          ? `<span style="font-size:13px;font-weight:700;color:var(--am)">${ag.stalledCases}件</span>
+             <span style="font-size:10px;color:var(--am)">（14日超）</span>`
+          : `<span style="color:var(--em);font-size:12px">なし</span>`}
+      </td>
+      <td style="font-variant-numeric:tabular-nums">
+        <span style="font-size:16px;font-weight:300">${ag.closedLast30}</span>
+        <span style="font-size:10px;color:var(--muted)">件/月</span>
+      </td>
+      <td>
+        ${ag.score !== null ? `
+          <div class="risk-gauge">
+            <div class="gauge-bar">
+              <div class="gauge-fill" style="width:${pct}%;background:${fill}"></div>
+            </div>
+            <span class="gauge-num" style="color:${col}">${pct}</span>
+          </div>
+          <div style="margin-top:4px">
+            <span class="badge" style="background:${col}18;color:${col};font-size:9px">
+              ${levelLabel[ag.level]||''}</span>
+          </div>
+          ${ag.reason ? `<div style="font-size:9px;color:var(--muted);margin-top:3px">
+            ${ag.reason}</div>` : ''}
+        ` : `<span style="font-size:11px;color:var(--muted)">未分析</span>`}
+      </td>
+      <td>
+        <button onclick="followAgent('${ag.id}','${ag.name}')"
+          style="padding:5px 10px;background:var(--navy);color:#fff;border:none;
+            border-radius:6px;font-size:10px;cursor:pointer;
+            font-family:'Outfit',sans-serif;white-space:nowrap">
+          📨 通知
+        </button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  // KPI更新
+  const high = AG_DATA.filter(a=>a.level==='high').length;
+  const mid  = AG_DATA.filter(a=>a.level==='mid').length;
+  const low  = AG_DATA.filter(a=>a.level==='low').length;
+  document.getElementById('kpi-total').textContent = AG_DATA.length;
+  document.getElementById('kpi-high').textContent  = high;
+  document.getElementById('kpi-mid').textContent   = mid;
+  document.getElementById('kpi-low').textContent   = low;
+  const badge = document.getElementById('high-risk-badge');
+  if (high > 0) { badge.style.display='inline-flex'; badge.textContent=`⚠️ 要フォロー ${high}件`; }
+  else { badge.style.display='none'; }
+}
+
+// ── AI分析実行 ────────────────────────────────────────────
+async function runRetentionAI() {
+  const btn    = document.getElementById('ai-run-btn');
+  const result = document.getElementById('ai-result');
+  btn.disabled = true; btn.textContent = '⏳ 分析中...';
+
+  result.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;
+      color:var(--muted);font-size:12px">
+      <div style="display:flex;gap:4px">
+        ${[0,.2,.4].map(d=>`<span style="width:6px;height:6px;border-radius:50%;
+          background:var(--gold);animation:db 1.4s ${d}s infinite ease-in-out;
+          display:inline-block"></span>`).join('')}
+      </div>
+      AGの活動状況を分析中...
+    </div>`;
+
+  const prompt = `あなたはCORETO不動産仲介プラットフォームのHQ管理AIです。
+COREBLDGは、フルコミッションで働くエージェント（AG）が自主的に案件を動かすプラットフォームです。
+以下のAGの活動データを分析し、各AGがプラットフォームから離脱するリスクをスコアリングしてください。
+
+【AGの活動データ】
+${AG_DATA.map(a=>`
+${a.id}（${a.name}）/ 種別:${a.typeLabel} / 入会${a.joinedDays}日
+  活動中案件: ${a.activeCases}件 / 停滞案件（14日超）: ${a.stalledCases}件
+  直近30日成約: ${a.closedLast30}件 / 最終活動: ${a.lastCaseDate}`).join('\n')}
+
+スコア基準:
+- 70以上: 高リスク（要即フォロー）
+- 40〜69: 中リスク（要注視・定期フォロー）
+- 39以下: 低リスク（安定）
+
+以下のJSONのみで返答（前置き不要）:
+{
+  "agents": [
+    {
+      "id": "AG-XXXX",
+      "score": 0から100の整数,
+      "level": "high / mid / low",
+      "reason": "離脱リスクの主因（20文字以内）",
+      "action": "HQが取るべきフォロー（25文字以内）",
+      "potential": "このAGの伸びしろ（20文字以内）"
+    }
+  ],
+  "summary": "全体所見と優先対応方針（50文字以内）"
+}`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:800,
+        messages:[{role:'user', content:prompt}] })
+    });
+    const data = await resp.json();
+    const raw  = data.content?.find(b=>b.type==='text')?.text||'{}';
+    const res  = JSON.parse(raw.replace(/```json|```/g,'').trim());
+
+    // AG_DATAにスコアを反映
+    (res.agents||[]).forEach(r => {
+      const ag = AG_DATA.find(a=>a.id===r.id);
+      if (ag) { ag.score=r.score; ag.level=r.level; ag.reason=r.reason;
+                ag.action=r.action; ag.potential=r.potential; }
+    });
+
+    // AI所見バナー
+    result.innerHTML = `
+      <div style="background:var(--navy);border-radius:8px;padding:10px 14px;
+        margin-bottom:14px;font-size:10px;color:rgba(255,255,255,.75);line-height:1.7">
+        🤖 ${res.summary||''}
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${(res.agents||[]).sort((a,b)=>b.score-a.score).map(ag => {
+          const agData = AG_DATA.find(a=>a.id===ag.id)||{};
+          const pct = Math.min(100,Math.max(0,ag.score));
+          const col = levelColor[ag.level]||'var(--muted)';
+          const bg  = levelBg[ag.level]||'var(--cream2)';
+          return `
+            <div style="border:1.5px solid ${
+              ag.level==='high'?'rgba(220,38,38,.25)':
+              ag.level==='mid' ?'rgba(217,119,6,.25)':'var(--bd)'};
+              border-radius:10px;overflow:hidden">
+              <div style="padding:10px 14px;background:${bg};
+                display:flex;align-items:center;gap:10px">
+                <div style="position:relative;width:44px;height:44px;flex-shrink:0">
+                  <svg width="44" height="44" viewBox="0 0 44 44">
+                    <circle cx="22" cy="22" r="18" fill="none" stroke="rgba(0,0,0,.08)" stroke-width="4"/>
+                    <circle cx="22" cy="22" r="18" fill="none" stroke="${col}" stroke-width="4"
+                      stroke-dasharray="${Math.round(2*Math.PI*18*pct/100)} 999"
+                      stroke-linecap="round" transform="rotate(-90 22 22)"/>
+                  </svg>
+                  <div style="position:absolute;inset:0;display:flex;align-items:center;
+                    justify-content:center;font-size:11px;font-weight:700;color:${col};
+                    font-family:'Outfit',sans-serif">${pct}</div>
+                </div>
+                <div style="flex:1">
+                  <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+                    <span style="font-size:12px;font-weight:700;color:var(--ink)">
+                      ${agData.name||ag.id}</span>
+                    <span style="font-size:9px;font-weight:700;padding:2px 6px;
+                      border-radius:10px;background:${col}20;color:${col}">
+                      ${levelLabel[ag.level]||''}</span>
+                  </div>
+                  <div style="font-size:10px;color:var(--muted)">
+                    ⚠️ ${ag.reason||''}</div>
+                </div>
+                <div style="text-align:right">
+                  <div style="font-size:10px;color:var(--navy);font-weight:600;margin-bottom:4px">
+                    → ${ag.action||''}</div>
+                  <div style="font-size:9px;color:var(--em)">💡 ${ag.potential||''}</div>
+                </div>
+              </div>
+            </div>`;
+        }).join('')}
+      </div>
+      <button onclick="runRetentionAI()"
+        style="width:100%;margin-top:12px;padding:7px;background:none;
+          border:1px solid var(--bd);border-radius:7px;font-size:10px;
+          color:var(--muted);cursor:pointer;font-family:'Outfit',sans-serif">
+        🔄 再分析
+      </button>`;
+
+    // テーブルも更新
+    renderTable();
+
+  } catch(e) {
+    result.innerHTML = `<div style="font-size:11px;color:var(--rd);padding:8px">
+      ❌ 分析エラー: ${e.message}</div>`;
+  }
+  btn.disabled = false; btn.textContent = '✨ AI分析実行';
+}
+
+function followAgent(id, name) {
+  showToast(`📨 ${name}（${id}）にフォロー通知を送信しました`);
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  renderTable();
+  CNAV.init('agent_retention');
+});
+</script>
+</body>
+</html>
