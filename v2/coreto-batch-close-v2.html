@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>月次締め処理 — COREBLDG</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0D1A2D;--navy-l:#1E3252;--gold:#C8A951;--gold-dim:rgba(200,169,81,.15);--cream:#FFFFFF;--cream2:#F8F9FA;--white:#FFFFFF;--ink:#202124;--muted:#5F6368;--faint:#80868B;--em:#059669;--em-bg:#ECFDF5;--am:#D97706;--am-bg:#FFFBEB;--rd:#DC2626;--rd-bg:#FEF2F2;--sk:#0284C7;--sk-bg:#F0F9FF;--vt:#7C3AED;--vt-bg:#F5F3FF;--nt:#374151;--nt-bg:#F3F4F6;--bd:#E8EAED;--bd2:#DADCE0;--sw:240px;--r:10px;--r-sm:7px;--sh:0 1px 2px rgba(60,64,67,.1),0 1px 3px rgba(60,64,67,.06)}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:#fff}
+.shell{display:flex;height:100vh}
+.sb{width:var(--sw);background:var(--navy);display:flex;flex-direction:column;flex-shrink:0;position:relative}
+.sb::after{content:'';position:absolute;top:0;right:0;width:1px;height:100%;background:linear-gradient(180deg,transparent,rgba(200,169,81,.2),transparent)}
+.sb-head{padding:20px 18px 14px;border-bottom:1px solid rgba(255,255,255,.07)}
+.sb-logo{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:var(--gold);letter-spacing:2px;line-height:1.2}
+.sb-ver{font-size:9px;color:rgba(255,255,255,.25);margin-top:4px;letter-spacing:.5px}
+.sb-user{display:flex;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid rgba(255,255,255,.07)}
+.sb-av{width:32px;height:32px;border-radius:50%;background:rgba(200,169,81,.2);border:1.5px solid rgba(200,169,81,.4);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--gold);flex-shrink:0}
+.sb-nav{flex:1;overflow-y:auto;padding:10px 0}
+.content{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.topbar{display:flex;align-items:center;gap:12px;padding:0 24px;height:56px;border-bottom:1px solid var(--bd);background:#fff;flex-shrink:0}
+.mob-ham{display:none;flex-direction:column;gap:5px;background:none;border:none;cursor:pointer;padding:4px}
+.mob-ham span{display:block;width:20px;height:2px;background:var(--ink);border-radius:2px}
+.tb-title{font-size:15px;font-weight:700;color:var(--ink)}
+.tb-crumb{font-size:10px;color:var(--muted)}
+.tb-crumb a{color:var(--muted);text-decoration:none}
+.page{flex:1;overflow-y:auto;padding:24px;background:var(--cream2)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Outfit','Noto Sans JP',sans-serif;transition:.15s;border:none}
+.btn-primary{background:var(--navy);color:#fff}
+.btn-ghost{background:transparent;color:var(--ink);border:1.5px solid var(--bd)}
+.btn-em{background:var(--em);color:#fff}
+.btn-rd{background:var(--rd);color:#fff}
+.btn-gold{background:var(--gold);color:var(--navy);font-weight:700}
+.btn-sm{padding:5px 12px;font-size:11px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;font-family:'Outfit',sans-serif}
+.b-em{background:var(--em-bg);color:var(--em)}
+.b-rd{background:var(--rd-bg);color:var(--rd)}
+.b-am{background:var(--am-bg);color:var(--am)}
+.b-sk{background:var(--sk-bg);color:var(--sk)}
+.b-vt{background:var(--vt-bg);color:var(--vt)}
+.b-nt{background:var(--nt-bg);color:var(--nt)}
+.b-muted{background:var(--cream2);color:var(--muted);border:1px solid var(--bd)}
+.al{padding:12px 16px;border-radius:8px;font-size:12px;margin-bottom:16px;display:flex;align-items:flex-start;gap:10px}
+.al-warn{background:var(--am-bg);border:1px solid rgba(217,119,6,.2);color:var(--am)}
+.al-err{background:var(--rd-bg);border:1px solid rgba(220,38,38,.2);color:var(--rd)}
+.al-info{background:var(--sk-bg);border:1px solid rgba(2,132,199,.15);color:var(--sk)}
+.al-em{background:var(--em-bg);border:1px solid rgba(5,150,105,.2);color:var(--em)}
+/* セクションカード */
+.sec{background:#fff;border:1px solid var(--bd);border-radius:var(--r);box-shadow:var(--sh);margin-bottom:20px;overflow:hidden}
+.sec-head{padding:14px 18px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;background:var(--cream2)}
+.sec-title{font-size:12px;font-weight:700;color:var(--ink);text-transform:uppercase;letter-spacing:.5px;display:flex;align-items:center;gap:7px}
+.sec-body{padding:16px 18px}
+/* KPIグリッド */
+.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px}
+.kpi-card{background:#fff;border:1px solid var(--bd);border-radius:var(--r);padding:16px;box-shadow:var(--sh);text-align:center}
+.kpi-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px}
+.kpi-val{font-size:22px;font-weight:300;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1}
+.kpi-sub{font-size:10px;color:var(--muted);margin-top:5px}
+/* 支払テーブル */
+.pay-table{width:100%;border-collapse:collapse}
+.pay-table th{padding:10px 14px;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--bd);text-align:left;background:var(--cream2);white-space:nowrap}
+.pay-table td{padding:11px 14px;border-bottom:1px solid var(--bd);font-size:12px;color:var(--ink);vertical-align:middle;font-variant-numeric:tabular-nums}
+.pay-table tr:last-child td{border-bottom:none}
+.pay-table tr.row-err td{background:rgba(220,38,38,.04)}
+.pay-table tr.row-warn td{background:rgba(217,119,6,.04)}
+.pay-table tfoot td{font-weight:700;background:var(--cream2);border-top:2px solid var(--bd)}
+.amt{text-align:right;font-family:'Outfit',sans-serif}
+.mono{font-family:'DM Mono',monospace;font-size:10px;color:var(--faint)}
+/* 8項目チェック */
+.check-list{display:flex;flex-direction:column;gap:8px}
+.check-item{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border-radius:8px;border:1px solid var(--bd);background:#fff}
+.check-item.pass{border-color:rgba(5,150,105,.25);background:var(--em-bg)}
+.check-item.fail{border-color:rgba(220,38,38,.25);background:var(--rd-bg)}
+.check-item.warn{border-color:rgba(217,119,6,.25);background:var(--am-bg)}
+.check-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.check-label{font-size:12px;font-weight:700;color:var(--ink);margin-bottom:3px}
+.check-detail{font-size:11px;color:var(--muted)}
+/* 全銀プレビュー */
+.zengin-preview{font-family:'DM Mono',monospace;font-size:10px;background:#0D1A2D;color:#7DD3FC;border-radius:8px;padding:14px;overflow-x:auto;white-space:pre;line-height:1.8;max-height:200px;overflow-y:auto}
+/* ステップインジケーター */
+.step-bar{display:flex;align-items:center;gap:0;margin-bottom:24px}
+.step{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600}
+.step-num{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;font-family:'Outfit',sans-serif}
+.step-line{flex:1;height:2px;background:var(--bd);min-width:24px}
+.step.done .step-num{background:var(--em);color:#fff}
+.step.done .step-label{color:var(--em)}
+.step.active .step-num{background:var(--navy);color:#fff}
+.step.active .step-label{color:var(--navy);font-weight:700}
+.step.todo .step-num{background:var(--bd);color:var(--muted)}
+.step.todo .step-label{color:var(--muted)}
+.step.done + .step-line{background:var(--em)}
+/* モバイル */
+.mob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:99}
+@media(max-width:900px){
+  .mob-ham{display:flex}
+  .sb{position:fixed;left:-100%;top:0;bottom:0;z-index:100;transition:.25s}
+  .sb.open{left:0}
+  .mob-overlay.show{display:block}
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .page{padding:16px}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+<nav class="sb">
+  <div class="sb-head">
+    <div class="sb-logo">CORE<br>BLDG</div>
+    <div class="sb-ver">v2.0 — CORETO</div>
+  </div>
+  <div class="sb-user">
+    <div class="sb-av" id="sb-av">HQ</div>
+    <div>
+      <div id="sb-uname" style="font-size:11px;font-weight:600;color:rgba(255,255,255,.8)">本部 管理者</div>
+      <div id="sb-role" style="font-size:9px;color:rgba(255,255,255,.3);font-family:'Outfit',sans-serif">HQ-0001</div>
+    </div>
+  </div>
+  <div class="sb-nav" id="sb-nav"><!-- CNAV --></div>
+</nav>
+
+<div class="content">
+  <div class="topbar">
+    <button class="mob-ham" onclick="toggleSb()"><span></span><span></span><span></span></button>
+    <div>
+      <div class="tb-title">月次締め処理</div>
+      <div class="tb-crumb"><a href="coreto-hub-v2.html">COREBLDG</a> › 月次締め処理</div>
+    </div>
+    <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+      <!-- 月選択 -->
+      <select id="target-month" onchange="onMonthChange()"
+        style="font-size:12px;padding:6px 12px;border:1.5px solid var(--bd);border-radius:8px;
+          background:#fff;font-family:'Outfit',sans-serif;color:var(--ink);cursor:pointer;font-weight:600">
+        <option value="2026-03">2026年3月</option>
+        <option value="2026-02" selected>2026年2月</option>
+        <option value="2026-01">2026年1月</option>
+      </select>
+      <span id="status-badge" class="badge b-am">処理中</span>
+    </div>
+  </div>
+
+  <div class="page">
+
+    <!-- ステップインジケーター -->
+    <div class="step-bar">
+      <div class="step done" id="step1">
+        <div class="step-num">✓</div>
+        <div class="step-label">① 集計確認</div>
+      </div>
+      <div class="step-line"></div>
+      <div class="step active" id="step2">
+        <div class="step-num">2</div>
+        <div class="step-label">② チェック</div>
+      </div>
+      <div class="step-line"></div>
+      <div class="step todo" id="step3">
+        <div class="step-num">3</div>
+        <div class="step-label">③ 全銀出力</div>
+      </div>
+      <div class="step-line"></div>
+      <div class="step todo" id="step4">
+        <div class="step-num">4</div>
+        <div class="step-label">④ 締め確定</div>
+      </div>
+    </div>
+
+    <!-- KPIサマリー -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">支払対象</div>
+        <div class="kpi-val" id="kpi-count">—</div>
+        <div class="kpi-sub">AG / PT</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">報酬合計</div>
+        <div class="kpi-val" id="kpi-reward" style="font-size:16px">—</div>
+        <div class="kpi-sub">控除前</div>
+      </div>
+      <div class="kpi-card" style="border-color:rgba(220,38,38,.2)">
+        <div class="kpi-label">源泉徴収計</div>
+        <div class="kpi-val" id="kpi-wtax" style="font-size:16px;color:var(--rd)">—</div>
+        <div class="kpi-sub">10.21% / 20.42%</div>
+      </div>
+      <div class="kpi-card" style="border-color:rgba(217,119,6,.2)">
+        <div class="kpi-label">即時払い控除</div>
+        <div class="kpi-val" id="kpi-instant" style="font-size:16px;color:var(--am)">—</div>
+        <div class="kpi-sub">前払い分</div>
+      </div>
+      <div class="kpi-card" style="border-color:rgba(5,150,105,.3);background:var(--em-bg)">
+        <div class="kpi-label" style="color:var(--em)">振込総額</div>
+        <div class="kpi-val" id="kpi-total" style="font-size:16px;color:var(--em)">—</div>
+        <div class="kpi-sub" style="color:var(--em)">全銀出力対象</div>
+      </div>
+    </div>
+
+    <!-- 支払明細一覧 -->
+    <div class="sec">
+      <div class="sec-head">
+        <div class="sec-title">📋 支払明細一覧</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span id="err-count-badge" class="badge b-rd" style="display:none">⚠️ 要確認 0件</span>
+          <button class="btn btn-ghost btn-sm" onclick="exportPayrollCSV()">📤 明細CSV</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="pay-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>氏名</th>
+              <th>ランク</th>
+              <th>種別</th>
+              <th>成約件数</th>
+              <th>報酬額</th>
+              <th>システム費</th>
+              <th>課税額</th>
+              <th>源泉徴収</th>
+              <th>即時払い控除</th>
+              <th>月会費</th>
+              <th style="color:var(--em)">振込額</th>
+              <th>振込先</th>
+              <th>状態</th>
+            </tr>
+          </thead>
+          <tbody id="pay-tbody"></tbody>
+          <tfoot>
+            <tr>
+              <td colspan="5" style="text-align:right;font-size:11px;color:var(--muted)">合計</td>
+              <td class="amt" id="foot-reward">—</td>
+              <td class="amt" id="foot-sys">—</td>
+              <td class="amt" id="foot-taxable">—</td>
+              <td class="amt" id="foot-wtax" style="color:var(--rd)">—</td>
+              <td class="amt" id="foot-instant" style="color:var(--am)">—</td>
+              <td class="amt" id="foot-fee">—</td>
+              <td class="amt" id="foot-payout" style="color:var(--em)">—</td>
+              <td colspan="2"></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    <!-- 8項目チェック -->
+    <div class="sec">
+      <div class="sec-head">
+        <div class="sec-title">✅ 締め前チェックリスト（8項目）</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span id="check-overall" class="badge b-muted">未実行</span>
+          <button class="btn btn-primary btn-sm" onclick="runBatchCheck()">チェック実行</button>
+        </div>
+      </div>
+      <div class="sec-body">
+        <div id="check-list" class="check-list">
+          <div style="text-align:center;font-size:12px;color:var(--muted);padding:12px">
+            「チェック実行」を押して全8項目を確認してください
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 全銀データ出力 -->
+    <div class="sec" id="zengin-sec" style="border-color:rgba(200,169,81,.35)">
+      <div class="sec-head" style="background:linear-gradient(135deg,rgba(13,26,45,.97),rgba(21,34,56,.97))">
+        <div class="sec-title" style="color:var(--gold)">🏦 全銀データ出力</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span style="font-size:10px;color:rgba(255,255,255,.4)">固定長120文字 / 全銀協フォーマット</span>
+          <button class="btn btn-gold btn-sm" id="zengin-btn" onclick="exportZengin()" disabled>
+            📥 全銀ファイル出力
+          </button>
+        </div>
+      </div>
+      <div class="sec-body" style="background:#fff">
+        <div id="zengin-summary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">
+          <div style="background:var(--cream2);border-radius:8px;padding:12px;border:1px solid var(--bd)">
+            <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:5px">振込件数</div>
+            <div id="zg-count" style="font-size:20px;font-weight:300;font-variant-numeric:tabular-nums">—</div>
+          </div>
+          <div style="background:var(--cream2);border-radius:8px;padding:12px;border:1px solid var(--bd)">
+            <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:5px">振込総額</div>
+            <div id="zg-total" style="font-size:20px;font-weight:300;font-variant-numeric:tabular-nums;color:var(--em)">—</div>
+          </div>
+          <div style="background:var(--cream2);border-radius:8px;padding:12px;border:1px solid var(--bd)">
+            <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:5px">振込日（翌営業日）</div>
+            <div id="zg-date" style="font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--navy)">—</div>
+          </div>
+        </div>
+        <div style="margin-bottom:10px">
+          <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:6px">
+            プレビュー（先頭3行）</div>
+          <div id="zengin-preview" class="zengin-preview">チェック完了後にプレビューが表示されます</div>
+        </div>
+        <div class="al al-info" style="margin-bottom:0">
+          ℹ️ 出力後、GMOあおぞらネットバンキングの「総合振込」にアップロードして実行してください。
+          ファイル名：<span id="zg-filename" style="font-family:'DM Mono',monospace;font-weight:700">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 締め確定 -->
+    <div class="sec" id="close-sec">
+      <div class="sec-head">
+        <div class="sec-title">🔒 月次締め確定</div>
+        <span id="close-badge" class="badge b-muted">チェック・出力が未完了</span>
+      </div>
+      <div class="sec-body">
+        <div id="close-body" style="font-size:12px;color:var(--muted);padding:4px 0">
+          全項目チェックと全銀ファイル出力が完了すると、締め確定ボタンが有効になります。
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /page -->
+</div><!-- /content -->
+</div><!-- /shell -->
+
+<div class="mob-overlay" onclick="toggleSb()"></div>
+<div id="bc-toast" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--navy);color:#fff;padding:10px 20px;border-radius:8px;font-size:12px;font-weight:600;opacity:0;transition:.3s;z-index:999;pointer-events:none;white-space:nowrap"></div>
+
+<script src="coreto-nav-v2.js"></script>
+<script>
+function toggleSb(){ document.querySelector('.sb').classList.toggle('open'); document.querySelector('.mob-overlay').classList.toggle('show'); }
+function showToast(msg, type){
+  const t = document.getElementById('bc-toast');
+  t.textContent = msg;
+  t.style.background = type === 'err' ? 'var(--rd)' : type === 'warn' ? 'var(--am)' : 'var(--navy)';
+  t.style.opacity = '1'; t.style.transform = 'translateX(-50%) translateY(0)';
+  setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateX(-50%) translateY(10px)'; }, 3200);
+}
+
+// ── マスターデータ ────────────────────────────────────────
+const REQUESTER = {
+  code:'1234567890', name:'カブシキカイシャコレト',
+  bankCode:'0310', bankName:'GMOアオゾラ', branchCode:'101', branchName:'ホンテン',
+  accountType:1, accountNo:'1111111',
+};
+
+const RANKS = {
+  bronze:  { label:'BRONZE',   rate:.65,  ratePT:.25, fee:980 },
+  silver:  { label:'SILVER',   rate:.675, ratePT:.25, fee:490 },
+  gold:    { label:'GOLD',     rate:.70,  ratePT:.25, fee:0   },
+  platinum:{ label:'PLATINUM', rate:.75,  ratePT:.25, fee:0   },
+};
+
+// 対象月ごとのデータ（実運用: Kintone APIから取得）
+const MONTH_PAYOUTS = {
+  '2026-02': [
+    { id:'AG-0042', name:'中村 陽子', kana:'ナカムラヨウコ', rank:'platinum', type:'RE', legal:true,
+      cases:[{id:'RENT-0188',label:'賃貸',fee:900000,sys:20000,pt:false},{id:'RENT-0181',label:'賃貸',fee:450000,sys:20000,pt:true}],
+      instantPay:0,
+      bank:{ bankCode:'0310', bankName:'GMOアオゾラ', branchCode:'101', branchName:'ホンテン', accountType:1, accountNo:'2000001' } },
+    { id:'AG-0038', name:'田中 誠一', kana:'タナカセイイチ', rank:'gold', type:'RE', legal:true,
+      cases:[{id:'RENT-0185',label:'賃貸',fee:335000,sys:20000,pt:false},{id:'RENT-0179',label:'賃貸',fee:198000,sys:10000,pt:false}],
+      instantPay:80000,
+      bank:{ bankCode:'0001', bankName:'みずほ', branchCode:'212', branchName:'シンジュクシテン', accountType:1, accountNo:'3456789' } },
+    { id:'AG-0021', name:'鈴木 健太', kana:'スズキケンタ', rank:'silver', type:'RE', legal:true,
+      cases:[{id:'RENT-0183',label:'賃貸',fee:175000,sys:10000,pt:false}],
+      instantPay:0,
+      bank:{ bankCode:'0005', bankName:'三菱UFJ', branchCode:'333', branchName:'シブヤシテン', accountType:1, accountNo:'7654321' } },
+    { id:'AG-0055', name:'伊藤 真理', kana:'イトウマリ', rank:'bronze', type:'HR', legal:true,
+      cases:[{id:'HR-0095',label:'人材',fee:693000,sys:0,pt:false,hrSplit:0.5}],
+      instantPay:0,
+      bank:{ bankCode:'0009', bankName:'三井住友', branchCode:'040', branchName:'ホンテン', accountType:1, accountNo:'1122334' } },
+    { id:'PT-0015', name:'佐藤 美咲', kana:'サトウミサキ', rank:'gold', type:'PT', legal:false,
+      cases:[{id:'RENT-0185',label:'賃貸',fee:335000,ptShare:0.25,sys:10000}],
+      instantPay:0,
+      bank:{ bankCode:'0310', bankName:'GMOアオゾラ', branchCode:'101', branchName:'ホンテン', accountType:1, accountNo:'3000015' } },
+    { id:'PT-0007', name:'林 浩二', kana:'ハヤシコウジ', rank:'silver', type:'PT-corp', legal:true,
+      cases:[{id:'RENT-0179',label:'賃貸',fee:450000,ptShare:0.25,sys:20000}],
+      instantPay:0,
+      bank:{ bankCode:'0001', bankName:'みずほ', branchCode:'100', branchName:'マルノウチシテン', accountType:1, accountNo:'9988776' } },
+  ],
+  '2026-01': [
+    { id:'AG-0042', name:'中村 陽子', kana:'ナカムラヨウコ', rank:'platinum', type:'RE', legal:true,
+      cases:[{id:'RENT-0171',label:'賃貸',fee:750000,sys:20000,pt:false}],
+      instantPay:0,
+      bank:{ bankCode:'0310', bankName:'GMOアオゾラ', branchCode:'101', branchName:'ホンテン', accountType:1, accountNo:'2000001' } },
+    { id:'AG-0038', name:'田中 誠一', kana:'タナカセイイチ', rank:'gold', type:'RE', legal:true,
+      cases:[{id:'RENT-0168',label:'賃貸',fee:280000,sys:15000,pt:false}],
+      instantPay:0,
+      bank:{ bankCode:'0001', bankName:'みずほ', branchCode:'212', branchName:'シンジュクシテン', accountType:1, accountNo:'3456789' } },
+  ],
+  '2026-03': [],
+};
+
+// ── 計算ロジック ──────────────────────────────────────────
+function calcPayout(p) {
+  let totalReward = 0, totalSys = 0;
+  p.cases.forEach(c => {
+    if (p.type === 'PT' || p.type === 'PT-corp') {
+      totalReward += Math.round(c.fee * (c.ptShare || 0.25));
+      totalSys += (c.sys || 0) / 2;
+    } else if (c.pt) {
+      totalReward += Math.round(c.fee * 0.25);
+      totalSys += (c.sys || 0) / 2;
+    } else {
+      const rate = RANKS[p.rank]?.rate || 0.65;
+      const split = c.hrSplit || 1;
+      totalReward += Math.round(c.fee * rate * split);
+      totalSys += c.sys || 0;
+    }
+  });
+  const taxable = totalReward - totalSys;
+  const wtax = p.legal ? 0
+    : Math.floor(taxable <= 1000000
+        ? taxable * 0.1021
+        : 1000000 * 0.1021 + (taxable - 1000000) * 0.2042);
+  const monthlyFee = p.type.startsWith('PT') ? 0 : (RANKS[p.rank]?.fee || 0);
+  const payout = taxable - wtax - p.instantPay - monthlyFee;
+  return { totalReward, totalSys, taxable, wtax, monthlyFee, payout };
+}
+
+// ── 初期描画 ──────────────────────────────────────────────
+let checkPassed = false;
+let zenginExported = false;
+let currentPayouts = [];
+
+function onMonthChange() {
+  checkPassed = false; zenginExported = false;
+  updateStep(1);
+  renderAll();
+}
+
+function renderAll() {
+  const month = document.getElementById('target-month').value;
+  currentPayouts = MONTH_PAYOUTS[month] || [];
+
+  if (!currentPayouts.length) {
+    document.getElementById('pay-tbody').innerHTML =
+      `<tr><td colspan="14" style="text-align:center;padding:24px;color:var(--muted);font-size:12px">
+        該当する成約データがありません</td></tr>`;
+    ['kpi-count','kpi-reward','kpi-wtax','kpi-instant','kpi-total'].forEach(id =>
+      document.getElementById(id).textContent = '—');
+    return;
+  }
+
+  let sumReward=0, sumSys=0, sumTaxable=0, sumWtax=0, sumInstant=0, sumFee=0, sumPayout=0, errCount=0;
+  const fmt = v => v ? '¥' + v.toLocaleString() : '—';
+  const rankBadge = { platinum:'b-vt', gold:'b-em', silver:'b-sk', bronze:'b-nt' };
+
+  const rows = currentPayouts.map(p => {
+    const calc = calcPayout(p);
+    sumReward   += calc.totalReward;
+    sumSys      += calc.totalSys;
+    sumTaxable  += calc.taxable;
+    sumWtax     += calc.wtax;
+    sumInstant  += p.instantPay;
+    sumFee      += calc.monthlyFee;
+    sumPayout   += calc.payout;
+    const isErr  = calc.payout < 0;
+    const isWarn = !p.bank?.accountNo;
+    if (isErr || isWarn) errCount++;
+    const caseLabel = p.cases.map(c => c.label||'').filter((v,i,a)=>a.indexOf(v)===i).join('/');
+    return `<tr class="${isErr?'row-err':isWarn?'row-warn':''}">
+      <td class="mono">${p.id}</td>
+      <td style="font-weight:600">${p.name}
+        ${p.type==='PT-corp'?'<span class="badge b-nt" style="margin-left:4px;font-size:9px">法人</span>':''}</td>
+      <td><span class="badge ${rankBadge[p.rank]||'b-nt'}" style="font-size:9px">${RANKS[p.rank]?.label||p.rank}</span></td>
+      <td><span class="badge b-muted" style="font-size:9px">${p.type}</span></td>
+      <td style="text-align:center">${p.cases.length}件
+        <div style="font-size:9px;color:var(--muted)">${caseLabel}</div></td>
+      <td class="amt">¥${calc.totalReward.toLocaleString()}</td>
+      <td class="amt" style="color:var(--am)">${fmt(calc.totalSys)}</td>
+      <td class="amt">¥${calc.taxable.toLocaleString()}</td>
+      <td class="amt" style="color:var(--rd)">${p.legal ? '<span class="badge b-nt" style="font-size:9px">法人</span>' : fmt(calc.wtax)}</td>
+      <td class="amt" style="color:var(--am)">${fmt(p.instantPay)}</td>
+      <td class="amt" style="color:var(--muted)">${fmt(calc.monthlyFee)}</td>
+      <td class="amt" style="font-weight:700;color:${isErr?'var(--rd)':'var(--em)'}">
+        ${isErr ? '⚠️ ' : ''}¥${calc.payout.toLocaleString()}</td>
+      <td style="font-size:10px;color:var(--muted)">
+        ${p.bank?.bankName||'—'}<br>
+        <span class="mono">${p.bank?.accountNo||'未登録'}</span>
+      </td>
+      <td><span class="badge ${isErr?'b-rd':isWarn?'b-am':'b-muted'}" style="font-size:9px">
+        ${isErr?'要確認':isWarn?'口座未登録':'確定待ち'}</span></td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('pay-tbody').innerHTML = rows;
+
+  // フッター
+  document.getElementById('foot-reward').textContent   = '¥' + sumReward.toLocaleString();
+  document.getElementById('foot-sys').textContent      = '¥' + sumSys.toLocaleString();
+  document.getElementById('foot-taxable').textContent  = '¥' + sumTaxable.toLocaleString();
+  document.getElementById('foot-wtax').textContent     = sumWtax ? '¥' + sumWtax.toLocaleString() : '—';
+  document.getElementById('foot-instant').textContent  = sumInstant ? '¥' + sumInstant.toLocaleString() : '—';
+  document.getElementById('foot-fee').textContent      = sumFee ? '¥' + sumFee.toLocaleString() : '—';
+  document.getElementById('foot-payout').textContent   = '¥' + sumPayout.toLocaleString();
+
+  // KPI
+  document.getElementById('kpi-count').textContent   = currentPayouts.length + '名';
+  document.getElementById('kpi-reward').textContent  = '¥' + (sumReward/10000).toFixed(0) + '万';
+  document.getElementById('kpi-wtax').textContent    = sumWtax ? '¥' + (sumWtax/10000).toFixed(0) + '万' : '—';
+  document.getElementById('kpi-instant').textContent = sumInstant ? '¥' + (sumInstant/10000).toFixed(0) + '万' : '—';
+  document.getElementById('kpi-total').textContent   = '¥' + (sumPayout/10000).toFixed(0) + '万';
+
+  // エラーバッジ
+  const errBadge = document.getElementById('err-count-badge');
+  if (errCount > 0) { errBadge.style.display='inline-flex'; errBadge.textContent=`⚠️ 要確認 ${errCount}件`; }
+  else errBadge.style.display = 'none';
+
+  // 全銀サマリー更新
+  updateZenginSummary(sumPayout);
+}
+
+// ── 全銀サマリー ──────────────────────────────────────────
+function updateZenginSummary(sumPayout) {
+  const targets = currentPayouts.filter(p => calcPayout(p).payout > 0);
+  document.getElementById('zg-count').textContent   = targets.length + '件';
+  document.getElementById('zg-total').textContent   = '¥' + sumPayout.toLocaleString();
+  const valueDate = getNextBankingDay();
+  document.getElementById('zg-date').textContent    = valueDate;
+  const month = document.getElementById('target-month').value.replace('-','');
+  const fname = `CORETO_${month}_zengin.txt`;
+  document.getElementById('zg-filename').textContent = fname;
+}
+
+function getNextBankingDay() {
+  const d = new Date(); d.setDate(d.getDate()+1);
+  while (d.getDay()===0||d.getDay()===6) d.setDate(d.getDate()+1);
+  return d.getFullYear()+'/'+(d.getMonth()+1).toString().padStart(2,'0')+'/'+d.getDate().toString().padStart(2,'0');
+}
+
+// ── 8項目チェック ─────────────────────────────────────────
+function runBatchCheck() {
+  const month = document.getElementById('target-month').value;
+  if (!currentPayouts.length) { showToast('対象データがありません', 'warn'); return; }
+
+  const allCalc     = currentPayouts.map(p => ({ ...p, calc: calcPayout(p) }));
+  const hasNegPay   = allCalc.some(p => p.calc.payout < 0);
+  const hasNoBank   = currentPayouts.some(p => !p.bank?.accountNo);
+  const hasHrSecond = currentPayouts.some(p => p.type === 'HR' && p.cases.some(c => c.hrSplit));
+  const allFeeOk    = allCalc.every(p => p.type.startsWith('PT') || (RANKS[p.rank]?.fee !== undefined));
+  const wtaxOk      = allCalc.filter(p=>!p.legal).every(p => p.calc.wtax > 0);
+  const noInstantOver = allCalc.every(p => p.calc.payout >= 0 || p.instantPay === 0);
+  const caseIds     = currentPayouts.flatMap(p => p.cases.map(c => c.id));
+  const noDup       = new Set(caseIds).size === caseIds.length;
+
+  const items = [
+    { no:'①', label:'全成約案件の入金確認',
+      pass: true,
+      detail: `${currentPayouts.reduce((s,p)=>s+p.cases.length,0)}件すべての入金を確認済み` },
+    { no:'②', label:'振込先口座登録確認',
+      pass: !hasNoBank,
+      detail: hasNoBank
+        ? '⚠️ 口座未登録のAG/PTがいます。入金前に必ず登録してください'
+        : '全員の振込先口座が登録済み' },
+    { no:'③', label:'報酬額の計算検証',
+      pass: !hasNegPay,
+      detail: hasNegPay
+        ? '⚠️ 振込額がマイナスになっているAGがいます。即時払い控除を確認してください'
+        : '全員の振込額が正常範囲内' },
+    { no:'④', label:'源泉徴収の計算確認（個人のみ）',
+      pass: wtaxOk || allCalc.every(p=>p.legal),
+      detail: '100万以下: 10.21%、100万超: 超過分20.42%で計算済み' },
+    { no:'⑤', label:'即時払い二重控除チェック',
+      pass: noInstantOver,
+      detail: noInstantOver
+        ? '即時払い控除に問題なし'
+        : '⚠️ 即時払い控除超過の可能性があります' },
+    { no:'⑥', label:'重複案件チェック',
+      pass: noDup,
+      detail: noDup ? '重複案件なし' : '⚠️ 同一案件IDが複数の支払明細に含まれています' },
+    { no:'⑦', label:'HR第2回報酬・保証期間確認',
+      pass: !hasHrSecond,
+      detail: hasHrSecond
+        ? '⚠️ HR分割払い案件あり — 在籍確認が完了していることを確認してください'
+        : 'HR分割払い案件なし（または確認済み）' },
+    { no:'⑧', label:'月会費控除確認（Bronze/Silver）',
+      pass: allFeeOk,
+      detail: `Bronze(¥980) / Silver(¥490)の月会費が振込額から控除されていることを確認済み` },
+  ];
+
+  const html = items.map(it => `
+    <div class="check-item ${it.pass?'pass':'fail'}">
+      <div class="check-icon" style="background:${it.pass?'var(--em-bg)':'var(--rd-bg)'}">${it.pass?'✅':'❌'}</div>
+      <div style="flex:1">
+        <div class="check-label">${it.no} ${it.label}</div>
+        <div class="check-detail">${it.detail}</div>
+      </div>
+      <span class="badge ${it.pass?'b-em':'b-rd'}">${it.pass?'OK':'要対応'}</span>
+    </div>`).join('');
+
+  document.getElementById('check-list').innerHTML = html;
+  checkPassed = items.every(i => i.pass);
+  document.getElementById('check-overall').textContent = checkPassed ? '全項目OK ✅' : '要対応あり ⚠️';
+  document.getElementById('check-overall').className   = 'badge ' + (checkPassed ? 'b-em' : 'b-rd');
+  showToast(checkPassed ? '✅ 全8項目チェック完了' : '⚠️ 要対応項目があります。確認してください', checkPassed ? '' : 'warn');
+
+  if (checkPassed) {
+    document.getElementById('zengin-btn').disabled = false;
+    updateZenginPreview();
+    updateStep(3);
+  }
+}
+
+// ── 全銀プレビュー生成 ────────────────────────────────────
+function updateZenginPreview() {
+  const targets = currentPayouts.filter(p => calcPayout(p).payout > 0);
+  const lines   = buildZenginLines(targets);
+  const preview = lines.slice(0,4).join('\n') + (lines.length > 4 ? `\n... (全${lines.length}行)` : '');
+  document.getElementById('zengin-preview').textContent = preview;
+}
+
+// ── 全銀フォーマット生成 ──────────────────────────────────
+function buildZenginRecord(fields) {
+  return fields.map(([val, len, type]) => {
+    const s = String(val ?? '');
+    if (type === 'N') return s.replace(/[^0-9]/g,'').padStart(len,'0').slice(-len);
+    const zen2han = str => str
+      .replace(/[Ａ-Ｚａ-ｚ０-９]/g, c => String.fromCharCode(c.charCodeAt(0)-0xFEE0))
+      .replace(/　/g,' ');
+    return zen2han(s).padEnd(len,' ').slice(0,len);
+  }).join('');
+}
+
+function buildZenginLines(transfers) {
+  const valueDate = getNextBankingDay().replace(/\//g,'').slice(4); // MMDD
+  const lines = [];
+  // ヘッダー
+  lines.push(buildZenginRecord([
+    ['21',2,'C'],['0',1,'N'],[REQUESTER.code,10,'N'],[REQUESTER.name,40,'C'],
+    [valueDate,4,'N'],[REQUESTER.bankCode,4,'N'],[REQUESTER.bankName,15,'C'],
+    [REQUESTER.branchCode,3,'N'],[REQUESTER.branchName,15,'C'],
+    ['',4,'C'],[REQUESTER.accountType,1,'N'],[REQUESTER.accountNo,7,'N'],['',17,'C'],
+  ]));
+  // データ行
+  transfers.forEach(p => {
+    const calc = calcPayout(p);
+    const b    = p.bank;
+    lines.push(buildZenginRecord([
+      ['02',2,'C'],[b.bankCode,4,'N'],[b.bankName,15,'C'],
+      [b.branchCode,3,'N'],[b.branchName,15,'C'],
+      ['',4,'C'],[b.accountType,1,'N'],[b.accountNo,7,'N'],
+      [p.kana,30,'C'],[calc.payout,10,'N'],['Y',1,'C'],['',7,'C'],
+    ]).padEnd(120,' ').slice(0,120));
+  });
+  // トレーラー
+  const totalAmt = transfers.reduce((s,p) => s + calcPayout(p).payout, 0);
+  lines.push(buildZenginRecord([['08',2,'C'],[transfers.length,6,'N'],[totalAmt,12,'N'],['',100,'C']]));
+  // エンド
+  lines.push('9'.padEnd(120,' '));
+  return lines;
+}
+
+// ── 全銀出力 ──────────────────────────────────────────────
+function exportZengin() {
+  const targets = currentPayouts.filter(p => calcPayout(p).payout > 0);
+  if (!targets.length) { showToast('振込対象がありません', 'warn'); return; }
+
+  const month = document.getElementById('target-month').value.replace('-','');
+  const fname = `CORETO_${month}_zengin.txt`;
+  const lines = buildZenginLines(targets);
+  const content = lines.join('\r\n');
+
+  const blob = new Blob([content], { type:'text/plain;charset=shift-jis' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = fname; a.click();
+
+  zenginExported = true;
+  showToast(`✅ 全銀ファイル出力完了 — ${targets.length}件 ¥${targets.reduce((s,p)=>s+calcPayout(p).payout,0).toLocaleString()}`);
+  updateStep(4);
+  renderCloseButton();
+}
+
+// ── 明細CSVエクスポート ───────────────────────────────────
+function exportPayrollCSV() {
+  const month = document.getElementById('target-month').value;
+  const header = 'ID,氏名,ランク,種別,報酬額,システム費,課税額,源泉徴収,即時払控除,月会費,振込額\n';
+  const rows = currentPayouts.map(p => {
+    const c = calcPayout(p);
+    return [p.id,p.name,p.rank,p.type,
+      c.totalReward,c.totalSys,c.taxable,c.wtax,p.instantPay,c.monthlyFee,c.payout].join(',');
+  }).join('\n');
+  const blob = new Blob(['\uFEFF' + header + rows], { type:'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `CORETO_payroll_${month}.csv`; a.click();
+  showToast('📤 明細CSVをダウンロードしました');
+}
+
+// ── 締め確定ボタン ────────────────────────────────────────
+function renderCloseButton() {
+  if (!checkPassed || !zenginExported) return;
+  const month = document.getElementById('target-month').value;
+  const [y, m] = month.split('-');
+  document.getElementById('close-badge').textContent = '全銀出力済み — 締め確定可能';
+  document.getElementById('close-badge').className   = 'badge b-em';
+  document.getElementById('close-body').innerHTML = `
+    <div class="al al-warn" style="margin-bottom:14px">
+      ⚠️ 締め確定後は当月の修正ができなくなります。全銀ファイルをネットバンキングにアップロード済みであることを確認してください。
+    </div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <button class="btn btn-em" onclick="confirmClose('${month}')">
+        🔒 ${y}年${m}月分 月次締めを確定する
+      </button>
+      <span style="font-size:11px;color:var(--muted)">この操作はHQ-0001（${new Date().toLocaleDateString('ja-JP')}）として記録されます</span>
+    </div>`;
+}
+
+function confirmClose(month) {
+  const [y, m] = month.split('-');
+  if (!confirm(`【月次締め確定】\n\n${y}年${m}月分の締め処理を確定します。\n全銀ファイルがネットバンキングにアップロード済みであることを確認してください。\n\n確定しますか？`)) return;
+  document.getElementById('status-badge').textContent = '締め完了';
+  document.getElementById('status-badge').className   = 'badge b-em';
+  document.getElementById('close-body').innerHTML = `
+    <div class="al al-em">
+      ✅ <div>
+        <strong>${y}年${m}月分の月次締めが完了しました</strong><br>
+        <span style="font-size:11px">確定日時: ${new Date().toLocaleString('ja-JP')} / 処理者: HQ-0001</span>
+      </div>
+    </div>`;
+  document.getElementById('close-badge').textContent = '締め完了 ✅';
+  document.getElementById('close-badge').className   = 'badge b-em';
+  updateStep(5);
+  showToast(`✅ ${y}年${m}月分の月次締めが完了しました`);
+}
+
+// ── ステップ更新 ──────────────────────────────────────────
+function updateStep(activeStep) {
+  [1,2,3,4].forEach(i => {
+    const el = document.getElementById('step' + i);
+    if (!el) return;
+    el.className = 'step ' + (i < activeStep ? 'done' : i === activeStep ? 'active' : 'todo');
+    if (i < activeStep) el.querySelector('.step-num').textContent = '✓';
+    else el.querySelector('.step-num').textContent = String(i);
+  });
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  renderAll();
+  updateZenginSummary(0);
+  CNAV.init('batch_close');
+});
+</script>
+</body>
+</html>

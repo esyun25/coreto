@@ -88,6 +88,7 @@ const NAV = {
     ]},
     { section:'財務・報酬', items:[
       { icon:'💴', label:'月次報酬確定・振込',       href:'coreto-payroll-v2.html',      key:'payroll' },
+      { icon:'🏦', label:'月次締め・全銀出力',       href:'coreto-batch-close-v2.html',  key:'batch_close' },
       { icon:'📋', label:'月次報酬レポート',         href:'coreto-monthly-report-v2.html',key:'monthly_report' },
       { icon:'🧾', label:'請求書・領収書発行',       href:'coreto-hq-receipt-v2.html',   key:'receipt' },
       { icon:'⚠️', label:'早期退職アラート',         href:'coreto-early-quit-v2.html',    key:'early_quit' },
