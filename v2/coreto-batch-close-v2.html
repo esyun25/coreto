@@ -256,6 +256,7 @@ html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:
             「チェック実行」を押して全8項目を確認してください
           </div>
         </div>
+        <div id="check-cta"></div>
       </div>
     </div>
 
@@ -664,12 +665,46 @@ function runBatchCheck() {
   checkPassed = items.every(i => i.pass || i.no === '⑦'); // ⑦は警告扱い（締め処理はブロックしない）
   document.getElementById('check-overall').textContent = checkPassed ? '全項目OK ✅' : '要対応あり ⚠️';
   document.getElementById('check-overall').className   = 'badge ' + (checkPassed ? 'b-em' : 'b-rd');
-  showToast(checkPassed ? '✅ 全8項目チェック完了' : '⚠️ 要対応項目があります。確認してください', checkPassed ? '' : 'warn');
 
+  // チェック結果の下にCTAを表示
+  const ctaEl = document.getElementById('check-cta');
   if (checkPassed) {
+    ctaEl.innerHTML = `
+      <div style="margin-top:16px;padding:14px 16px;background:var(--em-bg);
+        border:1px solid rgba(5,150,105,.25);border-radius:9px;
+        display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--em)">✅ 全チェック完了</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">
+            全銀ファイルを出力して振込処理に進んでください</div>
+        </div>
+        <button class="btn btn-gold" onclick="scrollToZengin()"
+          style="white-space:nowrap;flex-shrink:0">
+          次へ：全銀ファイル出力 →
+        </button>
+      </div>`;
     document.getElementById('zengin-btn').disabled = false;
     updateZenginPreview();
     updateStep(3);
+    showToast('✅ 全8項目チェック完了 — 全銀ファイルを出力してください');
+  } else {
+    const errCount = items.filter(i => !i.pass && i.no !== '⑦').length;
+    ctaEl.innerHTML = `
+      <div style="margin-top:16px;padding:14px 16px;background:var(--rd-bg);
+        border:1px solid rgba(220,38,38,.2);border-radius:9px;
+        display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--rd)">
+            ❌ 要対応 ${errCount}件</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">
+            上記のエラーを修正してから再チェックしてください</div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="runBatchCheck()"
+          style="white-space:nowrap;flex-shrink:0">
+          🔄 再チェック
+        </button>
+      </div>`;
+    showToast('⚠️ 要対応項目があります。確認してください', 'warn');
   }
 }
 
@@ -722,6 +757,10 @@ function buildZenginLines(transfers) {
   return lines;
 }
 
+function scrollToZengin() {
+  document.getElementById('zengin-sec').scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
 // ── 全銀出力 ──────────────────────────────────────────────
 function exportZengin() {
   const targets = currentPayouts.filter(p => calcPayout(p).payout > 0);
@@ -741,6 +780,24 @@ function exportZengin() {
   showToast(`✅ 全銀ファイル出力完了 — ${targets.length}件 ¥${targets.reduce((s,p)=>s+calcPayout(p).payout,0).toLocaleString()}`);
   updateStep(4);
   renderCloseButton();
+
+  // 全銀セクション内にも「次へ」CTAを表示
+  const zenginCta = document.createElement('div');
+  zenginCta.style.cssText = 'margin-top:14px';
+  zenginCta.innerHTML = `
+    <div style="padding:14px 16px;background:var(--em-bg);
+      border:1px solid rgba(5,150,105,.25);border-radius:9px;
+      display:flex;align-items:center;justify-content:space-between;gap:12px">
+      <div>
+        <div style="font-size:12px;font-weight:700;color:var(--em)">✅ 全銀ファイル出力完了</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">
+          ネットバンキングにアップロード後、月次締めを確定してください</div>
+      </div>
+      <button class="btn btn-primary" onclick="scrollToClose()" style="white-space:nowrap;flex-shrink:0">
+        次へ：月次締め確定 →
+      </button>
+    </div>`;
+  document.getElementById('zengin-sec').querySelector('.sec-body').appendChild(zenginCta);
 }
 
 // ── 明細CSVエクスポート ───────────────────────────────────
@@ -760,6 +817,10 @@ function exportPayrollCSV() {
 }
 
 // ── 締め確定ボタン ────────────────────────────────────────
+function scrollToClose() {
+  document.getElementById('close-sec').scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
 function renderCloseButton() {
   if (!checkPassed || !zenginExported) return;
   const month = document.getElementById('target-month').value;
