@@ -893,15 +893,20 @@ async function invRunCheck(){
         <div style="font-size:24px;margin-bottom:8px">❌</div>
         <div style="font-size:12px;font-weight:700;color:#DC2626">照合に失敗しました</div>
         <div style="font-size:10px;color:#5F6368;margin-top:4px">
-          ファイルを確認して再度アップロードしてください</div>
+          もう一度アップロードしてください</div>
       </div>`;
   }
-  // AG側には完了メッセージのみ表示（結果詳細はHQへ）
-  if(bar){ bar.textContent = result.hasNg
-    ? '⚠️ アップロード完了 — 不一致を検出しました。HQが確認します。'
-    : '✅ アップロード完了 — 照合問題なし';
-    bar.style.background = result.hasNg ? '#FEF2F2' : '#ECFDF5';
-    bar.style.color      = result.hasNg ? '#DC2626'  : '#059669'; }
+  if(bar){
+    const unreadable2 = (result.confidence < 0.3) ||
+      (result.rows.filter(r => r.isNull).length >= 4);
+    if(unreadable2){
+      bar.textContent = '📄 画像が不鮮明です。再度アップロードしてください';
+      bar.style.background='#FFFBEB'; bar.style.color='#D97706';
+    } else {
+      bar.textContent = '✅ アップロード完了';
+      bar.style.background='#ECFDF5'; bar.style.color='#059669';
+    }
+  }
   _invRunning = false;
 }
 
@@ -1026,24 +1031,36 @@ function invRenderResult(result, ag){
   const conf = Math.round((result.confidence||0)*100);
   const confColor = conf>=85?'#059669':conf>=60?'#D97706':'#DC2626';
 
-  // AG側には結果詳細を表示しない（HQのみ確認）
-  document.getElementById('inv-result-panel').innerHTML = result.hasNg
-    ? `<div style="background:#FEF2F2;border:1.5px solid rgba(220,38,38,.2);
+  // 読み取り不能判定（信頼度30%未満 または 主要項目が全てnull）
+  const unreadable = (result.confidence < 0.3) ||
+    (result.rows.filter(r => r.isNull).length >= 4);
+
+  document.getElementById('inv-result-panel').innerHTML = unreadable
+    ? `<div style="background:#FFFBEB;border:1.5px solid rgba(217,119,6,.25);
         border-radius:10px;padding:28px;text-align:center">
-        <div style="font-size:32px;margin-bottom:10px">⚠️</div>
-        <div style="font-size:13px;font-weight:800;color:#DC2626;margin-bottom:6px">
-          アップロード完了</div>
-        <div style="font-size:11px;color:#5F6368;line-height:1.7">
-          HQが内容を確認します。<br>確認が取れるまで送金を保留してください。</div>
+        <div style="font-size:32px;margin-bottom:10px">📄</div>
+        <div style="font-size:13px;font-weight:800;color:#D97706;margin-bottom:8px">
+          明細を再度アップロードしてください</div>
+        <div style="font-size:11px;color:#5F6368;line-height:1.8">
+          画像が不鮮明で読み取れませんでした。<br>
+          以下を確認して再度アップロードしてください。<br>
+          <span style="display:inline-block;margin-top:6px;text-align:left">
+            ・明細全体が画角に収まっているか<br>
+            ・文字がぼけていないか<br>
+            ・逆光・影が入っていないか
+          </span>
+        </div>
       </div>`
     : `<div style="background:#ECFDF5;border:1.5px solid rgba(5,150,105,.2);
         border-radius:10px;padding:28px;text-align:center">
         <div style="font-size:32px;margin-bottom:10px">✅</div>
         <div style="font-size:13px;font-weight:800;color:#059669;margin-bottom:6px">
           アップロード完了</div>
-        <div style="font-size:11px;color:#5F6368;line-height:1.7">
-          明細を受け付けました。<br>送金処理を進めてください。</div>
+        <div style="font-size:11px;color:#5F6368">
+          HQが送金処理を行います。</div>
       </div>`;
+  // 読み取り不能の場合はHQ通知せず、_invRunningをリセットしてre-uploadを許可
+  if(unreadable){ _invBase64=null; _invMime=null; return; }
 }
 
 // ── Slack通知シミュレーション ──────────────────────────────
