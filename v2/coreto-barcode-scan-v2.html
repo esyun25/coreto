@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>書類バーコード追跡 — COREBLDG</title>
+<title>書類郵送フロー管理 — COREBLDG</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script>
 <style>
@@ -398,59 +398,60 @@ body, input, select, textarea, button {
 
 
 /* ── ページ固有 ── */
-.tab-bar{display:flex;gap:0;border-bottom:2px solid var(--bd);margin-bottom:24px}
-.tab-btn{padding:10px 20px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;
-  border:none;background:none;border-bottom:2px solid transparent;margin-bottom:-2px;transition:.15s}
+.tab-bar{display:flex;gap:0;border-bottom:2px solid var(--bd);margin-bottom:24px;overflow-x:auto}
+.tab-btn{padding:10px 18px;font-size:11px;font-weight:600;color:var(--muted);cursor:pointer;
+  border:none;background:none;border-bottom:2px solid transparent;margin-bottom:-2px;
+  transition:.15s;white-space:nowrap}
 .tab-btn.active{color:var(--navy);border-bottom-color:var(--navy)}
 
-/* 書類カード */
-.doc-card{background:#fff;border:1px solid var(--bd);border-radius:12px;
-  padding:18px 20px;margin-bottom:12px;transition:.15s}
-.doc-card:hover{box-shadow:var(--sh2)}
-.doc-card.done{opacity:.6;border-color:var(--bd2)}
+/* フローステップ */
+.flow-steps{display:flex;align-items:flex-start;gap:0;overflow-x:auto;
+  padding:16px 0 12px;margin-bottom:16px}
+.flow-step{display:flex;flex-direction:column;align-items:center;min-width:80px;flex-shrink:0}
+.flow-step-dot{width:32px;height:32px;border-radius:50%;border:2px solid var(--bd2);
+  background:#fff;display:flex;align-items:center;justify-content:center;
+  font-size:13px;position:relative;z-index:1;flex-shrink:0;transition:.2s}
+.flow-step-dot.done{background:var(--em);border-color:var(--em);color:#fff}
+.flow-step-dot.active{background:var(--navy);border-color:var(--navy);color:var(--gold)}
+.flow-step-dot.warn{background:var(--am);border-color:var(--am);color:#fff}
+.flow-step-dot.ai{background:#6D28D9;border-color:#6D28D9;color:#fff}
+.flow-step-lbl{font-size:8px;color:var(--muted);margin-top:5px;text-align:center;
+  line-height:1.4;font-weight:600;max-width:72px}
+.flow-step-lbl.active{color:var(--navy);font-weight:700}
+.flow-step-lbl.done{color:var(--em)}
+.flow-step-ts{font-size:7px;color:var(--faint);margin-top:2px;text-align:center}
+.flow-line{flex:1;height:2px;background:var(--bd2);min-width:16px;
+  margin-bottom:28px;transition:.3s}
+.flow-line.done{background:var(--em)}
 
-.doc-head{display:flex;align-items:flex-start;gap:14px;margin-bottom:14px}
-.doc-icon{width:42px;height:42px;border-radius:10px;background:var(--navy);
-  color:var(--gold);display:flex;align-items:center;justify-content:center;
-  font-size:18px;flex-shrink:0}
+/* 書類カード */
+.doc-card{background:#fff;border:1.5px solid var(--bd);border-radius:12px;
+  margin-bottom:12px;overflow:hidden;transition:.15s}
+.doc-card:hover{box-shadow:var(--sh2)}
+.doc-card.flow-a{border-left:4px solid var(--navy)}
+.doc-card.flow-b{border-left:4px solid #6D28D9}
+.doc-card.flow-c{border-left:4px solid var(--em)}
+.doc-card.flow-d{border-left:4px solid var(--rd)}
+.doc-card.complete{opacity:.55;border-left-color:var(--bd2)}
+
+.doc-card-head{padding:14px 16px;display:flex;align-items:center;gap:12px;
+  border-bottom:1px solid var(--bd)}
 .doc-case-id{font-family:'DM Mono',monospace;font-size:13px;font-weight:700;color:var(--navy)}
-.doc-name{font-size:11px;color:var(--muted);margin-top:2px}
-.doc-registered{font-size:10px;color:var(--faint);margin-top:1px}
+.doc-meta{font-size:10px;color:var(--muted);margin-top:2px}
+.doc-card-body{padding:14px 16px}
 
 /* バッジ */
 .badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;
   font-size:9px;font-weight:700;letter-spacing:.4px}
-.badge-transit{background:#EFF6FF;color:#1D4ED8}
-.badge-delivered{background:var(--em-bg);color:var(--em)}
-.badge-returned{background:#EDE9FE;color:#5B21B6}
-.badge-completed{background:var(--em-bg);color:var(--em)}
+.badge-flowA{background:rgba(13,26,45,.1);color:var(--navy)}
+.badge-flowB{background:#EDE9FE;color:#5B21B6}
+.badge-flowC{background:var(--em-bg);color:var(--em)}
+.badge-flowD{background:var(--rd-bg);color:var(--rd)}
 .badge-pending{background:var(--am-bg);color:var(--am)}
+.badge-ok{background:var(--em-bg);color:var(--em)}
+.badge-ai{background:#EDE9FE;color:#5B21B6}
 .badge-waiting{background:#F3F4F6;color:#6B7280}
-.badge-type{background:rgba(13,26,45,.08);color:var(--navy)}
-
-/* 追跡ステップ */
-.track-steps{display:flex;align-items:center;gap:0;margin:12px 0;overflow-x:auto;padding-bottom:4px}
-.track-step{display:flex;flex-direction:column;align-items:center;min-width:72px}
-.track-step-dot{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;
-  justify-content:center;font-size:12px;border:2px solid var(--bd2);background:#fff;
-  position:relative;z-index:1;flex-shrink:0}
-.track-step-dot.done{background:var(--em);border-color:var(--em);color:#fff}
-.track-step-dot.active{background:var(--navy);border-color:var(--navy);color:var(--gold)}
-.track-step-dot.error{background:var(--rd);border-color:var(--rd);color:#fff}
-.track-step-label{font-size:9px;color:var(--muted);margin-top:4px;text-align:center;
-  white-space:nowrap;font-weight:600}
-.track-step-label.done{color:var(--em)}
-.track-step-label.active{color:var(--navy);font-weight:700}
-.track-line{flex:1;height:2px;background:var(--bd2);min-width:20px;margin:0 -1px;
-  margin-bottom:18px}
-.track-line.done{background:var(--em)}
-
-/* 追跡番号フィールド */
-.track-no-field{display:flex;align-items:center;gap:8px;padding:10px 12px;
-  background:#F8F9FA;border-radius:8px;margin-bottom:8px}
-.track-no-label{font-size:9px;font-weight:700;color:var(--muted);white-space:nowrap}
-.track-no-val{font-family:'DM Mono',monospace;font-size:12px;font-weight:700;color:var(--navy);flex:1}
-.track-no-status{font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px}
+.badge-done{background:var(--em-bg);color:var(--em)}
 
 /* アクションボタン */
 .act-btn{padding:7px 14px;border-radius:8px;font-size:11px;font-weight:700;
@@ -459,62 +460,87 @@ body, input, select, textarea, button {
 .act-primary:hover{background:var(--navy-l)}
 .act-em{background:var(--em);color:#fff}
 .act-em:hover{opacity:.85}
+.act-warn{background:var(--am);color:#fff}
+.act-danger{background:var(--rd);color:#fff}
 .act-ghost{background:transparent;border:1px solid var(--bd);color:var(--muted)}
-.act-ghost:hover{color:var(--ink);border-color:var(--bd2)}
-.act-print{background:#6D28D9;color:#fff}
+.act-ghost:hover{color:var(--ink)}
+.act-ai{background:#6D28D9;color:#fff}
+.act-print{background:#0F766E;color:#fff}
 
-/* 登録フォーム */
-.form-card{background:#fff;border:1px solid var(--bd);border-radius:12px;padding:24px;margin-bottom:20px}
-.form-card-title{font-size:14px;font-weight:700;color:var(--navy);margin-bottom:18px;
-  display:flex;align-items:center;gap:8px}
-.form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:14px}
-@media(max-width:600px){.form-row{grid-template-columns:1fr}}
-.form-field{display:flex;flex-direction:column;gap:5px}
-.form-label{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.4px}
-.form-inp{padding:9px 12px;border:1.5px solid var(--bd);border-radius:8px;
-  font-family:'Outfit',sans-serif;font-size:12px;color:var(--ink);outline:none;transition:.15s}
-.form-inp:focus{border-color:var(--navy)}
-.form-select{padding:9px 12px;border:1.5px solid var(--bd);border-radius:8px;
-  font-family:'Outfit',sans-serif;font-size:12px;color:var(--ink);
-  background:#fff;outline:none;cursor:pointer;transition:.15s}
-.form-select:focus{border-color:var(--navy)}
-.req{color:var(--rd)}
+/* AIパネル */
+.ai-panel{background:linear-gradient(135deg,#1a0f40,#2d1b69);border-radius:10px;
+  padding:16px;margin:12px 0}
+.ai-result{background:rgba(255,255,255,.08);border-radius:8px;padding:12px;margin-top:10px}
+.ai-label{font-size:9px;font-weight:700;color:rgba(255,255,255,.5);letter-spacing:.5px;margin-bottom:4px}
+.ai-val{font-size:13px;font-weight:700;color:#C4B5FD}
+.ai-conf{font-size:10px;color:rgba(255,255,255,.6);margin-top:4px}
 
-/* バーコード印刷エリア */
-.bc-print-area{background:var(--navy);border-radius:12px;padding:20px;text-align:center;
-  margin:16px 0}
-.bc-title-text{font-size:10px;color:rgba(255,255,255,.6);margin-bottom:12px;font-weight:600;letter-spacing:.5px}
-.bc-svg-wrap{background:#fff;border-radius:8px;padding:16px;display:inline-block;margin-bottom:12px}
+/* スキャン入力 */
+.scan-area{background:var(--navy);border-radius:12px;padding:20px;text-align:center;
+  cursor:pointer;transition:.15s;border:2px dashed rgba(200,169,81,.4)}
+.scan-area:hover{border-color:var(--gold);background:var(--navy-m)}
+.scan-icon{font-size:32px;margin-bottom:8px}
+.scan-text{font-size:12px;color:rgba(255,255,255,.7);font-weight:600}
+.scan-sub{font-size:10px;color:rgba(255,255,255,.4);margin-top:4px}
+
+/* スキャン入力フォーム */
+.scan-input-row{display:flex;gap:8px;margin-top:12px}
+.scan-input{flex:1;padding:10px 14px;border-radius:8px;border:none;
+  font-family:'DM Mono',monospace;font-size:13px;outline:none;
+  background:rgba(255,255,255,.1);color:#fff;letter-spacing:1px}
+.scan-input::placeholder{color:rgba(255,255,255,.3)}
+
+/* 印刷プレビュー */
+.print-preview{background:#fff;border:1px solid var(--bd);border-radius:10px;
+  padding:16px;margin:12px 0}
+.print-preview-title{font-size:10px;font-weight:700;color:var(--muted);
+  margin-bottom:12px;letter-spacing:.5px}
+.print-item{border:1px solid var(--bd2);border-radius:8px;padding:12px;
+  margin-bottom:8px;display:flex;align-items:center;gap:12px}
+.print-item-icon{font-size:20px;flex-shrink:0}
+.print-item-name{font-size:11px;font-weight:700;color:var(--ink)}
+.print-item-desc{font-size:10px;color:var(--muted);margin-top:2px}
+
+/* 捺印確認 */
+.hanko-check{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
+.hanko-item{background:#F8F9FA;border-radius:8px;padding:10px 12px;
+  display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer}
+.hanko-item input{width:15px;height:15px;accent-color:var(--navy);cursor:pointer}
 
 /* 統計カード */
-.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
-@media(max-width:680px){.stat-grid{grid-template-columns:repeat(2,1fr)}}
-.stat-card{background:#fff;border:1px solid var(--bd);border-radius:10px;padding:14px;text-align:center}
-.stat-val{font-size:26px;font-weight:700;color:var(--navy)}
-.stat-lbl{font-size:9px;color:var(--muted);margin-top:3px;font-weight:600;letter-spacing:.5px}
+.stat-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:20px}
+@media(max-width:700px){.stat-grid{grid-template-columns:repeat(3,1fr)}}
+.stat-card{background:#fff;border:1px solid var(--bd);border-radius:10px;padding:12px;text-align:center}
+.stat-val{font-size:22px;font-weight:700;color:var(--navy)}
+.stat-lbl{font-size:9px;color:var(--muted);margin-top:2px;font-weight:600;letter-spacing:.4px}
 
-/* 印刷モーダル */
+/* モーダル */
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;
-  display:flex;align-items:center;justify-content:center;padding:20px}
-.modal{background:#fff;border-radius:14px;padding:28px;max-width:480px;width:100%;
-  box-shadow:0 20px 60px rgba(0,0,0,.25)}
-.modal-title{font-size:15px;font-weight:700;color:var(--navy);margin-bottom:4px}
-.modal-desc{font-size:11px;color:var(--muted);margin-bottom:20px;line-height:1.8}
+  display:flex;align-items:center;justify-content:center;padding:16px}
+.modal{background:#fff;border-radius:14px;padding:24px;max-width:460px;width:100%;
+  box-shadow:0 20px 60px rgba(0,0,0,.25);max-height:90vh;overflow-y:auto}
+.modal-title{font-size:14px;font-weight:700;color:var(--navy);margin-bottom:14px;
+  display:flex;align-items:center;gap:8px}
+
+/* フロー選択カード */
+.flow-select-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+@media(max-width:500px){.flow-select-grid{grid-template-columns:1fr}}
+.flow-select-card{border-radius:12px;padding:16px;cursor:pointer;transition:.15s;
+  border:2px solid transparent}
+.flow-select-card:hover{transform:translateY(-2px);box-shadow:var(--sh2)}
+.flow-select-card.selected{border-color:var(--navy)}
+.flow-select-icon{font-size:24px;margin-bottom:8px}
+.flow-select-title{font-size:12px;font-weight:700;margin-bottom:4px}
+.flow-select-desc{font-size:10px;opacity:.7;line-height:1.5}
 </style>
 </head>
 <body>
 <div class="shell">
 <nav class="sb" id="sb">
-  <div class="sb-head">
-    <div class="sb-logo">CORE<br>BLDG</div>
-    <div class="sb-ver">v2.0 — CORETO</div>
-  </div>
+  <div class="sb-head"><div class="sb-logo">CORE<br>BLDG</div><div class="sb-ver">v2.0 — CORETO</div></div>
   <div class="sb-user">
     <div class="sb-av">HQ</div>
-    <div>
-      <div class="sb-un">田中 誠一</div>
-      <div class="sb-ur">HQ / exec</div>
-    </div>
+    <div><div class="sb-un">田中 誠一</div><div class="sb-ur">HQ / exec</div></div>
   </div>
   <div class="sb-nav" id="sb-nav"></div>
   <div class="sb-foot">
@@ -528,8 +554,8 @@ body, input, select, textarea, button {
   <div class="topbar">
     <button class="mob-ham" onclick="toggleSb()"><span></span><span></span><span></span></button>
     <div>
-      <div class="tb-title">書類バーコード追跡</div>
-      <div class="tb-crumb"><a href="coreto-hub-v2.html">COREBLDG</a> › <span>書類追跡</span></div>
+      <div class="tb-title">書類郵送フロー管理</div>
+      <div class="tb-crumb"><a href="coreto-hub-v2.html">COREBLDG</a> › <span>書類郵送</span></div>
     </div>
   </div>
   <div class="page">
@@ -537,9 +563,11 @@ body, input, select, textarea, button {
     <div class="stat-grid" id="stat-grid"></div>
 
     <div class="tab-bar">
-      <button class="tab-btn active" id="tab-receive" onclick="switchTab('receive')">📥 書類受取登録</button>
-      <button class="tab-btn"        id="tab-tracking" onclick="switchTab('tracking')">🚚 追跡中 <span id="tracking-badge" style="background:var(--am);color:#fff;border-radius:10px;padding:1px 7px;font-size:9px;margin-left:4px"></span></button>
-      <button class="tab-btn"        id="tab-history"  onclick="switchTab('history')">✅ 完了履歴</button>
+      <button class="tab-btn active" id="tab-dashboard" onclick="switchTab('dashboard')">📋 ダッシュボード</button>
+      <button class="tab-btn"        id="tab-flowA"     onclick="switchTab('flowA')">📮 A: HQ→クライアント</button>
+      <button class="tab-btn"        id="tab-flowB"     onclick="switchTab('flowB')">🔄 B: クライアント→管理会社</button>
+      <button class="tab-btn"        id="tab-flowC"     onclick="switchTab('flowC')">🔑 C: 管理会社→鍵</button>
+      <button class="tab-btn"        id="tab-flowD"     onclick="switchTab('flowD')">⚠️ D: 追加捺印</button>
     </div>
     <div id="tab-content"></div>
   </div>
@@ -549,18 +577,10 @@ body, input, select, textarea, button {
 <!-- バーコード印刷モーダル -->
 <div class="modal-bg" id="bc-modal" style="display:none" onclick="closeBcModal(event)">
   <div class="modal" onclick="event.stopPropagation()">
-    <div class="modal-title">📦 バーコードラベル発行</div>
-    <div class="modal-desc" id="bc-modal-desc"></div>
-    <div class="bc-print-area">
-      <div class="bc-title-text" id="bc-label-title">案件バーコード</div>
-      <div class="bc-svg-wrap">
-        <svg id="bc-svg-main"></svg>
-      </div>
-      <div id="bc-code-text" style="font-family:'DM Mono',monospace;font-size:12px;
-        color:rgba(255,255,255,.7);letter-spacing:2px"></div>
-    </div>
-    <div style="display:flex;gap:8px;margin-top:8px">
-      <button class="act-btn act-print" style="flex:1;justify-content:center" onclick="printBarcode()">
+    <div class="modal-title" id="bc-modal-title">🖨️ 印刷プレビュー</div>
+    <div id="bc-modal-body"></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="act-btn act-print" style="flex:1;justify-content:center" onclick="execPrint()">
         🖨️ 印刷する
       </button>
       <button class="act-btn act-ghost" onclick="closeBcModal()">閉じる</button>
@@ -568,79 +588,120 @@ body, input, select, textarea, button {
   </div>
 </div>
 
+<!-- スキャン入力モーダル -->
+<div class="modal-bg" id="scan-modal" style="display:none" onclick="closeScanModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-title" id="scan-modal-title">📷 スキャン入力</div>
+    <div id="scan-modal-body"></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script src="coreto-nav-v2.js"></script>
 <script>
-// ════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════
+// フロー定義
+// ══════════════════════════════════════════════════════════
+const FLOW_DEFS = {
+  A: {
+    label:'HQ→クライアント',
+    color:'var(--navy)',
+    steps:[
+      {key:'arrived',   label:'書類到着\n(案件不明)', icon:'📦'},
+      {key:'stamped',   label:'仲介印\n捺印',         icon:'🔴'},
+      {key:'scanned',   label:'スキャン\n完了',        icon:'📷'},
+      {key:'ai_done',   label:'AI\n案件判定',          icon:'🤖', aiStep:true},
+      {key:'confirmed', label:'HQ\n承認',              icon:'✅'},
+      {key:'printed',   label:'印刷\n完了',             icon:'🖨️'},
+      {key:'sent',      label:'発送\n済み',             icon:'📮'},
+    ],
+  },
+  B: {
+    label:'クライアント→管理会社',
+    color:'#6D28D9',
+    steps:[
+      {key:'returned',    label:'返送\n到着',           icon:'📬', scanStep:true},
+      {key:'identified',  label:'案件\n特定',           icon:'🔍'},
+      {key:'label_ready', label:'管理会社\nラベル印刷', icon:'🖨️'},
+      {key:'hanko_check', label:'捺印\n確認',           icon:'🔴'},
+      {key:'label_stuck', label:'ラベル\n貼付',         icon:'📋'},
+      {key:'track_scan',  label:'BC+追跡\nスキャン',   icon:'📷', scanStep:true},
+      {key:'sent',        label:'管理会社\n発送済み',   icon:'📮'},
+    ],
+  },
+  C: {
+    label:'管理会社→鍵到着',
+    color:'#059669',
+    steps:[
+      {key:'key_arrived', label:'鍵受取書\nスキャン',  icon:'📷', scanStep:true},
+      {key:'ai_done',     label:'AI\n案件特定',         icon:'🤖', aiStep:true},
+      {key:'confirmed',   label:'HQ\n承認',             icon:'✅'},
+      {key:'printed',     label:'ラベル\n印刷',         icon:'🖨️'},
+      {key:'track_scan',  label:'BC+追跡\nスキャン',   icon:'📷', scanStep:true},
+      {key:'sent',        label:'発送\n済み',           icon:'📮'},
+    ],
+  },
+  D: {
+    label:'追加捺印',
+    color:'#DC2626',
+    steps:[
+      {key:'request_print', label:'再捺印書類\nラベル印刷', icon:'🖨️'},
+      {key:'attached',      label:'貼り付け\n完了',          icon:'📋'},
+      {key:'sent',          label:'発送\n済み',              icon:'📮'},
+    ],
+  },
+};
+
+// ══════════════════════════════════════════════════════════
 // デモデータ
-// ════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════
 let DOCS = [
   {
-    id:'DOC-2026-001', caseId:'RC-10042', caseName:'田中 様 ／ 渋谷区代々木アパート',
-    docType:'契約書', agency:'大和ハウスリアルティ', agentId:'AG-10001',
-    registeredAt:'2026-03-05 10:30',
+    id:'DOC-001', caseId:'RC-10042', caseName:'田中 様 ／ 渋谷区代々木アパート',
+    flow:'A', stepIdx:6,
+    aiResult:{caseId:'RC-10042', caseName:'田中 様 ／ 渋谷区代々木アパート', confidence:97},
     outboundTracking:'1234-5678-9012', returnTracking:'9876-5432-1098',
-    steps:[
-      {key:'received',  label:'書類\n受取',   done:true,  ts:'03/05 10:30'},
-      {key:'scanned',   label:'スキャン\n完了', done:true,  ts:'03/05 10:45'},
-      {key:'sent',      label:'発送\n済み',    done:true,  ts:'03/05 14:00'},
-      {key:'delivered', label:'クライアント\n受取', done:true,  ts:'03/06 11:20'},
-      {key:'signed',    label:'署名済み\n返送',  done:false, ts:''},
-      {key:'complete',  label:'管理会社\n返送',  done:false, ts:''},
-    ],
-    status:'delivered', slackNotified:true,
+    arrivedAt:'03/05 10:30', lastUpdated:'03/05 14:00',
+    hankoOk:true, extraStamp:false,
   },
   {
-    id:'DOC-2026-002', caseId:'RC-10047', caseName:'鈴木 様 ／ 新宿区西新宿マンション',
-    docType:'重要事項説明書', agency:'東急リバブル', agentId:'AG-10002',
-    registeredAt:'2026-03-08 14:20',
-    outboundTracking:'2345-6789-0123', returnTracking:'',
-    steps:[
-      {key:'received',  label:'書類\n受取',    done:true,  ts:'03/08 14:20'},
-      {key:'scanned',   label:'スキャン\n完了', done:true,  ts:'03/08 14:35'},
-      {key:'sent',      label:'発送\n済み',     done:true,  ts:'03/08 17:00'},
-      {key:'delivered', label:'クライアント\n受取', done:false, ts:''},
-      {key:'signed',    label:'署名済み\n返送', done:false, ts:''},
-      {key:'complete',  label:'管理会社\n返送', done:false, ts:''},
-    ],
-    status:'transit', slackNotified:false,
+    id:'DOC-002', caseId:'RC-10047', caseName:'鈴木 様 ／ 新宿区西新宿マンション',
+    flow:'A', stepIdx:4,
+    aiResult:{caseId:'RC-10047', caseName:'鈴木 様 ／ 新宿区西新宿マンション', confidence:94},
+    outboundTracking:'', returnTracking:'',
+    arrivedAt:'03/08 14:20', lastUpdated:'03/08 15:10',
+    hankoOk:false, extraStamp:false,
   },
   {
-    id:'DOC-2026-003', caseId:'RC-10039', caseName:'高橋 様 ／ 港区芝浦マンション',
-    docType:'契約書', agency:'三井不動産リアルティ', agentId:'AG-10001',
-    registeredAt:'2026-03-01 09:00',
+    id:'DOC-003', caseId:'RC-10039', caseName:'高橋 様 ／ 港区芝浦マンション',
+    flow:'B', stepIdx:2,
+    aiResult:{caseId:'RC-10039', caseName:'高橋 様 ／ 港区芝浦マンション', confidence:99},
     outboundTracking:'3456-7890-1234', returnTracking:'8765-4321-0987',
-    steps:[
-      {key:'received',  label:'書類\n受取',    done:true, ts:'03/01 09:00'},
-      {key:'scanned',   label:'スキャン\n完了', done:true, ts:'03/01 09:15'},
-      {key:'sent',      label:'発送\n済み',     done:true, ts:'03/01 13:30'},
-      {key:'delivered', label:'クライアント\n受取', done:true, ts:'03/02 10:10'},
-      {key:'signed',    label:'署名済み\n返送', done:true, ts:'03/04 15:00'},
-      {key:'complete',  label:'管理会社\n返送', done:true, ts:'03/07 11:00'},
-    ],
-    status:'complete', slackNotified:true,
+    arrivedAt:'03/09 09:00', lastUpdated:'03/09 09:30',
+    hankoOk:false, extraStamp:false,
   },
   {
-    id:'DOC-2026-004', caseId:'RC-10051', caseName:'伊藤 様 ／ 品川区大崎アパート',
-    docType:'署名済み書類', agency:'住友不動産販売', agentId:'AG-10003',
-    registeredAt:'2026-03-09 16:45',
-    outboundTracking:'4567-8901-2345', returnTracking:'',
-    steps:[
-      {key:'received',  label:'書類\n受取',    done:true,  ts:'03/09 16:45'},
-      {key:'scanned',   label:'スキャン\n完了', done:true,  ts:'03/09 17:00'},
-      {key:'sent',      label:'発送\n済み',     done:false, ts:''},
-      {key:'delivered', label:'クライアント\n受取', done:false, ts:''},
-      {key:'signed',    label:'署名済み\n返送', done:false, ts:''},
-      {key:'complete',  label:'管理会社\n返送', done:false, ts:''},
-    ],
-    status:'pending_send', slackNotified:false,
+    id:'DOC-004', caseId:'RC-10051', caseName:'伊藤 様 ／ 品川区大崎アパート',
+    flow:'A', stepIdx:2,
+    aiResult:null,
+    outboundTracking:'', returnTracking:'',
+    arrivedAt:'03/10 09:00', lastUpdated:'03/10 09:05',
+    hankoOk:false, extraStamp:false,
+  },
+  {
+    id:'DOC-005', caseId:'RC-10033', caseName:'山田 様 ／ 目黒区中目黒マンション',
+    flow:'D', stepIdx:0,
+    aiResult:{caseId:'RC-10033', caseName:'山田 様 ／ 目黒区中目黒マンション', confidence:99},
+    outboundTracking:'', returnTracking:'',
+    arrivedAt:'03/07 11:00', lastUpdated:'03/09 14:00',
+    hankoOk:false, extraStamp:true,
   },
 ];
 
-// ════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════
 // ユーティリティ
-// ════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════
 function toggleSb(){
   document.querySelector('.sb').classList.toggle('open');
   document.querySelector('.mob-overlay').classList.toggle('show');
@@ -648,435 +709,648 @@ function toggleSb(){
 function showToast(msg, type=''){
   const t = document.getElementById('toast');
   t.textContent = msg;
-  t.style.background = {warn:'var(--am)', ok:'var(--em)', danger:'var(--rd)'}[type] || 'var(--navy)';
+  t.style.background = {warn:'var(--am)',ok:'var(--em)',danger:'var(--rd)'}[type]||'var(--navy)';
   t.style.opacity='1'; t.style.transform='translateX(-50%) translateY(0)';
-  setTimeout(()=>{t.style.opacity='0'; t.style.transform='translateX(-50%) translateY(10px)';}, 3000);
+  setTimeout(()=>{t.style.opacity='0'; t.style.transform='translateX(-50%) translateY(10px)';},3200);
 }
 
-function statusLabel(s){
-  return {
-    pending_send:'⏳ 発送前',
-    transit:'🚚 配送中',
-    delivered:'📬 受取済み',
-    signed_returned:'📝 返送中',
-    complete:'✅ 完了',
-  }[s] || s;
-}
-function statusBadgeCls(s){
-  return {
-    pending_send:'badge-pending',
-    transit:'badge-transit',
-    delivered:'badge-delivered',
-    signed_returned:'badge-returned',
-    complete:'badge-completed',
-  }[s] || '';
+function flowBadge(flow){
+  const cfg = {
+    A:['badge-flowA','📮 A: HQ→クライアント'],
+    B:['badge-flowB','🔄 B: クライアント→管理会社'],
+    C:['badge-flowC','🔑 C: 管理会社→鍵'],
+    D:['badge-flowD','⚠️ D: 追加捺印'],
+  };
+  const [cls,lbl] = cfg[flow]||['',''];
+  return `<span class="badge ${cls}">${lbl}</span>`;
 }
 
-// バーコード生成（JsBarcode）
-function genBarcode(svgId, code, opts={}){
-  try {
-    JsBarcode('#'+svgId, code, {
-      format:'CODE128', width:opts.width||2, height:opts.height||50,
-      displayValue:true, fontSize:opts.fontSize||12,
-      margin:opts.margin||8, lineColor:'#0D1A2D', background:'#ffffff',
-    });
-  } catch(e){ console.warn('BC生成エラー:', e); }
+function genBc(code){
+  // バーコード文字列をCode128フォーマットで返す（SVGは別途生成）
+  return code;
 }
 
-// ════════════════════════════════════════════════
-// 統計カード
-// ════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════
+// 統計
+// ══════════════════════════════════════════════════════════
 function renderStats(){
-  const transit   = DOCS.filter(d=>['pending_send','transit','delivered','signed_returned'].includes(d.status)).length;
-  const delivered = DOCS.filter(d=>d.status==='delivered').length;
-  const complete  = DOCS.filter(d=>d.status==='complete').length;
-  const total     = DOCS.length;
-
+  const flowCounts = {A:0, B:0, C:0, D:0};
+  DOCS.forEach(d => flowCounts[d.flow]++);
+  const pending_confirm = DOCS.filter(d =>
+    (d.flow==='A' && d.stepIdx===3) || (d.flow==='C' && d.stepIdx===1)
+  ).length;
   document.getElementById('stat-grid').innerHTML = [
-    {val:transit,   lbl:'追跡中',     color:'var(--am)'},
-    {val:delivered, lbl:'受取確認待ち', color:'#1D4ED8'},
-    {val:complete,  lbl:'完了済み',    color:'var(--em)'},
-    {val:total,     lbl:'登録総数',    color:'var(--navy)'},
+    {val:DOCS.length,        lbl:'処理中',             color:'var(--navy)'},
+    {val:flowCounts.A,       lbl:'A: HQ→クライアント', color:'var(--navy)'},
+    {val:flowCounts.B,       lbl:'B: クライアント→管',  color:'#6D28D9'},
+    {val:pending_confirm,    lbl:'⏳ AI承認待ち',       color:'var(--am)'},
+    {val:flowCounts.D,       lbl:'⚠️ 追加捺印',         color:'var(--rd)'},
   ].map(s=>`
     <div class="stat-card">
       <div class="stat-val" style="color:${s.color}">${s.val}</div>
       <div class="stat-lbl">${s.lbl}</div>
     </div>`).join('');
-
-  const trackingBadge = document.getElementById('tracking-badge');
-  if (trackingBadge) trackingBadge.textContent = transit || '';
 }
 
-// ════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════
 // タブ切替
-// ════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════
 function switchTab(tab){
-  ['receive','tracking','history'].forEach(t=>{
+  ['dashboard','flowA','flowB','flowC','flowD'].forEach(t=>{
     document.getElementById('tab-'+t).classList.toggle('active', t===tab);
   });
-  const TAB_MAP = {receive:renderReceive, tracking:renderTracking, history:renderHistory};
-  TAB_MAP[tab]?.();
+  const MAP = {
+    dashboard: renderDashboard,
+    flowA: ()=>renderFlowList('A'),
+    flowB: ()=>renderFlowList('B'),
+    flowC: ()=>renderFlowList('C'),
+    flowD: ()=>renderFlowList('D'),
+  };
+  MAP[tab]?.();
 }
 
-// ════════════════════════════════════════════════
-// TAB 1: 書類受取登録
-// ════════════════════════════════════════════════
-function renderReceive(){
+// ══════════════════════════════════════════════════════════
+// ダッシュボード
+// ══════════════════════════════════════════════════════════
+function renderDashboard(){
   const el = document.getElementById('tab-content');
+
+  // 新規受付ボタン
   el.innerHTML = `
-    <div class="form-card">
-      <div class="form-card-title">📥 書類受取登録</div>
-
-      <div class="form-row">
-        <div class="form-field">
-          <label class="form-label">案件ID <span class="req">*</span></label>
-          <input type="text" class="form-inp" id="f-case-id" placeholder="例：RC-10055"
-            oninput="autoFillCase(this.value)">
-        </div>
-        <div class="form-field">
-          <label class="form-label">クライアント名</label>
-          <input type="text" class="form-inp" id="f-client" placeholder="自動入力">
-        </div>
-      </div>
-
-      <div class="form-row">
-        <div class="form-field">
-          <label class="form-label">書類種別 <span class="req">*</span></label>
-          <select class="form-select" id="f-doc-type">
-            <option value="">選択してください</option>
-            <option value="契約書">契約書（管理会社→クライアント）</option>
-            <option value="署名済み書類">署名済み書類（クライアント→管理会社）</option>
-            <option value="重要事項説明書">重要事項説明書</option>
-            <option value="その他">その他</option>
-          </select>
-        </div>
-        <div class="form-field">
-          <label class="form-label">管理会社 <span class="req">*</span></label>
-          <input type="text" class="form-inp" id="f-agency" placeholder="例：大和ハウスリアルティ">
-        </div>
-      </div>
-
-      <div class="form-row">
-        <div class="form-field">
-          <label class="form-label">往路追跡番号（レターパック）</label>
-          <input type="text" class="form-inp" id="f-outbound" placeholder="例：1234-5678-9012" maxlength="20">
-        </div>
-        <div class="form-field">
-          <label class="form-label">返送追跡番号（署名後返送用）</label>
-          <input type="text" class="form-inp" id="f-return" placeholder="例：9876-5432-1098" maxlength="20">
-        </div>
-      </div>
-
-      <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <button class="act-btn act-primary" style="flex:1;justify-content:center" onclick="registerDoc()">
-          📥 受取登録・バーコード発行
-        </button>
-        <button class="act-btn act-ghost" onclick="clearForm()">クリア</button>
-      </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
+      <button class="act-btn act-primary" style="justify-content:center;padding:12px"
+        onclick="startNewFlow()">
+        📦 新規受付（書類到着）
+      </button>
+      <button class="act-btn" style="justify-content:center;padding:12px;
+        background:#EDE9FE;color:#5B21B6;border:none;border-radius:8px;font-weight:700;font-size:11px"
+        onclick="openReturnScan()">
+        📬 返送到着スキャン（Bフロー）
+      </button>
     </div>
 
-    <!-- 最近の登録 -->
-    <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:10px">
-      最近の登録（発送前）
+    <!-- AI承認待ち -->
+    ${renderAiPending()}
+
+    <div style="font-size:12px;font-weight:700;color:var(--navy);margin:20px 0 10px">
+      処理中の書類（${DOCS.length}件）
     </div>
-    ${DOCS.filter(d=>d.status==='pending_send').map(d => renderDocRow(d)).join('') ||
-      '<div style="text-align:center;padding:24px;color:var(--faint);font-size:12px">発送前の書類はありません</div>'}
-  `;
+    ${DOCS.map(d => renderDocCard(d)).join('')}`;
 }
 
-function autoFillCase(val){
-  // デモ用オートフィル
-  const CASES = {
-    'RC-10042':'田中 様 ／ 渋谷区代々木アパート',
-    'RC-10047':'鈴木 様 ／ 新宿区西新宿マンション',
-    'RC-10055':'山田 様 ／ 目黒区中目黒マンション',
-    'RC-10060':'中村 様 ／ 世田谷区三軒茶屋アパート',
-  };
-  const el = document.getElementById('f-client');
-  if (el) el.value = CASES[val.toUpperCase()] || '';
+function renderAiPending(){
+  const pending = DOCS.filter(d =>
+    (d.flow==='A' && d.stepIdx===3) ||
+    (d.flow==='C' && d.stepIdx===1)
+  );
+  if (!pending.length) return '';
+  return `
+    <div style="background:linear-gradient(135deg,#1a0f40,#2d1b69);border-radius:12px;
+      padding:16px;margin-bottom:16px">
+      <div style="font-size:11px;font-weight:700;color:#C4B5FD;margin-bottom:10px">
+        🤖 AI判定結果 — HQ承認待ち（${pending.length}件）
+      </div>
+      ${pending.map(d=>`
+        <div class="ai-result" style="margin-bottom:8px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <div>
+              <div class="ai-label">判定結果</div>
+              <div class="ai-val">${d.aiResult?.caseId} ／ ${d.aiResult?.caseName}</div>
+              <div class="ai-conf">信頼度 ${d.aiResult?.confidence}%</div>
+            </div>
+            <div style="display:flex;gap:6px">
+              <button class="act-btn act-em" style="font-size:10px"
+                onclick="approveAi('${d.id}')">✅ 承認</button>
+              <button class="act-btn" style="font-size:10px;background:var(--rd-bg);
+                color:var(--rd);border:none;border-radius:7px;font-weight:700"
+                onclick="rejectAi('${d.id}')">❌ 却下</button>
+            </div>
+          </div>
+        </div>`).join('')}
+    </div>`;
 }
 
-function clearForm(){
-  ['f-case-id','f-client','f-doc-type','f-agency','f-outbound','f-return'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.value = '';
-  });
-}
+// ══════════════════════════════════════════════════════════
+// 書類カード（汎用）
+// ══════════════════════════════════════════════════════════
+function renderDocCard(doc){
+  const flowDef = FLOW_DEFS[doc.flow];
+  const steps   = flowDef.steps;
+  const cur     = doc.stepIdx;
+  const isDone  = cur >= steps.length;
 
-function registerDoc(){
-  const caseId   = document.getElementById('f-case-id')?.value.trim();
-  const docType  = document.getElementById('f-doc-type')?.value;
-  const agency   = document.getElementById('f-agency')?.value.trim();
-  const client   = document.getElementById('f-client')?.value.trim();
-  const outbound = document.getElementById('f-outbound')?.value.trim();
-  const ret      = document.getElementById('f-return')?.value.trim();
-
-  if (!caseId)  { showToast('⚠️ 案件IDを入力してください','warn'); return; }
-  if (!docType) { showToast('⚠️ 書類種別を選択してください','warn'); return; }
-  if (!agency)  { showToast('⚠️ 管理会社を入力してください','warn'); return; }
-
-  const newDoc = {
-    id:'DOC-2026-' + String(DOCS.length+1).padStart(3,'0'),
-    caseId, caseName: client || caseId, docType, agency,
-    agentId:'AG-10001', registeredAt: new Date().toLocaleString('ja-JP').slice(0,-3),
-    outboundTracking: outbound, returnTracking: ret,
-    steps:[
-      {key:'received',  label:'書類\n受取',    done:true,  ts:new Date().toLocaleString('ja-JP').slice(5,-3)},
-      {key:'scanned',   label:'スキャン\n完了', done:false, ts:''},
-      {key:'sent',      label:'発送\n済み',     done:!!outbound, ts: outbound ? '—' : ''},
-      {key:'delivered', label:'クライアント\n受取', done:false, ts:''},
-      {key:'signed',    label:'署名済み\n返送', done:false, ts:''},
-      {key:'complete',  label:'管理会社\n返送', done:false, ts:''},
-    ],
-    status: outbound ? 'transit' : 'pending_send',
-    slackNotified: false,
-  };
-  DOCS.unshift(newDoc);
-  clearForm();
-  renderStats();
-  showToast('✅ 受取登録完了。バーコードを発行します', 'ok');
-  setTimeout(() => openBcModal(newDoc.id, newDoc.caseId, '案件バーコード'), 600);
-  renderReceive();
-}
-
-// ════════════════════════════════════════════════
-// TAB 2: 追跡中
-// ════════════════════════════════════════════════
-function renderTracking(){
-  const el = document.getElementById('tab-content');
-  const active = DOCS.filter(d=>d.status !== 'complete');
-
-  if (!active.length){
-    el.innerHTML='<div style="text-align:center;padding:48px;color:var(--faint);font-size:13px">追跡中の書類はありません</div>';
-    return;
-  }
-  el.innerHTML = active.map(d => renderDocRow(d)).join('');
-}
-
-// ════════════════════════════════════════════════
-// TAB 3: 完了履歴
-// ════════════════════════════════════════════════
-function renderHistory(){
-  const el = document.getElementById('tab-content');
-  const done = DOCS.filter(d=>d.status==='complete');
-
-  el.innerHTML = done.length
-    ? done.map(d => renderDocRow(d, true)).join('')
-    : '<div style="text-align:center;padding:48px;color:var(--faint);font-size:13px">完了履歴はありません</div>';
-}
-
-// ════════════════════════════════════════════════
-// 共通：書類行のレンダリング
-// ════════════════════════════════════════════════
-function renderDocRow(doc, isDone=false){
-  const doneCount = doc.steps.filter(s=>s.done).length;
-  const progress  = Math.round(doneCount / doc.steps.length * 100);
-
-  // 追跡ステップUI
-  const stepsHtml = doc.steps.map((s,i) => {
-    const isLast  = i === doc.steps.length-1;
-    const dotCls  = s.done ? 'done' : (i===doneCount ? 'active' : '');
-    const lineCls = s.done ? 'done' : '';
+  // ステップUI
+  const stepsHtml = steps.map((s,i)=>{
+    const done   = i < cur;
+    const active = i === cur;
+    const dotCls = done ? 'done' : active ? (s.aiStep?'ai':s.scanStep?'active':'active') : '';
+    const lblCls = done ? 'done' : active ? 'active' : '';
     return `
-      <div class="track-step">
-        <div class="track-step-dot ${dotCls}">${s.done ? '✓' : i+1}</div>
-        <div class="track-step-label ${dotCls}">${s.label.replace('\n','<br>')}</div>
-        ${s.ts ? `<div style="font-size:8px;color:var(--faint);margin-top:2px">${s.ts}</div>` : ''}
+      <div class="flow-step">
+        <div class="flow-step-dot ${dotCls}">${done?'✓':s.icon}</div>
+        <div class="flow-step-lbl ${lblCls}">${s.label.replace('\n','<br>')}</div>
       </div>
-      ${!isLast ? `<div class="track-line ${lineCls}"></div>` : ''}`;
+      ${i<steps.length-1 ? `<div class="flow-line ${done||i<cur?'done':''}"></div>` : ''}`;
   }).join('');
 
+  // 現在ステップのアクション
+  const action = renderStepAction(doc);
+
   return `
-  <div class="doc-card ${isDone?'done':''}">
-    <div class="doc-head">
-      <div class="doc-icon">${
-        {契約書:'📄', '署名済み書類':'✍️', 重要事項説明書:'📋', その他:'📦'}[doc.docType] || '📄'
-      }</div>
+  <div class="doc-card flow-${doc.flow.toLowerCase()} ${isDone?'complete':''}">
+    <div class="doc-card-head">
       <div style="flex:1">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
-          <div class="doc-case-id">${doc.caseId}</div>
-          <span class="badge badge-type">${doc.docType}</span>
-          <span class="badge ${statusBadgeCls(doc.status)}">${statusLabel(doc.status)}</span>
-          ${doc.slackNotified ? '<span class="badge" style="background:#E0F2FE;color:#0369A1">📢 Slack通知済み</span>' : ''}
+          <div class="doc-case-id">${doc.caseId || '案件特定中...'}</div>
+          ${flowBadge(doc.flow)}
+          ${doc.flow==='D'?'<span class="badge badge-flowD">⚠️ 追加捺印</span>':''}
         </div>
-        <div class="doc-name">${doc.caseName} ／ ${doc.agency}</div>
-        <div class="doc-registered">登録: ${doc.registeredAt} ／ ${doc.id}</div>
+        <div class="doc-meta">
+          ${doc.caseName || '—'} ／ 到着: ${doc.arrivedAt} ／ 更新: ${doc.lastUpdated}
+        </div>
       </div>
-      <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
-        <button class="act-btn act-ghost" style="font-size:10px"
-          onclick="openBcModal('${doc.id}','${doc.caseId}','案件バーコード')">
-          🏷️ BC印刷
-        </button>
-        ${!isDone ? `<button class="act-btn act-em" style="font-size:10px"
-          onclick="advanceStep('${doc.id}')">
-          ▶ 次のステップへ
-        </button>` : ''}
+      <div style="font-size:10px;color:var(--muted);font-weight:600;flex-shrink:0">
+        ${steps[Math.min(cur,steps.length-1)]?.label.replace('\n',' ') || '完了'}
+        <span style="color:var(--faint)"> (${Math.min(cur,steps.length-1)+1}/${steps.length})</span>
       </div>
     </div>
-
-    <!-- 追跡ステップ -->
-    <div class="track-steps">${stepsHtml}</div>
-
-    <!-- 進捗バー -->
-    <div style="background:var(--bd2);border-radius:3px;height:4px;margin-bottom:12px">
-      <div style="background:${progress===100?'var(--em)':'var(--navy)'};
-        height:100%;border-radius:3px;width:${progress}%;transition:.3s"></div>
+    <div class="doc-card-body">
+      <div class="flow-steps">${stepsHtml}</div>
+      ${action ? `<div style="margin-top:8px">${action}</div>` : ''}
     </div>
-
-    <!-- 追跡番号 -->
-    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px">
-      ${doc.outboundTracking ? `
-        <div class="track-no-field">
-          <span class="track-no-label">往路追跡</span>
-          <span class="track-no-val">${doc.outboundTracking}</span>
-          <span class="track-no-status" style="background:${doc.steps[2].done?'var(--em-bg)':'var(--am-bg)'};
-            color:${doc.steps[2].done?'var(--em)':'var(--am)'}">
-            ${doc.steps[3].done ? '配達完了' : doc.steps[2].done ? '配送中' : '未発送'}
-          </span>
-          <button class="act-btn act-ghost" style="font-size:9px;padding:4px 8px"
-            onclick="openBcModal('${doc.id}','${doc.outboundTracking}','往路追跡バーコード')">
-            BC
-          </button>
-        </div>` : ''}
-      ${doc.returnTracking ? `
-        <div class="track-no-field">
-          <span class="track-no-label">返送追跡</span>
-          <span class="track-no-val">${doc.returnTracking}</span>
-          <span class="track-no-status" style="background:${doc.steps[5].done?'var(--em-bg)':'var(--bd2)'};
-            color:${doc.steps[5].done?'var(--em)':'var(--muted)'}">
-            ${doc.steps[5].done ? '返送完了' : '返送待ち'}
-          </span>
-          <button class="act-btn act-ghost" style="font-size:9px;padding:4px 8px"
-            onclick="openBcModal('${doc.id}','${doc.returnTracking}','返送追跡バーコード')">
-            BC
-          </button>
-        </div>` : ''}
-    </div>
-
-    ${!isDone ? `
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      ${!doc.slackNotified ? `
-        <button class="act-btn act-ghost" onclick="sendSlack('${doc.id}')">
-          📢 Slack通知
-        </button>` : ''}
-      ${doc.status === 'delivered' ? `
-        <button class="act-btn act-em" onclick="markSigned('${doc.id}')">
-          ✍️ 署名済み受取を記録
-        </button>` : ''}
-      ${doc.status === 'signed_returned' ? `
-        <button class="act-btn act-em" onclick="markComplete('${doc.id}')">
-          ✅ 管理会社返送完了
-        </button>` : ''}
-    </div>` : ''}
   </div>`;
 }
 
-// ════════════════════════════════════════════════
-// ステップ操作
-// ════════════════════════════════════════════════
-function advanceStep(docId){
-  const doc = DOCS.find(d=>d.id===docId);
-  if (!doc) return;
-  const nextIdx = doc.steps.findIndex(s=>!s.done);
-  if (nextIdx < 0) return;
-  const now = new Date().toLocaleString('ja-JP').slice(5,-3);
-  doc.steps[nextIdx].done = true;
-  doc.steps[nextIdx].ts   = now;
+// ══════════════════════════════════════════════════════════
+// ステップ別アクション
+// ══════════════════════════════════════════════════════════
+function renderStepAction(doc){
+  const step = FLOW_DEFS[doc.flow].steps[doc.stepIdx];
+  if (!step) return '<span class="badge badge-done">✅ 完了</span>';
 
-  // ステータス更新
-  const doneKeys = doc.steps.filter(s=>s.done).map(s=>s.key);
-  if (doneKeys.includes('complete'))        doc.status = 'complete';
-  else if (doneKeys.includes('signed'))     doc.status = 'signed_returned';
-  else if (doneKeys.includes('delivered'))  doc.status = 'delivered';
-  else if (doneKeys.includes('sent'))       doc.status = 'transit';
-  else                                      doc.status = 'pending_send';
+  // Flow A
+  if (doc.flow==='A'){
+    if (doc.stepIdx===0) return `
+      <button class="act-btn act-primary" onclick="advance('${doc.id}')">
+        🔴 仲介印 捺印完了
+      </button>`;
+    if (doc.stepIdx===1) return `
+      <button class="act-btn act-ai" onclick="runAiScan('${doc.id}')">
+        📷 スキャン → AI判定
+      </button>`;
+    if (doc.stepIdx===2) return `
+      <span class="badge badge-ai">🤖 AI判定中...</span>`;
+    if (doc.stepIdx===3) return `
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="act-btn act-em" onclick="approveAi('${doc.id}')">✅ AI結果を承認</button>
+        <button class="act-btn act-ghost" onclick="rejectAi('${doc.id}')">❌ 却下・手動入力</button>
+      </div>`;
+    if (doc.stepIdx===4) return `
+      <button class="act-btn act-print" onclick="printFlowA('${doc.id}')">
+        🖨️ Welcome letter＋ラベル2枚 印刷
+      </button>`;
+    if (doc.stepIdx===5) return `
+      <button class="act-btn act-primary" onclick="openScanSend('${doc.id}','A')">
+        📷 スキャンして発送登録
+      </button>`;
+    if (doc.stepIdx===6) return '<span class="badge badge-done">📮 発送済み</span>';
+  }
 
-  const labels = {
-    scanned:'スキャン完了', sent:'発送登録', delivered:'クライアント受取確認',
-    signed:'署名済み返送記録', complete:'管理会社返送完了',
+  // Flow B
+  if (doc.flow==='B'){
+    if (doc.stepIdx===0) return '<span class="badge badge-pending">📬 返送到着スキャン待ち</span>';
+    if (doc.stepIdx===1) return `
+      <button class="act-btn act-print" onclick="printFlowB('${doc.id}')">
+        🖨️ 管理会社ラベル 印刷
+      </button>`;
+    if (doc.stepIdx===2) return `
+      <div>
+        <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:8px">
+          捺印確認チェック
+        </div>
+        <div class="hanko-check">
+          <label class="hanko-item">
+            <input type="checkbox" id="hk-${doc.id}-1"> 署名欄 すべて捺印あり
+          </label>
+          <label class="hanko-item">
+            <input type="checkbox" id="hk-${doc.id}-2"> 日付欄 正確
+          </label>
+          <label class="hanko-item">
+            <input type="checkbox" id="hk-${doc.id}-3"> 訂正箇所 問題なし
+          </label>
+          <label class="hanko-item">
+            <input type="checkbox" id="hk-${doc.id}-4"> 添付書類 揃っている
+          </label>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:4px">
+          <button class="act-btn act-em" onclick="hankoOk('${doc.id}')">✅ 問題なし → 次へ</button>
+          <button class="act-btn act-danger" onclick="hankoNg('${doc.id}')">❌ 追加捺印が必要</button>
+        </div>
+      </div>`;
+    if (doc.stepIdx===3) return `
+      <button class="act-btn act-primary" onclick="advance('${doc.id}')">
+        📋 ラベル貼付完了
+      </button>`;
+    if (doc.stepIdx===4) return `
+      <button class="act-btn act-primary" onclick="openScanSend('${doc.id}','B')">
+        📷 BC＋追跡コードをスキャン
+      </button>`;
+    if (doc.stepIdx===5) return '<span class="badge badge-done">📮 管理会社へ発送済み</span>';
+  }
+
+  // Flow C
+  if (doc.flow==='C'){
+    if (doc.stepIdx===0) return '<span class="badge badge-pending">📷 鍵受取書スキャン待ち</span>';
+    if (doc.stepIdx===1) return `
+      <div style="display:flex;gap:8px">
+        <button class="act-btn act-em" onclick="approveAi('${doc.id}')">✅ AI結果を承認</button>
+        <button class="act-btn act-ghost" onclick="rejectAi('${doc.id}')">❌ 却下</button>
+      </div>`;
+    if (doc.stepIdx===2) return `
+      <button class="act-btn act-print" onclick="printFlowC('${doc.id}')">
+        🖨️ ラベル印刷
+      </button>`;
+    if (doc.stepIdx===3) return `
+      <button class="act-btn act-primary" onclick="openScanSend('${doc.id}','C')">
+        📷 BC＋追跡コードをスキャン
+      </button>`;
+    if (doc.stepIdx===4) return '<span class="badge badge-done">📮 発送済み</span>';
+  }
+
+  // Flow D
+  if (doc.flow==='D'){
+    if (doc.stepIdx===0) return `
+      <button class="act-btn act-print" onclick="printFlowD('${doc.id}')">
+        🖨️ 再捺印書類＋ラベル印刷
+      </button>`;
+    if (doc.stepIdx===1) return `
+      <button class="act-btn act-primary" onclick="openScanSend('${doc.id}','D')">
+        📷 スキャンして発送登録
+      </button>`;
+    if (doc.stepIdx===2) return '<span class="badge badge-done">📮 発送済み</span>';
+  }
+  return '';
+}
+
+// ══════════════════════════════════════════════════════════
+// フロー別一覧
+// ══════════════════════════════════════════════════════════
+function renderFlowList(flow){
+  const el = document.getElementById('tab-content');
+  const docs = DOCS.filter(d=>d.flow===flow);
+  const def  = FLOW_DEFS[flow];
+
+  // フロー説明
+  const descs = {
+    A:'管理会社から書類到着 → 仲介印捺印 → スキャン・AI案件判定 → HQ承認 → Welcome letter＋ラベル印刷 → 発送',
+    B:'クライアントから返送到着 → ラベルスキャンで案件特定 → 管理会社ラベル印刷 → 捺印確認 → バーコード+追跡スキャン → 発送',
+    C:'管理会社から鍵受取書到着 → スキャン・AI案件特定 → HQ承認 → ラベル印刷 → バーコード+追跡スキャン → 発送',
+    D:'捺印不備 → 再捺印書類＋ラベル印刷 → スキャンして発送',
   };
-  showToast(`✅ ${labels[doc.steps[nextIdx].key] || 'ステップ更新'}: ${doc.caseId}`, 'ok');
-  renderStats();
-  const activeTab = document.querySelector('.tab-btn.active')?.id?.replace('tab-','');
-  if (activeTab === 'tracking') renderTracking();
-  else renderReceive();
+
+  el.innerHTML = `
+    <div style="background:#F8F9FA;border-radius:10px;padding:14px 16px;
+      margin-bottom:20px;font-size:11px;color:var(--muted);line-height:1.8;
+      border-left:4px solid ${def.color}">
+      <strong style="color:${def.color}">${def.label}</strong><br>${descs[flow]}
+    </div>
+    ${flow==='A' ? `
+      <button class="act-btn act-primary" style="margin-bottom:16px" onclick="startNewFlow()">
+        ➕ 新規受付（書類到着）
+      </button>` : ''}
+    ${flow==='B' ? `
+      <button class="act-btn" style="margin-bottom:16px;background:#EDE9FE;color:#5B21B6;
+        border:none;border-radius:8px;font-weight:700;font-size:11px"
+        onclick="openReturnScan()">
+        📬 返送到着スキャン
+      </button>` : ''}
+    ${docs.length
+      ? docs.map(d=>renderDocCard(d)).join('')
+      : `<div style="text-align:center;padding:48px;color:var(--faint);font-size:13px">
+           ${def.label}フローの処理中書類はありません</div>`}`;
 }
 
-function sendSlack(docId){
+// ══════════════════════════════════════════════════════════
+// 操作関数
+// ══════════════════════════════════════════════════════════
+function advance(docId){
   const doc = DOCS.find(d=>d.id===docId);
   if (!doc) return;
-  doc.slackNotified = true;
-  showToast(`📢 Slack通知を送信しました（${doc.caseId}）`);
-  const activeTab = document.querySelector('.tab-btn.active')?.id?.replace('tab-','');
-  if (activeTab === 'tracking') renderTracking();
-  else renderReceive();
+  doc.stepIdx++;
+  doc.lastUpdated = new Date().toLocaleString('ja-JP').slice(5,-3);
+  showToast('✅ ステップを更新しました', 'ok');
+  refreshCurrentTab();
 }
 
-function markSigned(docId){
+function runAiScan(docId){
   const doc = DOCS.find(d=>d.id===docId);
   if (!doc) return;
-  const signedStep = doc.steps.find(s=>s.key==='signed');
-  if (signedStep) { signedStep.done=true; signedStep.ts=new Date().toLocaleString('ja-JP').slice(5,-3); }
-  doc.status = 'signed_returned';
-  showToast(`✍️ 署名済み書類の受取を記録しました: ${doc.caseId}`, 'ok');
-  renderStats(); renderTracking();
-}
-
-function markComplete(docId){
-  const doc = DOCS.find(d=>d.id===docId);
-  if (!doc) return;
-  const completeStep = doc.steps.find(s=>s.key==='complete');
-  if (completeStep) { completeStep.done=true; completeStep.ts=new Date().toLocaleString('ja-JP').slice(5,-3); }
-  doc.status = 'complete';
-  showToast(`✅ 管理会社への返送が完了しました: ${doc.caseId}`, 'ok');
-  renderStats(); renderTracking();
-}
-
-// ════════════════════════════════════════════════
-// バーコードモーダル
-// ════════════════════════════════════════════════
-function openBcModal(docId, code, title){
-  document.getElementById('bc-label-title').textContent = title;
-  document.getElementById('bc-code-text').textContent = code;
-  const doc = DOCS.find(d=>d.id===docId);
-  document.getElementById('bc-modal-desc').innerHTML = doc
-    ? `案件: <strong>${doc.caseId}</strong> ／ ${doc.caseName}<br>書類種別: ${doc.docType}`
-    : `コード: ${code}`;
-  document.getElementById('bc-modal').style.display = 'flex';
-  // バーコード描画（少し遅延して確実にDOM表示後に実行）
+  // スキャン→AI判定（デモ: 1秒後にAI完了）
+  doc.stepIdx = 2; // スキャン完了
+  doc.lastUpdated = new Date().toLocaleString('ja-JP').slice(5,-3);
+  showToast('📷 スキャン完了。AI判定中...');
+  refreshCurrentTab();
   setTimeout(()=>{
-    genBarcode('bc-svg-main', code, {width:2, height:60, fontSize:12});
+    // AI判定結果を設定
+    const caseMap = {
+      'DOC-004': {caseId:'RC-10051', caseName:'伊藤 様 ／ 品川区大崎アパート', confidence:91},
+    };
+    doc.aiResult = caseMap[docId] || {caseId:'RC-XXXX', caseName:'未特定', confidence:72};
+    doc.stepIdx = 3; // AI判定完了→HQ承認待ち
+    doc.lastUpdated = new Date().toLocaleString('ja-JP').slice(5,-3);
+    showToast('🤖 AI判定完了 — HQ承認をお願いします', 'ok');
+    renderStats();
+    refreshCurrentTab();
+  }, 1500);
+}
+
+function approveAi(docId){
+  const doc = DOCS.find(d=>d.id===docId);
+  if (!doc) return;
+  if (doc.aiResult) {
+    doc.caseId   = doc.aiResult.caseId;
+    doc.caseName = doc.aiResult.caseName;
+  }
+  doc.stepIdx++;
+  doc.lastUpdated = new Date().toLocaleString('ja-JP').slice(5,-3);
+  showToast(`✅ 承認しました: ${doc.caseId}`, 'ok');
+  renderStats();
+  refreshCurrentTab();
+}
+
+function rejectAi(docId){
+  const newId = prompt('案件IDを手動入力してください:', '');
+  if (!newId) return;
+  const doc = DOCS.find(d=>d.id===docId);
+  if (!doc) return;
+  doc.caseId = newId;
+  doc.caseName = newId + ' (手動入力)';
+  doc.stepIdx++;
+  doc.lastUpdated = new Date().toLocaleString('ja-JP').slice(5,-3);
+  showToast(`✅ 手動入力で承認: ${newId}`, 'ok');
+  renderStats(); refreshCurrentTab();
+}
+
+function hankoOk(docId){
+  const doc = DOCS.find(d=>d.id===docId);
+  if (!doc) return;
+  doc.hankoOk = true;
+  advance(docId);
+}
+
+function hankoNg(docId){
+  const doc = DOCS.find(d=>d.id===docId);
+  if (!doc) return;
+  // フローDに移行
+  const newDoc = {
+    ...doc,
+    id: 'DOC-D-' + Date.now(),
+    flow: 'D',
+    stepIdx: 0,
+    lastUpdated: new Date().toLocaleString('ja-JP').slice(5,-3),
+    extraStamp: true,
+  };
+  DOCS.push(newDoc);
+  // Bフローの当該書類を削除
+  DOCS = DOCS.filter(d=>d.id!==docId);
+  showToast('⚠️ 追加捺印フロー（D）に移行しました', 'warn');
+  renderStats(); refreshCurrentTab();
+}
+
+// 印刷関数群
+function printFlowA(docId){
+  const doc = DOCS.find(d=>d.id===docId);
+  if (!doc) return;
+  const bc = doc.caseId.replace('-','') + Date.now().toString().slice(-6);
+  doc.outboundTracking = bc;
+  openBcModal('🖨️ A: Welcome letter＋ラベル印刷', docId, [
+    {label:'Welcome letter',    desc:`${doc.caseName} 宛（案件BC付き）`,    code:doc.caseId},
+    {label:'往路ラベル（宅配）', desc:'HQ → クライアント',                  code:'OUT-'+bc},
+    {label:'返送ラベル（返信）', desc:'クライアント → HQ（同封）',           code:'RET-'+bc},
+  ]);
+}
+
+function printFlowB(docId){
+  const doc = DOCS.find(d=>d.id===docId);
+  if (!doc) return;
+  const bc = 'MGT-' + Date.now().toString().slice(-8);
+  openBcModal('🖨️ B: 管理会社ラベル印刷', docId, [
+    {label:'管理会社行ラベル', desc:`${doc.caseName} ／ 管理会社宛`, code:bc},
+  ]);
+}
+
+function printFlowC(docId){
+  const doc = DOCS.find(d=>d.id===docId);
+  if (!doc) return;
+  const bc = 'KEY-' + Date.now().toString().slice(-8);
+  openBcModal('🖨️ C: ラベル印刷', docId, [
+    {label:'鍵送付ラベル', desc:`${doc.caseName} 宛`, code:bc},
+  ]);
+}
+
+function printFlowD(docId){
+  const doc = DOCS.find(d=>d.id===docId);
+  if (!doc) return;
+  const bc = 'RESTAMP-' + Date.now().toString().slice(-6);
+  openBcModal('🖨️ D: 再捺印書類＋ラベル印刷', docId, [
+    {label:'再捺印お願い書類', desc:`${doc.caseName} 様 ／ BC付き`, code:doc.caseId},
+    {label:'往路ラベル',      desc:'HQ → クライアント',             code:bc},
+  ]);
+}
+
+function openScanSend(docId, flow){
+  const doc = DOCS.find(d=>d.id===docId);
+  if (!doc) return;
+  const hints = {
+    A:'スキャン内容：Welcome letter、往路ラベル、書類一式',
+    B:'スキャン内容：管理会社ラベルのバーコード＋追跡コード',
+    C:'スキャン内容：ラベルのバーコード＋追跡コード',
+    D:'スキャン内容：再捺印お願い書類、往路ラベル',
+  };
+  document.getElementById('scan-modal-title').textContent = '📷 スキャン → 発送登録';
+  document.getElementById('scan-modal-body').innerHTML = `
+    <div style="font-size:11px;color:var(--muted);margin-bottom:14px;line-height:1.7">
+      ${hints[flow] || ''}
+    </div>
+    <div class="scan-area" onclick="document.getElementById('scan-code-inp').focus()">
+      <div class="scan-icon">📷</div>
+      <div class="scan-text">バーコードをスキャン</div>
+      <div class="scan-sub">または下のフィールドに手入力</div>
+      <div class="scan-input-row">
+        <input type="text" class="scan-input" id="scan-code-inp"
+          placeholder="追跡番号 / バーコード">
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="act-btn act-em" style="flex:1;justify-content:center"
+        onclick="confirmSend('${docId}')">
+        ✅ 発送登録を確定
+      </button>
+      <button class="act-btn act-ghost" onclick="closeScanModal()">キャンセル</button>
+    </div>`;
+  document.getElementById('scan-modal').style.display = 'flex';
+}
+
+function confirmSend(docId){
+  const doc = DOCS.find(d=>d.id===docId);
+  if (!doc) return;
+  const code = document.getElementById('scan-code-inp')?.value.trim();
+  if (code) doc.outboundTracking = code;
+  doc.stepIdx++;
+  doc.lastUpdated = new Date().toLocaleString('ja-JP').slice(5,-3);
+  closeScanModal();
+  showToast('📮 発送登録が完了しました', 'ok');
+  renderStats(); refreshCurrentTab();
+}
+
+// 返送到着スキャン（Bフロー起点）
+function openReturnScan(){
+  document.getElementById('scan-modal-title').textContent = '📬 返送到着スキャン（Bフロー開始）';
+  document.getElementById('scan-modal-body').innerHTML = `
+    <div style="font-size:11px;color:var(--muted);margin-bottom:14px;line-height:1.7">
+      クライアントから返送されたレターパックのラベルをスキャンしてください。<br>
+      バーコードから案件が自動特定されます。
+    </div>
+    <div class="scan-area" onclick="document.getElementById('return-scan-inp').focus()">
+      <div class="scan-icon">📬</div>
+      <div class="scan-text">返送ラベルをスキャン</div>
+      <div class="scan-sub">返信用ラベルのバーコードをスキャン</div>
+      <div class="scan-input-row">
+        <input type="text" class="scan-input" id="return-scan-inp"
+          placeholder="RET-xxxxxx">
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="act-btn" style="flex:1;justify-content:center;background:#6D28D9;
+        color:#fff;border:none;border-radius:8px;font-weight:700;font-size:11px"
+        onclick="registerReturn()">
+        📬 案件特定・Bフロー開始
+      </button>
+      <button class="act-btn act-ghost" onclick="closeScanModal()">キャンセル</button>
+    </div>`;
+  document.getElementById('scan-modal').style.display = 'flex';
+}
+
+function registerReturn(){
+  const code = document.getElementById('return-scan-inp')?.value.trim() || 'RET-DEMO';
+  // デモ: コードに対応する案件を特定（実際はKintone照合）
+  const matched = DOCS.find(d=>d.flow==='A' && d.stepIdx===6) ||
+    {caseId:'RC-10042', caseName:'田中 様 ／ 渋谷区代々木アパート'};
+  const newDoc = {
+    id:'DOC-B-'+Date.now(),
+    caseId:matched.caseId, caseName:matched.caseName,
+    flow:'B', stepIdx:1,
+    aiResult:null,
+    outboundTracking:code, returnTracking:'',
+    arrivedAt:new Date().toLocaleString('ja-JP').slice(5,-3),
+    lastUpdated:new Date().toLocaleString('ja-JP').slice(5,-3),
+    hankoOk:false, extraStamp:false,
+  };
+  DOCS.push(newDoc);
+  closeScanModal();
+  showToast(`📬 案件特定: ${matched.caseId} ／ Bフロー開始`, 'ok');
+  renderStats();
+  switchTab('flowB');
+}
+
+// 新規受付
+function startNewFlow(){
+  const newDoc = {
+    id:'DOC-'+String(DOCS.length+1).padStart(3,'0'),
+    caseId:'', caseName:'',
+    flow:'A', stepIdx:0,
+    aiResult:null,
+    outboundTracking:'', returnTracking:'',
+    arrivedAt:new Date().toLocaleString('ja-JP').slice(5,-3),
+    lastUpdated:new Date().toLocaleString('ja-JP').slice(5,-3),
+    hankoOk:false, extraStamp:false,
+  };
+  DOCS.unshift(newDoc);
+  renderStats();
+  showToast('📦 新規受付を登録しました。仲介印捺印へ');
+  refreshCurrentTab();
+}
+
+// ══════════════════════════════════════════════════════════
+// バーコード印刷モーダル
+// ══════════════════════════════════════════════════════════
+let _printDocId = null;
+let _printItems = [];
+
+function openBcModal(title, docId, items){
+  _printDocId = docId;
+  _printItems = items;
+  document.getElementById('bc-modal-title').textContent = title;
+  const body = document.getElementById('bc-modal-body');
+  body.innerHTML = items.map((item,i)=>`
+    <div class="print-item">
+      <div class="print-item-icon">🏷️</div>
+      <div style="flex:1">
+        <div class="print-item-name">${item.label}</div>
+        <div class="print-item-desc">${item.desc}</div>
+      </div>
+      <div style="text-align:right">
+        <svg id="bc-svg-${i}" style="max-width:120px"></svg>
+      </div>
+    </div>`).join('');
+  document.getElementById('bc-modal').style.display = 'flex';
+  // バーコード描画
+  setTimeout(()=>{
+    items.forEach((item,i)=>{
+      try {
+        JsBarcode('#bc-svg-'+i, item.code, {
+          format:'CODE128', width:1.5, height:36, fontSize:9,
+          margin:4, lineColor:'#0D1A2D', background:'#ffffff',
+        });
+      } catch(e){}
+    });
   }, 80);
 }
 
-function printBarcode(){
-  const svg = document.getElementById('bc-svg-main');
-  const code = document.getElementById('bc-code-text').textContent;
-  const w = window.open('','_blank','width=400,height=300');
-  w.document.write(`
-    <html><head><title>バーコード印刷</title>
-    <style>body{text-align:center;padding:20px;font-family:sans-serif}
-    @media print{button{display:none}}</style></head>
-    <body>
-      <p style="font-size:12px;margin-bottom:8px">${code}</p>
-      ${svg.outerHTML}
-      <br><button onclick="window.print()">🖨️ 印刷</button>
-    </body></html>`);
-  w.document.close();
+function execPrint(){
+  const doc = DOCS.find(d=>d.id===_printDocId);
+  // 印刷完了 → 次ステップへ
+  if (doc) {
+    doc.stepIdx++;
+    doc.lastUpdated = new Date().toLocaleString('ja-JP').slice(5,-3);
+  }
+  closeBcModal();
+  showToast('🖨️ 印刷しました。次のステップへ進んでください', 'ok');
+  renderStats(); refreshCurrentTab();
 }
 
 function closeBcModal(e){
-  if (e && e.target !== document.getElementById('bc-modal')) return;
-  document.getElementById('bc-modal').style.display = 'none';
+  if (e && e.target!==document.getElementById('bc-modal')) return;
+  document.getElementById('bc-modal').style.display='none';
+}
+function closeScanModal(e){
+  if (e && e.target!==document.getElementById('scan-modal')) return;
+  document.getElementById('scan-modal').style.display='none';
 }
 
-// ════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════
+// タブ再描画ヘルパー
+// ══════════════════════════════════════════════════════════
+function refreshCurrentTab(){
+  const active = document.querySelector('.tab-btn.active')?.id?.replace('tab-','');
+  if (!active) return;
+  const MAP = {
+    dashboard: renderDashboard,
+    flowA: ()=>renderFlowList('A'),
+    flowB: ()=>renderFlowList('B'),
+    flowC: ()=>renderFlowList('C'),
+    flowD: ()=>renderFlowList('D'),
+  };
+  MAP[active]?.();
+}
+
+// ══════════════════════════════════════════════════════════
 // 初期化
-// ════════════════════════════════════════════════
-window.addEventListener('DOMContentLoaded', () => {
+// ══════════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', ()=>{
   CNAV.init('barcode_scan');
   renderStats();
-  renderReceive();
+  renderDashboard();
 });
 </script>
 </body>
