@@ -1510,10 +1510,14 @@ function printApprovalDocs(doc, trackingCode){
     agent:{name:'担当AG', agId:'—'},
     mgmt:{name:'管理会社', postal:'—', address:'—'},
   };
-  // 1. Welcome letter（A4）を自動印刷
-  printWelcomeLetter(cas, trackingCode);
-  // 2. ラベル（A6 ラベルプリンター用）は少し遅らせて別ウィンドウ
-  setTimeout(()=> printLabels(cas, trackingCode), 600);
+  // 両ウィンドウを先に開き、その後 letter を印刷
+  // （先に print() するとダイアログがブロックしてラベルウィンドウが開けないため）
+  const wLabel = printLabels(cas, trackingCode);   // ラベルを先に開く（自動印刷なし）
+  const wLetter = printWelcomeLetter(cas, trackingCode); // Letterを後に開く（自動印刷なし）
+  // 両ウィンドウが描画された後、Letterのみ自動印刷
+  setTimeout(() => {
+    try { wLetter && wLetter.print(); } catch(e) {}
+  }, 1200);
 }
 
 // ── Welcome letter（A4・通常プリンター・自動印刷）──────────
@@ -1594,10 +1598,11 @@ function printWelcomeLetter(cas, trackingCode){
 <script>
 window.addEventListener('load',function(){
   try{JsBarcode('#bc-wl','${cas.caseId}',{format:'CODE128',width:2,height:52,displayValue:false,margin:4,lineColor:'#0D1A2D',background:'#ffffff'});}catch(e){}
-  setTimeout(()=>window.print(),800);
+  // 自動印刷はprintApprovalDocsから制御
 });
 <\/script></body></html>`);
   w.document.close();
+  return w;
 }
 
 // ── ラベル2枚（ロールラベルプリンター用: 80mm×115mm）────────
@@ -1806,6 +1811,7 @@ window.addEventListener('load',function(){
 });
 <\/script></body></html>`);
   w.document.close();
+  return w;
 }
 
 
