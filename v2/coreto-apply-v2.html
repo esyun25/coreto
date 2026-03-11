@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>エージェント・パートナー応募 — CORETO</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0D1A2D;--navy-l:#1E3252;--gold:#C8A951;--gold-dim:rgba(200,169,81,.15);--em:#059669;--em-bg:#ECFDF5;--am:#D97706;--am-bg:#FFFBEB;--rd:#DC2626;--rd-bg:#FEF2F2;--sk:#0284C7;--sk-bg:#F0F9FF;--ink:#202124;--muted:#5F6368;--faint:#80868B;--bd:#E8EAED;--bd2:#DADCE0;--cream2:#F8F9FA;--sh:0 1px 2px rgba(60,64,67,.1),0 1px 3px rgba(60,64,67,.06);--r:10px}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{min-height:100%;background:linear-gradient(135deg,#0D1A2D 0%,#1E3252 50%,#0D1A2D 100%)}
+body{font-family:'Outfit','Noto Sans JP',sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:32px 16px 64px}
+/* ヘッダー */
+.site-header{text-align:center;margin-bottom:36px}
+.site-logo{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:600;color:var(--gold);letter-spacing:4px}
+.site-tagline{font-size:11px;color:rgba(255,255,255,.35);letter-spacing:3px;margin-top:6px;text-transform:uppercase}
+/* ステップバー */
+.step-bar{display:flex;align-items:center;width:100%;max-width:540px;margin-bottom:28px}
+.step{display:flex;flex-direction:column;align-items:center;gap:5px;flex:1}
+.step-num{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;font-family:'Outfit',sans-serif;transition:.2s}
+.step-label{font-size:10px;font-weight:600;letter-spacing:.3px;transition:.2s}
+.step-line{flex:1;height:2px;margin-bottom:16px;transition:.2s}
+.step.done .step-num{background:var(--em);color:#fff}
+.step.done .step-label{color:rgba(255,255,255,.6)}
+.step.done + .step-line{background:var(--em)}
+.step.active .step-num{background:var(--gold);color:var(--navy)}
+.step.active .step-label{color:var(--gold);font-weight:700}
+.step.todo .step-num{background:rgba(255,255,255,.1);color:rgba(255,255,255,.3)}
+.step.todo .step-label{color:rgba(255,255,255,.3)}
+.step-line{background:rgba(255,255,255,.1)}
+/* カード */
+.card{background:#fff;border-radius:var(--r);box-shadow:0 8px 40px rgba(0,0,0,.3);width:100%;max-width:540px;overflow:hidden}
+.card-head{padding:20px 24px;border-bottom:1px solid var(--bd);background:var(--cream2)}
+.card-head-title{font-size:14px;font-weight:700;color:var(--ink)}
+.card-head-sub{font-size:11px;color:var(--muted);margin-top:3px}
+.card-body{padding:24px}
+/* フォーム */
+.field{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
+.field:last-child{margin-bottom:0}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+label{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.3px}
+label .req{color:var(--rd);margin-left:2px}
+label .opt{color:var(--faint);font-weight:400;margin-left:4px}
+.form-input{padding:10px 12px;border:1.5px solid var(--bd);border-radius:7px;font-size:13px;color:var(--ink);font-family:'Outfit','Noto Sans JP',sans-serif;outline:none;transition:.15s;background:#fff;width:100%}
+.form-input:focus{border-color:var(--navy);box-shadow:0 0 0 3px rgba(13,26,45,.08)}
+.form-input.err{border-color:var(--rd)}
+select.form-input{cursor:pointer}
+textarea.form-input{min-height:90px;resize:vertical;line-height:1.6}
+.hint{font-size:10px;color:var(--faint);margin-top:3px}
+.field-err{font-size:10px;color:var(--rd);margin-top:3px;display:none}
+.field-err.show{display:block}
+/* 種別カード選択 */
+.type-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px}
+.type-card{border:2px solid var(--bd);border-radius:9px;padding:16px;cursor:pointer;transition:.15s;background:#fff;text-align:center}
+.type-card:hover{border-color:var(--navy);background:var(--cream2)}
+.type-card.selected{border-color:var(--navy);background:linear-gradient(135deg,rgba(13,26,45,.05),rgba(13,26,45,.02))}
+.type-card .tc-icon{font-size:24px;margin-bottom:7px}
+.type-card .tc-title{font-size:12px;font-weight:700;color:var(--ink);margin-bottom:4px}
+.type-card .tc-sub{font-size:10px;color:var(--muted);line-height:1.5}
+/* 宅建 */
+.takken-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tk-card{border:2px solid var(--bd);border-radius:8px;padding:14px;cursor:pointer;transition:.15s;text-align:center}
+.tk-card:hover{border-color:var(--navy)}
+.tk-card.selected{border-color:var(--em);background:var(--em-bg)}
+/* ボタン */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px 20px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Outfit','Noto Sans JP',sans-serif;transition:.15s;border:none;width:100%}
+.btn-primary{background:var(--navy);color:#fff}
+.btn-primary:hover{background:var(--navy-l, #1E3252)}
+.btn-ghost{background:transparent;color:var(--ink);border:1.5px solid var(--bd)}
+.btn-em{background:var(--em);color:#fff}
+.btn-row{display:flex;gap:10px;margin-top:20px}
+.btn-row .btn{flex:1}
+/* アラート */
+.al{padding:11px 14px;border-radius:8px;font-size:12px;margin-bottom:16px;display:flex;align-items:flex-start;gap:9px;line-height:1.6}
+.al-info{background:var(--sk-bg);border:1px solid rgba(2,132,199,.15);color:var(--sk)}
+.al-em{background:var(--em-bg);border:1px solid rgba(5,150,105,.2);color:var(--em)}
+/* 完了画面 */
+.complete-wrap{text-align:center;padding:40px 24px}
+/* プログレスバー（テキストエリア文字数） */
+.char-bar{height:2px;background:var(--bd);border-radius:2px;margin-top:5px}
+.char-fill{height:100%;background:var(--em);border-radius:2px;transition:.2s}
+@media(max-width:480px){
+  .field-row,.type-grid,.takken-grid{grid-template-columns:1fr}
+  .card-body{padding:18px}
+}
+</style>
+</head>
+<body>
+
+<div class="site-header">
+  <div class="site-logo">CORETO</div>
+  <div class="site-tagline">Agent &amp; Partner Application</div>
+</div>
+
+<!-- ステップバー -->
+<div class="step-bar" id="step-bar">
+  <div class="step active" id="sb1">
+    <div class="step-num">1</div>
+    <div class="step-label">種別・基本情報</div>
+  </div>
+  <div class="step-line"></div>
+  <div class="step todo" id="sb2">
+    <div class="step-num">2</div>
+    <div class="step-label">経験・希望</div>
+  </div>
+  <div class="step-line"></div>
+  <div class="step todo" id="sb3">
+    <div class="step-num">3</div>
+    <div class="step-label">確認・送信</div>
+  </div>
+</div>
+
+<div class="card" id="main-card"></div>
+
+<div style="margin-top:20px;font-size:10px;color:rgba(255,255,255,.2);text-align:center;line-height:1.8">
+  株式会社CORETO｜このフォームはSSL暗号化通信で保護されています<br>
+  個人情報は採用審査のみに使用し、第三者には提供しません
+</div>
+
+<div id="app-toast" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--rd);color:#fff;padding:10px 20px;border-radius:8px;font-size:12px;font-weight:600;opacity:0;transition:.3s;z-index:999;pointer-events:none;white-space:nowrap"></div>
+
+<script>
+// ── データ ──────────────────────────────────────────────
+let STEP = 1;
+let D = {
+  role: '',          // 'ag-re' | 'ag-hr' | 'pt'
+  lastName:'', firstName:'', lastKana:'', firstKana:'',
+  phone:'', email:'',
+  pref:'', area:'',
+  takken: '',        // 'yes' | 'no'
+  takkenNo:'', takkenPref:'東京都',
+  expRe:'', expHr:'', expSales:'',
+  motivation:'',
+  referral:'',
+  ptEntity: '',      // 'individual' | 'corporate'  (PTのみ)
+  companyName:'',    // 法人PTのみ
+};
+
+// ── ユーティリティ ───────────────────────────────────────
+function showToast(msg){
+  const t=document.getElementById('app-toast');
+  t.textContent=msg; t.style.opacity='1'; t.style.transform='translateX(-50%) translateY(0)';
+  setTimeout(()=>{t.style.opacity='0';t.style.transform='translateX(-50%) translateY(10px)';},3000);
+}
+function setStep(n){
+  STEP=n;
+  [1,2,3].forEach(i=>{
+    const el=document.getElementById('sb'+i);
+    el.className='step '+(i<n?'done':i===n?'active':'todo');
+    el.querySelector('.step-num').textContent=i<n?'✓':String(i);
+  });
+}
+function val(id){ return (document.getElementById(id)?.value||'').trim(); }
+function markErr(id,msg){
+  const el=document.getElementById(id);
+  if(el){ el.classList.add('err'); }
+  const em=document.getElementById(id+'-err');
+  if(em){ em.textContent=msg||'入力してください'; em.classList.add('show'); }
+}
+function clearErr(id){
+  const el=document.getElementById(id); if(el) el.classList.remove('err');
+  const em=document.getElementById(id+'-err'); if(em) em.classList.remove('show');
+}
+
+// ── STEP 1：種別・基本情報 ──────────────────────────────
+function renderStep1(){
+  setStep(1);
+  document.getElementById('main-card').innerHTML = `
+    <div class="card-head">
+      <div class="card-head-title">① 応募種別・基本情報</div>
+      <div class="card-head-sub">応募する種別を選択し、基本情報をご入力ください</div>
+    </div>
+    <div class="card-body">
+      <!-- 種別選択 -->
+      <div class="field">
+        <label>応募種別 <span class="req">*</span></label>
+        <div class="type-grid">
+          <div class="type-card ${D.role==='ag-re'?'selected':''}" onclick="selectRole('ag-re',this)">
+            <div class="tc-icon">🏠</div>
+            <div class="tc-title">不動産AG</div>
+            <div class="tc-sub">賃貸・売買仲介<br>RE-Agent</div>
+          </div>
+          <div class="type-card ${D.role==='ag-hr'?'selected':''}" onclick="selectRole('ag-hr',this)">
+            <div class="tc-icon">👤</div>
+            <div class="tc-title">人材AG</div>
+            <div class="tc-sub">転職支援・人材紹介<br>HR-Agent</div>
+          </div>
+          <div class="type-card ${D.role==='pt'?'selected':''}" onclick="selectRole('pt',this)">
+            <div class="tc-icon">🌐</div>
+            <div class="tc-title">パートナー（PT）</div>
+            <div class="tc-sub">案件紹介・光通信<br>Partner</div>
+          </div>
+          <div class="type-card ${D.role==='ag-both'?'selected':''}" onclick="selectRole('ag-both',this)">
+            <div class="tc-icon">⭐</div>
+            <div class="tc-title">不動産 ＋ 人材</div>
+            <div class="tc-sub">両分野で活動希望<br>RE ＋ HR</div>
+          </div>
+        </div>
+        <div class="field-err" id="role-err">応募種別を選択してください</div>
+      </div>
+
+      <!-- PT：個人/法人 -->
+      <div id="pt-entity-wrap" style="display:${D.role==='pt'?'':'none'}">
+        <div class="field">
+          <label>個人 / 法人 <span class="req">*</span></label>
+          <div class="takken-grid">
+            <div class="tk-card ${D.ptEntity==='individual'?'selected':''}" onclick="selectPtEntity('individual',this)">
+              <div style="font-size:18px;margin-bottom:5px">👤</div>
+              <div style="font-size:12px;font-weight:700">個人</div>
+            </div>
+            <div class="tk-card ${D.ptEntity==='corporate'?'selected':''}" onclick="selectPtEntity('corporate',this)">
+              <div style="font-size:18px;margin-bottom:5px">🏢</div>
+              <div style="font-size:12px;font-weight:700">法人</div>
+            </div>
+          </div>
+        </div>
+        <div id="corp-name-wrap" style="display:${D.ptEntity==='corporate'?'':'none'}">
+          <div class="field">
+            <label>法人名 <span class="req">*</span></label>
+            <input id="f-company" class="form-input" value="${D.companyName}" placeholder="株式会社○○">
+          </div>
+        </div>
+      </div>
+
+      <!-- 氏名 -->
+      <div class="field-row">
+        <div class="field">
+          <label>姓（漢字）<span class="req">*</span></label>
+          <input id="f-lname" class="form-input" value="${D.lastName}" placeholder="山田">
+          <div class="field-err" id="f-lname-err"></div>
+        </div>
+        <div class="field">
+          <label>名（漢字）<span class="req">*</span></label>
+          <input id="f-fname" class="form-input" value="${D.firstName}" placeholder="誠">
+          <div class="field-err" id="f-fname-err"></div>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>姓（カナ）<span class="req">*</span></label>
+          <input id="f-lkana" class="form-input" value="${D.lastKana}" placeholder="ヤマダ">
+          <div class="field-err" id="f-lkana-err"></div>
+        </div>
+        <div class="field">
+          <label>名（カナ）<span class="req">*</span></label>
+          <input id="f-fkana" class="form-input" value="${D.firstKana}" placeholder="マコト">
+          <div class="field-err" id="f-fkana-err"></div>
+        </div>
+      </div>
+
+      <!-- 連絡先 -->
+      <div class="field-row">
+        <div class="field">
+          <label>携帯電話番号 <span class="req">*</span></label>
+          <input id="f-phone" class="form-input" type="tel" value="${D.phone}" placeholder="090-0000-0000">
+          <div class="field-err" id="f-phone-err"></div>
+        </div>
+        <div class="field">
+          <label>メールアドレス <span class="req">*</span></label>
+          <input id="f-email" class="form-input" type="email" value="${D.email}" placeholder="you@example.com">
+          <div class="field-err" id="f-email-err"></div>
+        </div>
+      </div>
+
+      <!-- 都道府県・希望エリア -->
+      <div class="field-row">
+        <div class="field">
+          <label>居住都道府県 <span class="req">*</span></label>
+          <select id="f-pref" class="form-input">
+            ${['東京都','神奈川県','埼玉県','千葉県','大阪府','愛知県','福岡県','その他'].map(p=>`<option${D.pref===p?' selected':''}>${p}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field">
+          <label>希望活動エリア <span class="opt">任意</span></label>
+          <input id="f-area" class="form-input" value="${D.area}" placeholder="例：港区・渋谷区">
+        </div>
+      </div>
+
+      <!-- 紹介コード -->
+      <div class="field">
+        <label>紹介コード <span class="opt">任意</span></label>
+        <input id="f-ref" class="form-input" value="${D.referral}" placeholder="紹介者からコードを受け取った方のみ"
+          style="font-family:'DM Mono',monospace;letter-spacing:1px">
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="validateStep1()">次へ：経験・希望 →</button>
+      </div>
+    </div>`;
+}
+
+function selectRole(role, el) {
+  D.role = role;
+  document.querySelectorAll('.type-card').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected');
+  clearErr('role');
+  const ptWrap = document.getElementById('pt-entity-wrap');
+  if (ptWrap) ptWrap.style.display = role==='pt' ? '' : 'none';
+}
+
+function selectPtEntity(entity, el) {
+  D.ptEntity = entity;
+  document.querySelectorAll('.tk-card').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected');
+  const corpWrap = document.getElementById('corp-name-wrap');
+  if (corpWrap) corpWrap.style.display = entity==='corporate' ? '' : 'none';
+}
+
+function validateStep1() {
+  let ok = true;
+  if (!D.role) { markErr('role','応募種別を選択してください'); ok=false; }
+  ['f-lname','f-fname','f-lkana','f-fkana'].forEach(id=>{
+    if (!val(id)) { markErr(id,'入力してください'); ok=false; } else clearErr(id);
+  });
+  const ph = val('f-phone');
+  if (!ph.match(/^[0-9]{10,11}$|^[0-9]{2,4}-[0-9]{2,4}-[0-9]{4}$/)) {
+    markErr('f-phone','正しい電話番号を入力してください'); ok=false;
+  } else clearErr('f-phone');
+  const em = val('f-email');
+  if (!em.includes('@')) { markErr('f-email','正しいメールアドレスを入力してください'); ok=false; }
+  else clearErr('f-email');
+  if (!ok) { showToast('⚠️ 入力内容を確認してください'); return; }
+
+  D.lastName=val('f-lname'); D.firstName=val('f-fname');
+  D.lastKana=val('f-lkana'); D.firstKana=val('f-fkana');
+  D.phone=val('f-phone'); D.email=val('f-email');
+  D.pref=val('f-pref'); D.area=val('f-area');
+  D.referral=val('f-ref');
+  if (D.role==='pt') D.companyName=val('f-company')||'';
+  renderStep2();
+}
+
+// ── STEP 2：経験・希望 ─────────────────────────────────
+function renderStep2() {
+  setStep(2);
+  const isAG = D.role !== 'pt';
+  const showRe = ['ag-re','ag-both'].includes(D.role);
+  const showHr = ['ag-hr','ag-both'].includes(D.role);
+
+  document.getElementById('main-card').innerHTML = `
+    <div class="card-head">
+      <div class="card-head-title">② 経験・希望</div>
+      <div class="card-head-sub">現在の状況と活動希望をご記入ください</div>
+    </div>
+    <div class="card-body">
+
+      ${isAG ? `
+      <!-- 宅建士 -->
+      <div class="field" style="margin-bottom:18px">
+        <label>宅地建物取引士の資格 <span class="req">*</span></label>
+        <div class="hint" style="margin-bottom:8px">お持ちの方は専任登録で月会費・名刺費用が無料になります</div>
+        <div class="takken-grid">
+          <div class="tk-card ${D.takken==='yes'?'selected':''}" onclick="selectTakken('yes',this)">
+            <div style="font-size:18px;margin-bottom:5px">🏛️</div>
+            <div style="font-size:12px;font-weight:700">持っている</div>
+          </div>
+          <div class="tk-card ${D.takken==='no'?'selected':''}" onclick="selectTakken('no',this)">
+            <div style="font-size:18px;margin-bottom:5px">📋</div>
+            <div style="font-size:12px;font-weight:700">持っていない</div>
+          </div>
+        </div>
+        <div class="field-err" id="takken-err">選択してください</div>
+      </div>
+
+      <!-- 宅建士番号（持っている場合） -->
+      <div id="takken-detail" style="display:${D.takken==='yes'?'':'none'}">
+        <div class="field-row">
+          <div class="field">
+            <label>登録都道府県</label>
+            <select id="f-tk-pref" class="form-input">
+              ${['東京都','神奈川県','埼玉県','千葉県','大阪府','愛知県','福岡県','その他'].map(p=>`<option${D.takkenPref===p?' selected':''}>${p}</option>`).join('')}
+            </select>
+          </div>
+          <div class="field">
+            <label>宅建士証番号</label>
+            <input id="f-tk-no" class="form-input" value="${D.takkenNo}" placeholder="第000000号"
+              style="font-family:'DM Mono',monospace">
+          </div>
+        </div>
+      </div>
+      ` : ''}
+
+      ${showRe ? `
+      <!-- 不動産経験 -->
+      <div class="field">
+        <label>不動産業の経験年数</label>
+        <select id="f-exp-re" class="form-input">
+          ${['未経験','1年未満','1〜3年','3〜5年','5〜10年','10年以上'].map(v=>`<option${D.expRe===v?' selected':''}>${v}</option>`).join('')}
+        </select>
+      </div>` : ''}
+
+      ${showHr ? `
+      <!-- 人材経験 -->
+      <div class="field">
+        <label>人材業の経験年数</label>
+        <select id="f-exp-hr" class="form-input">
+          ${['未経験','1年未満','1〜3年','3〜5年','5〜10年','10年以上'].map(v=>`<option${D.expHr===v?' selected':''}>${v}</option>`).join('')}
+        </select>
+      </div>` : ''}
+
+      <!-- 営業経験 -->
+      <div class="field">
+        <label>営業・セールス経験</label>
+        <select id="f-exp-sales" class="form-input">
+          ${['未経験','1年未満','1〜3年','3〜5年','5年以上'].map(v=>`<option${D.expSales===v?' selected':''}>${v}</option>`).join('')}
+        </select>
+      </div>
+
+      <!-- 現在の状況 -->
+      <div class="field">
+        <label>現在の状況 <span class="req">*</span></label>
+        <select id="f-status" class="form-input">
+          <option value="">選択してください</option>
+          ${['会社員（副業として活動希望）','フリーランス・個人事業主','求職中','学生','その他'].map(v=>`<option${D.status===v?' selected':''}>${v}</option>`).join('')}
+        </select>
+        <div class="field-err" id="f-status-err"></div>
+      </div>
+
+      <!-- 志望動機 -->
+      <div class="field">
+        <label>志望動機・自己PR <span class="req">*</span></label>
+        <textarea id="f-motivation" class="form-input" placeholder="COREBLDGへの応募理由、これまでの経験、意気込みなどをご自由にご記入ください（100〜500文字程度）" oninput="updateCharBar(this,100,500)">${D.motivation}</textarea>
+        <div class="char-bar"><div class="char-fill" id="char-fill" style="width:${Math.min(D.motivation.length/500*100,100)}%"></div></div>
+        <div class="hint"><span id="char-count">${D.motivation.length}</span> 文字 （推奨: 100〜500文字）</div>
+        <div class="field-err" id="f-motivation-err"></div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-ghost" onclick="renderStep1()" style="flex:.4">← 戻る</button>
+        <button class="btn btn-primary" onclick="validateStep2()">確認画面へ →</button>
+      </div>
+    </div>`;
+}
+
+function selectTakken(v, el) {
+  D.takken = v;
+  document.querySelectorAll('.tk-card').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected');
+  const detail = document.getElementById('takken-detail');
+  if (detail) detail.style.display = v==='yes' ? '' : 'none';
+  clearErr('takken');
+}
+
+function updateCharBar(el, min, max) {
+  const len = el.value.length;
+  document.getElementById('char-count').textContent = len;
+  const fill = document.getElementById('char-fill');
+  fill.style.width = Math.min(len/max*100,100)+'%';
+  fill.style.background = len < min ? 'var(--am)' : 'var(--em)';
+}
+
+function validateStep2() {
+  let ok = true;
+  const isAG = D.role !== 'pt';
+  if (isAG && !D.takken) { markErr('takken','選択してください'); ok=false; }
+  if (!val('f-status')) { markErr('f-status','選択してください'); ok=false; } else clearErr('f-status');
+  const mot = val('f-motivation');
+  if (mot.length < 30) { markErr('f-motivation','30文字以上でご記入ください'); ok=false; } else clearErr('f-motivation');
+  if (!ok) { showToast('⚠️ 入力内容を確認してください'); return; }
+
+  D.takken = isAG ? D.takken : 'n/a';
+  if (D.takken==='yes') {
+    D.takkenPref = val('f-tk-pref');
+    D.takkenNo   = val('f-tk-no');
+  }
+  D.expRe      = val('f-exp-re')   || '未経験';
+  D.expHr      = val('f-exp-hr')   || '未経験';
+  D.expSales   = val('f-exp-sales')|| '未経験';
+  D.status     = val('f-status');
+  D.motivation = val('f-motivation');
+  renderStep3();
+}
+
+// ── STEP 3：確認・送信 ────────────────────────────────
+function renderStep3() {
+  setStep(3);
+  const roleLabel = {
+    'ag-re':'不動産AG（RE）','ag-hr':'人材AG（HR）',
+    'ag-both':'不動産AG ＋ 人材AG','pt':'パートナー（PT）'
+  }[D.role]||D.role;
+  const row = (l,v) => `
+    <div style="display:flex;justify-content:space-between;font-size:12px;
+      padding:7px 0;border-bottom:1px solid var(--bd)">
+      <span style="color:var(--muted)">${l}</span>
+      <span style="font-weight:600;text-align:right;max-width:60%">${v||'—'}</span>
+    </div>`;
+
+  document.getElementById('main-card').innerHTML = `
+    <div class="card-head">
+      <div class="card-head-title">③ 応募内容の確認</div>
+      <div class="card-head-sub">内容をご確認のうえ「応募する」を押してください</div>
+    </div>
+    <div class="card-body">
+      <div style="background:var(--cream2);border:1px solid var(--bd);border-radius:9px;
+        padding:14px 16px;margin-bottom:16px">
+        ${row('応募種別', `<span style="background:var(--gold-dim, rgba(200,169,81,.15));color:#92610A;padding:2px 8px;border-radius:20px;font-size:11px">${roleLabel}</span>`)}
+        ${row('氏名', `${D.lastName} ${D.firstName}（${D.lastKana} ${D.firstKana}）`)}
+        ${row('電話番号', D.phone)}
+        ${row('メール', D.email)}
+        ${row('居住地', D.pref)}
+        ${D.area ? row('希望エリア', D.area) : ''}
+        ${D.role !== 'pt' ? row('宅建士', D.takken==='yes' ? `あり（${D.takkenPref} ${D.takkenNo||'番号未入力'}）` : 'なし') : ''}
+        ${D.role !== 'pt' ? row('不動産経験', D.expRe) : ''}
+        ${D.role !== 'pt' ? row('営業経験', D.expSales) : ''}
+        ${row('現在の状況', D.status)}
+        ${D.referral ? row('紹介コード', `<span style="font-family:'DM Mono',monospace">${D.referral}</span>`) : ''}
+      </div>
+
+      <div style="background:var(--cream2);border:1px solid var(--bd);border-radius:9px;
+        padding:14px 16px;margin-bottom:16px">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:8px;
+          text-transform:uppercase;letter-spacing:.5px">志望動機</div>
+        <div style="font-size:12px;color:var(--ink);line-height:1.8">${D.motivation.replace(/\n/g,'<br>')}</div>
+      </div>
+
+      <div class="al al-info">
+        ℹ️ 応募後、担当者より3営業日以内にご連絡いたします。面接日程を調整のうえ、合格者には招待コードをお送りします。
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-ghost" onclick="renderStep2()" style="flex:.4">← 戻る</button>
+        <button class="btn btn-em" onclick="submitApply()">✅ 応募する</button>
+      </div>
+    </div>`;
+}
+
+// ── 送信 ─────────────────────────────────────────────────
+function submitApply() {
+  const btn = document.querySelector('.btn-em');
+  if (btn) { btn.disabled=true; btn.textContent='送信中...'; }
+
+  // Slack通知（実運用ではAPIエンドポイントへPOST）
+  const roleLabel = {'ag-re':'不動産AG','ag-hr':'人材AG','ag-both':'不動産+人材AG','pt':'PT'}[D.role]||D.role;
+  const slackMsg = {
+    text: `🆕 新規応募が届きました`,
+    blocks:[{
+      type:'section',
+      text:{ type:'mrkdwn',
+        text:`*🆕 CORETO 新規応募*\n` +
+          `種別: *${roleLabel}*\n` +
+          `氏名: ${D.lastName} ${D.firstName}（${D.lastKana} ${D.firstKana}）\n` +
+          `電話: ${D.phone}  /  Mail: ${D.email}\n` +
+          `居住: ${D.pref}　経験（不動産）: ${D.expRe}\n` +
+          `宅建: ${D.takken==='yes'?'あり':'なし'}　状況: ${D.status}\n` +
+          `紹介コード: ${D.referral||'なし'}`
+      }
+    }]
+  };
+  console.log('[CORETO Apply] Slack payload:', JSON.stringify(slackMsg));
+  // 実運用: fetch(SLACK_WEBHOOK_URL, { method:'POST', body: JSON.stringify(slackMsg) })
+
+  setTimeout(() => renderComplete(), 600);
+}
+
+// ── 完了 ─────────────────────────────────────────────────
+function renderComplete() {
+  document.getElementById('step-bar').style.display = 'none';
+  document.getElementById('main-card').innerHTML = `
+    <div class="complete-wrap">
+      <div style="font-size:56px;margin-bottom:16px">🎉</div>
+      <div style="font-size:22px;font-weight:300;color:var(--ink);margin-bottom:10px">
+        ご応募ありがとうございます</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.9;margin-bottom:28px">
+        担当者より <strong>3営業日以内</strong> にご連絡いたします。<br>
+        面接・書類選考を経て、合格者には<br>
+        <strong>招待コード（SMS）</strong>をお送りします。
+      </div>
+      <div style="background:var(--cream2);border:1px solid var(--bd);border-radius:9px;
+        padding:16px;display:inline-block;text-align:left;min-width:280px;margin-bottom:24px">
+        <div style="font-size:10px;color:var(--faint);margin-bottom:10px;
+          text-transform:uppercase;letter-spacing:.5px">受付内容</div>
+        <div style="font-size:12px;display:flex;flex-direction:column;gap:5px">
+          <div><span style="color:var(--muted)">お名前：</span>${D.lastName} ${D.firstName}</div>
+          <div><span style="color:var(--muted)">連絡先：</span>${D.phone}</div>
+          <div><span style="color:var(--muted)">メール：</span>${D.email}</div>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--faint)">
+        応募受付番号: <span style="font-family:'DM Mono',monospace">APL-${Date.now().toString().slice(-8)}</span>
+      </div>
+    </div>`;
+}
+
+// ── 初期化 ───────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  // URLパラメータで紹介コード自動入力
+  const p = new URLSearchParams(location.search);
+  if (p.get('ref')) D.referral = p.get('ref');
+  if (p.get('role')) D.role = p.get('role');
+  renderStep1();
+});
+</script>
+</body>
+</html>

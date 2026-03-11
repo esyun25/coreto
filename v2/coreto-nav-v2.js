@@ -98,6 +98,9 @@ const NAV = {
       { icon:'📉', label:'AG離脱リスク管理',         href:'coreto-agent-retention-v2.html', key:'agent_retention' },
       { icon:'🤝', label:'PT管理',                 href:'coreto-hub-v2.html#pt_mgmt',  key:'pt_mgmt' },
       { icon:'🎓', label:'インターン管理',          href:'coreto-intern-v2.html',       key:'intern' },
+      { icon:'📝', label:'応募者管理',               href:'coreto-applicants-v2.html',   key:'applicants' },
+      { icon:'📨', label:'AG招待・新規登録',          href:'coreto-agent-signup-v2.html', key:'agent_invite' },
+      { icon:'📨', label:'PT招待・新規登録',          href:'coreto-partner-signup-v2.html',key:'pt_invite' },
     ]},
     { section:'報酬 / 通知', items:[
       { icon:'💴', label:'報酬・支払い（全体）',   href:'coreto-payment-v2.html',      key:'payment' },

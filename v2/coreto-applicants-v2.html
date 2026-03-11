@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>応募者管理 — COREBLDG</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0D1A2D;--navy-l:#1E3252;--gold:#C8A951;--gold-dim:rgba(200,169,81,.15);--cream:#FFFFFF;--cream2:#F8F9FA;--ink:#202124;--muted:#5F6368;--faint:#80868B;--em:#059669;--em-bg:#ECFDF5;--am:#D97706;--am-bg:#FFFBEB;--rd:#DC2626;--rd-bg:#FEF2F2;--sk:#0284C7;--sk-bg:#F0F9FF;--vt:#7C3AED;--vt-bg:#F5F3FF;--nt:#374151;--nt-bg:#F3F4F6;--bd:#E8EAED;--sw:240px;--r:10px;--sh:0 1px 2px rgba(60,64,67,.1),0 1px 3px rgba(60,64,67,.06)}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:#fff}
+.shell{display:flex;height:100vh}
+.sb{width:var(--sw);background:var(--navy);display:flex;flex-direction:column;flex-shrink:0;position:relative}
+.sb::after{content:'';position:absolute;top:0;right:0;width:1px;height:100%;background:linear-gradient(180deg,transparent,rgba(200,169,81,.2),transparent)}
+.sb-head{padding:20px 18px 14px;border-bottom:1px solid rgba(255,255,255,.07)}
+.sb-logo{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:var(--gold);letter-spacing:2px;line-height:1.2}
+.sb-ver{font-size:9px;color:rgba(255,255,255,.25);margin-top:4px}
+.sb-user{display:flex;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid rgba(255,255,255,.07)}
+.sb-av{width:32px;height:32px;border-radius:50%;background:rgba(200,169,81,.2);border:1.5px solid rgba(200,169,81,.4);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--gold);flex-shrink:0}
+.sb-nav{flex:1;overflow-y:auto;padding:10px 0}
+.content{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.topbar{display:flex;align-items:center;gap:12px;padding:0 24px;height:56px;border-bottom:1px solid var(--bd);background:#fff;flex-shrink:0}
+.mob-ham{display:none;flex-direction:column;gap:5px;background:none;border:none;cursor:pointer;padding:4px}
+.mob-ham span{display:block;width:20px;height:2px;background:var(--ink);border-radius:2px}
+.tb-title{font-size:15px;font-weight:700;color:var(--ink)}
+.tb-crumb{font-size:10px;color:var(--muted)}
+.tb-crumb a{color:var(--muted);text-decoration:none}
+.page{flex:1;overflow-y:auto;padding:24px;background:var(--cream2)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Outfit','Noto Sans JP',sans-serif;transition:.15s;border:none}
+.btn-primary{background:var(--navy);color:#fff}
+.btn-ghost{background:transparent;color:var(--ink);border:1.5px solid var(--bd)}
+.btn-em{background:var(--em);color:#fff}
+.btn-gold{background:var(--gold);color:var(--navy);font-weight:700}
+.btn-sm{padding:5px 12px;font-size:11px}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;font-family:'Outfit',sans-serif}
+.b-em{background:var(--em-bg);color:var(--em)}
+.b-rd{background:var(--rd-bg);color:var(--rd)}
+.b-am{background:var(--am-bg);color:var(--am)}
+.b-sk{background:var(--sk-bg);color:var(--sk)}
+.b-vt{background:var(--vt-bg);color:var(--vt)}
+.b-nt{background:var(--nt-bg);color:var(--nt)}
+.b-gold{background:var(--gold-dim);color:#92610A}
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px}
+.kpi-card{background:#fff;border:1px solid var(--bd);border-radius:var(--r);padding:16px;box-shadow:var(--sh);text-align:center}
+.kpi-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px}
+.kpi-val{font-size:24px;font-weight:300;color:var(--ink);font-variant-numeric:tabular-nums}
+.kpi-sub{font-size:10px;color:var(--muted);margin-top:4px}
+/* テーブル */
+.sec{background:#fff;border:1px solid var(--bd);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden}
+.sec-head{padding:13px 18px;border-bottom:1px solid var(--bd);background:var(--cream2);display:flex;align-items:center;justify-content:space-between}
+.sec-title{font-size:12px;font-weight:700;color:var(--ink);text-transform:uppercase;letter-spacing:.5px}
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{padding:10px 14px;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--bd);text-align:left;background:var(--cream2);white-space:nowrap}
+.tbl td{padding:11px 14px;border-bottom:1px solid var(--bd);font-size:12px;color:var(--ink);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:rgba(13,26,45,.02)}
+.mono{font-family:'DM Mono',monospace;font-size:10px;color:var(--faint)}
+/* フィルタバー */
+.filter-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:12px 18px;border-bottom:1px solid var(--bd);background:#fff}
+.filter-pill{padding:5px 12px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;border:1.5px solid var(--bd);background:#fff;color:var(--muted);transition:.13s}
+.filter-pill.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+/* ドロワー */
+.drawer-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:200}
+.drawer-overlay.show{display:block}
+.drawer{position:fixed;right:-480px;top:0;bottom:0;width:460px;background:#fff;z-index:201;
+  box-shadow:-4px 0 24px rgba(0,0,0,.15);transition:.25s;overflow-y:auto;display:flex;flex-direction:column}
+.drawer.open{right:0}
+.drawer-head{padding:18px 20px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:var(--cream2)}
+.drawer-body{padding:20px;flex:1}
+.d-section{margin-bottom:20px}
+.d-section-title{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
+.d-row{display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-bottom:1px solid var(--bd)}
+.d-row:last-child{border-bottom:none}
+.d-label{color:var(--muted)}
+.d-val{font-weight:600;text-align:right;max-width:60%}
+.d-motivation{font-size:12px;color:var(--ink);line-height:1.8;background:var(--cream2);border-radius:8px;padding:12px 14px;border:1px solid var(--bd)}
+/* ステータス更新 */
+.status-sel{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px}
+.status-card{border:1.5px solid var(--bd);border-radius:8px;padding:10px;cursor:pointer;text-align:center;font-size:11px;font-weight:700;transition:.13s}
+.status-card:hover{border-color:var(--navy)}
+.status-card.sel{border-color:var(--navy);background:rgba(13,26,45,.04)}
+/* モバイル */
+.mob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:99}
+@media(max-width:900px){
+  .mob-ham{display:flex}
+  .sb{position:fixed;left:-100%;top:0;bottom:0;z-index:100;transition:.25s}
+  .sb.open{left:0}
+  .mob-overlay.show{display:block}
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .drawer{width:100%}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+<nav class="sb">
+  <div class="sb-head">
+    <div class="sb-logo">CORE<br>BLDG</div>
+    <div class="sb-ver">v2.0 — CORETO</div>
+  </div>
+  <div class="sb-user">
+    <div class="sb-av">HQ</div>
+    <div>
+      <div style="font-size:11px;font-weight:600;color:rgba(255,255,255,.8)">本部 管理者</div>
+      <div style="font-size:9px;color:rgba(255,255,255,.3);font-family:'DM Mono',monospace">HQ-0001</div>
+    </div>
+  </div>
+  <div class="sb-nav" id="sb-nav"></div>
+</nav>
+
+<div class="content">
+  <div class="topbar">
+    <button class="mob-ham" onclick="toggleSb()"><span></span><span></span><span></span></button>
+    <div>
+      <div class="tb-title">応募者管理</div>
+      <div class="tb-crumb"><a href="coreto-hub-v2.html">COREBLDG</a> › 応募者管理</div>
+    </div>
+    <div style="margin-left:auto;display:flex;gap:8px">
+      <button class="btn btn-ghost btn-sm" onclick="copyApplyUrl()">🔗 応募URLをコピー</button>
+      <button class="btn btn-primary btn-sm" onclick="window.open('coreto-apply-v2.html','_blank')">
+        📋 応募フォームを開く
+      </button>
+    </div>
+  </div>
+
+  <div class="page">
+    <!-- KPI -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">総応募数</div>
+        <div class="kpi-val" id="kpi-total">—</div>
+        <div class="kpi-sub">累計</div>
+      </div>
+      <div class="kpi-card" style="border-color:rgba(217,119,6,.2)">
+        <div class="kpi-label">新着（未対応）</div>
+        <div class="kpi-val" id="kpi-new" style="color:var(--am)">—</div>
+        <div class="kpi-sub">要確認</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">面接調整中</div>
+        <div class="kpi-val" id="kpi-interview">—</div>
+        <div class="kpi-sub"></div>
+      </div>
+      <div class="kpi-card" style="border-color:rgba(5,150,105,.2)">
+        <div class="kpi-label">合格・招待済み</div>
+        <div class="kpi-val" id="kpi-passed" style="color:var(--em)">—</div>
+        <div class="kpi-sub"></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">不採用</div>
+        <div class="kpi-val" id="kpi-ng" style="color:var(--muted)">—</div>
+        <div class="kpi-sub"></div>
+      </div>
+    </div>
+
+    <!-- テーブル -->
+    <div class="sec">
+      <div class="sec-head">
+        <div class="sec-title">📋 応募者リスト</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="search-input" placeholder="氏名・電話番号で検索" oninput="filterList()"
+            style="font-size:12px;padding:6px 12px;border:1.5px solid var(--bd);border-radius:7px;
+              font-family:'Outfit','Noto Sans JP',sans-serif;outline:none;width:180px">
+          <button class="btn btn-ghost btn-sm" onclick="exportCsv()">📤 CSV</button>
+        </div>
+      </div>
+      <!-- フィルタ -->
+      <div class="filter-bar">
+        <span style="font-size:11px;color:var(--muted);font-weight:700">種別:</span>
+        <div class="filter-pill active" data-filter="role" data-val="all" onclick="setFilter('role','all',this)">すべて</div>
+        <div class="filter-pill" data-filter="role" data-val="ag-re" onclick="setFilter('role','ag-re',this)">不動産AG</div>
+        <div class="filter-pill" data-filter="role" data-val="ag-hr" onclick="setFilter('role','ag-hr',this)">人材AG</div>
+        <div class="filter-pill" data-filter="role" data-val="ag-both" onclick="setFilter('role','ag-both',this)">両方AG</div>
+        <div class="filter-pill" data-filter="role" data-val="pt" onclick="setFilter('role','pt',this)">PT</div>
+        <span style="font-size:11px;color:var(--muted);font-weight:700;margin-left:8px">ステータス:</span>
+        <div class="filter-pill active" data-filter="status" data-val="all" onclick="setFilter('status','all',this)">すべて</div>
+        <div class="filter-pill" data-filter="status" data-val="new" onclick="setFilter('status','new',this)">新着</div>
+        <div class="filter-pill" data-filter="status" data-val="interview" onclick="setFilter('status','interview',this)">面接中</div>
+        <div class="filter-pill" data-filter="status" data-val="passed" onclick="setFilter('status','passed',this)">合格</div>
+        <div class="filter-pill" data-filter="status" data-val="ng" onclick="setFilter('status','ng',this)">不採用</div>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th>応募ID</th><th>応募日</th><th>氏名</th><th>種別</th>
+              <th>宅建</th><th>経験</th><th>居住地</th><th>ステータス</th><th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="applicant-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="mob-overlay" onclick="toggleSb()"></div>
+
+<!-- ドロワー（詳細・ステータス変更） -->
+<div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="detail-drawer">
+  <div class="drawer-head">
+    <div>
+      <div id="drawer-name" style="font-size:14px;font-weight:700;color:var(--ink)">—</div>
+      <div id="drawer-id" style="font-size:10px;font-family:'DM Mono',monospace;color:var(--muted)">—</div>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="closeDrawer()">✕ 閉じる</button>
+  </div>
+  <div class="drawer-body" id="drawer-body"></div>
+</div>
+
+<div id="ap-toast" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--navy);color:#fff;padding:10px 20px;border-radius:8px;font-size:12px;font-weight:600;opacity:0;transition:.3s;z-index:999;pointer-events:none;white-space:nowrap"></div>
+
+<script src="coreto-nav-v2.js"></script>
+<script>
+function toggleSb(){ document.querySelector('.sb').classList.toggle('open'); document.querySelector('.mob-overlay')?.classList.toggle('show'); }
+function showToast(msg,type){
+  const t=document.getElementById('ap-toast');
+  t.textContent=msg; t.style.background=type==='err'?'var(--rd)':type==='warn'?'var(--am)':'var(--navy)';
+  t.style.opacity='1'; t.style.transform='translateX(-50%) translateY(0)';
+  setTimeout(()=>{t.style.opacity='0';t.style.transform='translateX(-50%) translateY(10px)';},3000);
+}
+
+// ── サンプルデータ ────────────────────────────────────────
+const APPLICANTS = [
+  { id:'APL-87243501', date:'2026-03-11', lastName:'田中', firstName:'誠', lastKana:'タナカ', firstKana:'マコト',
+    phone:'090-1234-5678', email:'tanaka@example.com', pref:'東京都', area:'渋谷区・新宿区',
+    role:'ag-re', takken:'yes', takkenNo:'第123456号', takkenPref:'東京都',
+    expRe:'3〜5年', expSales:'3〜5年', status:'new',
+    motivation:'不動産業で5年間勤めており、より自由な働き方を求めてCOREBLDGへの応募を決意しました。宅建士として専任登録し、月間10件の成約を目指します。', referral:'' },
+  { id:'APL-76543210', date:'2026-03-10', lastName:'佐藤', firstName:'美咲', lastKana:'サトウ', firstKana:'ミサキ',
+    phone:'080-9876-5432', email:'sato@example.com', pref:'神奈川県', area:'横浜市',
+    role:'ag-hr', takken:'no', expRe:'未経験', expHr:'1〜3年', expSales:'1〜3年',
+    status:'interview',
+    motivation:'転職支援の経験を活かしてCOREBLDGで活動したいと考えています。フルコミッションの環境で自分の実力を試したいです。', referral:'CORETO-AB12-CD34' },
+  { id:'APL-65432109', date:'2026-03-09', lastName:'山田', firstName:'浩二', lastKana:'ヤマダ', firstKana:'コウジ',
+    phone:'070-5555-4444', email:'yamada@example.com', pref:'東京都', area:'港区',
+    role:'pt', takken:'n/a', ptEntity:'corporate', companyName:'株式会社山田商事',
+    expSales:'5年以上', status:'passed',
+    motivation:'法人として複数の顧客を抱えており、パートナーとして案件を紹介できる体制があります。', referral:'' },
+  { id:'APL-54321098', date:'2026-03-08', lastName:'鈴木', firstName:'健太', lastKana:'スズキ', firstKana:'ケンタ',
+    phone:'090-3333-2222', email:'suzuki@example.com', pref:'埼玉県', area:'さいたま市',
+    role:'ag-both', takken:'no', expRe:'1〜3年', expHr:'1年未満', expSales:'1〜3年',
+    status:'ng',
+    motivation:'両分野で活動したいと思っています。現在会社員として副業で取り組みたいです。', referral:'' },
+  { id:'APL-43210987', date:'2026-03-07', lastName:'伊藤', firstName:'真理', lastKana:'イトウ', firstKana:'マリ',
+    phone:'080-7777-6666', email:'ito@example.com', pref:'東京都', area:'世田谷区・目黒区',
+    role:'ag-re', takken:'yes', takkenNo:'第654321号', takkenPref:'東京都',
+    expRe:'5〜10年', expSales:'5〜10年', status:'new',
+    motivation:'長年大手仲介会社に勤めてきましたが、フルコミッション環境で自分の力を試したいと考え応募しました。宅建士として専任登録を希望します。', referral:'' },
+];
+
+// ── フィルタ状態 ──────────────────────────────────────────
+let filters = { role:'all', status:'all' };
+let searchQ = '';
+
+const ROLE_LABEL = { 'ag-re':'不動産AG', 'ag-hr':'人材AG', 'ag-both':'不動産+人材', 'pt':'PT' };
+const STATUS_DEF = {
+  new:       { label:'新着',   cls:'b-am' },
+  interview: { label:'面接中', cls:'b-sk' },
+  passed:    { label:'合格',   cls:'b-em' },
+  ng:        { label:'不採用', cls:'b-nt' },
+};
+
+// ── KPI更新 ───────────────────────────────────────────────
+function updateKPI() {
+  document.getElementById('kpi-total').textContent     = APPLICANTS.length;
+  document.getElementById('kpi-new').textContent       = APPLICANTS.filter(a=>a.status==='new').length;
+  document.getElementById('kpi-interview').textContent = APPLICANTS.filter(a=>a.status==='interview').length;
+  document.getElementById('kpi-passed').textContent    = APPLICANTS.filter(a=>a.status==='passed').length;
+  document.getElementById('kpi-ng').textContent        = APPLICANTS.filter(a=>a.status==='ng').length;
+}
+
+// ── リスト描画 ────────────────────────────────────────────
+function renderList() {
+  const list = APPLICANTS.filter(a => {
+    if (filters.role   !== 'all' && a.role   !== filters.role)   return false;
+    if (filters.status !== 'all' && a.status !== filters.status) return false;
+    if (searchQ && !`${a.lastName}${a.firstName}${a.phone}`.includes(searchQ)) return false;
+    return true;
+  });
+
+  const tbody = document.getElementById('applicant-tbody');
+  if (!list.length) {
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:28px;color:var(--muted)">
+      該当する応募者がいません</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = list.map(a => {
+    const st = STATUS_DEF[a.status] || STATUS_DEF.new;
+    return `<tr>
+      <td class="mono">${a.id}</td>
+      <td style="color:var(--muted);font-size:11px">${a.date}</td>
+      <td style="font-weight:600">${a.lastName} ${a.firstName}
+        <div style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace">
+          ${a.lastKana} ${a.firstKana}</div></td>
+      <td><span class="badge b-gold" style="font-size:9px">${ROLE_LABEL[a.role]||a.role}</span></td>
+      <td style="text-align:center">${a.takken==='yes'?'<span class="badge b-em" style="font-size:9px">あり</span>':a.takken==='n/a'?'<span style="color:var(--faint);font-size:10px">—</span>':'<span style="color:var(--faint);font-size:10px">なし</span>'}</td>
+      <td style="font-size:11px;color:var(--muted)">${a.expRe||'—'}</td>
+      <td style="font-size:11px">${a.pref}</td>
+      <td><span class="badge ${st.cls}">${st.label}</span></td>
+      <td><button class="btn btn-ghost btn-sm" onclick="openDrawer('${a.id}')">詳細</button></td>
+    </tr>`;
+  }).join('');
+}
+
+// ── フィルタ操作 ──────────────────────────────────────────
+function setFilter(type, val, el) {
+  filters[type] = val;
+  document.querySelectorAll(`[data-filter="${type}"]`).forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  renderList();
+}
+function filterList() {
+  searchQ = document.getElementById('search-input').value.trim();
+  renderList();
+}
+
+// ── ドロワー ──────────────────────────────────────────────
+function openDrawer(id) {
+  const a = APPLICANTS.find(x=>x.id===id);
+  if (!a) return;
+  document.getElementById('drawer-name').textContent = `${a.lastName} ${a.firstName}`;
+  document.getElementById('drawer-id').textContent   = a.id;
+
+  const st = STATUS_DEF[a.status] || STATUS_DEF.new;
+  const row = (l,v) => `<div class="d-row"><span class="d-label">${l}</span><span class="d-val">${v}</span></div>`;
+
+  document.getElementById('drawer-body').innerHTML = `
+    <div class="d-section">
+      <div class="d-section-title">基本情報</div>
+      ${row('応募日', a.date)}
+      ${row('種別', ROLE_LABEL[a.role]||a.role)}
+      ${row('電話番号', a.phone)}
+      ${row('メール', `<a href="mailto:${a.email}" style="color:var(--sk)">${a.email}</a>`)}
+      ${row('居住地', a.pref)}
+      ${a.area ? row('希望エリア', a.area) : ''}
+      ${a.referral ? row('紹介コード', `<span style="font-family:'DM Mono',monospace">${a.referral}</span>`) : ''}
+    </div>
+
+    <div class="d-section">
+      <div class="d-section-title">資格・経験</div>
+      ${a.takken!=='n/a' ? row('宅建士', a.takken==='yes' ? `あり（${a.takkenPref} ${a.takkenNo}）` : 'なし') : ''}
+      ${a.expRe ? row('不動産経験', a.expRe) : ''}
+      ${a.expHr ? row('人材経験', a.expHr) : ''}
+      ${a.expSales ? row('営業経験', a.expSales) : ''}
+      ${a.ptEntity ? row('法人/個人', a.ptEntity==='corporate'?`法人（${a.companyName}）`:'個人') : ''}
+    </div>
+
+    <div class="d-section">
+      <div class="d-section-title">志望動機</div>
+      <div class="d-motivation">${a.motivation.replace(/\n/g,'<br>')}</div>
+    </div>
+
+    <div class="d-section">
+      <div class="d-section-title">ステータス変更</div>
+      <div class="status-sel">
+        ${Object.entries(STATUS_DEF).map(([k,v])=>`
+          <div class="status-card ${a.status===k?'sel':''}" onclick="changeStatus('${a.id}','${k}',this)">
+            <span class="badge ${v.cls}">${v.label}</span>
+          </div>`).join('')}
+      </div>
+      ${a.status==='passed' ? `
+        <div style="margin-top:8px">
+          <button class="btn btn-gold" style="width:100%" onclick="goToInvite('${a.id}')">
+            📨 招待コードを発行する →
+          </button>
+        </div>` : ''}
+    </div>`;
+
+  document.getElementById('detail-drawer').classList.add('open');
+  document.getElementById('drawer-overlay').classList.add('show');
+}
+
+function closeDrawer() {
+  document.getElementById('detail-drawer').classList.remove('open');
+  document.getElementById('drawer-overlay').classList.remove('show');
+}
+
+function changeStatus(id, newStatus, el) {
+  const a = APPLICANTS.find(x=>x.id===id);
+  if (!a) return;
+  a.status = newStatus;
+  document.querySelectorAll('.status-card').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel');
+  updateKPI(); renderList();
+  showToast(`✅ ステータスを「${STATUS_DEF[newStatus].label}」に変更しました`);
+
+  // 合格に変更したら招待ボタンを表示
+  if (newStatus === 'passed') {
+    const body = document.getElementById('drawer-body');
+    const existing = body.querySelector('[data-invite-btn]');
+    if (!existing) {
+      const btn = document.createElement('div');
+      btn.setAttribute('data-invite-btn','1');
+      btn.style.marginTop = '8px';
+      btn.innerHTML = `<button class="btn btn-gold" style="width:100%" onclick="goToInvite('${id}')">
+        📨 招待コードを発行する →</button>`;
+      body.querySelector('.status-sel').insertAdjacentElement('afterend', btn);
+    }
+  }
+}
+
+function goToInvite(id) {
+  const a = APPLICANTS.find(x=>x.id===id);
+  if (!a) return;
+  const roleMap = { 'ag-re':'agent_invite','ag-hr':'agent_invite','ag-both':'agent_invite','pt':'pt_invite' };
+  closeDrawer();
+  window.location.href = `coreto-hub-v2.html#${roleMap[a.role]||'agent_invite'}?name=${encodeURIComponent(a.lastName+' '+a.firstName)}`;
+}
+
+// ── CSV出力 ───────────────────────────────────────────────
+function exportCsv() {
+  const header = '応募ID,応募日,姓,名,姓カナ,名カナ,電話,メール,種別,宅建,経験,居住地,ステータス\n';
+  const rows = APPLICANTS.map(a =>
+    [a.id,a.date,a.lastName,a.firstName,a.lastKana,a.firstKana,a.phone,a.email,
+     ROLE_LABEL[a.role]||a.role, a.takken==='yes'?'あり':'なし',
+     a.expRe||'—',a.pref,STATUS_DEF[a.status]?.label||a.status].join(',')
+  ).join('\n');
+  const blob = new Blob(['\uFEFF'+header+rows],{type:'text/csv'});
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `CORETO_applicants_${new Date().toISOString().slice(0,10)}.csv`;
+  link.click();
+  showToast('📤 CSVをダウンロードしました');
+}
+
+function copyApplyUrl() {
+  const url = location.href.replace('coreto-applicants-v2.html','coreto-apply-v2.html');
+  navigator.clipboard.writeText(url).then(() => showToast('🔗 応募URLをコピーしました'));
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  updateKPI();
+  renderList();
+  CNAV.init('applicants');
+});
+</script>
+</body>
+</html>
