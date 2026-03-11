@@ -649,6 +649,35 @@ function renderForm() {
 
 window.addEventListener('DOMContentLoaded', () => {
   renderForm();
+  // URLパラメータから案件情報を自動セット
+  const p = new URLSearchParams(location.search);
+  if (p.get('id')) {
+    setTimeout(() => {
+      const el = id => document.getElementById(id);
+      if (el('case-id'))     el('case-id').value     = p.get('id')    || '';
+      if (el('client-name')) el('client-name').value = decodeURIComponent(p.get('name') || '');
+      // 物件情報（addr, prop, price）
+      const addrInput = document.querySelector('input[placeholder="渋谷区代々木1丁目XX-XX"]');
+      if (addrInput && p.get('addr')) addrInput.value = decodeURIComponent(p.get('addr'));
+      // 物件種別
+      const propSel = document.querySelector('select.form-input');
+      if (propSel && p.get('prop')) {
+        [...propSel.options].forEach(o => { if (o.text.includes(decodeURIComponent(p.get('prop')))) propSel.value = o.value; });
+      }
+      // 取引形態
+      const deal = p.get('deal') || 'brokerage';
+      selectDealType(deal);
+      // 売買価格
+      if (p.get('price') && el('sale-price')) {
+        const price = parseInt(p.get('price'));
+        el('sale-price').value = price.toLocaleString();
+        calcBrokerageReward();
+      }
+      // パンくず上にケースIDを表示
+      const crumb = document.querySelector('.tb-crumb');
+      if (crumb) crumb.innerHTML = `<a href="coreto-hub-v2.html">COREBLDG</a> › <a href="coreto-cases-v2.html">案件管理</a> › <span style="color:var(--ink);font-family:'DM Mono',monospace">${p.get('id')}</span> › 売買成約報告`;
+    }, 50);
+  }
   CNAV.init('contract_report');
 });
 </script>
