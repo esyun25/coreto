@@ -850,13 +850,15 @@ function renderLeadCard(l){
       <span style="font-size:10px;color:var(--faint)">${l.daysAgo===0?'今日':l.daysAgo+'日前'}</span>
     </div>
     <div class="status-flow">
-      <span class="status-step ${analyzed?'done':'current'}">📝 登録</span>
+      <span class="status-step done">📝 登録</span>
       <span class="status-arrow">›</span>
-      <span class="status-step ${analyzed?'done':''}">🤖 AI解析</span>
+      <span class="status-step ${['analyzing','scoring','ai_ranking','notified'].includes(l.status)?'done':l.status==='pending_ai'?'current':''}">🤖 AI解析</span>
       <span class="status-arrow">›</span>
-      <span class="status-step ${l._algoResult?'done':analyzed?'current':''}">⚙️ アルゴ</span>
+      <span class="status-step ${['ai_ranking','notified'].includes(l.status)?'done':l.status==='scoring'?'current':''}">⚙️ アルゴ</span>
       <span class="status-arrow">›</span>
-      <span class="status-step ${l._aiRanking?'done':l._algoResult?'current':''}">✨ AI判定</span>
+      <span class="status-step ${l.status==='notified'?'done':l.status==='ai_ranking'?'current':''}">✨ AI判定</span>
+      <span class="status-arrow">›</span>
+      <span class="status-step ${l.status==='notified'?'current':''}">🔔 AG通知</span>
     </div>
   </div>`;
 }
@@ -864,9 +866,9 @@ function renderLeadCard(l){
 function renderLeadDetailPlaceholder(){
   return `<div style="background:var(--cream2);border:1.5px dashed var(--bd2);border-radius:12px;
     padding:48px;text-align:center;color:var(--faint)">
-    <div style="font-size:32px;margin-bottom:10px">🤖</div>
-    <div style="font-size:13px;font-weight:600;color:var(--muted)">案件を選択してAIマッチングを開始</div>
-    <div style="font-size:11px;margin-top:6px">Role A（案件解析）→ アルゴ120点 → Role B（AI判定）</div>
+    <div style="font-size:32px;margin-bottom:10px">👆</div>
+    <div style="font-size:13px;font-weight:600;color:var(--muted)">案件を選択して確認・確定</div>
+    <div style="font-size:11px;margin-top:6px;color:var(--em)">AIマッチングはPT投稿時に全自動で実行済みです</div>
   </div>`;
 }
 
@@ -883,9 +885,16 @@ function renderLeadDetail(lead){
         <div style="font-size:10px;color:var(--muted);margin-top:2px;font-family:'DM Mono',monospace">${lead.id}</div>
       </div>
       <div style="display:flex;gap:6px">
-        ${!ai ? `<button class="btn btn-navy" onclick="runRoleA('${lead.id}')">🤖 AI解析 (Role A)</button>` : ''}
-        ${ai && !ranking ? `<button class="btn btn-vt" onclick="runFullMatch('${lead.id}')">✨ AIマッチング実行</button>` : ''}
-        ${ranking ? `<button class="btn btn-em" onclick="openAiModal('${lead.id}')">📊 結果を見る</button>` : ''}
+        ${lead.status==='pending_ai'||lead.status==='analyzing'||lead.status==='scoring'||lead.status==='ai_ranking'
+          ? `<div class="ai-thinking" style="padding:7px 14px;display:inline-flex;border-radius:8px">
+              <div class="ai-thinking-dots"><span></span><span></span><span></span></div>
+              <div style="color:rgba(255,255,255,.7);font-size:11px;margin-left:8px">${
+                lead.status==='analyzing'?'🤖 Role A 解析中...'
+                :lead.status==='scoring'?'⚙️ スコアリング中...'
+                :lead.status==='ai_ranking'?'✨ Role B 判定中...'
+                :'🤖 AI解析待ち'}</div></div>`
+          : ranking ? `<button class="btn btn-em" onclick="openAiModal('${lead.id}')">📊 AI結果を確認・確定</button>`
+          : `<button class="btn btn-am btn-sm" onclick="autoMatchPipeline('${lead.id}')">↺ 再実行</button>`}
       </div>
     </div>
     <div class="card-body">
@@ -1306,10 +1315,19 @@ function renderPTMyCase(myLeads){
   if(!myLeads.length) return `<div style="text-align:center;padding:48px;color:var(--faint)">
     投稿中の案件はありません</div>`;
   const statusMap = {
-    pending_ai:'🤖 AI解析中',unmatched:'🔍 マッチング中',
-    matched:'✅ 担当AG決定',closed:'🏁 成約'
+    pending_ai:'⏳ 受付完了',
+    analyzing:'🤖 AI解析中',
+    scoring:'⚙️ スコアリング中',
+    ai_ranking:'✨ AI判定中',
+    notified:'🔔 AG選定完了・応答待ち',
+    unmatched:'🔍 マッチング中',
+    matched:'✅ 担当AG決定',
+    closed:'🏁 成約'
   };
-  const statusCls = {pending_ai:'b-am',unmatched:'b-sk',matched:'b-em',closed:'b-nt'};
+  const statusCls = {
+    pending_ai:'b-nt',analyzing:'b-am',scoring:'b-am',
+    ai_ranking:'b-vt',notified:'b-sk',unmatched:'b-sk',matched:'b-em',closed:'b-nt'
+  };
   return myLeads.map(l=>`
   <div class="card" style="margin-bottom:12px">
     <div class="card-body">
@@ -1370,33 +1388,97 @@ async function submitPTLead(){
   if(!type||!area||!desc){ showToast('種別・エリア・概要は必須です','error'); return; }
 
   const btn = document.getElementById('pt-submit-btn');
-  btn.disabled = true; btn.textContent = '🤖 AI解析中...';
+  btn.disabled = true;
 
   const leads = getLeads();
   const newId = 'LD-2026-'+ String(leads.length+1).padStart(3,'0');
   const newLead = {
     id:newId, ptId:'PT-30007', ptName:'佐藤 美咲', ptReputation:4.3,
-    type, area, budget, title:`${area} ${type==='rental'?'賃貸':type==='sale'?'売買':'人材'}`,
+    type, area, budget,
+    title:`${area} ${type==='rental'?'賃貸':type==='sale'?'売買':'人材'}`,
     description:desc, method:ptMethod,
     targetAgId: ptMethod==='direct'?targetAg:null, minRank:null,
     status:'pending_ai', createdAt:new Date().toLocaleString('ja-JP'), daysAgo:0,
     _aiAnalysis:null, _algoResult:null, _aiRanking:null
   };
-
-  showToast('🤖 AI Role A — 案件を解析しています...','info');
-  const ai = await analyzeLeadWithAI(newLead);
-  newLead._aiAnalysis = ai;
-
-  if(ai.estimatedDifficulty>=8 && !newLead.minRank) newLead.minRank='Silver';
-  if(ai.urgencyLevel>=8) newLead._urgent=true;
-
   leads.push(newLead);
   saveLeads(leads);
 
-  showToast(`✅ 投稿完了！難易度 ${ai.estimatedDifficulty}/10 / 緊急度 ${ai.urgencyLevel}/10`,'success');
-  btn.disabled=false; btn.textContent='🤖 投稿してAIマッチングを開始';
+  // 投稿完了 → マイ案件タブに遷移してプログレス表示
   currentTab='mycase';
   renderMain();
+
+  // バックグラウンドで全自動パイプライン実行
+  autoMatchPipeline(newLead.id);
+
+  showToast('✅ 投稿完了！AIマッチングを自動開始しました','success');
+  btn.disabled=false;
+  btn.textContent='🤖 投稿してAIマッチングを開始';
+}
+
+// ══════════════════════════════════════════════════════════════
+// 全自動マッチングパイプライン（PT投稿時・即時起動）
+// ══════════════════════════════════════════════════════════════
+async function autoMatchPipeline(leadId){
+  const leads = getLeads();
+  const lead = leads.find(l=>l.id===leadId);
+  if(!lead) return;
+
+  // ── Step 1: Role A 案件解析 ──────────────────────────────
+  lead.status = 'analyzing';
+  saveLeads(leads);
+  refreshLeadStatusBadge(lead);
+
+  const ai = await analyzeLeadWithAI(lead);
+  lead._aiAnalysis = ai;
+  if(ai.estimatedDifficulty>=8 && !lead.minRank) lead.minRank='Silver';
+  if(ai.urgencyLevel>=8) lead._urgent=true;
+  saveLeads(leads);
+  refreshLeadStatusBadge(lead);
+
+  // ── Step 2: アルゴ 120点スコアリング ─────────────────────
+  lead.status = 'scoring';
+  saveLeads(leads);
+  refreshLeadStatusBadge(lead);
+  await new Promise(r=>setTimeout(r,400)); // UI更新の余地
+
+  const agents = getAgents();
+  const filtered = hardFilter(agents, lead);
+  const scored = filtered.map(ag=>({ag, lead, score:calculateMatchScore(ag,lead)}));
+  const ranked = explorationAdjustedRanking(scored);
+  lead._algoResult = ranked;
+  saveLeads(leads);
+
+  // ── Step 3: Role B AI最終判定 ─────────────────────────────
+  lead.status = 'ai_ranking';
+  saveLeads(leads);
+  refreshLeadStatusBadge(lead);
+
+  const ranking = await aiFinalRanking(ranked, lead);
+  lead._aiRanking = ranking;
+
+  // ── Step 4: Slack通知シミュレーション ─────────────────────
+  lead.status = 'notified'; // AG通知済み → HQ確認待ち
+  lead._notifiedAt = new Date().toLocaleString('ja-JP');
+  lead._notifiedAgents = ranking.selected.map(s=>s.agentId);
+  saveLeads(leads);
+  refreshLeadStatusBadge(lead);
+
+  // HQへのアラート（緊急案件・リスクフラグあり）
+  if(ranking.hqAlertNeeded || lead._urgent){
+    showToast(`⚠️ HQアラート: ${lead.id} — ${ranking.hqAlertReason||'緊急案件です'}`, 'error');
+  } else {
+    showToast(`🔔 ${lead.id}: AI選定完了・上位${ranking.selected.length}名に通知送信`, 'success');
+  }
+
+  // HQボードを自動更新
+  if(currentRole==='hq') renderMain();
+}
+
+// マイ案件ステータスバッジをリアルタイム更新
+function refreshLeadStatusBadge(lead){
+  // PT側のマイ案件タブで状態をリアルタイム反映
+  if(currentRole==='pt' && currentTab==='mycase') renderMain();
 }
 
 async function runRoleA(leadId){
@@ -1675,6 +1757,12 @@ document.addEventListener('DOMContentLoaded',()=>{
   initDemoAgents();
   initDemoLeads();
   renderMain();
+
+  // pending_ai 状態の案件があれば自動パイプライン起動（デモ用）
+  const leads = getLeads();
+  leads.filter(l=>l.status==='pending_ai'&&!l._aiAnalysis).forEach(l=>{
+    setTimeout(()=>autoMatchPipeline(l.id), 800);
+  });
 });
 </script>
 </body>
