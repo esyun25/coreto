@@ -1156,11 +1156,23 @@ function approveAi(docId){
   }
   doc.stepIdx++;
   doc.lastUpdated = new Date().toLocaleString('ja-JP').slice(5,-3);
-  // Aフロー: 承認と同時に自動印刷
+  // Aフロー: 承認時にlocalStorageをcaseIdキーに移行 + 自動印刷
   if (doc.flow === 'A') {
+    // pending → caseId キーに移行
+    try {
+      const pendingKey = 'CORETO_SCAN_PENDING_'+doc.id;
+      const raw = localStorage.getItem(pendingKey);
+      if (raw) {
+        const data = JSON.parse(raw);
+        data.caseId = doc.caseId;
+        data.confirmedAt = new Date().toLocaleString('ja-JP').slice(0,-3);
+        localStorage.setItem('CORETO_SCAN_'+doc.caseId, JSON.stringify(data));
+        localStorage.removeItem(pendingKey);
+      }
+    } catch(e){}
     const bc = doc.caseId.replace('-','') + Date.now().toString().slice(-6);
     doc.outboundTracking = bc;
-    showToast(`✅ 承認: ${doc.caseId} — 印刷を開始します`, 'ok');
+    showToast(`✅ 承認: ${doc.caseId} — 書類を保存・印刷を開始します`, 'ok');
     renderStats(); refreshCurrentTab();
     setTimeout(()=>{
       openBcModal('🖨️ 自動印刷: Welcome letter＋ラベル2枚', docId, [
@@ -1459,27 +1471,56 @@ function startNewFlow(){
   document.getElementById('scan-modal-title').textContent = '📦 新規受付 — 書類スキャンアップロード';
   document.getElementById('scan-modal-body').innerHTML = `
     <div style="font-size:11px;color:var(--muted);margin-bottom:14px;line-height:1.8">
-      コピー機でスキャンしたPDFをアップロードしてください。<br>
-      AIが書類の内容から案件を自動判定します。
+      コピー機でスキャンしたPDFを種別ごとにアップロードしてください。<br>
+      AIが内容から案件を自動判定します。IT重説時に宅建士が参照します。
     </div>
-    <label id="new-upload-label"
-      style="display:block;border:2px dashed var(--bd2);border-radius:12px;
-      padding:24px;text-align:center;cursor:pointer;transition:.2s;background:#F8F9FA"
-      onmouseenter="this.style.borderColor='var(--navy)';this.style.background='#EEF2FF'"
-      onmouseleave="this.style.borderColor='var(--bd2)';this.style.background='#F8F9FA'">
-      <input type="file" accept="application/pdf" multiple style="display:none"
-        onchange="handleNewUpload(event)">
-      <div style="font-size:28px;margin-bottom:8px">📁</div>
-      <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:4px">
-        PDFをクリックして選択
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+      <!-- 契約書 -->
+      <div>
+        <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:6px;letter-spacing:.4px">
+          📄 契約書 <span style="color:var(--rd)">*</span>
+        </div>
+        <label id="upload-label-contract"
+          style="display:block;border:2px dashed var(--bd2);border-radius:10px;
+          padding:16px;text-align:center;cursor:pointer;transition:.2s;background:#F8F9FA;min-height:90px"
+          onmouseenter="this.style.borderColor='var(--navy)'"
+          onmouseleave="if(!_uploadFiles.contract)this.style.borderColor='var(--bd2)'">
+          <input type="file" accept="application/pdf" style="display:none"
+            onchange="handleFileSelect(event,'contract')">
+          <div id="upload-status-contract" style="font-size:11px;color:var(--muted)">
+            <div style="font-size:20px;margin-bottom:4px">📁</div>
+            クリックして選択
+          </div>
+        </label>
       </div>
-      <div id="new-upload-status" style="font-size:11px;color:var(--muted)">
-        契約書.pdf ／ 重要事項説明書.pdf（複数選択可）
+      <!-- 重要事項説明書 -->
+      <div>
+        <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:6px;letter-spacing:.4px">
+          📋 重要事項説明書 <span style="color:var(--rd)">*</span>
+        </div>
+        <label id="upload-label-jusetsu"
+          style="display:block;border:2px dashed var(--bd2);border-radius:10px;
+          padding:16px;text-align:center;cursor:pointer;transition:.2s;background:#F8F9FA;min-height:90px"
+          onmouseenter="this.style.borderColor='var(--navy)'"
+          onmouseleave="if(!_uploadFiles.jusetsu)this.style.borderColor='var(--bd2)'">
+          <input type="file" accept="application/pdf" style="display:none"
+            onchange="handleFileSelect(event,'jusetsu')">
+          <div id="upload-status-jusetsu" style="font-size:11px;color:var(--muted)">
+            <div style="font-size:20px;margin-bottom:4px">📁</div>
+            クリックして選択
+          </div>
+        </label>
       </div>
-    </label>
+    </div>
+
+    <div style="font-size:10px;color:var(--faint);margin-bottom:10px;text-align:center">
+      ⚠️ PDFサイズの合計は10MB以内を推奨。本番ではGoogle Driveに保存されます。
+    </div>
+
     <button class="act-btn act-ai"
       id="new-upload-submit" disabled
-      style="margin-top:14px;width:100%;justify-content:center;opacity:.45"
+      style="width:100%;justify-content:center;opacity:.45"
       onclick="submitNewUpload()">
       🤖 アップロードしてAI判定を開始
     </button>
@@ -1489,24 +1530,40 @@ function startNewFlow(){
   document.getElementById('scan-modal').style.display = 'flex';
 }
 
-let _newUploadFiles = [];
+// ── ファイルアップロード管理 ────────────────────────────
+let _uploadFiles = {contract: null, jusetsu: null};
+let _uploadDataUrls = {contract: null, jusetsu: null};
 
-function handleNewUpload(event){
-  _newUploadFiles = Array.from(event.target.files);
-  if (!_newUploadFiles.length) return;
-  const names = _newUploadFiles.map(f=>f.name).join('、');
-  const statusEl = document.getElementById('new-upload-status');
-  const btnEl    = document.getElementById('new-upload-submit');
-  const label    = document.getElementById('new-upload-label');
+function handleFileSelect(event, type){
+  const file = event.target.files[0];
+  if (!file) return;
+  _uploadFiles[type] = file;
+
+  const statusEl = document.getElementById('upload-status-'+type);
+  const labelEl  = document.getElementById('upload-label-'+type);
   if (statusEl) statusEl.innerHTML =
-    `<span style="color:var(--em);font-weight:700">✅ ${_newUploadFiles.length}件選択済み</span><br>
-     <span style="font-size:10px">${names}</span>`;
-  if (btnEl) { btnEl.disabled=false; btnEl.style.opacity='1'; }
-  if (label) label.style.borderColor = 'var(--em)';
+    `<div style="font-size:18px;margin-bottom:3px">✅</div>
+     <div style="font-size:10px;font-weight:700;color:var(--em)">${file.name}</div>
+     <div style="font-size:9px;color:var(--faint)">${(file.size/1024).toFixed(0)}KB</div>`;
+  if (labelEl) labelEl.style.borderColor = 'var(--em)';
+
+  // 両方揃ったらボタン有効化
+  const btnEl = document.getElementById('new-upload-submit');
+  if (_uploadFiles.contract && _uploadFiles.jusetsu){
+    if (btnEl){ btnEl.disabled=false; btnEl.style.opacity='1'; }
+  }
+
+  // base64変換（localStorage保存用）
+  const reader = new FileReader();
+  reader.onload = e => { _uploadDataUrls[type] = e.target.result; };
+  reader.readAsDataURL(file);
 }
 
 function submitNewUpload(){
-  if (!_newUploadFiles.length) return;
+  if (!_uploadFiles.contract || !_uploadFiles.jusetsu){
+    showToast('⚠️ 契約書と重説の両方を選択してください','warn');
+    return;
+  }
   closeScanModal();
   const newDoc = {
     id:'DOC-'+String(Date.now()).slice(-5),
@@ -1519,11 +1576,32 @@ function submitNewUpload(){
     hankoOk:false, extraStamp:false,
   };
   DOCS.unshift(newDoc);
+
+  // localStorage に pending として保存
+  const pendingData = {
+    docId: newDoc.id,
+    caseId: null,
+    uploadedAt: newDoc.arrivedAt,
+    contract: _uploadDataUrls.contract ? {
+      name: _uploadFiles.contract.name,
+      dataUrl: _uploadDataUrls.contract,
+      size: _uploadFiles.contract.size,
+    } : null,
+    jusetsu: _uploadDataUrls.jusetsu ? {
+      name: _uploadFiles.jusetsu.name,
+      dataUrl: _uploadDataUrls.jusetsu,
+      size: _uploadFiles.jusetsu.size,
+    } : null,
+  };
+  try {
+    localStorage.setItem('CORETO_SCAN_PENDING_'+newDoc.id, JSON.stringify(pendingData));
+  } catch(e){ showToast('⚠️ ローカルストレージ保存失敗（容量不足の可能性）','warn'); }
+
   renderStats();
-  showToast(`📦 受付登録完了（${_newUploadFiles.length}件）— AI判定を開始します`);
-  _newUploadFiles = [];
+  showToast('📦 受付登録完了 — AI判定を開始します');
+  _uploadFiles = {contract:null, jusetsu:null};
+  _uploadDataUrls = {contract:null, jusetsu:null};
   refreshCurrentTab();
-  // 1.5秒後にAI判定完了（デモ）
   setTimeout(()=>{ runAiScanById(newDoc.id); }, 1500);
 }
 

@@ -310,6 +310,21 @@ body, input, select, textarea, button { font-family:'Outfit','Noto Sans JP',sans
 .label-preview .lp-main{font-size:14px;font-weight:700;color:var(--ink)}
 .label-preview .lp-sub{font-size:10px;color:var(--muted)}
 
+
+/* ── 書類参照パネル ── */
+.doc-panel{background:#fff;border:1px solid var(--bd);border-radius:12px;
+  margin-bottom:16px;overflow:hidden}
+.doc-panel-head{padding:12px 16px;background:var(--navy);display:flex;
+  align-items:center;justify-content:space-between;gap:8px}
+.doc-panel-title{font-size:11px;font-weight:700;color:var(--gold)}
+.doc-tab-bar{display:flex;border-bottom:1px solid var(--bd)}
+.doc-tab{padding:8px 16px;font-size:11px;font-weight:600;color:var(--muted);
+  cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;
+  margin-bottom:-1px;transition:.15s}
+.doc-tab.active{color:var(--navy);border-bottom-color:var(--navy)}
+.doc-viewer{width:100%;height:420px;border:none;display:block}
+.doc-no-data{padding:32px;text-align:center;color:var(--faint);font-size:12px}
+
 </style>
 </head>
 <body>
@@ -344,6 +359,25 @@ body, input, select, textarea, button { font-family:'Outfit','Noto Sans JP',sans
   <div class="cs-body">
     <div class="cs-left" id="cs-left"></div>
     <div class="cs-right" id="cs-right"></div>
+
+<!-- 書類参照パネル（IT重説中に宅建士が参照）-->
+<div id="doc-panel-wrap" style="margin-top:16px;display:none">
+  <div class="doc-panel">
+    <div class="doc-panel-head">
+      <span class="doc-panel-title">📄 書類参照（宅建士用）</span>
+      <span style="font-size:9px;color:rgba(255,255,255,.5)" id="doc-panel-meta"></span>
+    </div>
+    <div class="doc-tab-bar">
+      <button class="doc-tab active" id="doc-tab-contract"
+        onclick="switchDocTab('contract')">📄 契約書</button>
+      <button class="doc-tab" id="doc-tab-jusetsu"
+        onclick="switchDocTab('jusetsu')">📋 重要事項説明書</button>
+    </div>
+    <div id="doc-viewer-area">
+      <div class="doc-no-data">書類を読み込んでいます...</div>
+    </div>
+  </div>
+</div>
   </div>
 
 </div>
@@ -380,6 +414,7 @@ let STATE = {
   trackingNo:     '',
   shippedAt:      null,
   barcodes: {case_id:'',outbound_name:'',outbound_track:'',return_name:'',return_track:''},
+  scannedDocs:    null,   // {contract:{name,dataUrl}, jusetsu:{name,dataUrl}} from localStorage
 };
 
 // ── デモ案件データ ─────────────────────────────────────
@@ -414,6 +449,7 @@ function renderScan() {
       📌 スキャナーまたはスマートフォンで書類を撮影してアップロードしてください。<br>
       <strong style="color:var(--ink)">AIが契約者名・物件名を読み取り、案件を自動で特定します。</strong>
     </div>
+    ${checkPreloadedDocs()}
     <div class="scan-drop" id="scan-drop"
       onclick="document.getElementById('scan-file').click()"
       ondragover="event.preventDefault();this.classList.add('drag')"
@@ -753,9 +789,23 @@ function renderManualSearch(q) {
 function confirmCase() {
   if (!STATE.selectedCase) return;
   STATE.docType = STATE.aiResult?.extracted?.doc_type || '賃貸借契約書';
-  showToast(`✅ ${STATE.selectedCase.name} 様の案件に登録しました`);
+
+  // localStorage から書類スキャンデータをロード
+  try {
+    const raw = localStorage.getItem('CORETO_SCAN_'+STATE.selectedCase.id);
+    if (raw) {
+      STATE.scannedDocs = JSON.parse(raw);
+      showToast(`✅ ${STATE.selectedCase.name} 様の案件に登録 — スキャン書類あり`, 'ok');
+    } else {
+      STATE.scannedDocs = null;
+      showToast(`✅ ${STATE.selectedCase.name} 様の案件に登録しました`);
+    }
+  } catch(e){ STATE.scannedDocs = null; }
+
   // 確定と同時にクライアント向け案内を自動印刷
   setTimeout(() => printClientGuide(), 400);
+  // 書類パネルを更新
+  renderDocPanel();
   goStep('stamp');
 }
 
@@ -1306,6 +1356,75 @@ function submitBC(key) {
 }
 
 // ══ フロー制御 ════════════════════════════════════════════
+function checkPreloadedDocs(){
+  // CORETO_SCAN_* キーを全検索して件数表示
+  const keys = [];
+  try {
+    for(let i=0; i<localStorage.length; i++){
+      const k = localStorage.key(i);
+      if (k && k.startsWith('CORETO_SCAN_') && !k.includes('PENDING')) keys.push(k);
+    }
+  } catch(e){}
+  if (!keys.length) return '';
+  return `<div style="background:#EDE9FE;border:1px solid rgba(109,40,217,.2);border-radius:8px;
+    padding:10px 12px;margin-bottom:12px;font-size:11px;color:#5B21B6;line-height:1.8">
+    📂 <strong>スキャン書類あり（${keys.length}件）:</strong>
+    ${keys.map(k=>{
+      try{const d=JSON.parse(localStorage.getItem(k));
+        return `<span style="font-family:'DM Mono',monospace;font-size:10px">
+          ${d.caseId||k.replace('CORETO_SCAN_','')}</span>`;}catch(e){return '';}
+    }).join('、')}<br>
+    <span style="font-size:10px;opacity:.8">案件を確定すると書類参照パネルに表示されます。</span>
+  </div>`;
+}
+
+// ── 書類参照パネル ────────────────────────────────────
+function renderDocPanel(){
+  const wrap = document.getElementById('doc-panel-wrap');
+  if (!wrap) return;
+
+  if (!STATE.scannedDocs || (!STATE.scannedDocs.contract && !STATE.scannedDocs.jusetsu)){
+    wrap.style.display = 'none';
+    return;
+  }
+
+  wrap.style.display = 'block';
+  const meta = document.getElementById('doc-panel-meta');
+  if (meta) meta.textContent = 'アップロード: ' + (STATE.scannedDocs.uploadedAt || '');
+
+  switchDocTab('contract');
+}
+
+function switchDocTab(type){
+  ['contract','jusetsu'].forEach(t => {
+    const tab = document.getElementById('doc-tab-'+t);
+    if (tab) tab.classList.toggle('active', t===type);
+  });
+
+  const area = document.getElementById('doc-viewer-area');
+  if (!area) return;
+
+  const doc = STATE.scannedDocs?.[type];
+  if (!doc || !doc.dataUrl){
+    area.innerHTML = `<div class="doc-no-data">
+      ${type==='contract' ? '📄 契約書' : '📋 重要事項説明書'}のデータがありません
+    </div>`;
+    return;
+  }
+
+  area.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;
+      padding:8px 14px;border-bottom:1px solid var(--bd);background:#F8F9FA">
+      <span style="font-size:11px;font-weight:600;color:var(--ink)">${doc.name}</span>
+      <a href="${doc.dataUrl}" download="${doc.name}"
+        style="font-size:10px;font-weight:700;color:var(--navy);text-decoration:none">
+        ⬇️ ダウンロード
+      </a>
+    </div>
+    <embed src="${doc.dataUrl}" type="application/pdf" class="doc-viewer"
+      onerror="this.outerHTML='<div class=doc-no-data>PDFビューアが利用できません。<br>上の「ダウンロード」からファイルを開いてください。</div>'">`;
+}
+
 function goStep(step) {
   STATE.step = step;
   renderFlowBar();
