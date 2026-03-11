@@ -190,11 +190,7 @@ function renderStep1(){
             <div class="tc-title">パートナー（PT）</div>
             <div class="tc-sub">案件紹介・光通信<br>Partner</div>
           </div>
-          <div class="type-card ${D.role==='ag-both'?'selected':''}" onclick="selectRole('ag-both',this)">
-            <div class="tc-icon">⭐</div>
-            <div class="tc-title">不動産 ＋ 人材</div>
-            <div class="tc-sub">両分野で活動希望<br>RE ＋ HR</div>
-          </div>
+
         </div>
         <div class="field-err" id="role-err">応募種別を選択してください</div>
       </div>
@@ -257,7 +253,7 @@ function renderStep1(){
         </div>
         <div class="field">
           <label>メールアドレス <span class="req">*</span></label>
-          <input id="f-email" class="form-input" type="email" value="${D.email}" placeholder="you@example.com">
+          <input id="f-email" class="form-input" type="text" value="${D.email}" placeholder="you@example.com">
           <div class="field-err" id="f-email-err"></div>
         </div>
       </div>
@@ -317,8 +313,9 @@ function validateStep1() {
     markErr('f-phone','正しい電話番号を入力してください'); ok=false;
   } else clearErr('f-phone');
   const em = val('f-email');
-  if (!em.includes('@')) { markErr('f-email','正しいメールアドレスを入力してください'); ok=false; }
-  else clearErr('f-email');
+  if (!em || em.indexOf('@') < 1 || em.lastIndexOf('.') <= em.indexOf('@')) {
+    markErr('f-email','正しいメールアドレスを入力してください'); ok=false;
+  } else clearErr('f-email');
   if (!ok) { showToast('⚠️ 入力内容を確認してください'); return; }
 
   D.lastName=val('f-lname'); D.firstName=val('f-fname');
@@ -334,8 +331,8 @@ function validateStep1() {
 function renderStep2() {
   setStep(2);
   const isAG = D.role !== 'pt';
-  const showRe = ['ag-re','ag-both'].includes(D.role);
-  const showHr = ['ag-hr','ag-both'].includes(D.role);
+  const showRe = D.role === 'ag-re';
+  const showHr = D.role === 'ag-hr';
 
   document.getElementById('main-card').innerHTML = `
     <div class="card-head">
@@ -476,7 +473,7 @@ function renderStep3() {
   setStep(3);
   const roleLabel = {
     'ag-re':'不動産AG（RE）','ag-hr':'人材AG（HR）',
-    'ag-both':'不動産AG ＋ 人材AG','pt':'パートナー（PT）'
+    'pt':'パートナー（PT）'
   }[D.role]||D.role;
   const row = (l,v) => `
     <div style="display:flex;justify-content:space-between;font-size:12px;
@@ -530,7 +527,7 @@ function submitApply() {
   if (btn) { btn.disabled=true; btn.textContent='送信中...'; }
 
   // Slack通知（実運用ではAPIエンドポイントへPOST）
-  const roleLabel = {'ag-re':'不動産AG','ag-hr':'人材AG','ag-both':'不動産+人材AG','pt':'PT'}[D.role]||D.role;
+  const roleLabel = {'ag-re':'不動産AG','ag-hr':'人材AG','pt':'PT'}[D.role]||D.role;
   const slackMsg = {
     text: `🆕 新規応募が届きました`,
     blocks:[{
