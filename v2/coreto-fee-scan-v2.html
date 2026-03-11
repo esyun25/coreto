@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>COREBLDG — 初期費用明細照合</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600&family=Outfit:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0D1A2D;--navy-m:#152238;--navy-l:#1E3252;
+  --gold:#C8A951;--gold-dim:rgba(200,169,81,.15);
+  --ink:#202124;--muted:#5F6368;--faint:#80868B;
+  --em:#059669;--em-bg:#ECFDF5;
+  --rd:#DC2626;--rd-bg:#FEF2F2;
+  --am:#D97706;--am-bg:#FFFBEB;
+  --sk:#0284C7;--sk-bg:#F0F9FF;
+  --cream:#FFFFFF;--cream2:#F8F9FA;
+  --bd:#E8EAED;--bd2:#DADCE0;
+  --sw:240px;
+  --sh:0 1px 2px rgba(60,64,67,.1),0 1px 3px rgba(60,64,67,.06);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:var(--cream2)}
+.shell{display:flex;height:100vh}
+
+/* sidebar */
+.sb{width:var(--sw);background:var(--navy);display:flex;flex-direction:column;flex-shrink:0;position:relative}
+.sb::after{content:'';position:absolute;top:0;right:0;width:1px;height:100%;
+  background:linear-gradient(180deg,rgba(200,169,81,.25) 0%,rgba(200,169,81,.06) 50%,transparent 100%)}
+.sb-head{padding:24px 20px 18px;border-bottom:1px solid rgba(255,255,255,.06)}
+.sb-logo{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;letter-spacing:5px;color:var(--gold)}
+.sb-ver{font-size:9px;letter-spacing:2px;color:rgba(200,169,81,.3);font-family:'DM Mono',monospace;margin-top:2px}
+.sb-nav{flex:1;padding:6px 10px}
+.nav-sec{font-size:9px;font-weight:700;letter-spacing:1.5px;color:rgba(255,255,255,.2);padding:14px 11px 5px;text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:8px;
+  font-size:12px;font-weight:500;color:rgba(255,255,255,.55);transition:.15s;text-decoration:none;margin-bottom:2px}
+.nav-item:hover{background:rgba(255,255,255,.06);color:rgba(255,255,255,.85)}
+.nav-item.active{background:var(--gold-dim);color:var(--gold)}
+.sb-foot{padding:14px 12px;border-top:1px solid rgba(255,255,255,.06)}
+.sb-user{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);
+  border-radius:9px;padding:9px 11px;display:flex;align-items:center;gap:9px}
+.sb-av{width:28px;height:28px;border-radius:50%;background:var(--gold-dim);
+  border:1px solid rgba(200,169,81,.25);display:flex;align-items:center;
+  justify-content:center;font-size:10px;font-weight:700;color:var(--gold);flex-shrink:0}
+.sb-uname{font-size:11px;font-weight:600;color:rgba(255,255,255,.8)}
+.sb-urole{font-size:9px;color:rgba(255,255,255,.3);font-family:'DM Mono',monospace}
+
+/* main */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.top-bar{background:#fff;border-bottom:1px solid var(--bd);padding:0 28px;height:52px;
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.top-title{font-size:15px;font-weight:700;color:var(--navy)}
+.top-sub{font-size:10px;color:var(--muted);margin-top:1px}
+.content{flex:1;overflow-y:auto;padding:24px 28px}
+
+/* layout */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+.card{background:#fff;border:1px solid var(--bd);border-radius:12px;box-shadow:var(--sh);overflow:hidden}
+.card-head{padding:14px 18px;border-bottom:1px solid var(--bd);
+  display:flex;align-items:center;justify-content:space-between}
+.card-title{font-size:13px;font-weight:700;color:var(--navy);display:flex;align-items:center;gap:7px}
+.card-body{padding:18px}
+
+/* form */
+.fg{display:flex;flex-direction:column;gap:5px;margin-bottom:13px}
+.fl{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.4px}
+.fl .req{color:var(--rd)}
+.fi,.fs{padding:9px 12px;border:1.5px solid var(--bd2);border-radius:8px;
+  font-size:13px;font-family:'Outfit',sans-serif;color:var(--ink);background:#fff;
+  transition:.15s;width:100%}
+.fi:focus,.fs:focus{outline:none;border-color:var(--navy);box-shadow:0 0 0 3px rgba(13,26,45,.06)}
+.fg2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fg3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.famount{font-size:16px;font-weight:700;font-family:'DM Mono',monospace}
+
+/* upload zone */
+.upload-zone{border:2px dashed var(--bd2);border-radius:10px;padding:28px 20px;
+  text-align:center;cursor:pointer;transition:.2s;position:relative;background:var(--cream2)}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--navy);background:#EFF3FF}
+.upload-zone.has-file{border-color:var(--em);border-style:solid;background:var(--em-bg)}
+.upload-icon{font-size:28px;margin-bottom:8px}
+.upload-label{font-size:12px;font-weight:600;color:var(--muted)}
+.upload-sub{font-size:10px;color:var(--faint);margin-top:4px}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
+.preview-img{width:100%;max-height:280px;object-fit:contain;border-radius:8px;
+  border:1px solid var(--bd);margin-top:12px}
+
+/* btn */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:8px;
+  font-size:12px;font-weight:700;font-family:'Outfit',sans-serif;cursor:pointer;border:none;transition:.15s}
+.btn-navy{background:var(--navy);color:var(--gold)}
+.btn-navy:hover{background:var(--navy-m)}
+.btn-navy:disabled{opacity:.4;cursor:not-allowed}
+.btn-ghost{background:transparent;color:var(--muted);border:1.5px solid var(--bd2)}
+.btn-ghost:hover{border-color:var(--navy);color:var(--navy)}
+.btn-full{width:100%;justify-content:center;padding:12px}
+
+/* AI thinking */
+.thinking{display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,var(--navy),var(--navy-l));
+  border-radius:10px;padding:14px 18px}
+.dots{display:flex;gap:4px}
+.dots span{width:7px;height:7px;border-radius:50%;background:var(--gold);
+  animation:bounce 1.4s infinite ease-in-out}
+.dots span:nth-child(2){animation-delay:.2s}
+.dots span:nth-child(3){animation-delay:.4s}
+@keyframes bounce{0%,80%,100%{transform:scale(.6);opacity:.4}40%{transform:scale(1);opacity:1}}
+
+/* result */
+.result-panel{display:none}
+.result-panel.show{display:block}
+
+.verdict{border-radius:12px;padding:18px 20px;margin-bottom:20px;
+  display:flex;align-items:center;gap:14px}
+.verdict.ok{background:var(--em-bg);border:1.5px solid rgba(5,150,105,.25)}
+.verdict.warn{background:var(--am-bg);border:1.5px solid rgba(217,119,6,.25)}
+.verdict.ng{background:var(--rd-bg);border:1.5px solid rgba(220,38,38,.25)}
+.verdict-icon{font-size:32px;flex-shrink:0}
+.verdict-title{font-size:15px;font-weight:800}
+.verdict.ok .verdict-title{color:var(--em)}
+.verdict.warn .verdict-title{color:var(--am)}
+.verdict.ng .verdict-title{color:var(--rd)}
+.verdict-sub{font-size:11px;color:var(--muted);margin-top:3px;line-height:1.5}
+
+/* 項目比較テーブル */
+.compare-table{width:100%;border-collapse:collapse;font-size:12px}
+.compare-table th{background:var(--cream2);padding:8px 12px;text-align:left;
+  font-size:10px;font-weight:700;color:var(--muted);border-bottom:1px solid var(--bd)}
+.compare-table td{padding:10px 12px;border-bottom:1px solid var(--bd);vertical-align:top}
+.compare-table tr:last-child td{border-bottom:none}
+.compare-table tr:hover td{background:var(--cream2)}
+
+.field-label{font-size:10px;font-weight:700;color:var(--muted)}
+.field-val{font-size:13px;font-weight:600;color:var(--ink);margin-top:2px;font-family:'DM Mono',monospace}
+.field-val.em{color:var(--em)}
+.field-val.rd{color:var(--rd);text-decoration:underline wavy var(--rd)}
+
+.match-icon{display:inline-flex;align-items:center;justify-content:center;
+  width:26px;height:26px;border-radius:50%;font-size:13px;flex-shrink:0}
+.match-ok{background:var(--em-bg);color:var(--em)}
+.match-ng{background:var(--rd-bg);color:var(--rd)}
+
+/* OCR raw */
+.ocr-raw{background:var(--navy);border-radius:10px;padding:14px 16px;
+  font-family:'DM Mono',monospace;font-size:11px;color:rgba(255,255,255,.7);
+  line-height:1.8;white-space:pre-wrap;word-break:break-all;max-height:180px;overflow-y:auto}
+
+/* badge */
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;
+  font-size:10px;font-weight:700}
+.b-em{background:var(--em-bg);color:var(--em)}
+.b-rd{background:var(--rd-bg);color:var(--rd)}
+.b-am{background:var(--am-bg);color:var(--am)}
+.b-sk{background:var(--sk-bg);color:var(--sk)}
+
+/* step indicator */
+.steps{display:flex;align-items:center;gap:0;margin-bottom:24px}
+.step{display:flex;align-items:center;gap:8px;padding:8px 16px;border-radius:20px;
+  font-size:11px;font-weight:600;color:var(--muted);background:var(--cream2);
+  border:1px solid var(--bd)}
+.step.active{background:var(--navy);color:var(--gold);border-color:var(--navy)}
+.step.done{background:var(--em-bg);color:var(--em);border-color:rgba(5,150,105,.2)}
+.step-arrow{color:var(--bd2);font-size:14px;margin:0 4px}
+
+/* toast */
+.toast{position:fixed;bottom:24px;right:24px;padding:11px 18px;border-radius:9px;
+  font-size:12px;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,.2);
+  opacity:0;transition:.3s;z-index:999;pointer-events:none;max-width:360px}
+.toast.show{opacity:1}
+
+@media(max-width:900px){.two-col{grid-template-columns:1fr}.sb{display:none}}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- sidebar -->
+<div class="sb">
+  <div class="sb-head">
+    <div class="sb-logo">CORETO</div>
+    <div class="sb-ver">COREBLDG v2</div>
+  </div>
+  <div class="sb-nav">
+    <div class="nav-sec">書類・決済</div>
+    <a class="nav-item active" href="#">💴 初期費用明細照合</a>
+    <a class="nav-item" href="coreto-barcode-scan-v2.html">📦 書類スキャン</a>
+    <a class="nav-item" href="coreto-screening-v2.html">📋 書類審査</a>
+    <div class="nav-sec">メニュー</div>
+    <a class="nav-item" href="coreto-hub-v2.html">🏠 ホーム</a>
+    <a class="nav-item" href="coreto-cases-v2.html">📁 案件管理</a>
+    <a class="nav-item" href="coreto-payment-v2.html">💳 支払明細</a>
+  </div>
+  <div class="sb-foot">
+    <div class="sb-user">
+      <div class="sb-av">中</div>
+      <div>
+        <div class="sb-uname">中村 陽子</div>
+        <div class="sb-urole">AG-0042 · Platinum</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- main -->
+<div class="main">
+  <div class="top-bar">
+    <div>
+      <div class="top-title">💴 初期費用明細 照合チェック</div>
+      <div class="top-sub">管理会社の明細をスキャン → AG入力と自動照合 → 振込ミスゼロ</div>
+    </div>
+    <button class="btn btn-ghost" onclick="resetAll()">↺ リセット</button>
+  </div>
+
+  <div class="content">
+
+    <!-- step indicator -->
+    <div class="steps">
+      <div class="step" id="step1" >① AG情報入力</div>
+      <div class="step-arrow">›</div>
+      <div class="step" id="step2">② 明細をアップロード</div>
+      <div class="step-arrow">›</div>
+      <div class="step" id="step3">③ AI照合</div>
+      <div class="step-arrow">›</div>
+      <div class="step" id="step4">④ 結果確認</div>
+    </div>
+
+    <div class="two-col">
+
+      <!-- LEFT: AG入力 -->
+      <div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-head">
+            <div class="card-title">✏️ AGが入力する情報</div>
+            <span class="badge b-sk">Step 1</span>
+          </div>
+          <div class="card-body">
+
+            <div style="font-size:10px;font-weight:700;color:var(--muted);
+              letter-spacing:.5px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--bd)">
+              振込先口座（管理会社から口頭/メールで伝えられた情報）
+            </div>
+
+            <div class="fg">
+              <label class="fl">銀行名<span class="req">*</span></label>
+              <input class="fi" id="ag-bank" placeholder="例: 三菱UFJ銀行" oninput="checkReady()">
+            </div>
+            <div class="fg2">
+              <div class="fg">
+                <label class="fl">支店名<span class="req">*</span></label>
+                <input class="fi" id="ag-branch" placeholder="例: 渋谷支店" oninput="checkReady()">
+              </div>
+              <div class="fg">
+                <label class="fl">口座種別<span class="req">*</span></label>
+                <select class="fs" id="ag-type" onchange="checkReady()">
+                  <option value="">選択</option>
+                  <option value="普通">普通</option>
+                  <option value="当座">当座</option>
+                </select>
+              </div>
+            </div>
+            <div class="fg">
+              <label class="fl">口座番号<span class="req">*</span></label>
+              <input class="fi famount" id="ag-number" placeholder="例: 1234567"
+                maxlength="8" oninput="this.value=this.value.replace(/\D/g,'');checkReady()">
+            </div>
+            <div class="fg">
+              <label class="fl">口座名義（カタカナ）<span class="req">*</span></label>
+              <input class="fi" id="ag-name" placeholder="例: カブシキガイシャ〇〇" oninput="checkReady()">
+            </div>
+
+            <div style="font-size:10px;font-weight:700;color:var(--muted);
+              letter-spacing:.5px;margin:14px 0 10px;padding-top:14px;border-top:1px solid var(--bd)">
+              送金予定金額
+            </div>
+
+            <div class="fg">
+              <label class="fl">送金予定合計額（円）<span class="req">*</span></label>
+              <div style="position:relative">
+                <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);
+                  color:var(--muted);font-size:13px;pointer-events:none">¥</span>
+                <input class="fi famount" id="ag-amount" placeholder="例: 450000"
+                  style="padding-left:24px"
+                  oninput="this.value=this.value.replace(/[^0-9]/g,'');checkReady()">
+              </div>
+              <div style="font-size:9px;color:var(--faint);margin-top:3px">
+                敷金・礼金・前家賃・手数料など全て含む合計
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- upload -->
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title">📄 管理会社の明細書</div>
+            <span class="badge b-sk">Step 2</span>
+          </div>
+          <div class="card-body">
+            <div class="upload-zone" id="upload-zone"
+              ondragover="event.preventDefault();this.classList.add('drag')"
+              ondragleave="this.classList.remove('drag')"
+              ondrop="handleDrop(event)">
+              <input type="file" id="file-input" accept="image/*,application/pdf"
+                onchange="handleFile(this.files[0])">
+              <div class="upload-icon" id="upload-icon">📷</div>
+              <div class="upload-label" id="upload-label">写真・スキャンをアップロード</div>
+              <div class="upload-sub" id="upload-sub">JPG / PNG / PDF · ドラッグ＆ドロップも可</div>
+            </div>
+            <img id="preview" class="preview-img" style="display:none">
+
+            <div style="margin-top:16px">
+              <button class="btn btn-navy btn-full" id="run-btn"
+                onclick="runCheck()" disabled>
+                🔍 AI照合を実行
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: result -->
+      <div id="result-area">
+        <div style="background:var(--cream2);border:2px dashed var(--bd2);
+          border-radius:12px;padding:56px 24px;text-align:center;color:var(--faint)">
+          <div style="font-size:40px;margin-bottom:12px">🔍</div>
+          <div style="font-size:13px;font-weight:600;color:var(--muted)">照合結果がここに表示されます</div>
+          <div style="font-size:11px;margin-top:6px;line-height:1.6">
+            左側にAG情報を入力し、<br>明細書をアップロードして「AI照合を実行」
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /two-col -->
+  </div><!-- /content -->
+</div><!-- /main -->
+</div><!-- /shell -->
+
+<div id="toast" class="toast"></div>
+
+<script>
+let uploadedFile = null;
+let uploadedB64  = null;
+
+// ── ステップ管理 ────────────────────────────────────────────
+function setStep(n){
+  [1,2,3,4].forEach(i=>{
+    const el = document.getElementById('step'+i);
+    el.className = 'step' + (i<n?' done':i===n?' active':'');
+  });
+}
+
+// ── ファイル処理 ────────────────────────────────────────────
+function handleDrop(e){
+  e.preventDefault();
+  document.getElementById('upload-zone').classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if(file) handleFile(file);
+}
+
+function handleFile(file){
+  if(!file) return;
+  uploadedFile = file;
+
+  const zone  = document.getElementById('upload-zone');
+  const icon  = document.getElementById('upload-icon');
+  const label = document.getElementById('upload-label');
+  const sub   = document.getElementById('upload-sub');
+  const prev  = document.getElementById('preview');
+
+  zone.classList.add('has-file');
+  icon.textContent  = '✅';
+  label.textContent = file.name;
+  sub.textContent   = (file.size/1024).toFixed(0) + ' KB';
+
+  // base64変換（画像のみプレビュー）
+  const reader = new FileReader();
+  reader.onload = e => {
+    uploadedB64 = e.target.result.split(',')[1];
+    const mime  = file.type;
+
+    if(mime.startsWith('image/')){
+      prev.src = e.target.result;
+      prev.style.display = 'block';
+    }
+    checkReady();
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── 実行ボタン活性化 ────────────────────────────────────────
+function checkReady(){
+  const ok = document.getElementById('ag-bank').value.trim()
+    && document.getElementById('ag-branch').value.trim()
+    && document.getElementById('ag-type').value
+    && document.getElementById('ag-number').value.trim()
+    && document.getElementById('ag-name').value.trim()
+    && document.getElementById('ag-amount').value.trim()
+    && uploadedB64;
+  document.getElementById('run-btn').disabled = !ok;
+  if(ok) setStep(2); else setStep(1);
+}
+
+// ── AI照合実行 ──────────────────────────────────────────────
+async function runCheck(){
+  setStep(3);
+  const btn = document.getElementById('run-btn');
+  btn.disabled = true;
+  btn.textContent = '🤖 AI解析中...';
+
+  // AG入力値収集
+  const ag = {
+    bank:   document.getElementById('ag-bank').value.trim(),
+    branch: document.getElementById('ag-branch').value.trim(),
+    type:   document.getElementById('ag-type').value,
+    number: document.getElementById('ag-number').value.trim(),
+    name:   document.getElementById('ag-name').value.trim(),
+    amount: parseInt(document.getElementById('ag-amount').value.replace(/,/g,''))||0,
+  };
+
+  // 結果エリアにローディング
+  document.getElementById('result-area').innerHTML = `
+    <div class="thinking">
+      <div class="dots"><span></span><span></span><span></span></div>
+      <div style="color:rgba(255,255,255,.75);font-size:12px;margin-left:4px">
+        明細書を読み取り・照合しています...
+      </div>
+    </div>`;
+
+  showToast('🤖 AIが明細書を解析しています...', 'info');
+
+  try {
+    const mime = uploadedFile.type.startsWith('image/') ? uploadedFile.type : 'image/jpeg';
+
+    const prompt = `あなたは不動産初期費用明細書のOCR・照合AIです。
+添付された管理会社の初期費用明細書の画像から、以下の情報を読み取ってください。
+
+【読み取り項目】
+1. 振込先銀行名
+2. 振込先支店名
+3. 口座種別（普通・当座）
+4. 口座番号
+5. 口座名義（カタカナ）
+6. 初期費用の合計金額（円）
+
+【エージェントが入力した情報】
+- 銀行名: ${ag.bank}
+- 支店名: ${ag.branch}
+- 口座種別: ${ag.type}
+- 口座番号: ${ag.number}
+- 口座名義: ${ag.name}
+- 送金予定金額: ¥${ag.amount.toLocaleString()}
+
+【指示】
+画像から読み取った各項目と、エージェント入力値を比較してください。
+必ずJSON形式のみで返答し、前置き・後置きは不要です。
+
+{
+  "ocr": {
+    "bank": "読み取った銀行名（読み取れない場合はnull）",
+    "branch": "読み取った支店名（読み取れない場合はnull）",
+    "type": "読み取った口座種別（普通/当座、読み取れない場合はnull）",
+    "number": "読み取った口座番号（読み取れない場合はnull）",
+    "name": "読み取った口座名義（読み取れない場合はnull）",
+    "amount": 読み取った合計金額の数値（読み取れない場合はnull）
+  },
+  "matches": {
+    "bank":   true か false,
+    "branch": true か false,
+    "type":   true か false,
+    "number": true か false,
+    "name":   true か false,
+    "amount": true か false
+  },
+  "notes": {
+    "bank":   "不一致の場合の補足（一致ならnull）",
+    "branch": "不一致の場合の補足（一致ならnull）",
+    "type":   "不一致の場合の補足（一致ならnull）",
+    "number": "不一致の場合の補足（一致ならnull）",
+    "name":   "不一致の場合の補足（一致ならnull）",
+    "amount": "不一致の場合の補足（一致ならnull）"
+  },
+  "overallOk": true か false,
+  "readabilityScore": 0から10（明細書の読み取りやすさ）,
+  "warnings": ["特記すべき注意事項のリスト（なければ空配列）"],
+  "summary": "照合結果の総評を1〜2文で"
+}`;
+
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1500,
+        messages: [{
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: {
+                type: 'base64',
+                media_type: mime,
+                data: uploadedB64,
+              }
+            },
+            { type: 'text', text: prompt }
+          ]
+        }]
+      })
+    });
+
+    const data = await res.json();
+    const raw  = data.content[0].text.replace(/```json|```/g,'').trim();
+    const result = JSON.parse(raw);
+
+    renderResult(ag, result);
+    setStep(4);
+    showToast(result.overallOk ? '✅ 全項目一致！送金OKです' : '⚠️ 不一致項目があります。確認してください', result.overallOk ? 'success' : 'error');
+
+  } catch(e) {
+    console.error(e);
+    document.getElementById('result-area').innerHTML = `
+      <div style="background:var(--rd-bg);border:1px solid rgba(220,38,38,.2);
+        border-radius:10px;padding:18px;color:var(--rd);font-size:12px">
+        ❌ AI照合に失敗しました。<br>
+        <span style="color:var(--muted);font-size:10px;margin-top:4px;display:block">${e.message}</span>
+        <button class="btn btn-ghost" style="margin-top:12px" onclick="runCheck()">再試行</button>
+      </div>`;
+    showToast('AI照合に失敗しました', 'error');
+    setStep(2);
+  }
+
+  btn.disabled = false;
+  btn.textContent = '🔍 AI照合を実行';
+  btn.innerHTML = '🔄 再照合';
+}
+
+// ── 結果描画 ────────────────────────────────────────────────
+function renderResult(ag, r){
+  const allOk   = r.overallOk;
+  const matchCnt = Object.values(r.matches).filter(Boolean).length;
+  const total    = Object.values(r.matches).length;
+  const ngCnt    = total - matchCnt;
+
+  const verdictCls   = allOk ? 'ok' : ngCnt >= 2 ? 'ng' : 'warn';
+  const verdictIcon  = allOk ? '✅' : ngCnt >= 2 ? '🚨' : '⚠️';
+  const verdictTitle = allOk
+    ? '全項目一致 — 送金OK'
+    : ngCnt >= 2
+    ? `${ngCnt}項目が不一致 — 送金を止めて確認してください`
+    : '1項目が不一致 — 確認後に送金してください';
+
+  const fields = [
+    { key:'bank',   label:'銀行名',     icon:'🏦', mono:false },
+    { key:'branch', label:'支店名',     icon:'📍', mono:false },
+    { key:'type',   label:'口座種別',   icon:'📂', mono:false },
+    { key:'number', label:'口座番号',   icon:'🔢', mono:true  },
+    { key:'name',   label:'口座名義',   icon:'👤', mono:false },
+    { key:'amount', label:'合計金額',   icon:'💴', mono:true  },
+  ];
+
+  const agVals = {
+    bank: ag.bank, branch: ag.branch, type: ag.type,
+    number: ag.number, name: ag.name,
+    amount: '¥'+ag.amount.toLocaleString(),
+  };
+  const ocrVals = {
+    bank:   r.ocr.bank   ?? '—（読取不可）',
+    branch: r.ocr.branch ?? '—（読取不可）',
+    type:   r.ocr.type   ?? '—（読取不可）',
+    number: r.ocr.number ?? '—（読取不可）',
+    name:   r.ocr.name   ?? '—（読取不可）',
+    amount: r.ocr.amount != null ? '¥'+Number(r.ocr.amount).toLocaleString() : '—（読取不可）',
+  };
+
+  document.getElementById('result-area').innerHTML = `
+
+    <!-- 総合判定 -->
+    <div class="verdict ${verdictCls}">
+      <div class="verdict-icon">${verdictIcon}</div>
+      <div>
+        <div class="verdict-title">${verdictTitle}</div>
+        <div class="verdict-sub">${r.summary}</div>
+        <div style="margin-top:6px;display:flex;gap:6px;align-items:center">
+          <span class="badge b-em">${matchCnt}項目一致</span>
+          ${ngCnt>0?`<span class="badge b-rd">${ngCnt}項目不一致</span>`:''}
+          <span style="font-size:10px;color:var(--muted)">
+            読み取り精度: ${r.readabilityScore}/10
+          </span>
+        </div>
+      </div>
+    </div>
+
+    ${r.warnings?.length ? `
+    <div style="background:var(--am-bg);border:1px solid rgba(217,119,6,.2);
+      border-radius:9px;padding:11px 14px;margin-bottom:16px">
+      ${r.warnings.map(w=>`<div style="font-size:11px;color:var(--am);
+        display:flex;gap:6px;align-items:flex-start;margin-bottom:3px">
+        <span>⚠️</span><span>${w}</span></div>`).join('')}
+    </div>` : ''}
+
+    <!-- 項目別比較 -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">📊 項目別照合結果</div>
+      </div>
+      <div style="overflow:auto">
+        <table class="compare-table">
+          <thead>
+            <tr>
+              <th style="width:100px">項目</th>
+              <th>AG入力値</th>
+              <th>明細書（AI読取）</th>
+              <th style="width:60px;text-align:center">照合</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${fields.map(f => {
+              const ok  = r.matches[f.key];
+              const note = r.notes?.[f.key];
+              return `
+              <tr style="${!ok?'background:rgba(220,38,38,.03)':''}">
+                <td>
+                  <div style="display:flex;align-items:center;gap:5px">
+                    <span>${f.icon}</span>
+                    <span style="font-size:11px;font-weight:600;color:var(--muted)">${f.label}</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="field-val ${ok?'':'em'}"
+                    style="${f.mono?'font-family:\'DM Mono\',monospace':''}">
+                    ${agVals[f.key]}
+                  </div>
+                </td>
+                <td>
+                  <div class="field-val ${ok?'':'rd'}"
+                    style="${f.mono?'font-family:\'DM Mono\',monospace':''}">
+                    ${ocrVals[f.key]}
+                  </div>
+                  ${note?`<div style="font-size:10px;color:var(--rd);margin-top:2px">⚠️ ${note}</div>`:''}
+                </td>
+                <td style="text-align:center">
+                  <span class="match-icon ${ok?'match-ok':'match-ng'}">
+                    ${ok?'✓':'✕'}
+                  </span>
+                </td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- アクション -->
+    <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+      ${allOk
+        ? `<button class="btn btn-navy" onclick="showToast('送金承認を記録しました','success')">
+            ✅ 送金承認・記録する</button>`
+        : `<button class="btn" style="background:var(--rd);color:#fff"
+            onclick="showToast('差し戻しをSlackに通知しました','error')">
+            🚫 差し戻し・確認依頼を送る</button>`}
+      <button class="btn btn-ghost" onclick="resetAll()">↺ 別の明細を照合する</button>
+    </div>
+  `;
+}
+
+// ── リセット ────────────────────────────────────────────────
+function resetAll(){
+  ['ag-bank','ag-branch','ag-number','ag-name','ag-amount'].forEach(id=>{
+    document.getElementById(id).value='';
+  });
+  document.getElementById('ag-type').value='';
+  uploadedFile = null; uploadedB64 = null;
+
+  const zone = document.getElementById('upload-zone');
+  zone.classList.remove('has-file','drag');
+  document.getElementById('upload-icon').textContent='📷';
+  document.getElementById('upload-label').textContent='写真・スキャンをアップロード';
+  document.getElementById('upload-sub').textContent='JPG / PNG / PDF · ドラッグ＆ドロップも可';
+  document.getElementById('preview').style.display='none';
+  document.getElementById('preview').src='';
+  document.getElementById('file-input').value='';
+
+  document.getElementById('run-btn').disabled=true;
+  document.getElementById('run-btn').innerHTML='🔍 AI照合を実行';
+
+  document.getElementById('result-area').innerHTML=`
+    <div style="background:var(--cream2);border:2px dashed var(--bd2);
+      border-radius:12px;padding:56px 24px;text-align:center;color:var(--faint)">
+      <div style="font-size:40px;margin-bottom:12px">🔍</div>
+      <div style="font-size:13px;font-weight:600;color:var(--muted)">照合結果がここに表示されます</div>
+      <div style="font-size:11px;margin-top:6px;line-height:1.6">
+        左側にAG情報を入力し、<br>明細書をアップロードして「AI照合を実行」
+      </div>
+    </div>`;
+  setStep(1);
+}
+
+// ── Toast ────────────────────────────────────────────────────
+function showToast(msg, type='success'){
+  const t = document.getElementById('toast');
+  const colors = {success:'#059669',error:'#DC2626',info:'#0284C7'};
+  t.style.background = colors[type]||colors.success;
+  t.style.color = '#fff';
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 3500);
+}
+
+// init
+setStep(1);
+</script>
+</body>
+</html>
