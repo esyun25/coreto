@@ -330,6 +330,7 @@ html, body { background:#FFFFFF !important; }
             </div>
           </div>
 
+          <div id="kyc-ai-banner-area" style="margin-bottom:4px"></div>
           <button class="btn btn-primary" id="submit-btn" style="width:100%;justify-content:center;padding:13px;font-size:13px;border-radius:10px" onclick="submitKyc()" disabled>
             📤 本人確認書類を提出する
           </button>
@@ -487,7 +488,7 @@ html, body { background:#FFFFFF !important; }
           <div style="display:flex;align-items:center;gap:12px">
             <div style="width:36px;height:36px;border-radius:50%;background:var(--gold-dim);border:1px solid rgba(200,169,81,.3);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:400;color:var(--gold)">AG</div>
             <div>
-              <div style="font-size:13px;font-weight:700;color:var(--ink)">田中 優子</div>
+              <div style="font-size:13px;font-weight:700;color:var(--ink)" data-reg-name="田中優子">田中 優子</div>
               <div style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace">AG-0099 / 提出：2026/03/08 14:32</div>
             </div>
           </div>
@@ -629,6 +630,8 @@ function handleUp(input,side){
     const sumId=side==='s'?'sum-s':'sum-'+side;const sp=document.getElementById(sumId);if(sp){sp.textContent='✓ 済';sp.className='badge b-em';}
     if(side==='s'){const sb=document.getElementById('selfie-badge');if(sb){sb.textContent='✓ 準備完了';sb.className='badge b-em';}}
     else{const db=document.getElementById('doc-badge');if(db){db.textContent='✓ アップロード済み';db.className='badge b-em';}}
+    // 表面アップロード時にAI自動解析
+    if(side==='f') kycAIAnalyze(file, e.target.result.split(',')[1], file.type||'image/jpeg');
     chkReady();
   };
   reader.readAsDataURL(file);
@@ -676,6 +679,185 @@ function submitAcc(){
   closeAcc();alert(`✅ 口座変更申請を送信しました。\n口座名義「${holder}」を本部が登録名と照合後（1〜3営業日）、承認されます。`);
 }
 function viewDoc(label){alert('【デモ】'+label+'の画像を表示します。\n（実装時はKintoneの書類ビューワーに接続）');}
+
+// ══════════════════════════════════════════════════════════════
+// KYC AI本人確認解析
+// ══════════════════════════════════════════════════════════════
+
+// AG申込時の登録情報
+// 実運用: Kintone APIから取得 / デモ: セッションまたは固定値
+const _kycRegRaw = sessionStorage.getItem('kyc_reg_data');
+const KYC_REG_DATA = _kycRegRaw ? JSON.parse(_kycRegRaw) : {
+  name:  '田中優子',   // デモ値
+  birth: '1990/05/15', // デモ値
+};
+
+let _kycAIRunning = false;
+
+async function kycAIAnalyze(file, b64, mime) {
+  if(_kycAIRunning) return;
+  _kycAIRunning = true;
+
+  // AI解析バナーを表示
+  let banner = document.getElementById('kyc-ai-banner');
+  if(!banner){
+    banner = document.createElement('div');
+    banner.id = 'kyc-ai-banner';
+    const area = document.getElementById('kyc-ai-banner-area');
+    if(area) area.appendChild(banner);
+    else document.body.appendChild(banner);
+  }
+  banner.innerHTML = `
+    <div style="margin:14px 0;background:linear-gradient(135deg,#0D1A2D,#1E3252);
+      border-radius:10px;padding:14px 18px;display:flex;align-items:center;gap:10px">
+      <div style="display:flex;gap:4px">
+        <span style="width:6px;height:6px;border-radius:50%;background:#C8A951;
+          animation:db 1.4s infinite ease-in-out;display:inline-block"></span>
+        <span style="width:6px;height:6px;border-radius:50%;background:#C8A951;
+          animation:db 1.4s .2s infinite ease-in-out;display:inline-block"></span>
+        <span style="width:6px;height:6px;border-radius:50%;background:#C8A951;
+          animation:db 1.4s .4s infinite ease-in-out;display:inline-block"></span>
+      </div>
+      <div style="color:rgba(255,255,255,.75);font-size:12px">
+        🤖 書類を読み取り中...
+      </div>
+    </div>`;
+  banner.style.display = 'block';
+
+  try {
+    const docLabel = docT>=0 ? ['運転免許証','パスポート','マイナンバーカード'][docT] : '身分証明書';
+
+    const resp = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514', max_tokens:800,
+        system:`あなたは日本の本人確認書類の読み取り専門AIです。以下のJSONのみで返答してください（前置き・後置き不要）。`,
+        messages:[{ role:'user', content:[
+          { type:'image', source:{ type:'base64', media_type:mime, data:b64 }},
+          { type:'text', text:`この${docLabel}の画像から以下をJSONで抽出してください:
+{
+  "name_kanji": "氏名（漢字）",
+  "name_kana": "氏名（カナ、あれば）",
+  "birth": "生年月日 YYYY/MM/DD",
+  "expiry": "有効期限 YYYY/MM/DD（なければnull）",
+  "address": "住所（あれば）",
+  "doc_number": "証明書番号（あれば）",
+  "has_photo": 顔写真があればtrue,
+  "is_expired": 有効期限切れならtrue,
+  "is_clear": 読み取り可能な画質ならtrue,
+  "confidence": 0から1,
+  "issues": ["懸念点（なければ空配列）"]
+}` }
+        ]}]
+      })
+    });
+    const data = await resp.json();
+    const raw  = data.content?.find(b=>b.type==='text')?.text||'{}';
+    const res  = JSON.parse(raw.replace(/```json|```/g,'').trim());
+
+    // ── 登録情報との照合 ──────────────────────────────
+    const regName  = KYC_REG_DATA.name;
+    const regBirth = KYC_REG_DATA.birth;
+
+    const nameMatch  = !regName  || kycNormName(res.name_kanji) === kycNormName(regName);
+    const birthMatch = !regBirth || kycNormDate(res.birth)      === kycNormDate(regBirth);
+    const photoOk    = res.has_photo !== false;
+    const expiryOk   = !res.is_expired;
+    const clearOk    = res.is_clear  !== false;
+
+    // ── HQチェックボックスを自動セット ───────────────
+    kycAutoCheck('10012', {
+      face:   photoOk && clearOk,   // 顔写真と書類の鮮明さ
+      expiry: expiryOk,             // 有効期限
+      name:   nameMatch && birthMatch, // 氏名・生年月日照合
+      clear:  clearOk,              // 書類の鮮明さ
+    });
+
+    // ── バナー結果表示 ────────────────────────────────
+    const allOk = nameMatch && birthMatch && photoOk && expiryOk && clearOk;
+    const conf  = Math.round((res.confidence||0.85)*100);
+
+    const matchRow = (label, ok, detail) => `
+      <div style="display:flex;align-items:center;gap:8px;padding:6px 0;
+        border-bottom:1px solid rgba(255,255,255,.06)">
+        <span style="font-size:14px">${ok?'✅':'🔴'}</span>
+        <span style="font-size:11px;color:rgba(255,255,255,.7);flex:1">${label}</span>
+        <span style="font-size:10px;font-family:'DM Mono',monospace;
+          color:${ok?'#6EE7B7':'#FCA5A5'}">${detail||''}</span>
+      </div>`;
+
+    banner.innerHTML = `
+      <div style="margin:14px 0;background:linear-gradient(135deg,#0D1A2D,#1E3252);
+        border-radius:12px;overflow:hidden">
+        <div style="padding:12px 18px;border-bottom:1px solid rgba(255,255,255,.08);
+          display:flex;align-items:center;justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:16px">${allOk?'✅':'⚠️'}</span>
+            <span style="font-size:12px;font-weight:700;
+              color:${allOk?'#6EE7B7':'#FCA5A5'}">
+              AI本人確認 — ${allOk?'問題なし':'要確認あり'}</span>
+          </div>
+          <span style="font-size:10px;color:rgba(255,255,255,.3);
+            font-family:'DM Mono',monospace">読取精度 ${conf}%</span>
+        </div>
+        <div style="padding:12px 18px">
+          ${matchRow('氏名', nameMatch,
+            res.name_kanji ? res.name_kanji + (regName?` ← 登録: ${regName}`:'') : '読取不可')}
+          ${matchRow('生年月日', birthMatch,
+            res.birth ? res.birth + (regBirth?` ← 登録: ${regBirth}`:'') : '読取不可')}
+          ${matchRow('有効期限', expiryOk, res.expiry || '記載なし')}
+          ${matchRow('顔写真', photoOk, photoOk?'確認済み':'未確認')}
+          ${matchRow('画像鮮明さ', clearOk, clearOk?'鮮明':'不鮮明')}
+          ${res.issues?.length ? `
+          <div style="margin-top:8px;padding:8px 10px;background:rgba(220,38,38,.1);
+            border-radius:7px;font-size:10px;color:#FCA5A5">
+            ⚠️ ${res.issues.join(' / ')}</div>` : ''}
+          <div style="margin-top:10px;font-size:10px;color:rgba(255,255,255,.4)">
+            🤖 チェックボックスに自動反映済み — 内容を確認して承認してください
+          </div>
+        </div>
+      </div>`;
+
+  } catch(e) {
+    banner.innerHTML = `<div style="margin:14px 0;padding:12px 16px;background:#FEF2F2;
+      border-radius:8px;font-size:11px;color:#DC2626">
+      ❌ AI解析失敗: ${e.message}</div>`;
+    console.error('KYC AI解析エラー:', e);
+  }
+  _kycAIRunning = false;
+}
+
+// ── チェックボックス自動セット ─────────────────────────
+function kycAutoCheck(id, results) {
+  const cl = document.getElementById('cl-'+id);
+  if(!cl) return;
+  const boxes = cl.querySelectorAll('input[type=checkbox]');
+  // 順番: [顔写真一致, 有効期限, 氏名生年月日, 鮮明さ]
+  const vals = [results.face, results.expiry, results.name, results.clear];
+  boxes.forEach((box, i) => {
+    if(vals[i] !== undefined) {
+      box.checked = !!vals[i];
+      // AI自動セットのビジュアル表示
+      box.title = 'AI自動判定';
+      box.style.accentColor = vals[i] ? '#059669' : '#DC2626';
+    }
+  });
+  checkReady(id);
+}
+
+// ── 正規化ユーティリティ ───────────────────────────────
+function kycNormName(s){
+  if(!s) return '';
+  return String(s).replace(/[ \u3000]/g,'').replace(/[Ａ-Ｚａ-ｚ]/g,
+    c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).toUpperCase();
+}
+function kycNormDate(s){
+  if(!s) return '';
+  return String(s).replace(/[年月日\/\-]/g,'/').replace(/\s/g,'')
+    .replace(/(\d{4})\/(\d{1,2})\/(\d{1,2})/,
+      (_,y,m,d)=>`${y}/${m.padStart(2,'0')}/${d.padStart(2,'0')}`);
+}
+
 </script>
 <div class="mob-overlay" onclick="toggleSb()"></div>
 </body>
