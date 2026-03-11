@@ -235,7 +235,7 @@ html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:
   <div class="top-bar">
     <div>
       <div class="top-title">🤖 AI マッチングエンジン</div>
-      <div class="top-sub">Role A（案件解析）+ アルゴ120点 + Role B（AI最終判定）</div>
+      <div class="top-sub">PT投稿〜マッチング確定まで全自動 / HQは結果確認のみ</div>
     </div>
     <div style="display:flex;align-items:center;gap:10px">
       <div class="role-switcher">
@@ -262,7 +262,7 @@ html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:
       border-radius:16px 16px 0 0;display:flex;align-items:center;justify-content:space-between">
       <div>
         <div style="font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;
-          letter-spacing:3px;color:var(--gold)">AI MATCHING</div>
+          letter-spacing:3px;color:var(--gold)">AI MATCHING RESULT</div>
         <div style="font-size:10px;color:rgba(255,255,255,.45);margin-top:2px" id="modal-lead-id">—</div>
       </div>
       <button onclick="closeAiModal()" style="background:rgba(255,255,255,.1);border:none;
@@ -272,19 +272,7 @@ html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:
   </div>
 </div>
 
-<!-- ── マッチング確定モーダル ── -->
-<div id="confirm-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);
-  z-index:300;align-items:center;justify-content:center">
-  <div style="background:#fff;border-radius:14px;width:460px;padding:24px;box-shadow:0 8px 40px rgba(0,0,0,.25)">
-    <div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:6px" id="cfm-title">マッチング確定</div>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:18px" id="cfm-sub"></div>
-    <div id="cfm-body"></div>
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
-      <button class="btn btn-ghost" onclick="closeConfirmModal()">キャンセル</button>
-      <button class="btn btn-em" id="cfm-ok" onclick="executeMatch()">✅ 確定・顧客情報開示</button>
-    </div>
-  </div>
-</div>
+<!-- 確定モーダル削除済（全自動化により不要） -->
 
 <div id="toast" class="toast"></div>
 <script>
@@ -772,7 +760,7 @@ function renderMain(){
 // ══════════════════════════════════════════════════════════════
 function renderHQ(){
   const leads = getLeads();
-  const pending   = leads.filter(l=>l.status==='pending_ai'||l.status==='unmatched');
+  const pending   = leads.filter(l=>!['matched','closed'].includes(l.status));
   const matched   = leads.filter(l=>l.status==='matched');
 
   const tabs = [
@@ -805,7 +793,7 @@ function renderStatBar(leads){
   const avgElo = Math.round(agents.reduce((s,a)=>s+a.elo,0)/agents.length);
   return `
   <div class="stat-grid">
-    <div class="stat-card"><div class="stat-num" style="color:var(--rd)">${pending}</div><div class="stat-lbl">未マッチ案件</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--rd)">${pending}</div><div class="stat-lbl">AI処理中 / 要対応</div></div>
     <div class="stat-card"><div class="stat-num" style="color:var(--em)">${matched}</div><div class="stat-lbl">マッチング済み</div></div>
     <div class="stat-card"><div class="stat-num" style="color:var(--sk)">${activeAg}</div><div class="stat-lbl">稼働中AG</div></div>
     <div class="stat-card"><div class="stat-num" style="color:var(--vt)">${avgElo}</div><div class="stat-lbl">平均ELOレーティング</div></div>
@@ -852,13 +840,13 @@ function renderLeadCard(l){
     <div class="status-flow">
       <span class="status-step done">📝 登録</span>
       <span class="status-arrow">›</span>
-      <span class="status-step ${['analyzing','scoring','ai_ranking','notified'].includes(l.status)?'done':l.status==='pending_ai'?'current':''}">🤖 AI解析</span>
+      <span class="status-step ${['analyzing','scoring','ai_ranking','matched'].includes(l.status)?'done':l.status==='pending_ai'?'current':''}">🤖 AI解析</span>
       <span class="status-arrow">›</span>
-      <span class="status-step ${['ai_ranking','notified'].includes(l.status)?'done':l.status==='scoring'?'current':''}">⚙️ アルゴ</span>
+      <span class="status-step ${['ai_ranking','matched'].includes(l.status)?'done':l.status==='scoring'?'current':''}">⚙️ アルゴ</span>
       <span class="status-arrow">›</span>
-      <span class="status-step ${l.status==='notified'?'done':l.status==='ai_ranking'?'current':''}">✨ AI判定</span>
+      <span class="status-step ${l.status==='matched'?'done':l.status==='ai_ranking'?'current':''}">✨ AI判定</span>
       <span class="status-arrow">›</span>
-      <span class="status-step ${l.status==='notified'?'current':''}">🔔 AG通知</span>
+      <span class="status-step ${l.status==='matched'?'current':''}">✅ 自動確定</span>
     </div>
   </div>`;
 }
@@ -885,15 +873,18 @@ function renderLeadDetail(lead){
         <div style="font-size:10px;color:var(--muted);margin-top:2px;font-family:'DM Mono',monospace">${lead.id}</div>
       </div>
       <div style="display:flex;gap:6px">
-        ${lead.status==='pending_ai'||lead.status==='analyzing'||lead.status==='scoring'||lead.status==='ai_ranking'
+        ${['pending_ai','analyzing','scoring','ai_ranking'].includes(lead.status)
           ? `<div class="ai-thinking" style="padding:7px 14px;display:inline-flex;border-radius:8px">
               <div class="ai-thinking-dots"><span></span><span></span><span></span></div>
               <div style="color:rgba(255,255,255,.7);font-size:11px;margin-left:8px">${
                 lead.status==='analyzing'?'🤖 Role A 解析中...'
                 :lead.status==='scoring'?'⚙️ スコアリング中...'
                 :lead.status==='ai_ranking'?'✨ Role B 判定中...'
-                :'🤖 AI解析待ち'}</div></div>`
-          : ranking ? `<button class="btn btn-em" onclick="openAiModal('${lead.id}')">📊 AI結果を確認・確定</button>`
+                :'🤖 AI処理中...'}</div></div>`
+          : lead.status==='matched'
+            ? `<button class="btn btn-em btn-sm" onclick="openAiModal('${lead.id}')">📊 マッチング結果を見る</button>`
+          : lead.status==='needs_hq'
+            ? `<button class="btn btn-rd" onclick="openHQAssign('${lead.id}')">⚠️ HQ手動対応が必要</button>`
           : `<button class="btn btn-am btn-sm" onclick="autoMatchPipeline('${lead.id}')">↺ 再実行</button>`}
       </div>
     </div>
@@ -1034,7 +1025,7 @@ function renderAIRankingPreview(ranking, lead){
     ${ranking.selected.length>3?`<div style="font-size:10px;color:rgba(255,255,255,.3);text-align:center">
       他${ranking.selected.length-3}名 → 詳細を見るで確認</div>`:''}
     <div style="margin-top:12px;display:flex;gap:8px">
-      <button class="btn btn-em" onclick="openAiModal('${lead.id}')">📊 全結果を確認・確定</button>
+      <button class="btn btn-em" onclick="openAiModal('${lead.id}')">📊 マッチング結果を見る</button>
       <button class="btn btn-ghost btn-sm" onclick="runFullMatch('${lead.id}')">🔄 再実行</button>
     </div>
   </div>`;
@@ -1054,7 +1045,10 @@ function renderHQMatched(matched){
         <div style="font-size:12px;font-weight:700;color:var(--em)">${l.assignedAgName}</div>
         <div style="font-size:9px;color:var(--faint);font-family:'DM Mono',monospace">${l.assignedAgId}</div>
       </div>
-      <span class="badge b-em">✅ マッチング済</span>
+      <div style="text-align:right">
+        <span class="badge b-em">✅ 自動確定済</span>
+        ${l._autoMatched?'<div style="font-size:9px;color:var(--em);margin-top:3px">🤖 AI自動マッチング</div>':''}
+      </div>
     </div>
   </div>`).join('');
 }
@@ -1320,8 +1314,9 @@ function renderPTMyCase(myLeads){
     scoring:'⚙️ スコアリング中',
     ai_ranking:'✨ AI判定中',
     notified:'🔔 AG選定完了・応答待ち',
+    needs_hq:'⚠️ HQ対応中',
     unmatched:'🔍 マッチング中',
-    matched:'✅ 担当AG決定',
+    matched:'✅ 自動マッチング完了',
     closed:'🏁 成約'
   };
   const statusCls = {
@@ -1341,10 +1336,14 @@ function renderPTMyCase(myLeads){
       ${l.assignedAgName?`
       <div style="margin-top:10px;padding:10px 12px;background:var(--em-bg);
         border-radius:8px;border:1px solid rgba(5,150,105,.2)">
-        <div style="font-size:10px;color:var(--em);font-weight:700">担当エージェント</div>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+          <div style="font-size:10px;color:var(--em);font-weight:700">担当エージェント</div>
+          ${l._autoMatched?'<span style="font-size:9px;background:rgba(5,150,105,.15);color:var(--em);padding:1px 7px;border-radius:10px;font-weight:700">🤖 AI自動マッチング</span>':''}
+        </div>
         <div style="font-size:12px;font-weight:700;color:var(--navy);margin-top:2px">
           ${l.assignedAgName} <span style="font-size:9px;font-family:'DM Mono',monospace;
           color:var(--muted)">${l.assignedAgId}</span></div>
+        ${l._matchReason?`<div style="font-size:10px;color:var(--muted);margin-top:4px;line-height:1.5">${l._matchReason}</div>`:''}
       </div>`:``}
     </div>
   </div>`).join('');
@@ -1457,22 +1456,44 @@ async function autoMatchPipeline(leadId){
   const ranking = await aiFinalRanking(ranked, lead);
   lead._aiRanking = ranking;
 
-  // ── Step 4: Slack通知シミュレーション ─────────────────────
-  lead.status = 'notified'; // AG通知済み → HQ確認待ち
-  lead._notifiedAt = new Date().toLocaleString('ja-JP');
-  lead._notifiedAgents = ranking.selected.map(s=>s.agentId);
+  // ── Step 4: マッチング自動確定 ──────────────────────────
+  // Role Bが選定した#1位のAGに自動確定
+  const topPick = ranking.selected[0];
+  const agents = getAgents();
+  const matchedAg = agents.find(a=>a.id===topPick.agentId);
+
+  if(matchedAg){
+    lead.status = 'matched';
+    lead.assignedAgId   = matchedAg.id;
+    lead.assignedAgName = matchedAg.name;
+    lead.matchedAt      = new Date().toLocaleString('ja-JP');
+    lead._autoMatched   = true; // 自動確定フラグ
+    lead._matchReason   = topPick.reason;
+    lead._matchExpected = topPick.expectedOutcome;
+    lead._notifiedAgents = ranking.selected.map(s=>s.agentId);
+    matchedAg.activeCases = (matchedAg.activeCases||0) + 1;
+    saveAgents(agents);
+  } else {
+    // 候補AGが見つからない場合のみHQ介入
+    lead.status = 'needs_hq';
+  }
+
   saveLeads(leads);
   refreshLeadStatusBadge(lead);
 
-  // HQへのアラート（緊急案件・リスクフラグあり）
-  if(ranking.hqAlertNeeded || lead._urgent){
-    showToast(`⚠️ HQアラート: ${lead.id} — ${ranking.hqAlertReason||'緊急案件です'}`, 'error');
+  // ── Step 5: 全員に自動通知 ────────────────────────────────
+  if(lead.status==='matched'){
+    // 緊急フラグがある場合はHQにも追加通知
+    if(ranking.hqAlertNeeded || lead._urgent){
+      showToast(`⚠️ 自動確定完了 + HQアラート: ${ranking.hqAlertReason||'緊急案件'}`, 'error');
+    } else {
+      showToast(`✅ 自動マッチング確定！${matchedAg.name} が担当します`, 'success');
+    }
   } else {
-    showToast(`🔔 ${lead.id}: AI選定完了・上位${ranking.selected.length}名に通知送信`, 'success');
+    showToast(`⚠️ ${lead.id}: 候補AG不在 — HQ対応が必要です`, 'error');
   }
 
-  // HQボードを自動更新
-  if(currentRole==='hq') renderMain();
+  if(currentRole==='hq'||currentRole==='ag'||currentRole==='pt') renderMain();
 }
 
 // マイ案件ステータスバッジをリアルタイム更新
@@ -1621,9 +1642,7 @@ function openAiModal(leadId){
             ${s.riskNote?`<div style="font-size:10px;color:var(--rd);margin-top:3px">⚠️ ${s.riskNote}</div>`:''}
           </div>
           <div style="flex-shrink:0">
-            <button class="btn btn-em btn-sm" onclick="prepareConfirmMatch('${lead.id}','${ag.id}','${ag.name}')">
-              確定→
-            </button>
+            <span class="badge b-em" style="font-size:10px">✅ 自動確定済</span>
           </div>
         </div>
       </div>`}).join('')}`;
