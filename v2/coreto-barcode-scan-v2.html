@@ -1499,10 +1499,10 @@ function registerReturn(){
 }
 
 // ══════════════════════════════════════════════════════════
-// Welcome letter + ラベル 印刷（承認時自動）
+// 印刷: Welcome letter（A4・通常プリンター）+ ラベル2枚（A6・ラベルプリンター）
+// 承認時: Welcomeは自動印刷、ラベルは別ウィンドウで手動印刷
 // ══════════════════════════════════════════════════════════
 function printApprovalDocs(doc, trackingCode){
-  // CASE_DBから詳細情報を取得
   const cas = CASE_DB.find(c => c.caseId === doc.caseId) || {
     caseId: doc.caseId, caseName: doc.caseName, honorific:'様',
     postal:'—', address: doc.caseName, building:'',
@@ -1510,102 +1510,64 @@ function printApprovalDocs(doc, trackingCode){
     agent:{name:'担当AG', agId:'—'},
     mgmt:{name:'管理会社', postal:'—', address:'—'},
   };
+  // 1. Welcome letter（A4）を自動印刷
+  printWelcomeLetter(cas, trackingCode);
+  // 2. ラベル（A6 ラベルプリンター用）は少し遅らせて別ウィンドウ
+  setTimeout(()=> printLabels(cas, trackingCode), 600);
+}
+
+// ── Welcome letter（A4・通常プリンター・自動印刷）──────────
+function printWelcomeLetter(cas, trackingCode){
   const today = new Date().toLocaleDateString('ja-JP',{year:'numeric',month:'long',day:'numeric'});
   const w = window.open('','_blank','width=860,height=1100');
-
   w.document.write(`<!DOCTYPE html><html lang="ja"><head>
 <meta charset="UTF-8">
-<title>書類印刷 — ${cas.caseId}</title>
+<title>Welcome letter — ${cas.caseId}</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"><\/script>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:'Hiragino Kaku Gothic Pro','Noto Sans JP',sans-serif;font-size:12px;line-height:1.8;color:#202124;background:#f0f0f0}
-  .page{width:210mm;min-height:297mm;background:#fff;padding:20mm 18mm;margin:0 auto 16px;box-shadow:0 2px 12px rgba(0,0,0,.15)}
-  @media print{
-    body{background:#fff}
-    .no-print{display:none!important}
-    .page{margin:0;box-shadow:none;page-break-after:always}
-    .page:last-child{page-break-after:auto}
-  }
-
-  /* ── Welcome letter ── */
-  .wl-header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #0D1A2D;padding-bottom:14px;margin-bottom:18px}
-  .wl-logo{font-size:22px;font-weight:800;letter-spacing:3px;color:#0D1A2D}
-  .wl-logo-sub{font-size:9px;color:#5F6368;letter-spacing:1px;margin-top:2px}
-  .wl-meta{font-size:10px;color:#5F6368;text-align:right;line-height:1.7}
-  .wl-client-box{background:#F8F9FA;border:1px solid #E8EAED;border-radius:8px;padding:14px 18px;margin-bottom:18px}
-  .wl-client-label{font-size:9px;font-weight:700;color:#5F6368;letter-spacing:1px;margin-bottom:4px}
-  .wl-client-name{font-size:20px;font-weight:700;color:#0D1A2D}
-  .wl-client-sub{font-size:11px;color:#5F6368;margin-top:3px}
-  .sec-title{font-size:11px;font-weight:700;letter-spacing:.8px;color:#0D1A2D;border-left:3px solid #C8A951;padding-left:10px;margin:16px 0 8px}
-  .return-box{background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:14px 18px;margin:14px 0}
-  .return-box h3{font-size:12px;color:#1D4ED8;margin-bottom:8px}
-  .return-box ol{padding-left:18px;font-size:11px;line-height:2.2}
+  .page{width:210mm;min-height:297mm;background:#fff;padding:20mm 18mm;margin:0 auto;box-shadow:0 2px 12px rgba(0,0,0,.15)}
+  @media print{body{background:#fff}.page{margin:0;box-shadow:none}.no-print{display:none!important}}
+  .header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #0D1A2D;padding-bottom:14px;margin-bottom:18px}
+  .logo{font-size:22px;font-weight:800;letter-spacing:3px;color:#0D1A2D}
+  .logo-sub{font-size:9px;color:#5F6368;letter-spacing:1px;margin-top:2px}
+  .meta{font-size:10px;color:#5F6368;text-align:right;line-height:1.7}
+  .client-box{background:#F8F9FA;border:1px solid #E8EAED;border-radius:8px;padding:14px 18px;margin-bottom:18px}
+  .cb-lbl{font-size:9px;font-weight:700;color:#5F6368;letter-spacing:1px;margin-bottom:4px}
+  .cb-name{font-size:20px;font-weight:700;color:#0D1A2D}
+  .cb-sub{font-size:11px;color:#5F6368;margin-top:3px}
+  .sec{font-size:11px;font-weight:700;letter-spacing:.8px;color:#0D1A2D;border-left:3px solid #C8A951;padding-left:10px;margin:16px 0 8px}
+  table{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:14px}
+  th{background:#0D1A2D;color:#fff;padding:7px 10px;text-align:left;font-size:10px;font-weight:600}
+  td{padding:6px 10px;border:1px solid #E8EAED}
+  .ret-box{background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:14px 18px;margin:14px 0}
+  .ret-box h3{font-size:12px;color:#1D4ED8;margin-bottom:8px}
+  .ret-box ol{padding-left:18px;font-size:11px;line-height:2.2}
   .bc-wrap{text-align:center;padding:14px;border:1px dashed #E8EAED;border-radius:8px;margin:14px 0}
   .bc-lbl{font-size:9px;color:#5F6368;letter-spacing:1px;margin-bottom:6px}
   .bc-id{font-family:monospace;font-size:13px;font-weight:700;color:#0D1A2D;margin-top:4px}
-  .wl-footer{margin-top:20px;padding-top:10px;border-top:1px solid #E8EAED;font-size:9px;color:#9AA0A6;text-align:center;line-height:1.8}
-
-  /* ── ラベル共通 ── */
-  .label-page{display:flex;align-items:center;justify-content:center;min-height:297mm;padding:20mm}
-  .label-card{width:100%;max-width:165mm;border:1.5px dashed #ccc;border-radius:4px;padding:10mm 12mm;position:relative}
-  .label-card::before{content:'';position:absolute;top:0;left:0;right:0;height:5px;border-radius:4px 4px 0 0}
-  .label-outbound::before{background:#3b82f6}
-  .label-return::before{background:#8b5cf6}
-  .label-type-tag{font-size:8px;font-weight:700;letter-spacing:.5px;padding:2px 8px;border-radius:2px;display:inline-block;margin-bottom:5mm;margin-top:2mm}
-  .tag-out{background:#dbeafe;color:#1d4ed8}
-  .tag-ret{background:#ede9fe;color:#6d28d9}
-  .postal{font-size:14px;color:#374151;letter-spacing:3px;margin-bottom:2mm;font-weight:500}
-  .addr{font-size:10px;color:#374151;line-height:1.6;margin-bottom:2mm}
-  .to-name{font-size:18px;font-weight:700;color:#111827;line-height:1.3}
-  .honorific{font-size:12px;font-weight:400}
-  .divider{border:none;border-top:.5px solid #e5e7eb;margin:4mm 0}
-  .from-lbl{font-size:7px;color:#9ca3af;letter-spacing:.5px;margin-bottom:1.5mm}
-  .from-name{font-size:10px;font-weight:700;color:#374151;line-height:1.5}
-  .from-addr{font-size:8px;color:#6b7280;line-height:1.5}
-  .case-corner{position:absolute;bottom:4mm;right:5mm;font-size:7px;color:#9ca3af;text-align:right;line-height:1.5}
-  .label-bc-wrap{margin:4mm 0 2mm;text-align:center}
-</style>
-</head><body>
-
-<!-- ═══ PAGE 1: Welcome letter ═══ -->
+  .footer{margin-top:20px;padding-top:10px;border-top:1px solid #E8EAED;font-size:9px;color:#9AA0A6;text-align:center;line-height:1.8}
+</style></head><body>
 <div class="page">
-  <div class="wl-header">
-    <div>
-      <div class="wl-logo">CORETO</div>
-      <div class="wl-logo-sub">株式会社CORETO — 書類送付のご案内</div>
-    </div>
-    <div class="wl-meta">
-      発行日：${today}<br>
-      案件ID：<strong style="font-family:monospace">${cas.caseId}</strong>
-    </div>
+  <div class="header">
+    <div><div class="logo">CORETO</div><div class="logo-sub">株式会社CORETO — 書類送付のご案内</div></div>
+    <div class="meta">発行日：${today}<br>案件ID：<strong style="font-family:monospace">${cas.caseId}</strong></div>
   </div>
-
-  <div class="wl-client-box">
-    <div class="wl-client-label">送付先クライアント</div>
-    <div class="wl-client-name">${cas.caseName} <span style="font-size:13px;font-weight:400">${cas.honorific}</span></div>
-    <div class="wl-client-sub">〒${cas.postal} ${cas.address} ${cas.building}</div>
-    <div class="wl-client-sub" style="margin-top:4px">物件：${cas.propertyName} ／ 担当：${cas.agent.name}（${cas.agent.agId}）</div>
+  <div class="client-box">
+    <div class="cb-lbl">送付先クライアント</div>
+    <div class="cb-name">${cas.caseName} <span style="font-size:13px;font-weight:400">${cas.honorific}</span></div>
+    <div class="cb-sub">〒${cas.postal} ${cas.address} ${cas.building}</div>
+    <div class="cb-sub" style="margin-top:4px">物件：${cas.propertyName} ／ 担当：${cas.agent.name}（${cas.agent.agId}）</div>
   </div>
-
-  <div class="sec-title">書類送付のご案内</div>
-  <p style="font-size:11px;margin-bottom:10px">
-    このたびは契約書類をお送りいたします。下記のとおりご署名・ご捺印のうえ、<strong>同封の返送用レターパックプラス</strong>にて
-    ご返送いただきますようお願い申し上げます。
-  </p>
-
-  <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:14px">
-    <tr style="background:#0D1A2D;color:#fff">
-      <th style="padding:7px 10px;text-align:left;font-size:10px">書類種別</th>
-      <th style="padding:7px 10px;text-align:left;font-size:10px">確認事項</th>
-    </tr>
-    <tr><td style="padding:6px 10px;border:1px solid #E8EAED">賃貸借契約書</td>
-        <td style="padding:6px 10px;border:1px solid #E8EAED">各ページの署名欄にご署名・ご捺印ください</td></tr>
-    <tr><td style="padding:6px 10px;border:1px solid #E8EAED">重要事項説明書</td>
-        <td style="padding:6px 10px;border:1px solid #E8EAED">内容をご確認のうえ、署名欄にご署名ください</td></tr>
+  <div class="sec">書類送付のご案内</div>
+  <p style="font-size:11px;margin-bottom:10px">このたびは契約書類をお送りいたします。下記のとおりご署名・ご捺印のうえ、<strong>同封の返送用レターパックプラス</strong>にてご返送いただきますようお願い申し上げます。</p>
+  <table>
+    <tr><th style="width:160px">書類種別</th><th>確認事項</th></tr>
+    <tr><td>賃貸借契約書</td><td>各ページの署名欄にご署名・ご捺印ください</td></tr>
+    <tr><td>重要事項説明書</td><td>内容をご確認のうえ、署名欄にご署名ください</td></tr>
   </table>
-
-  <div class="return-box">
+  <div class="ret-box">
     <h3>📦 書類の返送方法</h3>
     <ol>
       <li>同封の<strong>返送用レターパックプラス（紫色）</strong>をご使用ください</li>
@@ -1615,100 +1577,175 @@ function printApprovalDocs(doc, trackingCode){
       <li>発送後、追跡番号をご連絡いただく必要はありません</li>
     </ol>
   </div>
-
   <div class="bc-wrap">
-    <div class="bc-lbl">案件管理バーコード（開封・返送時にスキャンされます）</div>
+    <div class="bc-lbl">案件管理バーコード</div>
     <svg id="bc-wl"></svg>
     <div class="bc-id">${cas.caseId}</div>
   </div>
-
-  <div class="wl-footer">
+  <div class="footer">
     株式会社CORETO ／ 〒${CORETO_HQ.postal} ${CORETO_HQ.address} ／ TEL ${CORETO_HQ.tel}<br>
-    ご不明な点は担当 ${cas.agent.name} までお問い合わせください。このご案内は書類と一緒に保管してください。
+    ご不明な点は担当 ${cas.agent.name} までお問い合わせください。
   </div>
 </div>
-
-<!-- ═══ PAGE 2: 往路ラベル（HQ → クライアント）═══ -->
-<div class="page label-page">
-  <div class="label-card label-outbound">
-    <span class="label-type-tag tag-out">📄 契約書送付 → お客様</span>
-
-    <div style="margin-bottom:5mm">
-      <div class="postal">〒${cas.postal}</div>
-      <div class="addr">${cas.address}<br>${cas.building}</div>
-      <div class="to-name">${cas.caseName} <span class="honorific">${cas.honorific}</span></div>
-    </div>
-
-    <hr class="divider">
-
-    <div>
-      <div class="from-lbl">差出人</div>
-      <div class="from-name">${CORETO_HQ.name} ／ 担当：${cas.agent.name}</div>
-      <div class="from-addr">〒${CORETO_HQ.postal} ${CORETO_HQ.address}</div>
-      <div class="from-addr">TEL：${CORETO_HQ.tel}</div>
-    </div>
-
-    <div class="label-bc-wrap">
-      <svg id="bc-out"></svg>
-    </div>
-
-    <div class="case-corner">${cas.caseId}<br>${cas.propertyName}</div>
-  </div>
-</div>
-
-<!-- ═══ PAGE 3: 返送ラベル（クライアント → HQ）═══ -->
-<div class="page label-page">
-  <div class="label-card label-return">
-    <span class="label-type-tag tag-ret">↩️ 返信用（署名済み書類の返送）</span>
-
-    <div style="margin-bottom:5mm">
-      <div class="postal">〒${CORETO_HQ.postal}</div>
-      <div class="addr">${CORETO_HQ.address}</div>
-      <div class="to-name">${CORETO_HQ.name}<br>
-        <span style="font-size:12px;font-weight:500">契約書受付 係</span>
-      </div>
-    </div>
-
-    <hr class="divider">
-
-    <div>
-      <div class="from-lbl">差出人（お客様のお名前・ご住所をご記入ください）</div>
-      <div class="from-name">${cas.caseName} ${cas.honorific}</div>
-      <div class="from-addr">〒${cas.postal} ${cas.address} ${cas.building}</div>
-    </div>
-
-    <div class="label-bc-wrap">
-      <svg id="bc-ret"></svg>
-    </div>
-
-    <div class="case-corner">${cas.caseId} 返送用<br>署名後にご投函ください</div>
-  </div>
-</div>
-
-<!-- 印刷ボタン -->
 <div class="no-print" style="text-align:center;padding:20px;background:#f0f0f0">
+  <button onclick="window.print()" style="padding:10px 28px;background:#0D1A2D;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;margin-right:10px">🖨️ 印刷（通常プリンター・A4）</button>
+  <button onclick="window.close()" style="padding:10px 18px;background:#E8EAED;color:#202124;border:none;border-radius:8px;font-size:13px;cursor:pointer">閉じる</button>
+</div>
+<script>
+window.addEventListener('load',function(){
+  try{JsBarcode('#bc-wl','${cas.caseId}',{format:'CODE128',width:2,height:52,displayValue:false,margin:4,lineColor:'#0D1A2D',background:'#ffffff'});}catch(e){}
+  setTimeout(()=>window.print(),800);
+});
+<\/script></body></html>`);
+  w.document.close();
+}
+
+// ── ラベル2枚（A6・ラベルプリンター用・手動印刷）──────────
+// @page size: 105mm 148mm （A6）
+// レターパック宛名欄（約125×65mm）に対応したレイアウト
+function printLabels(cas, trackingCode){
+  const w = window.open('','_blank','width=500,height=800');
+  w.document.write(`<!DOCTYPE html><html lang="ja"><head>
+<meta charset="UTF-8">
+<title>ラベル印刷 — ${cas.caseId}</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"><\/script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Hiragino Kaku Gothic Pro','Noto Sans JP',sans-serif;background:#e5e7eb}
+
+  /* ラベルプリンター用: A6 = 105mm × 148mm */
+  @page{size:105mm 148mm;margin:4mm}
+  @media print{
+    body{background:#fff}
+    .label-wrap{width:105mm;height:148mm;padding:0;margin:0;page-break-after:always;box-shadow:none}
+    .label-wrap:last-of-type{page-break-after:auto}
+    .no-print{display:none!important}
+  }
+
+  /* 画面プレビュー用 */
+  .preview-bar{background:#0D1A2D;color:#C8A951;padding:12px 20px;font-size:11px;font-weight:700;display:flex;justify-content:space-between;align-items:center}
+  .preview-note{font-size:10px;color:rgba(255,255,255,.6);font-weight:400}
+  .label-wrap{width:105mm;height:148mm;background:#fff;margin:16px auto;padding:6mm;
+    box-shadow:0 2px 12px rgba(0,0,0,.15);position:relative;overflow:hidden}
+
+  /* ラベル上部カラーバー */
+  .label-wrap::before{content:'';position:absolute;top:0;left:0;right:0;height:4mm}
+  .label-out::before{background:#3b82f6}
+  .label-ret::before{background:#8b5cf6}
+
+  .type-tag{font-size:7px;font-weight:700;letter-spacing:.5px;padding:2px 7px;border-radius:2px;
+    display:inline-block;margin-bottom:4mm;margin-top:3mm}
+  .tag-out{background:#dbeafe;color:#1d4ed8}
+  .tag-ret{background:#ede9fe;color:#6d28d9}
+
+  /* 宛先 */
+  .postal{font-size:13px;color:#374151;letter-spacing:3px;font-weight:600;margin-bottom:1.5mm}
+  .addr{font-size:9px;color:#374151;line-height:1.6;margin-bottom:1.5mm}
+  .to-name{font-size:17px;font-weight:700;color:#111827;line-height:1.3;margin-bottom:3mm}
+  .sub-name{font-size:10px;font-weight:500;margin-top:1mm}
+
+  /* 区切り線 */
+  .div{border:none;border-top:.5px solid #d1d5db;margin:3mm 0}
+
+  /* 差出人 */
+  .from-lbl{font-size:7px;color:#9ca3af;letter-spacing:.5px;margin-bottom:1.5mm}
+  .from-name{font-size:9px;font-weight:700;color:#374151;line-height:1.5}
+  .from-addr{font-size:8px;color:#6b7280;line-height:1.5}
+
+  /* バーコード */
+  .bc-area{text-align:center;margin-top:3mm}
+  .bc-id{font-family:monospace;font-size:8px;color:#9ca3af;margin-top:1mm}
+
+  /* 案件コーナー */
+  .case-corner{position:absolute;bottom:3mm;right:4mm;font-size:7px;color:#d1d5db;text-align:right;line-height:1.4}
+</style></head><body>
+
+<div class="no-print preview-bar">
+  <span>🖨️ ラベル印刷プレビュー ／ ${cas.caseId}</span>
+  <span class="preview-note">A6（105×148mm）ラベルプリンター用 ／ 2枚</span>
+</div>
+
+<!-- ラベル1: 往路（HQ → クライアント） -->
+<div class="label-wrap label-out">
+  <span class="type-tag tag-out">📄 契約書送付 → お客様</span>
+
+  <div>
+    <div class="postal">〒${cas.postal}</div>
+    <div class="addr">${cas.address}</div>
+    <div class="addr">${cas.building}</div>
+    <div class="to-name">${cas.caseName}
+      <span style="font-size:11px;font-weight:400">&nbsp;${cas.honorific}</span>
+    </div>
+  </div>
+
+  <hr class="div">
+
+  <div>
+    <div class="from-lbl">差 出 人</div>
+    <div class="from-name">${CORETO_HQ.name}</div>
+    <div class="from-name">担当：${cas.agent.name}（${cas.agent.agId}）</div>
+    <div class="from-addr">〒${CORETO_HQ.postal}</div>
+    <div class="from-addr">${CORETO_HQ.address}</div>
+    <div class="from-addr">TEL：${CORETO_HQ.tel}</div>
+  </div>
+
+  <div class="bc-area">
+    <svg id="bc-out"></svg>
+    <div class="bc-id">OUT-${trackingCode}</div>
+  </div>
+  <div class="case-corner">${cas.caseId}<br>${cas.propertyName}</div>
+</div>
+
+<!-- ラベル2: 返送（クライアント → HQ、同封） -->
+<div class="label-wrap label-ret">
+  <span class="type-tag tag-ret">↩️ 返信用（署名済み書類の返送）</span>
+
+  <div>
+    <div class="postal">〒${CORETO_HQ.postal}</div>
+    <div class="addr">${CORETO_HQ.address}</div>
+    <div class="to-name">${CORETO_HQ.name}
+      <div class="sub-name">契約書受付 係</div>
+    </div>
+  </div>
+
+  <hr class="div">
+
+  <div>
+    <div class="from-lbl">差出人（ご記入ください）</div>
+    <div class="from-name">${cas.caseName} ${cas.honorific}</div>
+    <div class="from-addr">〒${cas.postal}</div>
+    <div class="from-addr">${cas.address} ${cas.building}</div>
+  </div>
+
+  <div class="bc-area">
+    <svg id="bc-ret"></svg>
+    <div class="bc-id">RET-${trackingCode}</div>
+  </div>
+  <div class="case-corner">${cas.caseId} 返送用<br>署名後にご投函ください</div>
+</div>
+
+<div class="no-print" style="text-align:center;padding:16px;background:#e5e7eb">
+  <div style="font-size:11px;color:#6b7280;margin-bottom:10px">
+    ⚠️ ラベルプリンターを選択して印刷してください（A6 / 105×148mm）
+  </div>
   <button onclick="window.print()"
-    style="padding:12px 32px;background:#0D1A2D;color:#fff;border:none;border-radius:8px;
-    font-size:14px;cursor:pointer;margin-right:12px">
-    🖨️ 3ページを印刷する（Welcome letter＋ラベル2枚）
+    style="padding:10px 28px;background:#6D28D9;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;margin-right:10px">
+    🖨️ ラベル印刷（ラベルプリンター・A6）
   </button>
   <button onclick="window.close()"
-    style="padding:12px 20px;background:#E8EAED;color:#202124;border:none;border-radius:8px;
-    font-size:14px;cursor:pointer">閉じる</button>
+    style="padding:10px 18px;background:#E8EAED;color:#202124;border:none;border-radius:8px;font-size:13px;cursor:pointer">閉じる</button>
 </div>
 
 <script>
-window.addEventListener('load', function(){
-  const bcOpts = {format:'CODE128',width:2,height:52,displayValue:false,margin:4,lineColor:'#0D1A2D',background:'#ffffff'};
-  try{ JsBarcode('#bc-wl',  '${cas.caseId}',   bcOpts); }catch(e){}
-  try{ JsBarcode('#bc-out', 'OUT-${trackingCode}', bcOpts); }catch(e){}
-  try{ JsBarcode('#bc-ret', 'RET-${trackingCode}', bcOpts); }catch(e){}
-  setTimeout(()=>window.print(), 900);
+window.addEventListener('load',function(){
+  const opt={format:'CODE128',width:1.6,height:38,displayValue:false,margin:3,lineColor:'#0D1A2D',background:'#ffffff'};
+  try{JsBarcode('#bc-out','OUT-${trackingCode}',opt);}catch(e){}
+  try{JsBarcode('#bc-ret','RET-${trackingCode}',opt);}catch(e){}
 });
-<\/script>
-</body></html>`);
+<\/script></body></html>`);
   w.document.close();
 }
+
 
 // Bフロー開始（案件検索）
 function startFlowB(){
