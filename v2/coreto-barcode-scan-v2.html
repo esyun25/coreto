@@ -895,9 +895,28 @@ function renderStepAction(doc){
         🔴 仲介印 捺印完了
       </button>`;
     if (doc.stepIdx===1) return `
-      <button class="act-btn act-ai" onclick="runAiScan('${doc.id}')">
-        📷 スキャン → AI判定
-      </button>`;
+      <div>
+        <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:8px">
+          📄 契約書＋重要事項説明書（2枚）をアップロード
+        </div>
+        <label style="display:block;border:2px dashed var(--bd2);border-radius:10px;
+          padding:16px;text-align:center;cursor:pointer;transition:.15s;background:#F8F9FA"
+          id="upload-label-${doc.id}"
+          onmouseenter="this.style.borderColor='var(--navy)'"
+          onmouseleave="this.style.borderColor='var(--bd2)'">
+          <input type="file" accept="application/pdf" multiple style="display:none"
+            onchange="handlePdfUpload(event,'${doc.id}')">
+          <div id="upload-status-${doc.id}" style="font-size:12px;color:var(--muted)">
+            📁 PDFを選択（クリックまたはドロップ）<br>
+            <span style="font-size:10px;color:var(--faint)">契約書.pdf ／ 重要事項説明書.pdf</span>
+          </div>
+        </label>
+        <button class="act-btn act-ai" style="margin-top:10px;width:100%;justify-content:center"
+          id="ai-scan-btn-${doc.id}" disabled
+          onclick="runAiScan('${doc.id}')" style="opacity:.45">
+          🤖 AIで案件を判定する
+        </button>
+      </div>`;
     if (doc.stepIdx===2) return `
       <span class="badge badge-ai">🤖 AI判定中...</span>`;
     if (doc.stepIdx===3) return `
@@ -960,7 +979,28 @@ function renderStepAction(doc){
 
   // Flow C
   if (doc.flow==='C'){
-    if (doc.stepIdx===0) return '<span class="badge badge-pending">📷 鍵受取書スキャン待ち</span>';
+    if (doc.stepIdx===0) return `
+      <div>
+        <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:8px">
+          🔑 鍵受取書をアップロード
+        </div>
+        <label style="display:block;border:2px dashed var(--bd2);border-radius:10px;
+          padding:16px;text-align:center;cursor:pointer;transition:.15s;background:#F8F9FA"
+          onmouseenter="this.style.borderColor='var(--em)'"
+          onmouseleave="this.style.borderColor='var(--bd2)'">
+          <input type="file" accept="application/pdf" style="display:none"
+            onchange="handleKeyPdfUpload(event,'${doc.id}')">
+          <div id="key-upload-status-${doc.id}" style="font-size:12px;color:var(--muted)">
+            📁 鍵受取書PDFを選択<br>
+            <span style="font-size:10px;color:var(--faint)">鍵受取書.pdf</span>
+          </div>
+        </label>
+        <button class="act-btn act-ai" style="margin-top:10px;width:100%;justify-content:center"
+          id="key-ai-btn-${doc.id}" disabled
+          onclick="runKeyAiScan('${doc.id}')">
+          🤖 AIで案件を特定する
+        </button>
+      </div>`;
     if (doc.stepIdx===1) return `
       <div style="display:flex;gap:8px">
         <button class="act-btn act-em" onclick="approveAi('${doc.id}')">✅ AI結果を承認</button>
@@ -1040,6 +1080,51 @@ function advance(docId){
   doc.lastUpdated = new Date().toLocaleString('ja-JP').slice(5,-3);
   showToast('✅ ステップを更新しました', 'ok');
   refreshCurrentTab();
+}
+
+// PDF アップロードハンドラ（Flow A: 契約書＋重説）
+function handlePdfUpload(event, docId){
+  const files = Array.from(event.target.files);
+  if (!files.length) return;
+  const names = files.map(f=>f.name).join('、');
+  const statusEl = document.getElementById('upload-status-'+docId);
+  const btnEl    = document.getElementById('ai-scan-btn-'+docId);
+  if (statusEl) statusEl.innerHTML = `✅ アップロード完了<br>
+    <span style="font-size:10px;color:var(--em);font-weight:600">${names}</span>`;
+  if (btnEl) { btnEl.disabled = false; btnEl.style.opacity = '1'; }
+  // ラベルのボーダー色を緑に
+  const label = document.getElementById('upload-label-'+docId);
+  if (label) label.style.borderColor = 'var(--em)';
+  showToast(`📄 ${files.length}件のPDFを受信しました`);
+}
+
+// PDF アップロードハンドラ（Flow C: 鍵受取書）
+function handleKeyPdfUpload(event, docId){
+  const files = Array.from(event.target.files);
+  if (!files.length) return;
+  const statusEl = document.getElementById('key-upload-status-'+docId);
+  const btnEl    = document.getElementById('key-ai-btn-'+docId);
+  if (statusEl) statusEl.innerHTML = `✅ アップロード完了<br>
+    <span style="font-size:10px;color:var(--em);font-weight:600">${files[0].name}</span>`;
+  if (btnEl) { btnEl.disabled = false; btnEl.style.opacity = '1'; }
+  showToast(`🔑 鍵受取書PDFを受信しました`);
+}
+
+// AI判定実行（Flow C）
+function runKeyAiScan(docId){
+  const doc = DOCS.find(d=>d.id===docId);
+  if (!doc) return;
+  doc.stepIdx = 0;
+  doc.lastUpdated = new Date().toLocaleString('ja-JP').slice(5,-3);
+  showToast('📷 スキャン完了。AI案件特定中...');
+  refreshCurrentTab();
+  setTimeout(()=>{
+    doc.aiResult = {caseId: doc.caseId||'RC-XXXX', caseName: doc.caseName||'特定中', confidence:89};
+    doc.stepIdx = 1;
+    doc.lastUpdated = new Date().toLocaleString('ja-JP').slice(5,-3);
+    showToast('🤖 AI特定完了 — HQ承認をお願いします', 'ok');
+    renderStats(); refreshCurrentTab();
+  }, 1500);
 }
 
 function runAiScan(docId){
