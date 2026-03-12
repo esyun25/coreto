@@ -159,7 +159,8 @@ const NAV = {
       { icon:'🏅', label:'ランク・報酬明細',       href:'coreto-payment-v2.html',      key:'payment' },
     ]},
     { section:'人材（AG権限）', items:[
-      { icon:'👤', label:'担当案件（HR）',         href:'coreto-cases-v2.html',        key:'cases',    badge:'3' },
+      { icon:'🤖', label:'人材マッチング',         href:'coreto-hr-matching-v2.html',  key:'hr_matching', badge:'3', badgeColor:'amber' },
+      { icon:'👤', label:'担当案件（HR）',         href:'coreto-cases-v2.html',        key:'cases' },
       { icon:'👥', label:'クライアント管理',       href:'coreto-crm-v2.html',          key:'crm' },
       { icon:'📝', label:'成約報告',               href:'coreto-contract-report-v2.html', key:'contract_report' },
       { icon:'⚡', label:'即時払い申請',            href:'coreto-instant-pay-v2.html',  key:'instant_pay' },
