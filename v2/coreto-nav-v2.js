@@ -85,6 +85,7 @@ const NAV = {
       { icon:'🔑', label:'IT重説管理',             href:'coreto-itsetsu-v2.html',      key:'itsetsu',  badge:'2', badgeColor:'amber' },
       { icon:'📊', label:'案件パイプライン',         href:'coreto-pipeline-v2.html',     key:'pipeline' },
       { icon:'🔗', label:'PTマッチング',             href:'coreto-matching-v2.html',     key:'matching', badge:'3', badgeColor:'red' },
+      { icon:'🏦', label:'初期費用明細チェック',     href:'coreto-invoice-check-v2.html',key:'invoice_check' },
     ]},
     { section:'財務・報酬', items:[
       { icon:'💴', label:'月次報酬確定・振込',       href:'coreto-payroll-v2.html',      key:'payroll' },
@@ -132,6 +133,7 @@ const NAV = {
       { icon:'⚠️', label:'早期退職アラート',         href:'coreto-early-quit-v2.html',   key:'early_quit' },
       { icon:'🏠', label:'内見管理',               href:'coreto-showing-v2.html',      key:'showing' },
       { icon:'🔑', label:'IT重説チェック',         href:'coreto-itsetsu-v2.html',      key:'itsetsu' },
+      { icon:'🏦', label:'初期費用明細チェック',   href:'coreto-invoice-check-v2.html',key:'invoice_check' },
       { icon:'💰', label:'入金確認',               href:'coreto-remittance-v2.html',   key:'remit' },
       { icon:'⚡', label:'即時払い申請',            href:'coreto-instant-pay-v2.html',  key:'instant_pay' },
     ]},

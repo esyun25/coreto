@@ -767,8 +767,13 @@ function renderResult(agInput, result){
           📞 管理会社確認メモを作成</button>`
       : `<button class="btn btn-sm" style="background:var(--em-bg);color:var(--em);
           border:1px solid rgba(5,150,105,.2)" onclick="showOkMemo()">
-          ✅ 確認完了メモを作成</button>`}
-  </div>`;
+          ✅ 確認完了メモを作成</button>
+         <button class="btn btn-sm" style="background:var(--navy);color:var(--gold);border:none" onclick="proceedToPayment()">
+          💴 送金申請へ進む</button>`}
+    <button class="btn btn-ghost btn-sm" onclick="printResult()">🖨️ 印刷</button>
+    <button class="btn btn-ghost btn-sm" id="log-toggle" onclick="toggleLog()">AIログ 表示</button>
+  </div>
+  <div id="ai-log" style="display:none;margin-top:10px;padding:10px 12px;background:#0D1A2D;border-radius:8px;font-family:'DM Mono',monospace;font-size:10px;color:rgba(200,169,81,.7);line-height:1.7;max-height:160px;overflow-y:auto">AI処理ログ（デバッグ用）</div>`;
 
   panel.innerHTML = bannerHtml + scanInfoHtml + headerHtml +
     `<div class="result-grid">${rowsHtml}</div>` + confHtml + actionHtml;
@@ -794,6 +799,23 @@ function showOkMemo(){
   const msg = `【明細チェック完了】\n案件: ${caseNo||'—'}\n金額: ¥${Number(amount).toLocaleString()}\n` +
     `確認日時: ${now}\nAI照合: 全項目一致 ✅`;
   navigator.clipboard?.writeText(msg).then(()=>showToast('完了メモをコピーしました','success'));
+}
+
+// ══════════════════════════════════════════════════════════════
+// 追加機能（invoice-verify-v2より移植）
+// ══════════════════════════════════════════════════════════════
+function proceedToPayment(){
+  showToast('送金申請ページへ遷移します...','success');
+  setTimeout(()=>{ window.location.href='coreto-remittance-v2.html'; },1200);
+}
+function printResult(){ window.print(); }
+function toggleLog(){
+  const log = document.getElementById('ai-log');
+  const btn = document.getElementById('log-toggle');
+  if (!log) return;
+  const visible = log.style.display !== 'none';
+  log.style.display = visible ? 'none' : 'block';
+  btn.textContent = visible ? 'AIログ 表示' : 'AIログ 非表示';
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -839,7 +861,9 @@ document.addEventListener('DOMContentLoaded',()=>{
   ['in-bank','in-branch','in-number','in-holder','in-amount'].forEach(id=>{
     document.getElementById(id)?.addEventListener('input', updateCheckBtn);
   });
+  if (typeof CNAV !== 'undefined') CNAV.init('invoice_check');
 });
 </script>
+<script src="coreto-nav-v2.js"></script>
 </body>
 </html>
