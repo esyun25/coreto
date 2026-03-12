@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>通知ログ — COREBLDG</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0D1A2D;--navy-l:#1E3252;--gold:#C8A951;--gold-dim:rgba(200,169,81,.15);--cream:#FFFFFF;--cream2:#F8F9FA;--white:#FFFFFF;--ink:#202124;--muted:#5F6368;--faint:#80868B;--em:#059669;--em-bg:#ECFDF5;--am:#D97706;--am-bg:#FFFBEB;--rd:#DC2626;--rd-bg:#FEF2F2;--sk:#0284C7;--sk-bg:#F0F9FF;--vt:#7C3AED;--vt-bg:#F5F3FF;--bd:#E8EAED;--bd2:#DADCE0;--sw:240px;--r:10px;--r-sm:7px;--sh:0 1px 2px rgba(60,64,67,.1),0 1px 3px rgba(60,64,67,.06)}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:var(--cream2)}
+.shell{display:flex;height:100vh}
+.sb{width:var(--sw);background:var(--navy);display:flex;flex-direction:column;flex-shrink:0;position:relative}
+.sb::after{content:'';position:absolute;top:0;right:0;width:1px;height:100%;background:linear-gradient(180deg,rgba(200,169,81,.25) 0%,rgba(200,169,81,.06) 50%,transparent 100%)}
+.sb-head{padding:24px 20px 18px;border-bottom:1px solid rgba(255,255,255,.06)}
+.sb-logo{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;letter-spacing:5px;color:var(--gold)}
+.sb-ver{font-size:9px;letter-spacing:2px;color:rgba(200,169,81,.3);font-family:'DM Mono',monospace;margin-top:2px}
+.sb-user{margin:14px 14px 10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:9px 11px;display:flex;align-items:center;gap:9px}
+.sb-av{width:28px;height:28px;border-radius:50%;background:var(--gold-dim);border:1px solid rgba(200,169,81,.25);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--gold);flex-shrink:0}
+.sb-un{font-size:11px;font-weight:600;color:rgba(255,255,255,.8)}.sb-ur{font-size:9px;color:rgba(255,255,255,.3);font-family:'DM Mono',monospace}
+.sb-nav{flex:1;overflow-y:auto;padding:6px 10px}
+.sb-nav::-webkit-scrollbar{width:3px}.sb-nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:2px}
+.sb-foot{padding:10px 14px 18px;border-top:1px solid rgba(255,255,255,.05)}
+.sf{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;cursor:pointer;font-size:11px;color:rgba(255,255,255,.3);transition:.13s}
+.sf:hover{background:rgba(255,255,255,.05);color:rgba(255,255,255,.6)}
+.content{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:58px;background:var(--white);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 24px;gap:14px;flex-shrink:0;box-shadow:var(--sh)}
+.tb-back{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);cursor:pointer;text-decoration:none;transition:.13s;flex-shrink:0}
+.tb-back:hover{color:var(--am)}
+.tb-sep{width:1px;height:20px;background:var(--bd);flex-shrink:0}
+.tb-info{flex:1}
+.tb-title{font-size:15px;font-weight:600;color:var(--ink)}
+.tb-crumb{font-size:11px;color:var(--faint)}.tb-crumb a{color:var(--muted);text-decoration:none}.tb-crumb a:hover{color:var(--am)}
+.tb-act{margin-left:auto;display:flex;gap:9px;align-items:center}
+.btn{padding:7px 16px;border-radius:var(--r-sm);font-size:12px;font-weight:600;cursor:pointer;transition:.15s;font-family:'Outfit',sans-serif;border:none;letter-spacing:.3px}
+.btn-p{background:var(--navy);color:var(--gold)}.btn-p:hover{background:var(--navy-l)}
+.btn-g{background:transparent;color:var(--muted);border:1px solid var(--bd)}.btn-g:hover{background:var(--cream);color:var(--ink)}
+.btn-rd{background:var(--rd-bg);color:var(--rd);border:1px solid rgba(220,38,38,.2)}.btn-rd:hover{background:var(--rd);color:#fff}
+.btn-sm{padding:5px 12px;font-size:11px}
+.page{flex:1;overflow-y:auto;padding:24px}.page::-webkit-scrollbar{width:5px}.page::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:3px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.kpi{background:var(--white);border:1px solid var(--bd);border-radius:var(--r);padding:16px 18px;box-shadow:var(--sh);position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.kpi.gd::before{background:var(--gold)}.kpi.em::before{background:var(--em)}.kpi.sk::before{background:var(--sk)}.kpi.am::before{background:var(--am)}.kpi.rd::before{background:var(--rd)}
+.kpi-lb{font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+.kpi-vl{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink)}
+.kpi-sb{font-size:10px;color:var(--faint);margin-top:4px}
+.card{background:var(--white);border:1px solid var(--bd);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden;margin-bottom:18px}
+.card-head{padding:13px 18px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;background:var(--cream2)}
+.card-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--ink)}
+.tbl{width:100%;border-collapse:collapse;font-size:12px}
+.tbl th{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--faint);padding:9px 14px;border-bottom:2px solid var(--bd);text-align:left;background:var(--cream2)}
+.tbl td{padding:11px 14px;border-bottom:1px solid var(--bd);color:var(--ink);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}.tbl tr:hover td{background:rgba(200,169,81,.03)}
+.mono{font-family:'DM Mono',monospace;font-size:11px;color:var(--faint)}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.3px;white-space:nowrap}
+.b-em{background:var(--em-bg);color:var(--em)}.b-am{background:var(--am-bg);color:var(--am)}.b-rd{background:var(--rd-bg);color:var(--rd)}.b-sk{background:var(--sk-bg);color:var(--sk)}.b-vt{background:var(--vt-bg);color:var(--vt)}.b-gd{background:var(--gold-dim);color:#92610A}.b-mu{background:var(--cream2);color:var(--faint);border:1px solid var(--bd)}
+.filter-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.filter-sel{padding:7px 12px;background:var(--cream2);border:1.5px solid var(--bd);border-radius:var(--r-sm);font-size:12px;color:var(--ink);font-family:'Outfit',sans-serif;outline:none;cursor:pointer}
+.filter-sel:focus{border-color:var(--gold)}
+.srch{position:relative;flex:1;min-width:200px}
+.srch input{width:100%;padding:8px 12px 8px 34px;background:var(--cream2);border:1.5px solid var(--bd);border-radius:var(--r-sm);font-size:12px;color:var(--ink);font-family:'Outfit',sans-serif;outline:none}
+.srch input:focus{border-color:var(--gold);background:var(--white)}
+.srch-ic{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--faint);font-size:13px;pointer-events:none}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;align-items:center;justify-content:center;backdrop-filter:blur(2px)}
+.modal-bg.show{display:flex}
+.modal{background:var(--white);border-radius:12px;width:540px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal-head{padding:18px 22px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-size:14px;font-weight:700;color:var(--ink)}
+.modal-close{background:none;border:none;font-size:18px;cursor:pointer;color:var(--muted)}
+.modal-body{padding:20px 22px}
+.modal-foot{padding:14px 22px;border-top:1px solid var(--bd);display:flex;justify-content:flex-end;gap:8px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;letter-spacing:.5px}
+.field input,.field select,.field textarea{width:100%;padding:9px 12px;background:var(--cream2);border:1.5px solid var(--bd);border-radius:var(--r-sm);font-size:13px;color:var(--ink);font-family:'Outfit','Noto Sans JP',sans-serif;outline:none;transition:.15s}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--gold);background:var(--white)}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.section-lbl{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--bd)}
+.toggle{width:40px;height:22px;background:var(--bd2);border-radius:11px;position:relative;cursor:pointer;transition:.2s;flex-shrink:0}
+.toggle.on{background:var(--em)}
+.toggle::after{content:'';position:absolute;width:16px;height:16px;background:#fff;border-radius:50%;top:3px;left:3px;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.toggle.on::after{left:21px}
+
+
+.notif-row{display:flex;align-items:flex-start;gap:14px;padding:14px 18px;border-bottom:1px solid var(--bd);transition:.13s;cursor:pointer}
+.notif-row:last-child{border-bottom:none}
+.notif-row:hover{background:rgba(200,169,81,.03)}
+.notif-row.unread{background:rgba(13,26,45,.025)}
+.notif-dot{width:7px;height:7px;border-radius:50%;background:var(--rd);flex-shrink:0;margin-top:5px;opacity:0}
+.notif-row.unread .notif-dot{opacity:1}
+.notif-icon{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.notif-body{flex:1;min-width:0}
+.notif-title{font-size:13px;font-weight:600;color:var(--ink);margin-bottom:2px}
+.notif-row.unread .notif-title{color:var(--navy)}
+.notif-desc{font-size:11px;color:var(--muted);line-height:1.6;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.notif-meta{font-size:10px;color:var(--faint);margin-top:5px;display:flex;align-items:center;gap:8px}
+.tab-bar{display:flex;border-bottom:1px solid var(--bd);background:var(--white);padding:0 18px}
+.tab{padding:12px 18px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:.15s}
+.tab:hover{color:var(--ink)}.tab.active{color:var(--navy);border-bottom-color:var(--gold)}
+.tcnt{font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px;background:var(--rd);color:#fff;margin-left:4px}
+.set-row{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;background:var(--cream2);border-radius:var(--r-sm);margin-bottom:7px}
+.set-label{font-size:13px;font-weight:600;color:var(--ink)}.set-desc{font-size:11px;color:var(--muted)}
+
+</style>
+</head>
+<body>
+<div class="shell">
+  <nav class="sb">
+    <div class="sb-head"><div class="sb-logo">CORETO</div><div class="sb-ver">COREBLDG v2.0</div></div>
+    <div class="sb-user">
+      <div class="sb-av" id="sb-av">HQ</div>
+      <div><div class="sb-un" id="sb-name">田中 誠一（統括）</div><div class="sb-ur" id="sb-role">CORETO / exec</div></div>
+    </div>
+    <div class="sb-nav" id="sb-nav"><!-- CNAV --></div>
+    <div class="sb-foot">
+      <div class="sf" onclick="CNAV.openSettings()">⚙️ &nbsp;設定</div>
+      <div class="sf" onclick="CNAV.logout()">🚪 &nbsp;ログアウト</div>
+    </div>
+  </nav>
+  <div class="content">
+    <div class="topbar">
+      <a href="coreto-hub-v2.html" class="tb-back">← 戻る</a>
+      <div class="tb-sep"></div>
+      <div class="tb-info">
+        <div class="tb-title">通知ログ</div>
+        <div class="tb-crumb"><a href="coreto-hub-v2.html">COREBLDG</a> › <span>通知ログ</span></div>
+      </div>
+      <div class="tb-act">
+        <button class="btn btn-g" onclick="markAllRead()">✅ 全て既読</button>
+        <button class="btn btn-p" onclick="document.getElementById('rule-modal').classList.add('show')">⚙️ 通知ルール設定</button>
+      </div>
+    </div>
+    <div class="page" id="page-content">
+
+      <div class="kpi-row">
+        <div class="kpi rd"><div class="kpi-lb">未読通知</div><div class="kpi-vl" id="kpi-unread">12</div><div class="kpi-sb">うち緊急 3件</div></div>
+        <div class="kpi am"><div class="kpi-lb">今日の通知</div><div class="kpi-vl">18</div></div>
+        <div class="kpi em"><div class="kpi-lb">今月の通知総数</div><div class="kpi-vl">284</div></div>
+        <div class="kpi sk"><div class="kpi-lb">設定中のルール</div><div class="kpi-vl">14</div></div>
+      </div>
+
+      <div style="background:var(--white);border:1px solid var(--bd);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden;margin-bottom:18px">
+        <div class="tab-bar">
+          <div class="tab active" id="tab-all" onclick="filterTab('all')">すべて<span class="tcnt" id="cnt-all"></span></div>
+          <div class="tab" id="tab-unread" onclick="filterTab('unread')">未読<span class="tcnt" id="cnt-unread" style="background:var(--am)"></span></div>
+          <div class="tab" id="tab-urgent" onclick="filterTab('urgent')">緊急</div>
+          <div class="tab" id="tab-system" onclick="filterTab('system')">システム</div>
+        </div>
+        <div style="padding:10px 18px;border-bottom:1px solid var(--bd)">
+          <div class="srch" style="max-width:360px"><div class="srch-ic">🔍</div><input type="text" placeholder="通知を検索..." oninput="filterSearch(this.value)"></div>
+        </div>
+        <div id="notif-list"></div>
+      </div>
+
+      <!-- 通知ルールモーダル -->
+      <div class="modal-bg" id="rule-modal" onclick="if(event.target===this)this.classList.remove('show')">
+        <div class="modal">
+          <div class="modal-head"><div class="modal-title">⚙️ 通知ルール設定</div><button class="modal-close" onclick="document.getElementById('rule-modal').classList.remove('show')">✕</button></div>
+          <div class="modal-body">
+            <div class="section-lbl">自動通知トリガー</div>
+            <div id="rule-list"></div>
+          </div>
+          <div class="modal-foot"><button class="btn btn-g" onclick="document.getElementById('rule-modal').classList.remove('show')">閉じる</button><button class="btn btn-p" onclick="saveRules()">保存</button></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+<script src="coreto-nav-v2.js"></script>
+<script>
+
+const NOTIFS = [
+  {id:'N-001',cat:'urgent',catLabel:'緊急',icon:'🚨',iconBg:'var(--rd-bg)',title:'即時払い審査待ち — AG-0042 山田 誠',desc:'¥180,000の即時払い申請が36時間以上未処理です。承認または差戻が必要です。',time:'10分前',link:'coreto-instant-pay-v2.html',unread:true},
+  {id:'N-002',cat:'kyc',catLabel:'KYC',icon:'🪪',iconBg:'var(--am-bg)',title:'KYC審査待ち — AG-0105 新規申込',desc:'エージェント入会申込が届いています。身分証・口座情報の確認が必要です。',time:'1時間前',link:'coreto-kyc-v2.html',unread:true},
+  {id:'N-003',cat:'contract',catLabel:'成約',icon:'📄',iconBg:'var(--sk-bg)',title:'成約報告 承認依頼 — RENT-0201',desc:'田中 一郎様（港区）の賃貸成約報告が提出されました。報酬額 ¥72,000。',time:'2時間前',link:'coreto-contract-report-v2.html',unread:true},
+  {id:'N-004',cat:'urgent',catLabel:'緊急',icon:'⚠️',iconBg:'var(--rd-bg)',title:'入金未確認 — RENT-0195（4日超過）',desc:'鈴木 花子様の敷金・前家賃入金が確認できていません。AG・管理会社への確認が必要です。',time:'3時間前',link:'coreto-remittance-v2.html',unread:true},
+  {id:'N-005',cat:'rank',catLabel:'ランク',icon:'🏅',iconBg:'var(--gold-dim)',title:'ランク昇格 — AG-0088 鈴木 花子がGoldへ',desc:'SilverからGoldへ昇格。報酬率が67.5%→70%に変更されます。',time:'5時間前',link:'coreto-rank-v2.html',unread:true},
+  {id:'N-006',cat:'system',catLabel:'AI',icon:'🤖',iconBg:'var(--em-bg)',title:'AIマッチング — 3件のマッチング候補を検出',desc:'新規クライアント3名に対し高適合度AGが自動抽出されました。確認・割当をお願いします。',time:'6時間前',link:'coreto-matching-v2.html',unread:true},
+  {id:'N-007',cat:'contract',catLabel:'署名',icon:'📝',iconBg:'var(--sk-bg)',title:'クラウドサイン署名完了 — AG-0105',desc:'新規AGの業務委託契約書への電子署名が完了しました。',time:'昨日 18:32',link:'coreto-onboarding-v2.html',unread:false},
+  {id:'N-008',cat:'payroll',catLabel:'報酬',icon:'💴',iconBg:'var(--em-bg)',title:'月次締め完了 — 2026年2月分',desc:'2月分の月次締めが完了しました。全銀CSVの出力・振込確認をお願いします。',time:'昨日 14:00',link:'coreto-batch-close-v2.html',unread:false},
+  {id:'N-009',cat:'system',catLabel:'レポート',icon:'📊',iconBg:'var(--em-bg)',title:'月次レポート自動生成完了',desc:'2026年2月分の月次報酬レポートが自動生成されました。',time:'昨日 14:05',link:'coreto-monthly-report-v2.html',unread:false},
+  {id:'N-010',cat:'retention',catLabel:'離脱',icon:'📉',iconBg:'var(--vt-bg)',title:'AG離脱リスク検出 — AG-0073 佐藤（中リスク）',desc:'過去30日間の活動が著しく低下。直近3ヶ月の成約なし。早期フォロー推奨。',time:'2日前',link:'coreto-agent-retention-v2.html',unread:false},
+  {id:'N-011',cat:'urgent',catLabel:'緊急',icon:'🔔',iconBg:'var(--rd-bg)',title:'早期退職アラート — 木村 陽子様（入居28日目）',desc:'入居から28日経過の報告未提出。退去・トラブルの可能性あり。AG・管理会社確認要。',time:'2日前',link:'coreto-early-quit-v2.html',unread:false},
+  {id:'N-012',cat:'kyc',catLabel:'KYC',icon:'✅',iconBg:'var(--em-bg)',title:'AI書類審査 合格 — AG-0104 渡辺',desc:'身分証・口座情報のAI審査が通過しました。最終確認後、アカウントを有効化できます。',time:'3日前',link:'coreto-kyc-v2.html',unread:false},
+];
+const CAT_COLOR = {urgent:'b-rd',kyc:'b-am',contract:'b-sk',rank:'b-gd',system:'b-em',payroll:'b-em',retention:'b-vt'};
+let activeTab = 'all';
+
+function renderNotifs(list) {
+  const c = document.getElementById('notif-list');
+  if (!list.length) { c.innerHTML = '<div style="text-align:center;padding:40px;color:var(--faint);font-size:13px">通知はありません</div>'; return; }
+  c.innerHTML = list.map(n => `
+    <div class="notif-row ${n.unread?'unread':''}" onclick="openNotif('${n.id}','${n.link}')">
+      <div class="notif-dot"></div>
+      <div class="notif-icon" style="background:${n.iconBg}">${n.icon}</div>
+      <div class="notif-body">
+        <div class="notif-title">${n.title}</div>
+        <div class="notif-desc">${n.desc}</div>
+        <div class="notif-meta">
+          <span class="badge ${CAT_COLOR[n.cat]||'b-mu'}">${n.catLabel}</span>
+          <span>${n.time}</span>
+        </div>
+      </div>
+      <a href="${n.link}" class="btn btn-sm btn-g" onclick="event.stopPropagation()">確認 →</a>
+    </div>`).join('');
+}
+
+function filterTab(tab) {
+  activeTab = tab;
+  ['all','unread','urgent','system'].forEach(t => document.getElementById('tab-'+t).classList.toggle('active', t===tab));
+  const map = {all:NOTIFS, unread:NOTIFS.filter(n=>n.unread), urgent:NOTIFS.filter(n=>n.cat==='urgent'), system:NOTIFS.filter(n=>['system','payroll','rank'].includes(n.cat))};
+  renderNotifs(map[tab]||NOTIFS);
+}
+function markAllRead() { NOTIFS.forEach(n=>n.unread=false); document.getElementById('kpi-unread').textContent='0'; filterTab(activeTab); }
+function openNotif(id,link) { const n=NOTIFS.find(x=>x.id===id); if(n)n.unread=false; window.location.href=link; }
+function filterSearch(val) { const q=val.toLowerCase(); renderNotifs(NOTIFS.filter(n=>!q||n.title.toLowerCase().includes(q)||n.desc.toLowerCase().includes(q))); }
+
+const RULES = [
+  {label:'即時払い申請（新規）',desc:'即時払い申請が届いた際に通知',on:true},
+  {label:'KYC審査待ち',desc:'新規AG/PTのKYCが届いた際',on:true},
+  {label:'入金未確認アラート（3日超過）',desc:'入金確認が3日以上未処理の場合',on:true},
+  {label:'早期退職アラート（28日目）',desc:'入居28日での報告未提出',on:true},
+  {label:'AGランク昇格',desc:'AGのランクが変動した際',on:true},
+  {label:'月次締め完了',desc:'月次締め処理が完了した際',on:true},
+  {label:'AI離脱リスク検出',desc:'高リスクAGが検出された際',on:false},
+];
+function renderRules() {
+  document.getElementById('rule-list').innerHTML = RULES.map((r,i)=>`
+    <div class="set-row"><div><div class="set-label">${r.label}</div><div class="set-desc">${r.desc}</div></div>
+    <div class="toggle ${r.on?'on':''}" onclick="RULES[${i}].on=!RULES[${i}].on;this.classList.toggle('on')"></div></div>`).join('');
+}
+function saveRules() { document.getElementById('rule-modal').classList.remove('show'); }
+
+window.addEventListener('DOMContentLoaded', () => { CNAV.init('notif'); filterTab('all'); document.getElementById('cnt-all').textContent=NOTIFS.length; document.getElementById('cnt-unread').textContent=NOTIFS.filter(n=>n.unread).length; renderRules(); });
+</script>
+</body>
+</html>

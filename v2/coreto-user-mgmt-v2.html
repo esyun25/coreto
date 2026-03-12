@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ユーザー管理 — COREBLDG</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0D1A2D;--navy-l:#1E3252;--gold:#C8A951;--gold-dim:rgba(200,169,81,.15);--cream:#FFFFFF;--cream2:#F8F9FA;--white:#FFFFFF;--ink:#202124;--muted:#5F6368;--faint:#80868B;--em:#059669;--em-bg:#ECFDF5;--am:#D97706;--am-bg:#FFFBEB;--rd:#DC2626;--rd-bg:#FEF2F2;--sk:#0284C7;--sk-bg:#F0F9FF;--vt:#7C3AED;--vt-bg:#F5F3FF;--bd:#E8EAED;--bd2:#DADCE0;--sw:240px;--r:10px;--r-sm:7px;--sh:0 1px 2px rgba(60,64,67,.1),0 1px 3px rgba(60,64,67,.06)}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:var(--cream2)}
+.shell{display:flex;height:100vh}
+.sb{width:var(--sw);background:var(--navy);display:flex;flex-direction:column;flex-shrink:0;position:relative}
+.sb::after{content:'';position:absolute;top:0;right:0;width:1px;height:100%;background:linear-gradient(180deg,rgba(200,169,81,.25) 0%,rgba(200,169,81,.06) 50%,transparent 100%)}
+.sb-head{padding:24px 20px 18px;border-bottom:1px solid rgba(255,255,255,.06)}
+.sb-logo{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;letter-spacing:5px;color:var(--gold)}
+.sb-ver{font-size:9px;letter-spacing:2px;color:rgba(200,169,81,.3);font-family:'DM Mono',monospace;margin-top:2px}
+.sb-user{margin:14px 14px 10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:9px 11px;display:flex;align-items:center;gap:9px}
+.sb-av{width:28px;height:28px;border-radius:50%;background:var(--gold-dim);border:1px solid rgba(200,169,81,.25);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--gold);flex-shrink:0}
+.sb-un{font-size:11px;font-weight:600;color:rgba(255,255,255,.8)}.sb-ur{font-size:9px;color:rgba(255,255,255,.3);font-family:'DM Mono',monospace}
+.sb-nav{flex:1;overflow-y:auto;padding:6px 10px}
+.sb-nav::-webkit-scrollbar{width:3px}.sb-nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:2px}
+.sb-foot{padding:10px 14px 18px;border-top:1px solid rgba(255,255,255,.05)}
+.sf{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;cursor:pointer;font-size:11px;color:rgba(255,255,255,.3);transition:.13s}
+.sf:hover{background:rgba(255,255,255,.05);color:rgba(255,255,255,.6)}
+.content{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:58px;background:var(--white);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 24px;gap:14px;flex-shrink:0;box-shadow:var(--sh)}
+.tb-back{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);cursor:pointer;text-decoration:none;transition:.13s;flex-shrink:0}
+.tb-back:hover{color:var(--am)}
+.tb-sep{width:1px;height:20px;background:var(--bd);flex-shrink:0}
+.tb-info{flex:1}
+.tb-title{font-size:15px;font-weight:600;color:var(--ink)}
+.tb-crumb{font-size:11px;color:var(--faint)}.tb-crumb a{color:var(--muted);text-decoration:none}.tb-crumb a:hover{color:var(--am)}
+.tb-act{margin-left:auto;display:flex;gap:9px;align-items:center}
+.btn{padding:7px 16px;border-radius:var(--r-sm);font-size:12px;font-weight:600;cursor:pointer;transition:.15s;font-family:'Outfit',sans-serif;border:none;letter-spacing:.3px}
+.btn-p{background:var(--navy);color:var(--gold)}.btn-p:hover{background:var(--navy-l)}
+.btn-g{background:transparent;color:var(--muted);border:1px solid var(--bd)}.btn-g:hover{background:var(--cream);color:var(--ink)}
+.btn-rd{background:var(--rd-bg);color:var(--rd);border:1px solid rgba(220,38,38,.2)}.btn-rd:hover{background:var(--rd);color:#fff}
+.btn-sm{padding:5px 12px;font-size:11px}
+.page{flex:1;overflow-y:auto;padding:24px}.page::-webkit-scrollbar{width:5px}.page::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:3px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.kpi{background:var(--white);border:1px solid var(--bd);border-radius:var(--r);padding:16px 18px;box-shadow:var(--sh);position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.kpi.gd::before{background:var(--gold)}.kpi.em::before{background:var(--em)}.kpi.sk::before{background:var(--sk)}.kpi.am::before{background:var(--am)}.kpi.rd::before{background:var(--rd)}
+.kpi-lb{font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+.kpi-vl{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink)}
+.kpi-sb{font-size:10px;color:var(--faint);margin-top:4px}
+.card{background:var(--white);border:1px solid var(--bd);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden;margin-bottom:18px}
+.card-head{padding:13px 18px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;background:var(--cream2)}
+.card-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--ink)}
+.tbl{width:100%;border-collapse:collapse;font-size:12px}
+.tbl th{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--faint);padding:9px 14px;border-bottom:2px solid var(--bd);text-align:left;background:var(--cream2)}
+.tbl td{padding:11px 14px;border-bottom:1px solid var(--bd);color:var(--ink);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}.tbl tr:hover td{background:rgba(200,169,81,.03)}
+.mono{font-family:'DM Mono',monospace;font-size:11px;color:var(--faint)}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.3px;white-space:nowrap}
+.b-em{background:var(--em-bg);color:var(--em)}.b-am{background:var(--am-bg);color:var(--am)}.b-rd{background:var(--rd-bg);color:var(--rd)}.b-sk{background:var(--sk-bg);color:var(--sk)}.b-vt{background:var(--vt-bg);color:var(--vt)}.b-gd{background:var(--gold-dim);color:#92610A}.b-mu{background:var(--cream2);color:var(--faint);border:1px solid var(--bd)}
+.filter-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.filter-sel{padding:7px 12px;background:var(--cream2);border:1.5px solid var(--bd);border-radius:var(--r-sm);font-size:12px;color:var(--ink);font-family:'Outfit',sans-serif;outline:none;cursor:pointer}
+.filter-sel:focus{border-color:var(--gold)}
+.srch{position:relative;flex:1;min-width:200px}
+.srch input{width:100%;padding:8px 12px 8px 34px;background:var(--cream2);border:1.5px solid var(--bd);border-radius:var(--r-sm);font-size:12px;color:var(--ink);font-family:'Outfit',sans-serif;outline:none}
+.srch input:focus{border-color:var(--gold);background:var(--white)}
+.srch-ic{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--faint);font-size:13px;pointer-events:none}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;align-items:center;justify-content:center;backdrop-filter:blur(2px)}
+.modal-bg.show{display:flex}
+.modal{background:var(--white);border-radius:12px;width:540px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal-head{padding:18px 22px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-size:14px;font-weight:700;color:var(--ink)}
+.modal-close{background:none;border:none;font-size:18px;cursor:pointer;color:var(--muted)}
+.modal-body{padding:20px 22px}
+.modal-foot{padding:14px 22px;border-top:1px solid var(--bd);display:flex;justify-content:flex-end;gap:8px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;letter-spacing:.5px}
+.field input,.field select,.field textarea{width:100%;padding:9px 12px;background:var(--cream2);border:1.5px solid var(--bd);border-radius:var(--r-sm);font-size:13px;color:var(--ink);font-family:'Outfit','Noto Sans JP',sans-serif;outline:none;transition:.15s}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--gold);background:var(--white)}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.section-lbl{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--bd)}
+.toggle{width:40px;height:22px;background:var(--bd2);border-radius:11px;position:relative;cursor:pointer;transition:.2s;flex-shrink:0}
+.toggle.on{background:var(--em)}
+.toggle::after{content:'';position:absolute;width:16px;height:16px;background:#fff;border-radius:50%;top:3px;left:3px;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.toggle.on::after{left:21px}
+
+
+.avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0}
+.av-hq{background:var(--navy)}.av-re{background:var(--sk)}.av-hr{background:var(--vt)}.av-hk{background:var(--gold);color:var(--navy)}.av-pt{background:var(--em)}.av-in{background:var(--am)}
+.status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.dot-active{background:var(--em)}.dot-inactive{background:var(--faint)}.dot-suspend{background:var(--rd)}
+.row-actions{display:flex;gap:6px;opacity:0;transition:.15s}
+.tbl tr:hover .row-actions{opacity:1}
+.tab-bar{display:flex;border-bottom:1px solid var(--bd);background:var(--white);padding:0 20px;margin-bottom:18px;border-radius:var(--r) var(--r) 0 0}
+.tab{padding:11px 16px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:.15s;white-space:nowrap;display:flex;align-items:center;gap:5px}
+.tab:hover{color:var(--ink)}.tab.active{color:var(--navy);border-bottom-color:var(--gold)}
+.tcnt{font-size:9px;font-weight:700;padding:1px 6px;border-radius:9px;background:var(--cream2);color:var(--muted);border:1px solid var(--bd)}
+.tab.active .tcnt{background:var(--gold-dim);color:var(--navy);border-color:transparent}
+.perm-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px}
+.perm-item{padding:8px 10px;background:var(--cream2);border-radius:var(--r-sm);font-size:11px;color:var(--muted);border:1.5px solid var(--bd);cursor:pointer;transition:.15s;text-align:center}
+.perm-item.on{background:var(--em-bg);color:var(--em);border-color:rgba(5,150,105,.3);font-weight:600}
+
+</style>
+</head>
+<body>
+<div class="shell">
+  <nav class="sb">
+    <div class="sb-head"><div class="sb-logo">CORETO</div><div class="sb-ver">COREBLDG v2.0</div></div>
+    <div class="sb-user">
+      <div class="sb-av" id="sb-av">HQ</div>
+      <div><div class="sb-un" id="sb-name">田中 誠一（統括）</div><div class="sb-ur" id="sb-role">CORETO / exec</div></div>
+    </div>
+    <div class="sb-nav" id="sb-nav"><!-- CNAV --></div>
+    <div class="sb-foot">
+      <div class="sf" onclick="CNAV.openSettings()">⚙️ &nbsp;設定</div>
+      <div class="sf" onclick="CNAV.logout()">🚪 &nbsp;ログアウト</div>
+    </div>
+  </nav>
+  <div class="content">
+    <div class="topbar">
+      <a href="coreto-hub-v2.html" class="tb-back">← 戻る</a>
+      <div class="tb-sep"></div>
+      <div class="tb-info">
+        <div class="tb-title">ユーザー管理</div>
+        <div class="tb-crumb"><a href="coreto-hub-v2.html">COREBLDG</a> › <span>ユーザー管理</span></div>
+      </div>
+      <div class="tb-act">
+        <button class="btn btn-g" onclick="exportCSV()">📥 CSVエクスポート</button>
+        <button class="btn btn-p" onclick="openAddModal()">＋ ユーザー追加</button>
+      </div>
+    </div>
+    <div class="page">
+
+      <div class="kpi-row">
+        <div class="kpi gd"><div class="kpi-lb">総ユーザー数</div><div class="kpi-vl" id="kpi-total">0</div></div>
+        <div class="kpi em"><div class="kpi-lb">アクティブAG</div><div class="kpi-vl" id="kpi-ag">0</div></div>
+        <div class="kpi sk"><div class="kpi-lb">パートナー（PT）</div><div class="kpi-vl" id="kpi-pt">0</div></div>
+        <div class="kpi am"><div class="kpi-lb">今月の新規登録</div><div class="kpi-vl">4</div><div class="kpi-sb">AG 3 / PT 1</div></div>
+      </div>
+
+      <div style="background:var(--white);border:1px solid var(--bd);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden;margin-bottom:18px">
+        <div style="display:flex;border-bottom:2px solid var(--bd)">
+          <div class="tab active" id="tab-all" onclick="filterRole('all')" style="padding:11px 18px;font-size:12px;font-weight:600;color:var(--navy);border-bottom:2px solid var(--gold);cursor:pointer">すべて<span class="tcnt" id="cnt-all" style="margin-left:6px"></span></div>
+          <div class="tab" id="tab-hq" onclick="filterRole('hq')" style="padding:11px 18px;font-size:12px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer">HQ</div>
+          <div class="tab" id="tab-re_ag" onclick="filterRole('re_ag')" style="padding:11px 18px;font-size:12px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer">不動産AG</div>
+          <div class="tab" id="tab-hr_ag" onclick="filterRole('hr_ag')" style="padding:11px 18px;font-size:12px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer">人材AG</div>
+          <div class="tab" id="tab-hikari_ag" onclick="filterRole('hikari_ag')" style="padding:11px 18px;font-size:12px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer">光通信AG</div>
+          <div class="tab" id="tab-pt" onclick="filterRole('pt')" style="padding:11px 18px;font-size:12px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer">PT</div>
+          <div class="tab" id="tab-intern" onclick="filterRole('intern')" style="padding:11px 18px;font-size:12px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer">インターン</div>
+        </div>
+        <div style="padding:10px 16px;border-bottom:1px solid var(--bd);display:flex;gap:10px;align-items:center">
+          <div class="srch" style="max-width:340px"><div class="srch-ic">🔍</div><input type="text" placeholder="名前・ID・メールで検索..." oninput="searchUsers(this.value)"></div>
+          <select class="filter-sel" onchange="filterStatus(this.value)">
+            <option value="">全ステータス</option>
+            <option value="active">アクティブ</option>
+            <option value="inactive">停止中</option>
+            <option value="pending">審査中</option>
+          </select>
+        </div>
+        <table class="tbl">
+          <thead><tr>
+            <th>ユーザー</th><th>ID</th><th>ロール</th><th>ランク</th><th>ステータス</th>
+            <th>登録日</th><th>最終ログイン</th><th>操作</th>
+          </tr></thead>
+          <tbody id="user-tbody"></tbody>
+        </table>
+      </div>
+
+      <!-- ユーザー詳細・編集モーダル -->
+      <div class="modal-bg" id="user-modal" onclick="if(event.target===this)this.classList.remove('show')">
+        <div class="modal" style="width:580px">
+          <div class="modal-head"><div class="modal-title" id="modal-title">ユーザー詳細</div><button class="modal-close" onclick="document.getElementById('user-modal').classList.remove('show')">✕</button></div>
+          <div class="modal-body" id="modal-body"></div>
+          <div class="modal-foot" id="modal-foot"></div>
+        </div>
+      </div>
+
+      <!-- 追加モーダル -->
+      <div class="modal-bg" id="add-modal" onclick="if(event.target===this)this.classList.remove('show')">
+        <div class="modal">
+          <div class="modal-head"><div class="modal-title">＋ ユーザー追加（招待）</div><button class="modal-close" onclick="document.getElementById('add-modal').classList.remove('show')">✕</button></div>
+          <div class="modal-body">
+            <div class="field-row">
+              <div class="field"><label>姓</label><input type="text" id="add-last" placeholder="山田"></div>
+              <div class="field"><label>名</label><input type="text" id="add-first" placeholder="太郎"></div>
+            </div>
+            <div class="field"><label>メールアドレス</label><input type="email" id="add-email" placeholder="taro@example.com"></div>
+            <div class="field"><label>ロール</label>
+              <select id="add-role">
+                <option value="re_ag">不動産AG（RE-AG）</option>
+                <option value="hr_ag">人材AG（HR-AG）</option>
+                <option value="hikari_ag">光通信AG</option>
+                <option value="pt">パートナー（PT）</option>
+                <option value="intern">インターン</option>
+                <option value="hq">HQスタッフ</option>
+              </select>
+            </div>
+            <div class="field"><label>招待メッセージ（任意）</label><textarea placeholder="入会をお待ちしております。" style="height:70px"></textarea></div>
+          </div>
+          <div class="modal-foot">
+            <button class="btn btn-g" onclick="document.getElementById('add-modal').classList.remove('show')">キャンセル</button>
+            <button class="btn btn-p" onclick="sendInvite()">📨 招待メールを送る</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+<script src="coreto-nav-v2.js"></script>
+<script>
+
+const USERS_DATA = [
+  {id:'HQ-001',name:'田中 誠一',role:'hq',roleLabel:'HQ統括',rank:'—',status:'active',email:'tanaka@coreto.jp',reg:'2025/10/01',last:'本日',av:'HQ',avCls:'av-hq'},
+  {id:'AG-0042',name:'山田 誠',role:'re_ag',roleLabel:'不動産AG',rank:'Gold',status:'active',email:'yamada@coreto.jp',reg:'2025/11/15',last:'本日',av:'AG',avCls:'av-re'},
+  {id:'AG-0088',name:'鈴木 花子',role:'hr_ag',roleLabel:'人材AG',rank:'Silver',status:'active',email:'suzuki@coreto.jp',reg:'2025/12/01',last:'昨日',av:'AG',avCls:'av-hr'},
+  {id:'AG-0103',name:'山田 光太',role:'hikari_ag',roleLabel:'光通信AG',rank:'Bronze',status:'active',email:'yamada.k@coreto.jp',reg:'2026/01/10',last:'2日前',av:'AG',avCls:'av-hk'},
+  {id:'AG-0071',name:'中村 義雄',role:'re_ag',roleLabel:'不動産AG',rank:'Bronze',status:'active',email:'nakamura@coreto.jp',reg:'2025/12/20',last:'3日前',av:'AG',avCls:'av-re'},
+  {id:'AG-0073',name:'佐藤 純平',role:'re_ag',roleLabel:'不動産AG',rank:'Bronze',status:'inactive',email:'sato@coreto.jp',reg:'2025/11/30',last:'14日前',av:'AG',avCls:'av-re'},
+  {id:'PT-0015',name:'佐藤 健一',role:'pt',roleLabel:'PT（個人）',rank:'—',status:'active',email:'sato.k@gmail.com',reg:'2026/01/05',last:'本日',av:'PT',avCls:'av-pt'},
+  {id:'PT-0023',name:'木村 産業 株式会社',role:'pt',roleLabel:'PT（法人）',rank:'—',status:'active',email:'info@kimura.co.jp',reg:'2026/02/01',last:'4日前',av:'PT',avCls:'av-pt'},
+  {id:'INT-0007',name:'渡辺 大輝',role:'intern',roleLabel:'インターン',rank:'—',status:'active',email:'watanabe@coreto.jp',reg:'2026/01/20',last:'本日',av:'IN',avCls:'av-in'},
+  {id:'AG-0105',name:'新規 申込中',role:'re_ag',roleLabel:'不動産AG',rank:'—',status:'pending',email:'shinki@example.com',reg:'2026/03/12',last:'—',av:'AG',avCls:'av-re'},
+];
+
+const ROLE_TABS = ['all','hq','re_ag','hr_ag','hikari_ag','pt','intern'];
+const RANK_BADGE = {Gold:'b-gd',Silver:'b-sk',Bronze:'b-am','Platinum':'b-vt','—':'b-mu'};
+const STATUS_BADGE = {active:'b-em',inactive:'b-mu',pending:'b-am'};
+const STATUS_LABEL = {active:'アクティブ',inactive:'停止中',pending:'審査中'};
+let currentRole = 'all';
+
+function renderUsers(list) {
+  const tb = document.getElementById('user-tbody');
+  tb.innerHTML = list.map(u => `
+    <tr>
+      <td><div style="display:flex;align-items:center;gap:10px"><div class="avatar ${u.avCls}">${u.av}</div><div><div style="font-weight:600;font-size:13px">${u.name}</div><div style="font-size:11px;color:var(--faint)">${u.email}</div></div></div></td>
+      <td class="mono">${u.id}</td>
+      <td><span class="badge b-mu">${u.roleLabel}</span></td>
+      <td>${u.rank!=='—'?`<span class="badge ${RANK_BADGE[u.rank]||'b-mu'}">${u.rank}</span>`:'<span style="color:var(--faint)">—</span>'}</td>
+      <td><span class="badge ${STATUS_BADGE[u.status]}">${STATUS_LABEL[u.status]}</span></td>
+      <td class="mono" style="font-size:11px">${u.reg}</td>
+      <td style="font-size:11px;color:var(--muted)">${u.last}</td>
+      <td><div class="row-actions">
+        <button class="btn btn-sm btn-g" onclick="openUserModal('${u.id}')">詳細</button>
+        <button class="btn btn-sm btn-rd" onclick="toggleStatus('${u.id}')">${u.status==='active'?'停止':'有効化'}</button>
+      </div></td>
+    </tr>`).join('');
+  document.getElementById('kpi-total').textContent = USERS_DATA.length;
+  document.getElementById('kpi-ag').textContent = USERS_DATA.filter(u=>u.role.includes('ag')&&u.status==='active').length;
+  document.getElementById('kpi-pt').textContent = USERS_DATA.filter(u=>u.role==='pt'&&u.status==='active').length;
+  document.getElementById('cnt-all').textContent = USERS_DATA.length;
+}
+
+function filterRole(role) {
+  currentRole = role;
+  ROLE_TABS.forEach(t => {
+    const el = document.getElementById('tab-'+t);
+    if (el) { el.style.color = t===role?'var(--navy)':'var(--muted)'; el.style.borderBottomColor = t===role?'var(--gold)':'transparent'; }
+  });
+  renderUsers(role==='all' ? USERS_DATA : USERS_DATA.filter(u=>u.role===role));
+}
+
+function filterStatus(val) {
+  const list = !val ? USERS_DATA : USERS_DATA.filter(u=>u.status===val);
+  renderUsers(currentRole==='all' ? list : list.filter(u=>u.role===currentRole));
+}
+
+function searchUsers(val) {
+  const q = val.toLowerCase();
+  const list = !q ? USERS_DATA : USERS_DATA.filter(u=>u.name.toLowerCase().includes(q)||u.id.toLowerCase().includes(q)||u.email.toLowerCase().includes(q));
+  renderUsers(list);
+}
+
+function toggleStatus(id) {
+  const u = USERS_DATA.find(x=>x.id===id);
+  if (!u) return;
+  if (!confirm(`${u.name} を${u.status==='active'?'停止':'有効化'}しますか？`)) return;
+  u.status = u.status==='active'?'inactive':'active';
+  filterRole(currentRole);
+}
+
+function openUserModal(id) {
+  const u = USERS_DATA.find(x=>x.id===id);
+  if (!u) return;
+  document.getElementById('modal-title').textContent = u.name + ' — 詳細';
+  document.getElementById('modal-body').innerHTML = `
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;padding:16px;background:var(--cream2);border-radius:var(--r-sm)">
+      <div class="avatar ${u.avCls}" style="width:44px;height:44px;font-size:15px">${u.av}</div>
+      <div><div style="font-size:16px;font-weight:700;color:var(--ink)">${u.name}</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:2px">${u.email}</div>
+      <div style="margin-top:6px;display:flex;gap:6px"><span class="badge b-mu">${u.roleLabel}</span>${u.rank!=='—'?`<span class="badge ${RANK_BADGE[u.rank]||'b-mu'}">${u.rank}</span>`:''}<span class="badge ${STATUS_BADGE[u.status]}">${STATUS_LABEL[u.status]}</span></div></div>
+    </div>
+    <div class="section-lbl">基本情報</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px">
+      <div style="padding:9px 12px;background:var(--cream2);border-radius:var(--r-sm)"><div style="font-size:10px;color:var(--faint)">ユーザーID</div><div class="mono" style="font-size:13px;color:var(--ink);margin-top:2px">${u.id}</div></div>
+      <div style="padding:9px 12px;background:var(--cream2);border-radius:var(--r-sm)"><div style="font-size:10px;color:var(--faint)">登録日</div><div class="mono" style="font-size:13px;color:var(--ink);margin-top:2px">${u.reg}</div></div>
+      <div style="padding:9px 12px;background:var(--cream2);border-radius:var(--r-sm)"><div style="font-size:10px;color:var(--faint)">最終ログイン</div><div style="font-size:13px;color:var(--ink);margin-top:2px">${u.last}</div></div>
+      <div style="padding:9px 12px;background:var(--cream2);border-radius:var(--r-sm)"><div style="font-size:10px;color:var(--faint)">ロール</div><div style="font-size:13px;color:var(--ink);margin-top:2px">${u.roleLabel}</div></div>
+    </div>
+    <div class="section-lbl">アクセス権限</div>
+    <div class="perm-grid">
+      <div class="perm-item on">🏘️ 不動産</div>
+      <div class="perm-item ${u.role==='hr_ag'||u.role==='hq'?'on':''}">👤 人材</div>
+      <div class="perm-item ${u.role==='hikari_ag'||u.role==='hq'||u.role==='re_ag'||u.role==='hr_ag'?'on':''}">⚡ 光通信</div>
+    </div>`;
+  document.getElementById('modal-foot').innerHTML = `
+    <button class="btn btn-g" onclick="document.getElementById('user-modal').classList.remove('show')">閉じる</button>
+    <button class="btn btn-rd btn-sm" onclick="toggleStatus('${id}');document.getElementById('user-modal').classList.remove('show')">${u.status==='active'?'アカウント停止':'アカウント有効化'}</button>
+    <button class="btn btn-p">変更を保存</button>`;
+  document.getElementById('user-modal').classList.add('show');
+}
+
+function openAddModal() { document.getElementById('add-modal').classList.add('show'); }
+function sendInvite() {
+  const name = (document.getElementById('add-last').value + ' ' + document.getElementById('add-first').value).trim();
+  const email = document.getElementById('add-email').value;
+  if (!name || !email) { alert('氏名とメールアドレスを入力してください'); return; }
+  alert(`招待メールを送信しました\n宛先: ${email}`);
+  document.getElementById('add-modal').classList.remove('show');
+}
+function exportCSV() { alert('CSVエクスポート機能（本番環境で実装）'); }
+
+window.addEventListener('DOMContentLoaded', () => { CNAV.init('users'); filterRole('all'); });
+</script>
+</body>
+</html>

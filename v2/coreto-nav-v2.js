@@ -96,7 +96,7 @@ const NAV = {
     { section:'スタッフ管理', items:[
       { icon:'🏢', label:'AG管理（権限・育成）',   href:'coreto-hq-admin-v2.html',     key:'hq_admin' },
       { icon:'📉', label:'AG離脱リスク管理',         href:'coreto-agent-retention-v2.html', key:'agent_retention' },
-      { icon:'🤝', label:'PT管理',                 href:'coreto-hub-v2.html#pt_mgmt',  key:'pt_mgmt' },
+      { icon:'🤝', label:'PT管理',                 href:'coreto-pt-admin-v2.html',  key:'pt_mgmt' },
       { icon:'🎓', label:'インターン管理',          href:'coreto-intern-v2.html',       key:'intern' },
       { icon:'📝', label:'応募者管理',               href:'coreto-applicants-v2.html',   key:'applicants' },
       { icon:'🔗', label:'リクルートリンク発行',     href:'coreto-recruit-link-v2.html', key:'recruit_link' },
@@ -109,14 +109,14 @@ const NAV = {
       { icon:'📝', label:'成約報告一覧',            href:'coreto-contract-report-v2.html', key:'contract_report' },
       { icon:'📲', label:'LINE認証管理',           href:'coreto-line-auth-v2.html',    key:'line_auth' },
       { icon:'🤖', label:'LINE AIチャット管理',     href:'coreto-line-ai-v2.html',      key:'line_ai' },
-      { icon:'🔔', label:'通知ログ',               href:'coreto-hub-v2.html#notif',    key:'notif' },
+      { icon:'🔔', label:'通知ログ',               href:'coreto-notification-v2.html',    key:'notif' },
     ]},
     { section:'事業SFA', items:[
       { icon:'⚡', label:'光通信SFA（全体）',      href:'coreto-utility-v2.html',      key:'utility' },
       { icon:'👔', label:'士業連携管理',           href:'coreto-judicial-v2.html',     key:'judicial' },
     ]},
     { section:'システム', items:[
-      { icon:'🔐', label:'ユーザー管理',           href:'coreto-hub-v2.html#users',    key:'users' },
+      { icon:'🔐', label:'ユーザー管理',           href:'coreto-user-mgmt-v2.html',    key:'users' },
       { icon:'📚', label:'研修コンテンツ管理',     href:'coreto-hub-v2.html#onboard_mgmt', key:'onboard_mgmt' },
     ]},
   ],
