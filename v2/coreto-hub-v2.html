@@ -930,6 +930,7 @@ html, body { background:#FFFFFF !important; }
           <div class="demo-role" onclick="loginAs('hq')">HQ統括</div>
           <div class="demo-role" onclick="loginAs('re_ag')">不動産AG</div>
           <div class="demo-role" onclick="loginAs('hr_ag')">人材AG</div>
+          <div class="demo-role" onclick="loginAs('hikari_ag')">光通信AG</div>
           <div class="demo-role" onclick="loginAs('pt')">パートナー</div>
           <div class="demo-role" onclick="loginAs('intern')">インターン</div>
         </div>
@@ -1003,19 +1004,21 @@ let currentPage = 'dashboard';
 // PT権限: 紹介投げ・進捗閲覧のみ（編集・操作ボタン非表示）
 // ─────────────────────────────────────────
 const PERMISSIONS = {
-  hq:    { re:'ag', hr:'ag', util:'ag' },  // HQは全事業フル
-  re_ag: { re:'ag', hr:'pt', util:'ag' },  // 不動産AG・光通信AG / 人材はPT扱い
-  hr_ag: { re:'pt', hr:'ag', util:'ag' },  // 人材AG・光通信AG / 不動産はPT扱い
-  pt:    { re:'pt', hr:'pt', util:'pt' },  // 全事業PT扱い（光通信は案件投げのみ可）
-  intern:{ re:null, hr:null, util:null },  // 訪問・リード投げのみ
+  hq:        { re:'ag', hr:'ag', util:'ag' },  // HQは全事業フル
+  re_ag:     { re:'ag', hr:'pt', util:'ag' },  // 不動産AG・光通信AG / 人材はPT扱い
+  hr_ag:     { re:'pt', hr:'ag', util:'ag' },  // 人材AG・光通信AG / 不動産はPT扱い
+  hikari_ag: { re:'pt', hr:'pt', util:'ag' },  // 光通信AG / 不動産・人材はPT扱い
+  pt:        { re:'pt', hr:'pt', util:'pt' },  // 全事業PT扱い（光通信は案件投げのみ可）
+  intern:    { re:null, hr:null, util:null },  // 訪問・リード投げのみ
 };
 
 const ROLES = {
-  hq:    { label:'HQ統括',    av:'HQ', nav: hqNav,     page: renderHQDash },
-  re_ag: { label:'RE-AG',     av:'AG', nav: reAgNav,   page: renderREAgDash },
-  hr_ag: { label:'HR-AG',     av:'AG', nav: hrAgNav,   page: renderHRAgDash },
-  pt:    { label:'PT',        av:'PT', nav: ptNav,     page: renderPTDash },
-  intern:{ label:'インターン', av:'IN', nav: internNav, page: renderInternDash },
+  hq:        { label:'HQ統括',    av:'HQ', nav: hqNav,        page: renderHQDash },
+  re_ag:     { label:'RE-AG',     av:'AG', nav: reAgNav,      page: renderREAgDash },
+  hr_ag:     { label:'HR-AG',     av:'AG', nav: hrAgNav,      page: renderHRAgDash },
+  hikari_ag: { label:'光通信AG',  av:'AG', nav: hikariAgNav,  page: renderHikariAgDash },
+  pt:        { label:'PT',        av:'PT', nav: ptNav,        page: renderPTDash },
+  intern:    { label:'インターン', av:'IN', nav: internNav,    page: renderInternDash },
 };
 
 function doLogin() {
@@ -1213,6 +1216,35 @@ function ptNav() { return [
 // ── インターン ────────────────────────────────────────
 // 訪問記録と光通信リード投げのみ。管理機能は一切なし。
 // 報酬確認・ランキング閲覧は動機付けのため許可。
+// ── 光通信AG ─────────────────────────────────────────
+function hikariAgNav() { return [
+  { section: 'マイページ', items: [
+    { icon:'🏠', label:'マイダッシュボード',       page:'dashboard',   active: true },
+    { icon:'🏅', label:'ランク・報酬明細',         page:'payment' },
+  ]},
+  { section: '光通信（AG権限）', items: [
+    { icon:'⚡', label:'担当案件（光通信）',       page:'util_cases',  badge:'3', badgeColor:'gold' },
+    { icon:'👥', label:'クライアント管理',         page:'crm' },
+    { icon:'🏆', label:'成約報告',                 page:'contract_report' },
+    { icon:'⚡', label:'即時払い申請',             page:'instant_pay' },
+  ]},
+  { section: '不動産（PT扱い・閲覧のみ）', items: [
+    { icon:'🔒', label:'不動産紹介 進捗確認',      page:'re_ref',      note:'PT扱い' },
+  ]},
+  { section: '人材（PT扱い・閲覧のみ）', items: [
+    { icon:'🔒', label:'人材紹介 進捗確認',        page:'hr_ref',      note:'PT扱い' },
+  ]},
+  { section: 'マイアカウント', items: [
+    { icon:'🏅', label:'ランク・コミッション',     page:'rank' },
+    { icon:'📃', label:'業務委託契約書',           page:'contract' },
+    { icon:'🪪', label:'eKYC・口座登録',           page:'kyc' },
+    { icon:'📚', label:'マニュアル・FAQ',          page:'faq' },
+    { icon:'📲', label:'LINE再連携',               page:'line_relink' },
+    { icon:'🔗', label:'リクルートリンク発行',     page:'recruit_link' },
+    { icon:'🎓', label:'オンボーディング',         page:'onboarding' },
+  ]},
+];}
+
 function internNav() { return [
   { section: '本日の業務', items: [
     { icon:'📊', label:'当日の実績',               page:'daily',       active: true },
@@ -2531,6 +2563,68 @@ function renderREAgDash() {
 // ═══════════════════════════════════════════
 // HR-AG DASHBOARD
 // ═══════════════════════════════════════════
+function renderHikariAgDash() {
+  document.getElementById('page-title').textContent = '光通信エージェントダッシュボード';
+  document.getElementById('crumb-cur').textContent = 'ダッシュボード';
+  document.getElementById('topbar-actions').innerHTML = `
+    <button class="topbar-btn ghost">📋 日報提出</button>
+    <button class="topbar-btn primary">＋ 新規リード登録</button>`;
+
+  document.getElementById('main-content').innerHTML = `
+  <div class="section">
+    <div class="section-title">📊 今月の実績</div>
+    <div class="kpi-row">
+      <div class="kpi em"><div class="kpi-lb">今月成約</div><div class="kpi-vl">5件</div><div class="kpi-sb">先月比 ↑2件</div></div>
+      <div class="kpi gd"><div class="kpi-lb">今月報酬（確定）</div><div class="kpi-vl">¥540,000</div><div class="kpi-sb">累計 ¥2.1M</div></div>
+      <div class="kpi am"><div class="kpi-lb">進行中リード</div><div class="kpi-vl">12件</div><div class="kpi-sb">うち商談中 4件</div></div>
+      <div class="kpi sk"><div class="kpi-lb">平均成約日数</div><div class="kpi-vl">18日</div><div class="kpi-sb">リード受付〜開通</div></div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">⚡ 担当リード（光通信）</div>
+      <a href="coreto-utility-v2.html" class="section-link">全件表示 →</a>
+    </div>
+    <table class="data-table">
+      <thead><tr><th>案件ID</th><th>クライアント名</th><th>サービス</th><th>ステータス</th><th>報酬見込</th><th>操作</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">UTL-0201</td><td>田中 優子</td><td>光ファイバー</td><td><span class="badge b-am">商談中</span></td><td>¥108,000</td><td><button class="btn-sm">詳細</button></td></tr>
+        <tr><td class="mono">UTL-0198</td><td>鈴木 商店</td><td>法人光回線</td><td><span class="badge b-em">開通確定</span></td><td>¥216,000</td><td><button class="btn-sm">詳細</button></td></tr>
+        <tr><td class="mono">UTL-0195</td><td>山本 健一</td><td>光ファイバー</td><td><span class="badge b-vt">リード</span></td><td>¥108,000</td><td><button class="btn-sm">詳細</button></td></tr>
+        <tr><td class="mono">UTL-0192</td><td>佐藤 不動産</td><td>法人光回線</td><td><span class="badge b-am">申込処理中</span></td><td>¥324,000</td><td><button class="btn-sm">詳細</button></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div class="section">
+      <div class="section-title">🏅 ランク状況</div>
+      <div class="stat-card">
+        <div class="stat-row"><div class="stat-label">現在のランク</div><div class="stat-val">🥉 Bronze</div></div>
+        <div style="margin:8px 0 4px">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:4px">Silverまで（評価対象売上）</div>
+          <div style="height:6px;background:var(--bd2);border-radius:3px;overflow:hidden">
+            <div style="height:100%;width:42%;background:var(--gold);border-radius:3px"></div>
+          </div>
+          <div style="font-size:10px;color:var(--faint);margin-top:6px">¥840,000 / ¥2,000,000</div>
+        </div>
+        <div class="stat-row"><div class="stat-label">報酬率（光通信）</div><div class="stat-val">80%</div></div>
+        <div class="stat-row"><div class="stat-label">不動産紹介</div><div class="stat-val" style="color:var(--muted)">PT扱い 25%</div></div>
+        <div class="stat-row"><div class="stat-label">人材紹介</div><div class="stat-val" style="color:var(--muted)">PT扱い 25%</div></div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-title">💴 報酬・支払い</div>
+      <div class="stat-card">
+        <div class="stat-row"><div class="stat-label">今月確定報酬</div><div class="stat-val em">¥540,000</div></div>
+        <div class="stat-row"><div class="stat-label">処理中（未確定）</div><div class="stat-val am">¥648,000</div></div>
+        <div class="stat-row"><div class="stat-label">累計受取済み</div><div class="stat-val">¥2,100,000</div></div>
+        <div class="stat-row"><div class="stat-label">月会費</div><div class="stat-val">¥980/月</div></div>
+        <button class="topbar-btn primary" style="width:100%;margin-top:12px" onclick="window.location.href='coreto-instant-pay-v2.html'">⚡ 即時払い申請</button>
+      </div>
+    </div>
+  </div>`;
+}
+
 function renderHRAgDash() {
   document.getElementById('page-title').textContent = '人材エージェントダッシュボード';
   document.getElementById('crumb-cur').textContent = 'ダッシュボード';

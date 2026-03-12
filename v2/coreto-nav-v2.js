@@ -197,9 +197,37 @@ const NAV = {
       { icon:'📚', label:'マニュアル・FAQ',       href:'coreto-faq-v2.html',          key:'faq' },
       { icon:'📲', label:'LINE再連携',             href:'coreto-hub-v2.html#line_relink', key:'line_relink' },
       { icon:'🔗', label:'リクルートリンク発行',   href:'coreto-recruit-link-v2.html', key:'recruit_link' },
-      { icon:'🎓', label:'オンボーディング',         href:'coreto-onboarding-v2.html',   key:'onboarding' },
+      { icon:'🎓', label:'オンボーディング',       href:'coreto-onboarding-v2.html',   key:'onboarding' },
     ]},
   ],
+  hikari_ag: [
+    { section:'マイページ', items:[
+      { icon:'🏠', label:'マイダッシュボード',     href:'coreto-hub-v2.html',          key:'dashboard' },
+      { icon:'🏅', label:'ランク・報酬明細',       href:'coreto-payment-v2.html',      key:'payment' },
+    ]},
+    { section:'光通信（AG権限）', items:[
+      { icon:'⚡', label:'担当案件（光通信）',     href:'coreto-utility-v2.html',      key:'utility',  badge:'3', badgeColor:'gold' },
+      { icon:'👥', label:'クライアント管理',       href:'coreto-crm-v2.html',          key:'crm' },
+      { icon:'📝', label:'成約報告',               href:'coreto-contract-report-v2.html', key:'contract_report' },
+      { icon:'⚡', label:'即時払い申請',           href:'coreto-instant-pay-v2.html',  key:'instant_pay' },
+    ]},
+    { section:'不動産（PT扱い・閲覧のみ）', items:[
+      { icon:'🔒', label:'不動産紹介 進捗確認',   href:'coreto-hub-v2.html#re_ref',   key:'re_ref',   note:'PT扱い' },
+    ]},
+    { section:'人材（PT扱い・閲覧のみ）', items:[
+      { icon:'🔒', label:'人材紹介 進捗確認',     href:'coreto-hub-v2.html#hr_ref',   key:'hr_ref',   note:'PT扱い' },
+    ]},
+    { section:'マイアカウント', items:[
+      { icon:'🏅', label:'ランク・コミッション',   href:'coreto-rank-v2.html',         key:'rank' },
+      { icon:'📃', label:'業務委託契約書',         href:'coreto-contract-v2.html',     key:'contract' },
+      { icon:'🪪', label:'eKYC・口座登録',         href:'coreto-kyc-v2.html',          key:'kyc' },
+      { icon:'📚', label:'マニュアル・FAQ',       href:'coreto-faq-v2.html',          key:'faq' },
+      { icon:'📲', label:'LINE再連携',             href:'coreto-hub-v2.html#line_relink', key:'line_relink' },
+      { icon:'🔗', label:'リクルートリンク発行',   href:'coreto-recruit-link-v2.html', key:'recruit_link' },
+      { icon:'🎓', label:'オンボーディング',       href:'coreto-onboarding-v2.html',   key:'onboarding' },
+    ]},
+  ],
+  intern: [
     { section:'本日の業務', items:[
       { icon:'📊', label:'当日の実績',             href:'coreto-hub-v2.html',          key:'dashboard' },
       { icon:'📍', label:'訪問を記録する',         href:'coreto-hub-v2.html#visit',    key:'visit' },
@@ -218,11 +246,12 @@ const NAV = {
 };
 
 const USERS = {
-  hq:    { name:'田中 誠一（統括）', role:'CORETO / exec',    av:'HQ' },
-  re_ag: { name:'山田 誠（RE-AG）',  role:'AG-0042 / Gold',   av:'AG' },
-  hr_ag: { name:'鈴木 花子（HR-AG）',role:'AG-0088 / Silver', av:'AG' },
-  pt:    { name:'佐藤 健一（PT）',   role:'PT-0015 / active', av:'PT' },
-  intern:{ name:'渡辺 大輝（インターン）', role:'INT-0007 / active', av:'IN' },
+  hq:       { name:'田中 誠一（統括）',       role:'CORETO / exec',      av:'HQ' },
+  re_ag:    { name:'山田 誠（RE-AG）',        role:'AG-0042 / Gold',     av:'AG' },
+  hr_ag:    { name:'鈴木 花子（HR-AG）',      role:'AG-0088 / Silver',   av:'AG' },
+  hikari_ag:{ name:'山田 光太（光通信AG）',   role:'AG-0103 / Bronze',   av:'AG' },
+  pt:       { name:'佐藤 健一（PT）',         role:'PT-0015 / active',   av:'PT' },
+  intern:   { name:'渡辺 大輝（インターン）', role:'INT-0007 / active',  av:'IN' },
 };
 
 // ──────────────────────────────────────────────────────
@@ -386,11 +415,12 @@ function session() {
   const role = sessionStorage.getItem('coreto_role') || null;
   if (!role) return null;
   const nameMap = {
-    hq:     { name:'田中 誠一（統括）', type:'hq',    userId:'HQ-001' },
-    re_ag:  { name:'山田 誠（RE-AG）',  type:'re_ag', userId:'AG-0042' },
-    hr_ag:  { name:'鈴木 花子（HR-AG）',type:'hr_ag', userId:'AG-0088' },
-    pt:     { name:'PT ユーザー',        type:'pt',    userId:'PT-0001' },
-    intern: { name:'インターン',          type:'intern',userId:'INT-001' },
+    hq:        { name:'田中 誠一（統括）',       type:'hq',        userId:'HQ-001' },
+    re_ag:     { name:'山田 誠（RE-AG）',        type:'re_ag',     userId:'AG-0042' },
+    hr_ag:     { name:'鈴木 花子（HR-AG）',      type:'hr_ag',     userId:'AG-0088' },
+    hikari_ag: { name:'山田 光太（光通信AG）',   type:'hikari_ag', userId:'AG-0103' },
+    pt:        { name:'PT ユーザー',             type:'pt',        userId:'PT-0001' },
+    intern:    { name:'インターン',               type:'intern',    userId:'INT-001' },
   };
   return nameMap[role] || { name:role, type:role, userId:role };
 }
