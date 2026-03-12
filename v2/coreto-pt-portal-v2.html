@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PT案件投げ・進捗確認 — COREBLDG</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0D1A2D;--navy-m:#152238;--navy-l:#1E3252;
+  --gold:#C8A951;--gold-l:#DFC06A;--gold-dim:rgba(200,169,81,.15);
+  --cream:#FFFFFF;--cream2:#F8F9FA;--white:#FFFFFF;
+  --ink:#202124;--muted:#5F6368;--faint:#80868B;
+  --em:#059669;--em-bg:#ECFDF5;--am:#D97706;--am-bg:#FFFBEB;
+  --rd:#DC2626;--rd-bg:#FEF2F2;--sk:#0284C7;--sk-bg:#F0F9FF;
+  --vt:#7C3AED;--vt-bg:#F5F3FF;
+  --bd:#E8EAED;--bd2:#DADCE0;
+  --sw:240px;--r:10px;--r-sm:7px;
+  --sh:0 1px 2px rgba(60,64,67,.1),0 1px 3px rgba(60,64,67,.06);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:var(--cream2)}
+.shell{display:flex;height:100vh}
+/* SIDEBAR */
+.sb{width:var(--sw);background:var(--navy);display:flex;flex-direction:column;flex-shrink:0;position:relative}
+.sb::after{content:'';position:absolute;top:0;right:0;width:1px;height:100%;background:linear-gradient(180deg,rgba(200,169,81,.25) 0%,rgba(200,169,81,.06) 50%,transparent 100%)}
+.sb-head{padding:24px 20px 18px;border-bottom:1px solid rgba(255,255,255,.06)}
+.sb-logo{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;letter-spacing:5px;color:var(--gold)}
+.sb-ver{font-size:9px;letter-spacing:2px;color:rgba(200,169,81,.3);font-family:'DM Mono',monospace;margin-top:2px}
+.sb-user{margin:14px 14px 10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:9px 11px;display:flex;align-items:center;gap:9px}
+.sb-av{width:28px;height:28px;border-radius:50%;background:var(--gold-dim);border:1px solid rgba(200,169,81,.25);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--gold);flex-shrink:0}
+.sb-uname{font-size:11px;font-weight:600;color:rgba(255,255,255,.8)}
+.sb-urole{font-size:9px;color:rgba(255,255,255,.3);font-family:'DM Mono',monospace}
+.sb-nav{flex:1;overflow-y:auto;padding:6px 10px}
+.sb-nav::-webkit-scrollbar{width:3px}
+.sb-nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:2px}
+.sb-foot{padding:10px 14px 18px;border-top:1px solid rgba(255,255,255,.05)}
+.sb-foot-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;cursor:pointer;font-size:11px;color:rgba(255,255,255,.3);transition:.13s}
+.sb-foot-item:hover{background:rgba(255,255,255,.05);color:rgba(255,255,255,.6)}
+/* CONTENT */
+.content{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:58px;background:var(--white);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 24px;gap:14px;flex-shrink:0;box-shadow:var(--sh)}
+.tb-back{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);cursor:pointer;text-decoration:none;transition:.13s;flex-shrink:0}
+.tb-back:hover{color:var(--am)}
+.tb-sep{width:1px;height:20px;background:var(--bd);flex-shrink:0}
+.tb-title{font-size:15px;font-weight:600;color:var(--ink)}
+.tb-crumb{font-size:11px;color:var(--faint)}
+.tb-crumb a{color:var(--muted);text-decoration:none}
+.tb-crumb a:hover{color:var(--am)}
+.tb-actions{margin-left:auto;display:flex;gap:9px;align-items:center}
+.btn{padding:7px 16px;border-radius:var(--r-sm);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;font-family:'Outfit',sans-serif;border:none;letter-spacing:.3px}
+.btn-primary{background:var(--navy);color:var(--gold)}
+.btn-primary:hover{background:var(--navy-l)}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--bd)}
+.btn-ghost:hover{background:var(--cream2);color:var(--ink)}
+.btn-gold{background:var(--gold);color:var(--navy);font-weight:700}
+.btn-gold:hover{background:var(--gold-l)}
+.page{flex:1;overflow-y:auto;padding:24px}
+.page::-webkit-scrollbar{width:5px}
+.page::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:3px}
+
+/* ── KPI ── */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.kpi{background:var(--white);border:1px solid var(--bd);border-radius:var(--r);padding:16px 18px;box-shadow:var(--sh)}
+.kpi-lb{font-size:10px;font-weight:600;letter-spacing:.5px;color:var(--muted);text-transform:uppercase;margin-bottom:6px}
+.kpi-vl{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink);line-height:1}
+.kpi-sb{font-size:10px;color:var(--faint);margin-top:4px}
+.kpi.em .kpi-vl{color:var(--em)}
+.kpi.gd .kpi-vl{color:var(--gold)}
+.kpi.am .kpi-vl{color:var(--am)}
+.kpi.sk .kpi-vl{color:var(--sk)}
+
+/* ── TABS ── */
+.tab-bar{display:flex;gap:0;border-bottom:2px solid var(--bd);margin-bottom:20px;background:var(--white);border-radius:var(--r) var(--r) 0 0;overflow:hidden;border:1px solid var(--bd);border-bottom:none;box-shadow:var(--sh)}
+.tab{padding:13px 20px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.tab:hover{color:var(--ink);background:var(--cream2)}
+.tab.active{color:var(--navy);border-bottom-color:var(--gold);background:var(--white)}
+.tab-badge{font-size:9px;font-weight:700;padding:1px 6px;border-radius:10px;background:var(--rd);color:#fff}
+.tab-badge.gd{background:var(--gold);color:var(--navy)}
+.tab-badge.am{background:var(--am)}
+
+/* ── PANEL ── */
+.panel{background:var(--white);border:1px solid var(--bd);border-radius:0 0 var(--r) var(--r);padding:24px;box-shadow:var(--sh);margin-bottom:20px}
+.panel-title{font-size:14px;font-weight:700;color:var(--ink);margin-bottom:4px}
+.panel-desc{font-size:12px;color:var(--muted);margin-bottom:20px;line-height:1.6}
+.section-title{font-size:13px;font-weight:700;color:var(--ink);margin-bottom:12px;display:flex;align-items:center;gap:6px}
+
+/* ── FORM ── */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.form-grid.col3{grid-template-columns:1fr 1fr 1fr}
+.field{display:flex;flex-direction:column;gap:5px}
+.field.full{grid-column:1/-1}
+label{font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.3px}
+label .req{color:var(--rd);margin-left:2px}
+input[type=text],input[type=tel],input[type=email],input[type=number],select,textarea{
+  padding:9px 12px;border:1.5px solid var(--bd);border-radius:var(--r-sm);
+  font-size:13px;font-family:'Outfit','Noto Sans JP',sans-serif;color:var(--ink);
+  background:var(--cream2);outline:none;transition:border-color .15s;width:100%
+}
+input:focus,select:focus,textarea:focus{border-color:var(--gold);background:var(--white)}
+textarea{resize:vertical;min-height:80px;line-height:1.6}
+.radio-row{display:flex;gap:10px;flex-wrap:wrap}
+.radio-card{flex:1;min-width:100px;border:2px solid var(--bd);border-radius:var(--r-sm);padding:12px 14px;cursor:pointer;transition:all .15s;text-align:center}
+.radio-card:hover{border-color:var(--navy);background:var(--cream2)}
+.radio-card.selected{border-color:var(--navy);background:rgba(13,26,45,.03)}
+.radio-card input{display:none}
+.radio-card-icon{font-size:22px;margin-bottom:4px}
+.radio-card-label{font-size:12px;font-weight:600;color:var(--ink)}
+.radio-card-desc{font-size:10px;color:var(--muted);margin-top:2px;line-height:1.4}
+.field-hint{font-size:10px;color:var(--faint);margin-top:2px}
+
+/* ── BANNER ── */
+.banner{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-radius:var(--r-sm);margin-bottom:16px;font-size:12px;line-height:1.6}
+.banner.info{background:var(--sk-bg);border:1px solid rgba(2,132,199,.15);color:var(--sk)}
+.banner.warn{background:var(--am-bg);border:1px solid rgba(217,119,6,.15);color:var(--am)}
+.banner.lock{background:#F5F3FF;border:1px solid rgba(124,58,237,.15);color:var(--vt)}
+.banner-icon{font-size:16px;flex-shrink:0;margin-top:1px}
+.banner strong{font-weight:700}
+
+/* ── PROGRESS TABLE ── */
+.prog-table{width:100%;border-collapse:collapse;font-size:12px}
+.prog-table th{background:var(--cream2);padding:9px 12px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.5px;color:var(--muted);text-transform:uppercase;border-bottom:2px solid var(--bd)}
+.prog-table td{padding:11px 12px;border-bottom:1px solid var(--bd);color:var(--ink);vertical-align:middle}
+.prog-table tr:last-child td{border-bottom:none}
+.prog-table tr:hover td{background:var(--cream2)}
+.mono{font-family:'DM Mono',monospace;font-size:11px;color:var(--faint)}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.3px;white-space:nowrap}
+.b-em{background:var(--em-bg);color:var(--em)}
+.b-am{background:var(--am-bg);color:var(--am)}
+.b-rd{background:var(--rd-bg);color:var(--rd)}
+.b-sk{background:var(--sk-bg);color:var(--sk)}
+.b-vt{background:var(--vt-bg);color:var(--vt)}
+.b-gd{background:var(--gold-dim);color:#92610A}
+.b-mu{background:var(--cream2);color:var(--faint);border:1px solid var(--bd)}
+.prog-bar-wrap{height:5px;background:var(--bd);border-radius:3px;width:120px;overflow:hidden}
+.prog-bar{height:100%;border-radius:3px;background:var(--gold)}
+
+/* ── REWARD CARD ── */
+.reward-card{background:linear-gradient(135deg,var(--navy) 0%,var(--navy-l) 100%);border-radius:var(--r);padding:20px 22px;display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:20px}
+.reward-card-left .rc-label{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(200,169,81,.6);margin-bottom:4px}
+.reward-card-left .rc-title{font-size:18px;font-weight:700;color:var(--gold);margin-bottom:2px}
+.reward-card-left .rc-desc{font-size:11px;color:rgba(255,255,255,.55);line-height:1.6}
+.rc-stat{text-align:center}
+.rc-stat .rc-num{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--white)}
+.rc-stat .rc-sub{font-size:10px;color:rgba(255,255,255,.4);margin-top:2px}
+.rc-stats{display:flex;gap:24px;flex-shrink:0}
+
+/* ── STEP ── */
+.step-list{display:flex;flex-direction:column;gap:12px;margin-bottom:20px}
+.step-item{display:flex;align-items:flex-start;gap:12px}
+.step-num{width:24px;height:24px;border-radius:50%;background:var(--navy);color:var(--gold);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.step-body{flex:1}
+.step-title{font-size:12px;font-weight:700;color:var(--ink);margin-bottom:2px}
+.step-desc{font-size:11px;color:var(--muted);line-height:1.6}
+
+/* ── SUCCESS ── */
+.success-box{display:none;text-align:center;padding:40px 24px}
+.success-box.show{display:block}
+.success-icon{font-size:48px;margin-bottom:12px}
+.success-title{font-size:18px;font-weight:700;color:var(--ink);margin-bottom:6px}
+.success-desc{font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.7}
+.success-id{font-family:'DM Mono',monospace;font-size:14px;font-weight:700;color:var(--navy);background:var(--cream2);padding:8px 16px;border-radius:var(--r-sm);display:inline-block;margin-bottom:20px}
+
+/* ── PROGRESS FILTER ── */
+.filter-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.filter-select{padding:7px 12px;background:var(--cream2);border:1.5px solid var(--bd);border-radius:var(--r-sm);font-size:12px;color:var(--ink);font-family:'Outfit',sans-serif;outline:none;cursor:pointer}
+.filter-select:focus{border-color:var(--gold)}
+.search-wrap{position:relative;flex:1;min-width:200px}
+.search-wrap input{width:100%;padding:8px 12px 8px 34px;background:var(--cream2);border:1.5px solid var(--bd);border-radius:var(--r-sm);font-size:12px;color:var(--ink);font-family:'Outfit',sans-serif;outline:none}
+.search-wrap input:focus{border-color:var(--gold);background:var(--white)}
+.search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--faint);font-size:13px;pointer-events:none}
+.empty{text-align:center;padding:40px;color:var(--faint);font-size:13px}
+
+@media(max-width:768px){
+  .sb{display:none}
+  .kpi-row{grid-template-columns:1fr 1fr}
+  .form-grid{grid-template-columns:1fr}
+  .form-grid.col3{grid-template-columns:1fr}
+  .rc-stats{gap:12px}
+  .reward-card{flex-direction:column;text-align:center}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <!-- SIDEBAR -->
+  <nav class="sb">
+    <div class="sb-head">
+      <div class="sb-logo">CORETO</div>
+      <div class="sb-ver">COREBLDG v2.0</div>
+    </div>
+    <div class="sb-user">
+      <div class="sb-av" id="sb-av">PT</div>
+      <div><div class="sb-uname" id="sb-name">佐藤 健一（PT）</div><div class="sb-urole" id="sb-role">PT-0015 / active</div></div>
+    </div>
+    <div class="sb-nav" id="sb-nav"><!-- CNAV --></div>
+    <div class="sb-foot">
+      <div class="sb-foot-item" onclick="CNAV.openSettings()">⚙️ &nbsp;設定</div>
+      <div class="sb-foot-item" onclick="CNAV.logout()">🚪 &nbsp;ログアウト</div>
+    </div>
+  </nav>
+
+  <!-- CONTENT -->
+  <div class="content">
+    <div class="topbar">
+      <a href="coreto-hub-v2.html" class="tb-back">← 戻る</a>
+      <div class="tb-sep"></div>
+      <div>
+        <div class="tb-title">PT案件投げ・進捗確認</div>
+        <div class="tb-crumb"><a href="coreto-hub-v2.html">COREBLDG</a> › <span>PTポータル</span></div>
+      </div>
+      <div class="tb-actions">
+        <button class="btn btn-ghost" onclick="location.href='coreto-payment-v2.html'">💴 報酬明細</button>
+        <button class="btn btn-gold" onclick="switchTab('util')">⚡ 光通信を投げる</button>
+      </div>
+    </div>
+
+    <div class="page">
+      <!-- KPI -->
+      <div class="kpi-row">
+        <div class="kpi gd"><div class="kpi-lb">今月紹介報酬（確定）</div><div class="kpi-vl">¥147,000</div><div class="kpi-sb">累計 ¥890,000</div></div>
+        <div class="kpi em"><div class="kpi-lb">成約件数（全事業）</div><div class="kpi-vl">8件</div><div class="kpi-sb">今月 ↑3件</div></div>
+        <div class="kpi am"><div class="kpi-lb">進行中案件</div><div class="kpi-vl">5件</div><div class="kpi-sb">不動産2 / 人材1 / 光通信2</div></div>
+        <div class="kpi sk"><div class="kpi-lb">紹介コード</div><div class="kpi-vl" style="font-size:16px;font-family:'DM Mono',monospace">PT-0015</div><div class="kpi-sb">クライアントに伝えてください</div></div>
+      </div>
+
+      <!-- TABS -->
+      <div class="tab-bar">
+        <div class="tab active" id="tab-re" onclick="switchTab('re')">🏘️ 不動産を紹介する</div>
+        <div class="tab" id="tab-hr" onclick="switchTab('hr')">👤 人材を紹介する</div>
+        <div class="tab" id="tab-util" onclick="switchTab('util')">⚡ 光通信案件を投げる <span class="tab-badge gd">NEW</span></div>
+        <div class="tab" id="tab-progress" onclick="switchTab('progress')">📊 進捗確認 <span class="tab-badge am" id="prog-badge">5</span></div>
+      </div>
+
+      <!-- ══ TAB: 不動産 ══ -->
+      <div id="pane-re">
+        <div class="banner lock">
+          <div class="banner-icon">🔒</div>
+          <div><strong>PT権限：不動産紹介投げのみ</strong><br>乙（PT）は不動産取引に係る法律行為（媒介契約・重要事項説明・契約書交付等）を一切行えません。クライアントをCORETOに紹介するだけでOKです。成約で紹介報酬（甲売上の25%）が発生します。</div>
+        </div>
+
+        <div class="reward-card">
+          <div class="reward-card-left">
+            <div class="rc-label">不動産紹介報酬</div>
+            <div class="rc-title">🏘️ 成約で甲売上の 25%</div>
+            <div class="rc-desc">賃貸・売買どちらも対象。クライアントを紹介するだけでOK。<br>AGが取引業務を全て担当します。</div>
+          </div>
+          <div class="rc-stats">
+            <div class="rc-stat"><div class="rc-num">¥30,000<span style="font-size:12px">〜</span></div><div class="rc-sub">賃貸1件あたり目安</div></div>
+            <div class="rc-stat"><div class="rc-num">¥250,000<span style="font-size:12px">〜</span></div><div class="rc-sub">売買1件あたり目安</div></div>
+          </div>
+        </div>
+
+        <div id="re-form-wrap">
+          <div class="panel">
+            <div class="panel-title">📋 不動産紹介フォーム</div>
+            <div class="panel-desc">クライアントの基本情報と希望内容を入力してください。送信後、担当AGが連絡いたします。</div>
+
+            <div class="section-title">① 取引種別</div>
+            <div class="radio-row" style="margin-bottom:20px">
+              <div class="radio-card selected" id="re-type-rent" onclick="selectReType('rent',this)">
+                <div class="radio-card-icon">🏠</div>
+                <div class="radio-card-label">賃貸仲介</div>
+                <div class="radio-card-desc">部屋を借りたい</div>
+              </div>
+              <div class="radio-card" id="re-type-sale" onclick="selectReType('sale',this)">
+                <div class="radio-card-icon">🏢</div>
+                <div class="radio-card-label">売買仲介</div>
+                <div class="radio-card-desc">購入・売却したい</div>
+              </div>
+              <div class="radio-card" id="re-type-invest" onclick="selectReType('invest',this)">
+                <div class="radio-card-icon">📈</div>
+                <div class="radio-card-label">投資・収益物件</div>
+                <div class="radio-card-desc">投資目的で購入</div>
+              </div>
+            </div>
+
+            <div class="section-title">② クライアント情報</div>
+            <div class="form-grid">
+              <div class="field"><label>氏名 <span class="req">*</span></label><input type="text" id="re-name" placeholder="例：田中 一郎"></div>
+              <div class="field"><label>電話番号 <span class="req">*</span></label><input type="tel" id="re-tel" placeholder="例：090-1234-5678"></div>
+              <div class="field"><label>メールアドレス</label><input type="email" id="re-email" placeholder="例：tanaka@example.com"></div>
+              <div class="field"><label>連絡可能な時間帯</label><select id="re-contact-time"><option>いつでも可</option><option>平日日中（9〜18時）</option><option>平日夜（18〜21時）</option><option>土日祝</option></select></div>
+            </div>
+
+            <div class="section-title" style="margin-top:8px">③ 希望条件</div>
+            <div class="form-grid col3">
+              <div class="field"><label>希望エリア <span class="req">*</span></label><input type="text" id="re-area" placeholder="例：港区・渋谷区・世田谷区"></div>
+              <div class="field"><label>予算</label><input type="text" id="re-budget" placeholder="例：賃貸 ¥15万/月 / 売買 ¥5,000万"></div>
+              <div class="field"><label>希望入居・引渡時期</label><input type="text" id="re-timing" placeholder="例：2026年4月・できるだけ早く"></div>
+            </div>
+            <div class="form-grid">
+              <div class="field"><label>間取り・広さの希望</label><input type="text" id="re-layout" placeholder="例：2LDK以上・50㎡以上"></div>
+              <div class="field"><label>その他条件・こだわり</label><input type="text" id="re-conditions" placeholder="例：ペット可・駅徒歩10分以内"></div>
+            </div>
+            <div class="field" style="margin-bottom:16px">
+              <label>備考・紹介経緯</label>
+              <textarea id="re-note" placeholder="クライアントとの関係、紹介に至った経緯など"></textarea>
+            </div>
+
+            <div class="banner warn">
+              <div class="banner-icon">⚠️</div>
+              <div>送信後、HQまたは担当AGより<strong>24時間以内</strong>に連絡いたします。クライアントへの物件提案・内見手配はAGが行います。</div>
+            </div>
+
+            <div style="display:flex;justify-content:flex-end;gap:10px">
+              <button class="btn btn-ghost" onclick="clearForm('re')">クリア</button>
+              <button class="btn btn-primary" onclick="submitForm('re')">紹介を投げる →</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="success-box" id="re-success">
+          <div class="success-icon">🏘️</div>
+          <div class="success-title">不動産紹介を受け付けました！</div>
+          <div class="success-id" id="re-case-id">RENT-XXXX</div>
+          <div class="success-desc">担当AGより24時間以内にクライアントへ連絡いたします。<br>進捗は「進捗確認」タブで確認できます。</div>
+          <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+            <button class="btn btn-ghost" onclick="switchTab('progress')">📊 進捗を確認する</button>
+            <button class="btn btn-primary" onclick="resetSuccess('re')">続けて紹介する</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ TAB: 人材 ══ -->
+      <div id="pane-hr" style="display:none">
+        <div class="banner lock">
+          <div class="banner-icon">🔒</div>
+          <div><strong>PT権限：人材紹介投げのみ</strong><br>乙（PT）は職業安定法に基づく職業紹介行為を行えません。転職・就職を希望するクライアントをCORETOに紹介するだけでOKです。成約で紹介報酬（甲売上の25%）が発生します。</div>
+        </div>
+
+        <div class="reward-card">
+          <div class="reward-card-left">
+            <div class="rc-label">人材紹介報酬</div>
+            <div class="rc-title">👤 成約で甲売上の 25%</div>
+            <div class="rc-desc">転職・就職希望のクライアントを紹介するだけでOK。<br>企業との交渉・書類選考・面接調整はHR-AGが担当します。</div>
+          </div>
+          <div class="rc-stats">
+            <div class="rc-stat"><div class="rc-num">¥50,000<span style="font-size:12px">〜</span></div><div class="rc-sub">1件あたり目安</div></div>
+            <div class="rc-stat"><div class="rc-num">¥150,000<span style="font-size:12px">〜</span></div><div class="rc-sub">ハイクラス案件目安</div></div>
+          </div>
+        </div>
+
+        <div id="hr-form-wrap">
+          <div class="panel">
+            <div class="panel-title">📋 人材紹介フォーム</div>
+            <div class="panel-desc">転職・就職を希望するクライアントの情報を入力してください。HR-AGが選考・マッチングを全て担当します。</div>
+
+            <div class="section-title">① クライアント情報</div>
+            <div class="form-grid">
+              <div class="field"><label>氏名 <span class="req">*</span></label><input type="text" id="hr-name" placeholder="例：鈴木 花子"></div>
+              <div class="field"><label>電話番号 <span class="req">*</span></label><input type="tel" id="hr-tel" placeholder="例：080-9876-5432"></div>
+              <div class="field"><label>メールアドレス</label><input type="email" id="hr-email" placeholder="例：suzuki@example.com"></div>
+              <div class="field"><label>現在の雇用形態</label><select id="hr-employ"><option>正社員</option><option>派遣・契約社員</option><option>アルバイト・パート</option><option>フリーランス</option><option>無職</option></select></div>
+            </div>
+
+            <div class="section-title" style="margin-top:8px">② 転職希望内容</div>
+            <div class="form-grid col3">
+              <div class="field"><label>希望職種 <span class="req">*</span></label><input type="text" id="hr-job" placeholder="例：営業・エンジニア・看護師"></div>
+              <div class="field"><label>希望年収</label><input type="text" id="hr-salary" placeholder="例：500万〜・現状維持以上"></div>
+              <div class="field"><label>希望入社時期</label><input type="text" id="hr-timing" placeholder="例：2026年4月・できるだけ早く"></div>
+            </div>
+            <div class="form-grid">
+              <div class="field"><label>現在の職種・業界</label><input type="text" id="hr-current" placeholder="例：IT営業・不動産会社・3年"></div>
+              <div class="field"><label>希望勤務地</label><input type="text" id="hr-area" placeholder="例：東京都内・リモート可"></div>
+            </div>
+            <div class="field" style="margin-bottom:16px">
+              <label>転職の動機・備考</label>
+              <textarea id="hr-note" placeholder="転職の動機、資格・スキル、紹介経緯など"></textarea>
+            </div>
+
+            <div class="banner warn">
+              <div class="banner-icon">⚠️</div>
+              <div>送信後、HR-AGより<strong>48時間以内</strong>にクライアントへ連絡いたします。面接設定・条件交渉・内定後フォローはHR-AGが全て担当します。</div>
+            </div>
+
+            <div style="display:flex;justify-content:flex-end;gap:10px">
+              <button class="btn btn-ghost" onclick="clearForm('hr')">クリア</button>
+              <button class="btn btn-primary" onclick="submitForm('hr')">紹介を投げる →</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="success-box" id="hr-success">
+          <div class="success-icon">👤</div>
+          <div class="success-title">人材紹介を受け付けました！</div>
+          <div class="success-id" id="hr-case-id">HR-XXXX</div>
+          <div class="success-desc">HR-AGより48時間以内にクライアントへ連絡いたします。<br>進捗は「進捗確認」タブで確認できます。</div>
+          <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+            <button class="btn btn-ghost" onclick="switchTab('progress')">📊 進捗を確認する</button>
+            <button class="btn btn-primary" onclick="resetSuccess('hr')">続けて紹介する</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ TAB: 光通信 ══ -->
+      <div id="pane-util" style="display:none">
+        <div class="banner info">
+          <div class="banner-icon">⚡</div>
+          <div><strong>PT権限：光通信案件投げ可（AG同等）</strong><br>電力・ガス・光回線に興味があるクライアントを登録してください。光通信AGが全ての手続きを担当します。成約で紹介報酬が発生します。</div>
+        </div>
+
+        <div class="reward-card">
+          <div class="reward-card-left">
+            <div class="rc-label">光通信紹介報酬</div>
+            <div class="rc-title">⚡ 成約で甲売上の 25%</div>
+            <div class="rc-desc">個人宅・法人どちらも対象。クライアントを登録するだけでOK。<br>申込手続き・開通確認は光通信AGが全て担当します。</div>
+          </div>
+          <div class="rc-stats">
+            <div class="rc-stat"><div class="rc-num">¥3,000<span style="font-size:12px">〜</span></div><div class="rc-sub">個人1件あたり目安</div></div>
+            <div class="rc-stat"><div class="rc-num">¥30,000<span style="font-size:12px">〜</span></div><div class="rc-sub">法人1件あたり目安</div></div>
+          </div>
+        </div>
+
+        <div id="util-form-wrap">
+          <div class="panel">
+            <div class="panel-title">⚡ 光通信案件フォーム</div>
+            <div class="panel-desc">光通信サービスに興味があるクライアントの情報を入力してください。</div>
+
+            <div class="section-title">① 対象種別</div>
+            <div class="radio-row" style="margin-bottom:20px">
+              <div class="radio-card selected" id="util-type-ind" onclick="selectUtilType('individual',this)">
+                <div class="radio-card-icon">🏠</div>
+                <div class="radio-card-label">個人（一般家庭）</div>
+                <div class="radio-card-desc">光ファイバー・電力・ガス</div>
+              </div>
+              <div class="radio-card" id="util-type-corp" onclick="selectUtilType('corporate',this)">
+                <div class="radio-card-icon">🏢</div>
+                <div class="radio-card-label">法人・事業所</div>
+                <div class="radio-card-desc">法人光回線・まとめ契約</div>
+              </div>
+              <div class="radio-card" id="util-type-manse" onclick="selectUtilType('mansion',this)">
+                <div class="radio-card-icon">🏬</div>
+                <div class="radio-card-label">マンション一棟</div>
+                <div class="radio-card-desc">全戸まとめて高報酬</div>
+              </div>
+            </div>
+
+            <div class="section-title">② 希望サービス</div>
+            <div class="radio-row" style="margin-bottom:20px;flex-wrap:wrap">
+              <div class="radio-card" id="svc-fiber" onclick="toggleSvc(this)" style="flex:unset;min-width:120px">
+                <div class="radio-card-icon">🔌</div>
+                <div class="radio-card-label">光ファイバー</div>
+              </div>
+              <div class="radio-card" id="svc-power" onclick="toggleSvc(this)" style="flex:unset;min-width:120px">
+                <div class="radio-card-icon">⚡</div>
+                <div class="radio-card-label">電力</div>
+              </div>
+              <div class="radio-card" id="svc-gas" onclick="toggleSvc(this)" style="flex:unset;min-width:120px">
+                <div class="radio-card-icon">🔥</div>
+                <div class="radio-card-label">ガス</div>
+              </div>
+              <div class="radio-card" id="svc-set" onclick="toggleSvc(this)" style="flex:unset;min-width:120px">
+                <div class="radio-card-icon">💎</div>
+                <div class="radio-card-label">まとめ契約</div>
+              </div>
+            </div>
+
+            <div class="section-title">③ クライアント情報</div>
+            <div class="form-grid">
+              <div class="field"><label>氏名 / 法人名 <span class="req">*</span></label><input type="text" id="util-name" placeholder="例：山田 光太 / 株式会社○○"></div>
+              <div class="field"><label>電話番号 <span class="req">*</span></label><input type="tel" id="util-tel" placeholder="例：03-1234-5678"></div>
+              <div class="field"><label>住所・設置場所</label><input type="text" id="util-addr" placeholder="例：東京都港区三田3-1-1"></div>
+              <div class="field"><label>現在の契約状況</label><select id="util-current"><option>未確認</option><option>他社光回線契約中</option><option>ADSL・ケーブルTV</option><option>光回線なし</option><option>電力：大手電力会社</option></select></div>
+            </div>
+            <div class="form-grid">
+              <div class="field"><label>世帯数 / 契約回線数（法人・マンション）</label><input type="number" id="util-count" placeholder="例：24（戸）"></div>
+              <div class="field"><label>連絡可能な時間帯</label><select id="util-contact"><option>いつでも可</option><option>平日日中</option><option>平日夜</option><option>土日祝</option></select></div>
+            </div>
+            <div class="field" style="margin-bottom:16px">
+              <label>備考・紹介経緯</label>
+              <textarea id="util-note" placeholder="例：友人宅で光回線の話をしたら興味を持った、マンションオーナーで全戸切替を検討中、など"></textarea>
+            </div>
+
+            <div class="step-list">
+              <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px">投げた後の流れ</div>
+              <div class="step-item"><div class="step-num">1</div><div class="step-body"><div class="step-title">AG確認・連絡（24時間以内）</div><div class="step-desc">光通信AGがクライアントへ連絡し、詳細をヒアリングします。</div></div></div>
+              <div class="step-item"><div class="step-num">2</div><div class="step-body"><div class="step-title">プラン提案・申込</div><div class="step-desc">AGがプランを提案し、申込書類の準備を行います。</div></div></div>
+              <div class="step-item"><div class="step-num">3</div><div class="step-body"><div class="step-title">開通・成約確認</div><div class="step-desc">開通確認後、報酬が確定します。通知メール・COREBLDGで確認できます。</div></div></div>
+            </div>
+
+            <div style="display:flex;justify-content:flex-end;gap:10px">
+              <button class="btn btn-ghost" onclick="clearForm('util')">クリア</button>
+              <button class="btn btn-gold" onclick="submitForm('util')">⚡ 案件を投げる →</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="success-box" id="util-success">
+          <div class="success-icon">⚡</div>
+          <div class="success-title">光通信案件を受け付けました！</div>
+          <div class="success-id" id="util-case-id">UTL-XXXX</div>
+          <div class="success-desc">光通信AGより24時間以内にクライアントへ連絡いたします。<br>進捗は「進捗確認」タブで確認できます。</div>
+          <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+            <button class="btn btn-ghost" onclick="switchTab('progress')">📊 進捗を確認する</button>
+            <button class="btn btn-gold" onclick="resetSuccess('util')">続けて投げる</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ TAB: 進捗確認 ══ -->
+      <div id="pane-progress" style="display:none">
+        <div class="panel" style="padding:16px 20px;margin-bottom:16px">
+          <div class="filter-bar">
+            <div class="search-wrap">
+              <div class="search-icon">🔍</div>
+              <input type="text" placeholder="クライアント名・案件IDで検索" oninput="filterProgress(this.value)">
+            </div>
+            <select class="filter-select" id="prog-type-filter" onchange="filterProgress()">
+              <option value="">全事業</option>
+              <option value="re">不動産</option>
+              <option value="hr">人材</option>
+              <option value="util">光通信</option>
+            </select>
+            <select class="filter-select" id="prog-status-filter" onchange="filterProgress()">
+              <option value="">全ステータス</option>
+              <option value="active">進行中</option>
+              <option value="done">成約済み</option>
+              <option value="cancel">キャンセル</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="panel" style="padding:0;overflow:hidden">
+          <table class="prog-table" id="prog-table">
+            <thead>
+              <tr>
+                <th>案件ID</th>
+                <th>事業</th>
+                <th>クライアント</th>
+                <th>内容</th>
+                <th>ステータス</th>
+                <th>進捗</th>
+                <th>報酬（見込）</th>
+                <th>担当AG</th>
+                <th>更新日</th>
+              </tr>
+            </thead>
+            <tbody id="prog-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /page -->
+  </div><!-- /content -->
+</div><!-- /shell -->
+
+<script src="coreto-nav-v2.js"></script>
+<script>
+// ═══════════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════════
+const PROGRESS_DATA = [
+  { id:'RENT-0194', type:'re',   typeLabel:'不動産', client:'田中 一郎', detail:'港区（賃貸）2LDK', status:'active', statusLabel:'IT重説待ち',  prog:80, reward:30000,  ag:'山田 AG', date:'2026/03/10' },
+  { id:'RENT-0181', type:'re',   typeLabel:'不動産', client:'木村 麻衣', detail:'渋谷区（売買）戸建', status:'done',   statusLabel:'成約済み',    prog:100,reward:380000, ag:'山田 AG', date:'2026/02/28' },
+  { id:'HR-0025',   type:'hr',   typeLabel:'人材',   client:'鈴木 花子', detail:'IT営業→Web系',    status:'active', statusLabel:'書類審査中',  prog:40, reward:45000,  ag:'鈴木 AG', date:'2026/03/09' },
+  { id:'UTL-0201',  type:'util', typeLabel:'光通信', client:'山本 健一', detail:'光ファイバー',     status:'active', statusLabel:'申込処理中',  prog:60, reward:12000,  ag:'光太 AG', date:'2026/03/11' },
+  { id:'UTL-0189',  type:'util', typeLabel:'光通信', client:'佐藤 商店', detail:'法人光回線（5回線）',status:'active',statusLabel:'商談中',     prog:30, reward:60000,  ag:'光太 AG', date:'2026/03/08' },
+  { id:'HR-0017',   type:'hr',   typeLabel:'人材',   client:'渡辺 健二', detail:'営業→管理職',    status:'done',   statusLabel:'内定承諾済み', prog:100,reward:75000,  ag:'鈴木 AG', date:'2026/02/20' },
+  { id:'RENT-0165', type:'re',   typeLabel:'不動産', client:'中村 由美', detail:'港区（賃貸）1LDK', status:'cancel', statusLabel:'キャンセル',  prog:20, reward:0,      ag:'山田 AG', date:'2026/02/10' },
+  { id:'UTL-0175',  type:'util', typeLabel:'光通信', client:'高橋 マンション', detail:'マンション12戸', status:'done', statusLabel:'開通済み',  prog:100,reward:144000, ag:'光太 AG', date:'2026/03/01' },
+];
+
+const STATUS_BADGE = {
+  'active':'b-am', 'done':'b-em', 'cancel':'b-mu'
+};
+const TYPE_BADGE = {
+  're':'b-sk','hr':'b-vt','util':'b-gd'
+};
+
+// ═══════════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════════
+let currentTab = 're';
+
+function switchTab(tab) {
+  currentTab = tab;
+  ['re','hr','util','progress'].forEach(t => {
+    document.getElementById('tab-'+t).classList.toggle('active', t===tab);
+    document.getElementById('pane-'+t).style.display = t===tab ? 'block' : 'none';
+  });
+  if (tab === 'progress') renderProgress(PROGRESS_DATA);
+}
+
+// ═══════════════════════════════════════════════════
+// FORM
+// ═══════════════════════════════════════════════════
+function selectReType(type, el) {
+  document.querySelectorAll('[id^="re-type-"]').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+}
+function selectUtilType(type, el) {
+  document.querySelectorAll('[id^="util-type-"]').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+}
+function toggleSvc(el) { el.classList.toggle('selected'); }
+
+function clearForm(type) {
+  const ids = type === 're'
+    ? ['re-name','re-tel','re-email','re-area','re-budget','re-timing','re-layout','re-conditions','re-note']
+    : type === 'hr'
+    ? ['hr-name','hr-tel','hr-email','hr-current','hr-job','hr-salary','hr-timing','hr-area','hr-note']
+    : ['util-name','util-tel','util-addr','util-count','util-note'];
+  ids.forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+}
+
+let caseCounter = { re: 195, hr: 26, util: 202 };
+
+function submitForm(type) {
+  const nameId = type+'-name', telId = type+'-tel';
+  const name = document.getElementById(nameId)?.value.trim();
+  const tel  = document.getElementById(telId)?.value.trim();
+  if (!name) { showToast('⚠️ 氏名を入力してください'); return; }
+  if (!tel)  { showToast('⚠️ 電話番号を入力してください'); return; }
+
+  caseCounter[type]++;
+  const prefix = type === 're' ? 'RENT' : type === 'hr' ? 'HR' : 'UTL';
+  const caseId = `${prefix}-${String(caseCounter[type]).padStart(4,'0')}`;
+  document.getElementById(type+'-case-id').textContent = caseId;
+
+  document.getElementById(type+'-form-wrap').style.display = 'none';
+  document.getElementById(type+'-success').classList.add('show');
+
+  // 進捗データに追加
+  PROGRESS_DATA.unshift({
+    id: caseId, type, typeLabel: type==='re'?'不動産':type==='hr'?'人材':'光通信',
+    client: name, detail: '新規紹介', status:'active', statusLabel:'受付済み',
+    prog: 5, reward: 0, ag:'調整中', date: new Date().toLocaleDateString('ja-JP')
+  });
+  document.getElementById('prog-badge').textContent = PROGRESS_DATA.filter(d=>d.status==='active').length;
+}
+
+function resetSuccess(type) {
+  document.getElementById(type+'-success').classList.remove('show');
+  document.getElementById(type+'-form-wrap').style.display = 'block';
+  clearForm(type);
+}
+
+// ═══════════════════════════════════════════════════
+// PROGRESS
+// ═══════════════════════════════════════════════════
+function renderProgress(data) {
+  const tbody = document.getElementById('prog-tbody');
+  if (!data.length) {
+    tbody.innerHTML = '<tr><td colspan="9" class="empty">該当する案件がありません</td></tr>';
+    return;
+  }
+  tbody.innerHTML = data.map(d => `
+    <tr>
+      <td class="mono">${d.id}</td>
+      <td><span class="badge ${TYPE_BADGE[d.type]}">${d.typeLabel}</span></td>
+      <td style="font-weight:600">${d.client}</td>
+      <td style="color:var(--muted);font-size:11px">${d.detail}</td>
+      <td><span class="badge ${STATUS_BADGE[d.status]}">${d.statusLabel}</span></td>
+      <td>
+        <div style="display:flex;align-items:center;gap:6px">
+          <div class="prog-bar-wrap"><div class="prog-bar" style="width:${d.prog}%"></div></div>
+          <span style="font-size:10px;color:var(--faint);font-variant-numeric:tabular-nums">${d.prog}%</span>
+        </div>
+      </td>
+      <td style="font-variant-numeric:tabular-nums;font-weight:600;color:${d.reward>0?'var(--em)':'var(--faint)'}">
+        ${d.reward > 0 ? '¥'+d.reward.toLocaleString() : '—'}
+      </td>
+      <td style="font-size:11px;color:var(--muted)">${d.ag}</td>
+      <td class="mono">${d.date}</td>
+    </tr>`).join('');
+}
+
+function filterProgress(val) {
+  const q = (typeof val === 'string' ? val : document.querySelector('.search-wrap input')?.value || '').toLowerCase();
+  const typeF = document.getElementById('prog-type-filter')?.value;
+  const statF = document.getElementById('prog-status-filter')?.value;
+  const filtered = PROGRESS_DATA.filter(d => {
+    const matchQ = !q || d.id.toLowerCase().includes(q) || d.client.toLowerCase().includes(q);
+    const matchT = !typeF || d.type === typeF;
+    const matchS = !statF || d.status === statF;
+    return matchQ && matchT && matchS;
+  });
+  renderProgress(filtered);
+}
+
+// ═══════════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════════
+function showToast(msg) {
+  let t = document.getElementById('_toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = '_toast';
+    Object.assign(t.style, {
+      position:'fixed',bottom:'24px',left:'50%',transform:'translateX(-50%) translateY(10px)',
+      background:'#0D1A2D',color:'#fff',padding:'10px 20px',borderRadius:'8px',
+      fontSize:'13px',fontWeight:'600',zIndex:'9999',opacity:'0',transition:'all .25s',
+      fontFamily:"'Outfit',sans-serif",boxShadow:'0 4px 20px rgba(0,0,0,.25)',whiteSpace:'nowrap'
+    });
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.background = '#0D1A2D';
+  t.style.opacity = '1';
+  t.style.transform = 'translateX(-50%) translateY(0)';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => {
+    t.style.opacity = '0';
+    t.style.transform = 'translateX(-50%) translateY(10px)';
+  }, 3000);
+}
+
+// ═══════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  CNAV.init('pt_portal');
+});
+</script>
+</body>
+</html>

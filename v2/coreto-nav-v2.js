@@ -182,16 +182,16 @@ const NAV = {
       { icon:'💴', label:'報酬明細',               href:'coreto-payment-v2.html',      key:'payment' },
     ]},
     { section:'不動産（紹介・閲覧のみ）', items:[
-      { icon:'🏘️', label:'不動産案件を紹介する',   href:'coreto-hub-v2.html#re_refer', key:'re_refer' },
-      { icon:'📊', label:'紹介案件の進捗',         href:'coreto-hub-v2.html#re_progress', key:'re_progress' },
+      { icon:'🏘️', label:'不動産案件を紹介する',   href:'coreto-pt-portal-v2.html#re', key:'re_refer' },
+      { icon:'📊', label:'紹介案件の進捗',         href:'coreto-pt-portal-v2.html#progress', key:'re_progress' },
     ]},
     { section:'人材（紹介・閲覧のみ）', items:[
-      { icon:'👤', label:'人材案件を紹介する',     href:'coreto-hub-v2.html#hr_refer', key:'hr_refer' },
-      { icon:'📊', label:'紹介案件の進捗',         href:'coreto-hub-v2.html#hr_progress', key:'hr_progress' },
+      { icon:'👤', label:'人材案件を紹介する',     href:'coreto-pt-portal-v2.html#hr', key:'hr_refer' },
+      { icon:'📊', label:'紹介案件の進捗',         href:'coreto-pt-portal-v2.html#progress', key:'hr_progress' },
     ]},
     { section:'光通信（案件投げ可）', items:[
-      { icon:'⚡', label:'光通信案件を投げる',     href:'coreto-hub-v2.html#util_submit', key:'util_submit', badge:'NEW', badgeColor:'gold' },
-      { icon:'📊', label:'投げた案件の進捗',       href:'coreto-hub-v2.html#util_progress', key:'util_progress' },
+      { icon:'⚡', label:'光通信案件を投げる',     href:'coreto-pt-portal-v2.html#util', key:'util_submit', badge:'NEW', badgeColor:'gold' },
+      { icon:'📊', label:'投げた案件の進捗',       href:'coreto-pt-portal-v2.html#progress', key:'util_progress' },
     ]},
     { section:'ツール', items:[
       { icon:'📚', label:'マニュアル・FAQ',       href:'coreto-faq-v2.html',          key:'faq' },
