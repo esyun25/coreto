@@ -143,7 +143,12 @@ html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:
       <div><div class="tb-title">人材案件管理</div>
       <div class="tb-crumb"><a href="coreto-hub-v2.html">COREBLDG</a> › 人材案件</div></div>
       <div class="tb-act">
-        <button class="btn btn-g btn-sm" onclick="openModal('modal-add')">＋ 案件登録</button>
+        <div style="display:flex;gap:4px;background:var(--cream2);border:1px solid var(--bd);border-radius:var(--r-sm);padding:3px">
+          <button class="btn btn-sm" id="role-pt" onclick="setRole('pt')" style="background:transparent;color:var(--muted)">🤝 PT</button>
+          <button class="btn btn-sm" id="role-ag" onclick="setRole('ag')" style="background:var(--navy);color:var(--gold)">🏘️ AG</button>
+          <button class="btn btn-sm" id="role-hq" onclick="setRole('hq')" style="background:transparent;color:var(--muted)">🏢 HQ</button>
+        </div>
+        <button class="btn btn-g btn-sm" id="btn-add-case" onclick="openAddForRole()">＋ 案件登録</button>
         <button class="btn btn-p btn-sm" id="ai-btn" onclick="runAI()">✨ AIサポート</button>
       </div>
     </div>
@@ -987,13 +992,457 @@ JSONのみ: {"slack":"Slack通知文（絵文字あり・2〜3行）","line_work
   } catch(e) { toast('通知文生成失敗','warn'); }
   finally { if(btn){btn.disabled=false;btn.innerHTML='📢 通知文生成';} }
 }
+
+// ═══════════════════════════════════════════
+// ロール管理
+// ═══════════════════════════════════════════
+let ROLE = 'ag'; // 'pt' | 'ag' | 'hq'
+
+function setRole(r) {
+  ROLE = r;
+  ['pt','ag','hq'].forEach(id => {
+    const btn = document.getElementById('role-'+id);
+    if (!btn) return;
+    if (id === r) { btn.style.background = 'var(--navy)'; btn.style.color = 'var(--gold)'; }
+    else          { btn.style.background = 'transparent'; btn.style.color = 'var(--muted)'; }
+  });
+  const addBtn = document.getElementById('btn-add-case');
+  if (addBtn) addBtn.textContent = r === 'pt' ? '＋ 案件を投げる' : '＋ 案件登録';
+  render();
+}
+
+function openAddForRole() {
+  if (ROLE === 'pt') openModal('modal-pt-submit');
+  else openModal('modal-add');
+}
+
+// ═══════════════════════════════════════════
+// HR-AG プール（人材専門）
+// ═══════════════════════════════════════════
+const HR_AGENTS = [
+  {id:'HR-0012',name:'吉田 さくら',rank:'Gold',
+   elo:1490,closedCases:42,totalCases:50,activeCases:5,
+   avgRating:4.62,reviewCount:40,completionRate:0.93,avgResponseMin:18,
+   daysRegistered:290,status:'active',recentConversionRate:0.72,
+   specialties:['IT営業','SaaS','外資系転職'],
+   acceptanceByType:{hr:0.82}},
+  {id:'HR-0008',name:'松本 達也',rank:'Silver',
+   elo:1310,closedCases:18,totalCases:24,activeCases:2,
+   avgRating:4.38,reviewCount:16,completionRate:0.88,avgResponseMin:28,
+   daysRegistered:185,status:'active',recentConversionRate:0.58,
+   specialties:['エンジニア','バックエンド','フルリモート'],
+   acceptanceByType:{hr:0.70}},
+  {id:'HR-0021',name:'山田 理恵',rank:'Silver',
+   elo:1250,closedCases:12,totalCases:18,activeCases:3,
+   avgRating:4.50,reviewCount:11,completionRate:0.90,avgResponseMin:20,
+   daysRegistered:140,status:'active',recentConversionRate:0.62,
+   specialties:['マーケティング','人事・HR','女性活躍'],
+   acceptanceByType:{hr:0.75}},
+  {id:'HR-0035',name:'川島 浩',rank:'Bronze',
+   elo:1160,closedCases:4,totalCases:7,activeCases:1,
+   avgRating:4.30,reviewCount:4,completionRate:0.85,avgResponseMin:35,
+   daysRegistered:60,status:'active',recentConversionRate:0.50,
+   specialties:['営業職','若手・第二新卒'],
+   acceptanceByType:{hr:0.65}},
+];
+
+// ═══════════════════════════════════════════
+// PT 投稿データストア（インメモリ）
+// ═══════════════════════════════════════════
+let HR_LEADS = [
+  {id:'HRL-001',ptCode:'PT-0015',ptName:'佐藤 健一',
+   name:'田中 智也',age:32,currentJob:'SaaS営業',currentSalary:520,
+   targetJob:'営業マネージャー',targetSalary:700,
+   skills:'SaaS営業、法人営業、マネジメント、英語',experience:'8年',
+   note:'リモート必須。3月末に決めたい。',
+   status:'matched',
+   assignedAgId:'HR-0012',assignedAgName:'吉田 さくら',
+   matchScore:94, matchReason:'SaaS営業・外資系転職の専門性が高く最適',
+   createdAt:'2026/02/15', matchedAt:'2026/02/15',
+   _aiAnalysis:{urgencyLevel:8,clientDifficulty:5,summary:'転職意欲高い。リモート・年収が主要条件。',optimalAgProfile:'IT営業系に強いAG'},
+  },
+  {id:'HRL-002',ptCode:'PT-0015',ptName:'佐藤 健一',
+   name:'橋本 陽子',age:35,currentJob:'マーケティング',currentSalary:600,
+   targetJob:'マーケティングマネージャー',targetSalary:750,
+   skills:'デジタルマーケ、SEO/SEM、MA、データ分析',experience:'10年',
+   note:'複数社比較中。3/20回答期限あり。',
+   status:'matched',
+   assignedAgId:'HR-0021',assignedAgName:'山田 理恵',
+   matchScore:91, matchReason:'マーケティング職専門性とスキル整合性が高い',
+   createdAt:'2026/01/20', matchedAt:'2026/01/20',
+   _aiAnalysis:{urgencyLevel:9,clientDifficulty:4,summary:'優秀な候補者。期限が近く緊急度高い。',optimalAgProfile:'マーケ系に強いAG'},
+  },
+  {id:'HRL-003',ptCode:'PT-0001',ptName:'株式会社ネクスト不動産',
+   name:'松本 浩二',age:38,currentJob:'エンジニアリングMGR',currentSalary:850,
+   targetJob:'VPoE / CTO',targetSalary:1000,
+   skills:'Python、AWS、チームマネジメント、アジャイル',experience:'15年',
+   note:'ストック必須。Series C以上希望。',
+   status:'pending_ai',
+   assignedAgId:null,assignedAgName:null,
+   matchScore:null, matchReason:null,
+   createdAt:'2026/03/12', matchedAt:null,
+   _aiAnalysis:null,
+  },
+];
+
+// ═══════════════════════════════════════════
+// AI Phase 1: 案件解析
+// ═══════════════════════════════════════════
+async function hrAnalyzeLead(lead) {
+  const prompt = `あなたはCOREBLDGの人材紹介マッチングAIです。
+PTが入力した転職希望者の情報を解析してください。
+必ずJSON形式のみで返答（前置き不要）:
+
+【候補者情報】
+氏名: ${lead.name} / ${lead.age}歳
+現職: ${lead.currentJob} / 年収${lead.currentSalary}万円
+希望: ${lead.targetJob} / 年収${lead.targetSalary}万円〜
+スキル: ${lead.skills}
+経験: ${lead.experience}
+備考: ${lead.note||'なし'}
+
+JSON:
+{
+  "urgencyLevel": 0〜10,
+  "clientDifficulty": 0〜10,
+  "keySkills": ["主要スキル最大3つ"],
+  "targetIndustry": "想定業界",
+  "salaryFlex": -1か0か1,
+  "optimalAgProfile": "最適なAGの特徴（1文）",
+  "summary": "候補者の特徴（2文）",
+  "caution": "注意点（なければnull）"
+}`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({model:'claude-sonnet-4-20250514', max_tokens:600,
+        messages:[{role:'user',content:prompt}]})
+    });
+    const data = await resp.json();
+    return JSON.parse((data.content?.find(b=>b.type==='text')?.text||'{}').replace(/```json|```/g,'').trim());
+  } catch(e) {
+    return {urgencyLevel:5,clientDifficulty:5,keySkills:[],targetIndustry:'不明',
+      salaryFlex:0,optimalAgProfile:'経験豊富なAG',summary:'案件情報を受け付けました。',caution:null};
+  }
+}
+
+// ═══════════════════════════════════════════
+// スコアリング（HR専用）
+// ═══════════════════════════════════════════
+function hrScoreAgent(ag, lead, aiAnalysis) {
+  // [A] 成約力 30点
+  const eloNorm = Math.max(0, Math.min(1, (ag.elo-800)/(2400-800)));
+  const conv = ag.recentConversionRate || 0.5;
+  const closingPower = (eloNorm*0.4 + conv*0.6) * 30;
+
+  // [B] 専門適合 30点（HR専用: スキル・職種マッチ）
+  const skills = (lead.skills||'').toLowerCase();
+  const specs = ag.specialties || [];
+  const specMatch = specs.some(s => skills.includes(s.toLowerCase()) || lead.targetJob.includes(s)) ? 1.0 : 0.4;
+  const fitScore = specMatch * 30;
+
+  // [C] 信頼性 20点
+  const n = ag.reviewCount || 0;
+  const bayesRating = (n*(ag.avgRating||4.0) + 8*4.2) / (n+8);
+  const trustScore = (bayesRating/5*0.6 + (ag.completionRate||0.9)*0.4) * 20;
+
+  // [D] キャパシティ 10点
+  const caps = {Platinum:99, Gold:12, Silver:8, Bronze:5};
+  const load = (ag.activeCases||0) / caps[ag.rank];
+  const capScore = load < 0.7 ? 10 : 10 * Math.pow(Math.max(0,1-load),2)/0.09;
+
+  // [E] 緊急度適合 10点
+  const urgency = aiAnalysis?.urgencyLevel || 5;
+  const respScore = Math.max(0, 1 - (ag.avgResponseMin||30)/60);
+  const urgScore = urgency >= 7 ? respScore * 10 : 7;
+
+  const total = closingPower + fitScore + trustScore + capScore + urgScore;
+
+  // Thompson Sampling
+  const alpha = (ag.closedCases||0) + 1;
+  const beta  = Math.max(1,(ag.totalCases||1)-(ag.closedCases||0)) + 1;
+  let ts = 0;
+  try {
+    const x = gamma(alpha), y = gamma(beta);
+    ts = x/(x+y);
+  } catch(e) { ts = 0.5; }
+
+  // 新人ボーナス
+  let bonus = 0;
+  if (ag.daysRegistered < 90 && ag.totalCases < 5) {
+    if (Math.random() < Math.max(0, 0.3 - ag.totalCases*0.06)) bonus = 10;
+  }
+
+  return {
+    ag, total: Math.min(100, total),
+    finalScore: Math.min(100, total) + bonus,
+    thompson: ts, bonus,
+  };
+}
+
+function gamma(a) {
+  if (a<1) return gamma(1+a)*Math.pow(Math.random(),1/a);
+  const d=a-1/3, c=1/Math.sqrt(9*d);
+  while(true){
+    let x,v;
+    do{ x=(Math.random()*2-1)*3.464; v=1+c*x; }while(v<=0);
+    v=v*v*v;
+    const u=Math.random();
+    if(u<1-0.331*(x*x)*(x*x)) return d*v;
+    if(Math.log(u)<0.5*x*x+d*(1-v+Math.log(v))) return d*v;
+  }
+}
+
+// ═══════════════════════════════════════════
+// AI Phase 2: 最終AG選定
+// ═══════════════════════════════════════════
+async function hrFinalRanking(scored, lead, aiAnalysis) {
+  const candidates = scored.slice(0,4).map(s=>({
+    id: s.ag.id, name: s.ag.name, rank: s.ag.rank,
+    algoScore: +s.finalScore.toFixed(1),
+    specialties: s.ag.specialties,
+    closedCases: s.ag.closedCases, activeCases: s.ag.activeCases,
+    avgRating: s.ag.avgRating, convRate: +(s.ag.recentConversionRate*100).toFixed(0)+'%',
+  }));
+
+  const prompt = `あなたはCOREBLDGの人材マッチング最終判定AIです。
+下記候補者に最適なHR-AGを1名選定してください。
+
+【候補者】
+${lead.name} / 希望: ${lead.targetJob} / 年収${lead.targetSalary}万〜
+スキル: ${lead.skills}
+AI解析: ${aiAnalysis?.summary||''} / 緊急度: ${aiAnalysis?.urgencyLevel||5}/10
+
+【AG候補（スコア順）】
+${JSON.stringify(candidates)}
+
+JSONのみ:
+{
+  "selectedAgId": "HR-XXXX",
+  "matchScore": 0〜100の整数,
+  "reason": "選定理由（1文）",
+  "expectedOutcome": "期待される展開（1文）",
+  "hqAlert": true or false,
+  "hqAlertReason": "HQ注意事項（不要ならnull）"
+}`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({model:'claude-sonnet-4-20250514', max_tokens:400,
+        messages:[{role:'user',content:prompt}]})
+    });
+    const data = await resp.json();
+    return JSON.parse((data.content?.find(b=>b.type==='text')?.text||'{}').replace(/```json|```/g,'').trim());
+  } catch(e) {
+    const top = scored[0];
+    return {selectedAgId: top.ag.id, matchScore: Math.round(top.finalScore),
+      reason:'アルゴリズム上位のAGを選定しました。', expectedOutcome:'適切な支援が期待されます。',
+      hqAlert:false, hqAlertReason:null};
+  }
+}
+
+// ═══════════════════════════════════════════
+// 全自動マッチングパイプライン
+// ═══════════════════════════════════════════
+async function autoMatchPipeline(leadId) {
+  const lead = HR_LEADS.find(l=>l.id===leadId);
+  if (!lead) return;
+
+  // Phase 1: AI案件解析
+  lead.status = 'analyzing';
+  renderLeadStatusBadge(leadId);
+
+  const aiAnalysis = await hrAnalyzeLead(lead);
+  lead._aiAnalysis = aiAnalysis;
+
+  // Phase 2: アルゴスコアリング
+  lead.status = 'scoring';
+  renderLeadStatusBadge(leadId);
+  await new Promise(r=>setTimeout(r,300));
+
+  const availableAgs = HR_AGENTS.filter(ag => {
+    const caps = {Platinum:99,Gold:12,Silver:8,Bronze:5};
+    return ag.status==='active' && (ag.activeCases||0) < caps[ag.rank];
+  });
+  const scored = availableAgs.map(ag => hrScoreAgent(ag, lead, aiAnalysis))
+    .sort((a,b) => (b.finalScore*0.75+b.thompson*30*0.25) - (a.finalScore*0.75+a.thompson*30*0.25));
+
+  // Phase 3: AI最終選定
+  lead.status = 'ai_ranking';
+  renderLeadStatusBadge(leadId);
+
+  const ranking = await hrFinalRanking(scored, lead, aiAnalysis);
+  const matchedAg = HR_AGENTS.find(a=>a.id===ranking.selectedAgId) || scored[0]?.ag;
+
+  // Phase 4: 自動確定
+  if (matchedAg) {
+    lead.status = 'matched';
+    lead.assignedAgId   = matchedAg.id;
+    lead.assignedAgName = matchedAg.name;
+    lead.matchScore     = ranking.matchScore;
+    lead.matchReason    = ranking.reason;
+    lead.matchedAt      = new Date().toLocaleDateString('ja-JP');
+    lead._hqAlert       = ranking.hqAlert;
+    lead._hqAlertReason = ranking.hqAlertReason;
+    matchedAg.activeCases = (matchedAg.activeCases||0) + 1;
+
+    // マッチング済み案件として CASES に追加
+    const exists = CASES.find(c=>c.id==='HRL-'+leadId);
+    if (!exists) {
+      CASES.unshift({
+        id: leadId, name: lead.name, age: lead.age||0,
+        email:'', tel:'',
+        currentJob: lead.currentJob, currentSalary: lead.currentSalary||0,
+        targetJob: lead.targetJob, targetSalary: lead.targetSalary||0,
+        skills: (lead.skills||'').split('、').map(s=>s.trim()).filter(Boolean),
+        experience: lead.experience||'',
+        step:0, status:'active',
+        ptCode: lead.ptCode, ptName: lead.ptName,
+        ag: matchedAg.name+'（HR-AG）', agId: matchedAg.id,
+        reg: lead.createdAt, lastUpdate: lead.matchedAt||today(),
+        note: lead.note||'',
+        companies:[], timeline:[
+          {date:lead.createdAt, step:'受付', note:`PT: ${lead.ptCode} ${lead.ptName} より紹介。`, type:'em'},
+          {date:lead.matchedAt||today(), step:'AG自動アサイン', note:`AIマッチングにより ${matchedAg.name} にアサイン（スコア: ${ranking.matchScore}点）。${ranking.reason}`, type:'vt'},
+        ],
+      });
+    }
+  } else {
+    lead.status = 'needs_hq';
+  }
+
+  renderLeadStatusBadge(leadId);
+  render();
+  toast(`✅ ${lead.name}さん → ${matchedAg?.name||'HQ対応'} に自動アサインしました`);
+}
+
+function renderLeadStatusBadge(leadId) {
+  const el = document.getElementById('lead-status-'+leadId);
+  if (!el) return;
+  const lead = HR_LEADS.find(l=>l.id===leadId);
+  if (!lead) return;
+  const meta = {
+    pending_ai: {label:'投稿受付', cls:'b-mu'},
+    analyzing:  {label:'AI解析中 ⏳', cls:'b-am'},
+    scoring:    {label:'スコアリング中 ⏳', cls:'b-am'},
+    ai_ranking: {label:'AI判定中 ⏳', cls:'b-vt'},
+    matched:    {label:'✅ AG確定', cls:'b-em'},
+    needs_hq:   {label:'⚠️ HQ対応', cls:'b-rd'},
+  };
+  const m = meta[lead.status]||{label:lead.status,cls:'b-mu'};
+  el.className = 'badge '+m.cls;
+  el.textContent = m.label;
+}
+
+// ═══════════════════════════════════════════
+// PT投稿フォーム送信
+// ═══════════════════════════════════════════
+function submitPTCase() {
+  const name    = document.getElementById('pt-name').value.trim();
+  const age     = document.getElementById('pt-age').value;
+  const cj      = document.getElementById('pt-current-job').value.trim();
+  const cs      = Number(document.getElementById('pt-current-salary').value)||0;
+  const tj      = document.getElementById('pt-target-job').value.trim();
+  const ts      = Number(document.getElementById('pt-target-salary').value)||0;
+  const skills  = document.getElementById('pt-skills').value.trim();
+  const exp     = document.getElementById('pt-exp').value.trim();
+  const note    = document.getElementById('pt-note').value.trim();
+  if (!name || !cj || !tj) { alert('氏名・現職・希望職種は必須です'); return; }
+
+  const id = 'HRL-' + String(HR_LEADS.length+1).padStart(3,'0');
+  const lead = {
+    id, ptCode:'PT-0015', ptName:'佐藤 健一',
+    name, age:Number(age)||0, currentJob:cj, currentSalary:cs,
+    targetJob:tj, targetSalary:ts, skills, experience:exp, note,
+    status:'pending_ai', assignedAgId:null, assignedAgName:null,
+    matchScore:null, matchReason:null, _aiAnalysis:null,
+    createdAt:today(), matchedAt:null,
+  };
+  HR_LEADS.push(lead);
+  closeModal('modal-pt-submit');
+  render();
+  toast('✅ 案件を投稿しました！AIマッチングを自動開始します');
+  // バックグラウンドでパイプライン起動
+  setTimeout(() => autoMatchPipeline(id), 600);
+}
 // ═══════════════════════════════════════════
 // UTILS
 // ═══════════════════════════════════════════
 function openModal(id)  { document.getElementById(id).classList.add('show'); }
 function closeModal(id) { document.getElementById(id).classList.remove('show'); }
 function today() { return new Date().toLocaleDateString('ja-JP',{year:'numeric',month:'2-digit',day:'2-digit'}).replace(/\//g,'/'); }
-function render() { renderKPI(); filterCases(); }
+function render() {
+  if (ROLE === 'pt') { renderPTView(); return; }
+  if (ROLE === 'hq') { renderHQView(); }
+  renderKPI(); filterCases();
+}
+
+function renderPTView() {
+  document.getElementById('kpi-area').innerHTML = '';
+  document.getElementById('case-list-area').innerHTML = `
+    <div style="margin-bottom:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="font-size:13px;font-weight:700;color:var(--ink)">📤 投稿した案件</div>
+        <button class="btn btn-p btn-sm" onclick="openModal('modal-pt-submit')">＋ 新規投稿</button>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:12px;padding:10px 12px;background:var(--em-bg);border-radius:var(--r-sm)">
+        🤖 投稿後、AIが自動でHR-AGをマッチングします。通常30秒以内に担当AGが確定します。
+      </div>
+      ${HR_LEADS.map(l => {
+        const meta = {
+          pending_ai:{label:'受付済み',cls:'b-mu'},
+          analyzing:{label:'AI解析中 ⏳',cls:'b-am'},
+          scoring:{label:'スコアリング中 ⏳',cls:'b-am'},
+          ai_ranking:{label:'AI判定中 ⏳',cls:'b-vt'},
+          matched:{label:'✅ AG確定',cls:'b-em'},
+          needs_hq:{label:'⚠️ HQ確認中',cls:'b-rd'},
+        };
+        const m = meta[l.status]||{label:l.status,cls:'b-mu'};
+        return `<div style="background:var(--white);border:1px solid var(--bd);border-radius:var(--r);padding:14px 16px;margin-bottom:10px;box-shadow:var(--sh)">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+            <div style="flex:1">
+              <div style="font-weight:700;font-size:14px">${l.name} <span style="font-size:11px;color:var(--muted);font-weight:400">${l.age||''}歳</span></div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px">${l.currentJob} → <span style="color:var(--vt);font-weight:600">${l.targetJob}</span></div>
+              <div style="font-size:11px;color:var(--em);margin-top:2px">希望年収: ${l.targetSalary}万円〜</div>
+            </div>
+            <div style="text-align:right;flex-shrink:0">
+              <span class="badge ${m.cls}" id="lead-status-${l.id}">${m.label}</span>
+              <div style="font-size:10px;color:var(--faint);font-family:'DM Mono',monospace;margin-top:4px">${l.id}</div>
+            </div>
+          </div>
+          ${l.status==='matched' ? `
+          <div style="margin-top:10px;padding:10px 12px;background:var(--em-bg);border-radius:var(--r-sm);display:flex;align-items:center;gap:10px">
+            <div style="font-size:18px">🏘️</div>
+            <div>
+              <div style="font-size:12px;font-weight:700;color:var(--em)">担当AG: ${l.assignedAgName}</div>
+              <div style="font-size:10px;color:var(--muted);margin-top:2px">${l.matchReason||''}</div>
+            </div>
+            ${l.matchScore ? `<div style="margin-left:auto;text-align:center"><div style="font-size:18px;font-weight:700;color:var(--em)">${l.matchScore}</div><div style="font-size:9px;color:var(--faint)">適合スコア</div></div>` : ''}
+          </div>` : ''}
+          ${l._aiAnalysis?.summary ? `<div style="margin-top:8px;font-size:10px;color:var(--faint)">🤖 ${l._aiAnalysis.summary}</div>` : ''}
+          <div style="margin-top:6px;font-size:10px;color:var(--faint);font-family:'DM Mono',monospace">投稿: ${l.createdAt}</div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+function renderHQView() {
+  const alerts = HR_LEADS.filter(l=>l._hqAlert||l.status==='needs_hq');
+  if (!alerts.length) return;
+  const box = document.getElementById('hq-alert-box') || (() => {
+    const d = document.createElement('div');
+    d.id = 'hq-alert-box';
+    document.getElementById('page').prepend(d);
+    return d;
+  })();
+  box.innerHTML = `<div style="background:var(--rd-bg);border:1px solid rgba(220,38,38,.2);border-radius:var(--r);padding:12px 16px;margin-bottom:14px">
+    <div style="font-size:11px;font-weight:700;color:var(--rd);margin-bottom:8px">⚠️ HQ確認が必要な案件（${alerts.length}件）</div>
+    ${alerts.map(l=>`<div style="font-size:12px;color:var(--ink);padding:4px 0;border-bottom:1px solid var(--bd)">${l.name} — ${l._hqAlertReason||'AGが見つかりませんでした'}</div>`).join('')}
+  </div>`;
+}
+
 function toast(msg,type='ok') {
   let t=document.getElementById('_toast');
   if(!t){t=document.createElement('div');t.id='_toast';Object.assign(t.style,{position:'fixed',bottom:'24px',left:'50%',transform:'translateX(-50%) translateY(10px)',padding:'10px 20px',borderRadius:'8px',fontSize:'13px',fontWeight:'600',zIndex:'9999',opacity:'0',transition:'all .25s',fontFamily:"'Outfit',sans-serif",boxShadow:'0 4px 20px rgba(0,0,0,.25)',whiteSpace:'nowrap'});document.body.appendChild(t);}
@@ -1007,5 +1456,44 @@ window.addEventListener('DOMContentLoaded', () => {
   render();
 });
 </script>
+
+<!-- MODAL: PT 案件投稿 -->
+<div class="modal-bg" id="modal-pt-submit" onclick="if(event.target===this)closeModal('modal-pt-submit')">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <div class="modal-title">📤 人材案件を投げる</div>
+        <div style="font-size:10px;color:var(--em);margin-top:2px">🤖 投稿後、AIが自動でHR-AGをマッチングします</div>
+      </div>
+      <button class="modal-close" onclick="closeModal('modal-pt-submit')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="padding:10px 12px;background:var(--cream2);border-radius:var(--r-sm);margin-bottom:12px;font-size:11px;color:var(--muted)">
+        転職を希望するクライアントの情報を入力してください。担当HR-AGを自動でアサインします。
+      </div>
+      <div class="field-row">
+        <div class="field"><label>氏名</label><input id="pt-name" placeholder="田中 智也"></div>
+        <div class="field"><label>年齢</label><input type="number" id="pt-age" placeholder="32"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>現職</label><input id="pt-current-job" placeholder="SaaS営業 / 株式会社〇〇"></div>
+        <div class="field"><label>現年収（万円）</label><input type="number" id="pt-current-salary" placeholder="520"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>希望職種</label><input id="pt-target-job" placeholder="営業マネージャー"></div>
+        <div class="field"><label>希望年収（万円〜）</label><input type="number" id="pt-target-salary" placeholder="700"></div>
+      </div>
+      <div class="field"><label>スキル・経験（読点区切り）</label><input id="pt-skills" placeholder="SaaS営業、法人営業、CRM、マネジメント"></div>
+      <div class="field-row">
+        <div class="field"><label>経験年数</label><input id="pt-exp" placeholder="8年"></div>
+      </div>
+      <div class="field"><label>備考・転職理由・NG条件</label><textarea id="pt-note" placeholder="リモート必須・3月末に決めたい 等" style="height:60px;resize:none"></textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-g" onclick="closeModal('modal-pt-submit')">キャンセル</button>
+      <button class="btn btn-p" onclick="submitPTCase()">🤖 投稿してAIマッチングを開始</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
