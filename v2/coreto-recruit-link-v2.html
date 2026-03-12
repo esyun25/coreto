@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>リクルートリンク発行 — COREBLDG</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+:root{--navy:#0D1A2D;--navy-l:#1E3252;--gold:#C8A951;--gold-dim:rgba(200,169,81,.15);--cream:#FFFFFF;--cream2:#F8F9FA;--ink:#202124;--muted:#5F6368;--faint:#80868B;--em:#059669;--em-bg:#ECFDF5;--am:#D97706;--am-bg:#FFFBEB;--rd:#DC2626;--rd-bg:#FEF2F2;--sk:#0284C7;--sk-bg:#F0F9FF;--bd:#E8EAED;--bd2:#DADCE0;--sw:240px;--r:10px;--sh:0 1px 2px rgba(60,64,67,.1),0 1px 3px rgba(60,64,67,.06)}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:#fff}
+.shell{display:flex;height:100vh}
+/* サイドバー */
+.sb{width:var(--sw);background:var(--navy);display:flex;flex-direction:column;flex-shrink:0;position:relative}
+.sb::after{content:'';position:absolute;top:0;right:0;width:1px;height:100%;background:linear-gradient(180deg,transparent,rgba(200,169,81,.2),transparent)}
+.sb-head{padding:20px 18px 14px;border-bottom:1px solid rgba(255,255,255,.07)}
+.sb-logo{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:var(--gold);letter-spacing:2px;line-height:1.2}
+.sb-ver{font-size:9px;color:rgba(255,255,255,.25);margin-top:4px}
+.sb-user{display:flex;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid rgba(255,255,255,.07)}
+.sb-av{width:32px;height:32px;border-radius:50%;background:rgba(200,169,81,.2);border:1.5px solid rgba(200,169,81,.4);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--gold);flex-shrink:0}
+.sb-nav{flex:1;overflow-y:auto;padding:10px 0}
+/* メインエリア */
+.content{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.topbar{display:flex;align-items:center;gap:12px;padding:0 24px;height:56px;border-bottom:1px solid var(--bd);background:#fff;flex-shrink:0}
+.mob-ham{display:none;flex-direction:column;gap:5px;background:none;border:none;cursor:pointer;padding:4px}
+.mob-ham span{display:block;width:20px;height:2px;background:var(--ink);border-radius:2px}
+.tb-title{font-size:15px;font-weight:700;color:var(--ink)}
+.tb-crumb{font-size:10px;color:var(--muted)}
+.tb-crumb a{color:var(--muted);text-decoration:none}
+.page{flex:1;overflow-y:auto;padding:24px;background:var(--cream2)}
+/* ボタン */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Outfit','Noto Sans JP',sans-serif;transition:.15s;border:none}
+.btn-primary{background:var(--navy);color:#fff}
+.btn-primary:hover{opacity:.9}
+.btn-ghost{background:transparent;color:var(--ink);border:1.5px solid var(--bd)}
+.btn-ghost:hover{background:var(--cream2)}
+.btn-gold{background:var(--gold);color:var(--navy);font-weight:700}
+.btn-sm{padding:5px 12px;font-size:11px}
+/* バッジ */
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700}
+.b-gold{background:var(--gold-dim);color:#92610A}
+.b-em{background:var(--em-bg);color:var(--em)}
+.b-sk{background:var(--sk-bg);color:var(--sk)}
+.b-nt{background:#F3F4F6;color:#374151}
+/* カード */
+.sec{background:#fff;border:1px solid var(--bd);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden;margin-bottom:16px}
+.sec-head{padding:13px 18px;border-bottom:1px solid var(--bd);background:var(--cream2);display:flex;align-items:center;justify-content:space-between}
+.sec-title{font-size:12px;font-weight:700;color:var(--ink);text-transform:uppercase;letter-spacing:.5px}
+/* メインレイアウト */
+.main-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+/* 発行パネル */
+.issue-panel{padding:20px}
+.form-label{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.3px;display:block;margin-bottom:5px}
+.form-input{width:100%;padding:10px 12px;border:1.5px solid var(--bd);border-radius:7px;font-size:13px;color:var(--ink);font-family:'Outfit','Noto Sans JP',sans-serif;outline:none;transition:.15s;background:#fff}
+.form-input:focus{border-color:var(--navy);box-shadow:0 0 0 3px rgba(13,26,45,.07)}
+select.form-input{cursor:pointer}
+/* QRコード表示エリア */
+.qr-result{display:none;border:1px solid var(--bd);border-radius:var(--r);padding:20px;text-align:center;background:#fff}
+.qr-result.show{display:block}
+.qr-box{width:160px;height:160px;margin:0 auto 14px;background:var(--cream2);border-radius:8px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.url-display{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);background:var(--cream2);border:1px solid var(--bd);border-radius:6px;padding:8px 12px;word-break:break-all;text-align:left;margin-bottom:12px;line-height:1.6}
+.copy-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+/* 履歴テーブル */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{padding:9px 14px;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--bd);text-align:left;background:var(--cream2);white-space:nowrap}
+.tbl td{padding:11px 14px;border-bottom:1px solid var(--bd);font-size:12px;color:var(--ink);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:rgba(13,26,45,.02)}
+.mono{font-family:'DM Mono',monospace;font-size:10px;color:var(--faint)}
+/* 統計カード */
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+.stat-card{background:#fff;border:1px solid var(--bd);border-radius:var(--r);padding:16px;box-shadow:var(--sh);text-align:center}
+.stat-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px}
+.stat-val{font-size:26px;font-weight:300;color:var(--ink);font-variant-numeric:tabular-nums}
+.stat-sub{font-size:10px;color:var(--muted);margin-top:4px}
+/* モバイル */
+.mob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:99}
+@media(max-width:900px){
+  .mob-ham{display:flex}
+  .sb{position:fixed;left:-100%;top:0;bottom:0;z-index:100;transition:.25s}
+  .sb.open{left:0}
+  .mob-overlay.show{display:block}
+  .main-grid{grid-template-columns:1fr}
+  .stat-grid{grid-template-columns:1fr 1fr}
+  .copy-btns{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+<nav class="sb">
+  <div class="sb-head">
+    <div class="sb-logo">CORE<br>BLDG</div>
+    <div class="sb-ver">v2.0 — CORETO</div>
+  </div>
+  <div class="sb-user">
+    <div class="sb-av" id="sb-av">AG</div>
+    <div>
+      <div id="sb-name" style="font-size:11px;font-weight:600;color:rgba(255,255,255,.8)">—</div>
+      <div id="sb-id" style="font-size:9px;color:rgba(255,255,255,.3);font-family:'DM Mono',monospace">—</div>
+    </div>
+  </div>
+  <div class="sb-nav" id="sb-nav"></div>
+</nav>
+
+<div class="content">
+  <div class="topbar">
+    <button class="mob-ham" onclick="toggleSb()"><span></span><span></span><span></span></button>
+    <div>
+      <div class="tb-title">リクルートリンク発行</div>
+      <div class="tb-crumb"><a href="coreto-hub-v2.html">COREBLDG</a> › リクルートリンク発行</div>
+    </div>
+    <div style="margin-left:auto">
+      <button class="btn btn-ghost btn-sm" onclick="window.open('coreto-apply-v2.html','_blank')">
+        📋 応募フォームを確認
+      </button>
+    </div>
+  </div>
+
+  <div class="page">
+    <!-- 統計 -->
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-label">発行リンク数</div>
+        <div class="stat-val" id="stat-links">0</div>
+        <div class="stat-sub">累計</div>
+      </div>
+      <div class="stat-card" style="border-color:rgba(5,150,105,.2)">
+        <div class="stat-label">経由応募数</div>
+        <div class="stat-val" id="stat-applies" style="color:var(--em)">—</div>
+        <div class="stat-sub">※Kintone連携後に反映</div>
+      </div>
+      <div class="stat-card" style="border-color:rgba(200,169,81,.3)">
+        <div class="stat-label">経由合格数</div>
+        <div class="stat-val" id="stat-passed" style="color:#92610A">—</div>
+        <div class="stat-sub">※Kintone連携後に反映</div>
+      </div>
+    </div>
+
+    <div class="main-grid">
+      <!-- 発行パネル -->
+      <div class="sec">
+        <div class="sec-head">
+          <div class="sec-title">🔗 リンクを発行する</div>
+        </div>
+        <div class="issue-panel">
+          <!-- 用途 -->
+          <div style="margin-bottom:14px">
+            <label class="form-label">用途 / リンク名 <span style="color:var(--rd)">*</span></label>
+            <input id="link-label" class="form-input" placeholder="例：名刺QR、Instagram用、勉強会配布">
+          </div>
+          <!-- 応募職種フィルタ -->
+          <div style="margin-bottom:14px">
+            <label class="form-label">誘導する職種</label>
+            <select id="link-role" class="form-input">
+              <option value="">指定なし（全種別を表示）</option>
+              <option value="ag-re">不動産AG（RE）のみ</option>
+              <option value="ag-hr">人材AG（HR）のみ</option>
+              <option value="pt">パートナー（PT）のみ</option>
+            </select>
+            <div style="font-size:10px;color:var(--faint);margin-top:4px">
+              指定すると応募フォームで該当職種が初期選択された状態で開きます
+            </div>
+          </div>
+          <!-- メモ -->
+          <div style="margin-bottom:18px">
+            <label class="form-label">メモ <span style="color:var(--faint);font-weight:400">（任意）</span></label>
+            <input id="link-memo" class="form-input" placeholder="例：2026年3月 不動産フェア配布用">
+          </div>
+          <button class="btn btn-primary" style="width:100%;justify-content:center;padding:11px"
+            onclick="generateLink()">
+            ＋ リンクを発行する
+          </button>
+        </div>
+      </div>
+
+      <!-- QR・URL表示 -->
+      <div class="sec">
+        <div class="sec-head">
+          <div class="sec-title">📱 QRコード / URL</div>
+          <div id="result-badge" style="display:none"></div>
+        </div>
+        <div style="padding:20px">
+          <div id="qr-placeholder" style="text-align:center;padding:40px 20px;color:var(--muted)">
+            <div style="font-size:36px;margin-bottom:10px">🔗</div>
+            <div style="font-size:12px">左のフォームに入力して<br>リンクを発行すると表示されます</div>
+          </div>
+          <div class="qr-result" id="qr-result">
+            <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:12px;
+              text-align:left">発行したリンク</div>
+            <div class="qr-box" id="qr-box"></div>
+            <div style="font-size:10px;color:var(--muted);margin-bottom:12px">
+              スマートフォンでQRを読み取ると応募フォームが開きます
+            </div>
+            <div class="url-display" id="url-display"></div>
+            <div class="copy-btns">
+              <button class="btn btn-ghost" style="justify-content:center" onclick="copyUrl()">
+                📋 URLをコピー
+              </button>
+              <button class="btn btn-ghost" style="justify-content:center" onclick="downloadQR()">
+                ⬇️ QRをダウンロード
+              </button>
+            </div>
+            <button class="btn btn-gold" style="width:100%;justify-content:center" onclick="shareLink()">
+              📤 共有する
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 発行履歴 -->
+    <div class="sec">
+      <div class="sec-head">
+        <div class="sec-title">📋 発行履歴</div>
+        <button class="btn btn-ghost btn-sm" onclick="clearHistory()">🗑 履歴をクリア</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th>発行日時</th>
+              <th>用途 / リンク名</th>
+              <th>職種指定</th>
+              <th>紹介コード</th>
+              <th>メモ</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="history-tbody">
+            <tr id="empty-row">
+              <td colspan="6" style="text-align:center;padding:28px;color:var(--muted)">
+                まだリンクが発行されていません
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="mob-overlay" onclick="toggleSb()"></div>
+<div id="rl-toast" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--navy);color:#fff;padding:10px 20px;border-radius:8px;font-size:12px;font-weight:600;opacity:0;transition:.3s;z-index:999;pointer-events:none;white-space:nowrap"></div>
+
+<script src="coreto-nav-v2.js"></script>
+<script>
+function toggleSb(){ document.querySelector('.sb').classList.toggle('open'); document.querySelector('.mob-overlay')?.classList.toggle('show'); }
+function showToast(msg, type){
+  const t = document.getElementById('rl-toast');
+  t.textContent = msg;
+  t.style.background = type === 'err' ? 'var(--rd)' : 'var(--navy)';
+  t.style.opacity = '1'; t.style.transform = 'translateX(-50%) translateY(0)';
+  setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateX(-50%) translateY(10px)'; }, 3000);
+}
+
+// ── セッション・ユーザー情報 ──────────────────────────────
+const SESSION = { name:'山田 誠', type:'re_ag', userId:'AG-0042' }; // デモ値（実運用: CNAV.session()）
+const ROLE_LABEL = { 'ag-re':'不動産AG（RE）', 'ag-hr':'人材AG（HR）', 'pt':'PT', '':'全種別' };
+const BASE_URL = location.href.replace(/[^/]*$/, '') + 'coreto-apply-v2.html';
+
+// ── 履歴データ ────────────────────────────────────────────
+let HISTORY = [];
+let _currentUrl = '';
+
+// ── リンク発行 ────────────────────────────────────────────
+function generateLink() {
+  const label = document.getElementById('link-label').value.trim();
+  const role  = document.getElementById('link-role').value;
+  const memo  = document.getElementById('link-memo').value.trim();
+
+  if (!label) {
+    document.getElementById('link-label').style.borderColor = 'var(--rd)';
+    showToast('⚠️ 用途・リンク名を入力してください', 'err');
+    return;
+  }
+  document.getElementById('link-label').style.borderColor = '';
+
+  const refCode = SESSION.userId; // AG-0042 など
+  const params  = new URLSearchParams({ ref: refCode });
+  if (role) params.set('role', role);
+
+  const url = `${BASE_URL}?${params.toString()}`;
+  _currentUrl = url;
+
+  // QRコード生成
+  const qrBox = document.getElementById('qr-box');
+  qrBox.innerHTML = '';
+  new QRCode(qrBox, {
+    text: url,
+    width: 148,
+    height: 148,
+    colorDark: '#0D1A2D',
+    colorLight: '#ffffff',
+    correctLevel: QRCode.CorrectLevel.M,
+  });
+
+  document.getElementById('url-display').textContent = url;
+  document.getElementById('qr-placeholder').style.display = 'none';
+  document.getElementById('qr-result').classList.add('show');
+
+  const roleText = ROLE_LABEL[role] || '全種別';
+  document.getElementById('result-badge').style.display = '';
+  document.getElementById('result-badge').innerHTML =
+    `<span class="badge b-gold" style="font-size:9px">${roleText}</span>`;
+
+  // 履歴に追加
+  const entry = {
+    id: 'RL-' + Date.now().toString().slice(-6),
+    datetime: new Date().toLocaleString('ja-JP', {month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}),
+    label,
+    role,
+    refCode,
+    memo,
+    url,
+  };
+  HISTORY.unshift(entry);
+  renderHistory();
+  updateStats();
+  showToast('✅ リンクを発行しました');
+
+  // フォームリセット
+  document.getElementById('link-label').value = '';
+  document.getElementById('link-memo').value = '';
+}
+
+// ── QR操作 ───────────────────────────────────────────────
+function copyUrl() {
+  if (!_currentUrl) return;
+  navigator.clipboard.writeText(_currentUrl).then(() => showToast('📋 URLをコピーしました'));
+}
+
+function downloadQR() {
+  const canvas = document.querySelector('#qr-box canvas');
+  const img    = document.querySelector('#qr-box img');
+  if (canvas) {
+    const a = document.createElement('a');
+    a.download = `CORETO_QR_${SESSION.userId}_${Date.now()}.png`;
+    a.href = canvas.toDataURL('image/png');
+    a.click();
+    showToast('⬇️ QRコードをダウンロードしました');
+  } else if (img) {
+    // QRCode.jsがimg要素を生成した場合
+    const a = document.createElement('a');
+    a.download = `CORETO_QR_${SESSION.userId}_${Date.now()}.png`;
+    a.href = img.src;
+    a.click();
+    showToast('⬇️ QRコードをダウンロードしました');
+  } else {
+    showToast('QRの生成中です。少し待ってから再試行してください', 'err');
+  }
+}
+
+function shareLink() {
+  if (!_currentUrl) return;
+  if (navigator.share) {
+    navigator.share({ title:'CORETOエージェント募集', text:'CORETOでエージェント活動してみませんか？', url: _currentUrl });
+  } else {
+    copyUrl();
+    showToast('📋 URLをコピーしました（このブラウザは共有APIに未対応）');
+  }
+}
+
+// ── 履歴描画 ─────────────────────────────────────────────
+function renderHistory() {
+  const tbody = document.getElementById('history-tbody');
+  const empty = document.getElementById('empty-row');
+  if (empty) empty.remove();
+
+  // 再描画（既存行を一旦クリア）
+  tbody.innerHTML = '';
+
+  if (!HISTORY.length) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:28px;color:var(--muted)">
+      まだリンクが発行されていません</td></tr>`;
+    return;
+  }
+
+  HISTORY.forEach(h => {
+    const roleText = ROLE_LABEL[h.role] || '全種別';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="font-size:11px;color:var(--muted);white-space:nowrap">${h.datetime}</td>
+      <td style="font-weight:600">${h.label}</td>
+      <td><span class="badge b-nt" style="font-size:9px">${roleText}</span></td>
+      <td class="mono">${h.refCode}</td>
+      <td style="font-size:11px;color:var(--muted)">${h.memo||'—'}</td>
+      <td>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-ghost btn-sm" onclick="copyHistoryUrl('${h.id}')">📋 コピー</button>
+          <button class="btn btn-ghost btn-sm" onclick="reGenQR('${h.id}')">📱 QR表示</button>
+        </div>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function copyHistoryUrl(id) {
+  const h = HISTORY.find(x=>x.id===id);
+  if (!h) return;
+  navigator.clipboard.writeText(h.url).then(() => showToast('📋 URLをコピーしました'));
+}
+
+function reGenQR(id) {
+  const h = HISTORY.find(x=>x.id===id);
+  if (!h) return;
+  _currentUrl = h.url;
+  const qrBox = document.getElementById('qr-box');
+  qrBox.innerHTML = '';
+  new QRCode(qrBox, {
+    text: h.url, width:148, height:148,
+    colorDark:'#0D1A2D', colorLight:'#ffffff',
+    correctLevel: QRCode.CorrectLevel.M,
+  });
+  document.getElementById('url-display').textContent = h.url;
+  document.getElementById('qr-placeholder').style.display = 'none';
+  document.getElementById('qr-result').classList.add('show');
+  document.getElementById('result-badge').style.display = '';
+  document.getElementById('result-badge').innerHTML =
+    `<span class="badge b-gold" style="font-size:9px">${ROLE_LABEL[h.role]||'全種別'}</span>`;
+  showToast(`📱 「${h.label}」のQRを表示しました`);
+  window.scrollTo({ top:0, behavior:'smooth' });
+}
+
+function clearHistory() {
+  if (!HISTORY.length) return;
+  if (!confirm('発行履歴をすべて削除しますか？')) return;
+  HISTORY = [];
+  _currentUrl = '';
+  document.getElementById('qr-result').classList.remove('show');
+  document.getElementById('qr-placeholder').style.display = '';
+  document.getElementById('result-badge').style.display = 'none';
+  renderHistory();
+  updateStats();
+  showToast('🗑 履歴をクリアしました');
+}
+
+function updateStats() {
+  document.getElementById('stat-links').textContent = HISTORY.length;
+}
+
+// ── 初期化 ────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  // ユーザー情報をサイドバーに反映
+  const av = document.getElementById('sb-av');
+  const nm = document.getElementById('sb-name');
+  const si = document.getElementById('sb-id');
+  if (av) av.textContent = SESSION.type === 'hq' ? 'HQ' : 'AG';
+  if (nm) nm.textContent = SESSION.name;
+  if (si) si.textContent = SESSION.userId;
+
+  // サンプル履歴（デモ）
+  HISTORY = [
+    { id:'RL-001', datetime:'3/10 09:22', label:'名刺QRコード用', role:'ag-re',
+      refCode:SESSION.userId, memo:'不動産フェア 2026春', url:`${BASE_URL}?ref=${SESSION.userId}&role=ag-re` },
+    { id:'RL-002', datetime:'3/8 14:45', label:'Instagram プロフィールリンク', role:'',
+      refCode:SESSION.userId, memo:'', url:`${BASE_URL}?ref=${SESSION.userId}` },
+  ];
+  renderHistory();
+  updateStats();
+  CNAV.init('recruit_link');
+});
+</script>
+</body>
+</html>

@@ -99,6 +99,7 @@ const NAV = {
       { icon:'🤝', label:'PT管理',                 href:'coreto-hub-v2.html#pt_mgmt',  key:'pt_mgmt' },
       { icon:'🎓', label:'インターン管理',          href:'coreto-intern-v2.html',       key:'intern' },
       { icon:'📝', label:'応募者管理',               href:'coreto-applicants-v2.html',   key:'applicants' },
+      { icon:'🔗', label:'リクルートリンク発行',     href:'coreto-recruit-link-v2.html', key:'recruit_link' },
       { icon:'📨', label:'AG招待・新規登録',          href:'coreto-agent-signup-v2.html', key:'agent_invite' },
       { icon:'📨', label:'PT招待・新規登録',          href:'coreto-partner-signup-v2.html',key:'pt_invite' },
     ]},
@@ -145,6 +146,7 @@ const NAV = {
       { icon:'🪪', label:'eKYC・口座登録',         href:'coreto-kyc-v2.html',          key:'kyc' },
       { icon:'📚', label:'マニュアル・FAQ',       href:'coreto-faq-v2.html',          key:'faq' },
       { icon:'📲', label:'LINE再連携',             href:'coreto-hub-v2.html#line_relink', key:'line_relink' },
+      { icon:'🔗', label:'リクルートリンク発行',   href:'coreto-recruit-link-v2.html', key:'recruit_link' },
     ]},
   ],
   hr_ag: [
@@ -167,6 +169,7 @@ const NAV = {
     { section:'ツール', items:[
       { icon:'📚', label:'マニュアル・FAQ',       href:'coreto-faq-v2.html',          key:'faq' },
       { icon:'📲', label:'LINE再連携',             href:'coreto-hub-v2.html#line_relink', key:'line_relink' },
+      { icon:'🔗', label:'リクルートリンク発行',   href:'coreto-recruit-link-v2.html', key:'recruit_link' },
     ]},
   ],
   pt: [
