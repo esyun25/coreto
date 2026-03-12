@@ -1276,46 +1276,79 @@ async function autoMatchPipeline(leadId) {
   const ranking = await hrFinalRanking(scored, lead, aiAnalysis);
   const matchedAg = HR_AGENTS.find(a=>a.id===ranking.selectedAgId) || scored[0]?.ag;
 
-  // Phase 4: 自動確定
-  if (matchedAg) {
-    lead.status = 'matched';
-    lead.assignedAgId   = matchedAg.id;
-    lead.assignedAgName = matchedAg.name;
-    lead.matchScore     = ranking.matchScore;
-    lead.matchReason    = ranking.reason;
-    lead.matchedAt      = new Date().toLocaleDateString('ja-JP');
-    lead._hqAlert       = ranking.hqAlert;
-    lead._hqAlertReason = ranking.hqAlertReason;
-    matchedAg.activeCases = (matchedAg.activeCases||0) + 1;
-
-    // マッチング済み案件として CASES に追加
-    const exists = CASES.find(c=>c.id==='HRL-'+leadId);
-    if (!exists) {
-      CASES.unshift({
-        id: leadId, name: lead.name, age: lead.age||0,
-        email:'', tel:'',
-        currentJob: lead.currentJob, currentSalary: lead.currentSalary||0,
-        targetJob: lead.targetJob, targetSalary: lead.targetSalary||0,
-        skills: (lead.skills||'').split('、').map(s=>s.trim()).filter(Boolean),
-        experience: lead.experience||'',
-        step:0, status:'active',
-        ptCode: lead.ptCode, ptName: lead.ptName,
-        ag: matchedAg.name+'（HR-AG）', agId: matchedAg.id,
-        reg: lead.createdAt, lastUpdate: lead.matchedAt||today(),
-        note: lead.note||'',
-        companies:[], timeline:[
-          {date:lead.createdAt, step:'受付', note:`PT: ${lead.ptCode} ${lead.ptName} より紹介。`, type:'em'},
-          {date:lead.matchedAt||today(), step:'AG自動アサイン', note:`AIマッチングにより ${matchedAg.name} にアサイン（スコア: ${ranking.matchScore}点）。${ranking.reason}`, type:'vt'},
-        ],
-      });
+  // Phase 4: 上位3名に通知 → 先着Uber方式
+  if (scored.length > 0) {
+    // AI選定結果 + アルゴ上位でTop3に絞る
+    const notifyIds = new Set();
+    // まずAIが選定したAGを先頭に
+    if (ranking.selectedAgId) notifyIds.add(ranking.selectedAgId);
+    // アルゴ上位を補完してTop3まで
+    for (const s of scored) {
+      if (notifyIds.size >= 3) break;
+      notifyIds.add(s.ag.id);
     }
+    lead._notifiedAgIds   = [...notifyIds];
+    lead._notifiedAgNames = [...notifyIds].map(id => HR_AGENTS.find(a=>a.id===id)?.name||id);
+    lead._topMatchScore   = ranking.matchScore;
+    lead._topMatchReason  = ranking.reason;
+    lead._hqAlert         = ranking.hqAlert;
+    lead._hqAlertReason   = ranking.hqAlertReason;
+    lead.status = 'waiting_ag'; // 掲示板掲載中・AG応答待ち
   } else {
     lead.status = 'needs_hq';
   }
 
   renderLeadStatusBadge(leadId);
   render();
-  toast(`✅ ${lead.name}さん → ${matchedAg?.name||'HQ対応'} に自動アサインしました`);
+  const names = lead._notifiedAgNames?.join('・') || '—';
+  toast(`📢 ${lead.name}さんの案件を ${names} に通知しました。先着受付待ち中。`);
+}
+
+// ═══════════════════════════════════════════
+// AG が「対応する」を押した時の処理
+// ═══════════════════════════════════════════
+function hrAgAccept(leadId) {
+  const lead = HR_LEADS.find(l=>l.id===leadId);
+  if (!lead || lead.status !== 'waiting_ag') return;
+
+  // デモ: ロールがAGなので現在のAGがアサインされる
+  const currentAg = HR_AGENTS.find(a=>a.id==='HR-0012') || HR_AGENTS[0];
+  // 通知済みAGでなければ拒否
+  if (lead._notifiedAgIds && !lead._notifiedAgIds.includes(currentAg.id)) {
+    toast('この案件の通知を受けていません', 'warn'); return;
+  }
+
+  lead.status        = 'matched';
+  lead.assignedAgId  = currentAg.id;
+  lead.assignedAgName= currentAg.name;
+  lead.matchedAt     = today();
+  currentAg.activeCases = (currentAg.activeCases||0) + 1;
+
+  // AGの案件管理（CASES）に追加
+  CASES.unshift({
+    id: leadId, name: lead.name, age: lead.age||0,
+    email:'', tel:'',
+    currentJob: lead.currentJob, currentSalary: lead.currentSalary||0,
+    targetJob: lead.targetJob, targetSalary: lead.targetSalary||0,
+    skills: (lead.skills||'').split('、').map(s=>s.trim()).filter(Boolean),
+    experience: lead.experience||'',
+    step:1, status:'active',
+    ptCode: lead.ptCode, ptName: lead.ptName,
+    ag: currentAg.name+'（HR-AG）', agId: currentAg.id,
+    reg: lead.createdAt, lastUpdate: today(),
+    note: lead.note||'',
+    companies:[], timeline:[
+      {date:lead.createdAt,    step:'受付',         note:`PT: ${lead.ptCode} ${lead.ptName} より紹介。`, type:'em'},
+      {date:lead.matchedAt,    step:'AG引受け',      note:`${currentAg.name} が先着で対応を引き受けました。AIスコア: ${lead._topMatchScore||'—'}点。`, type:'vt'},
+    ],
+  });
+
+  render();
+  toast(`✅ 「${lead.name}」の対応を引き受けました！クライアント情報が開示されました。`);
+}
+
+function hrAgPass(leadId) {
+  toast('⏭ パスしました。他のAGに引き続き通知されます。', 'warn');
 }
 
 function renderLeadStatusBadge(leadId) {
@@ -1324,12 +1357,13 @@ function renderLeadStatusBadge(leadId) {
   const lead = HR_LEADS.find(l=>l.id===leadId);
   if (!lead) return;
   const meta = {
-    pending_ai: {label:'投稿受付', cls:'b-mu'},
-    analyzing:  {label:'AI解析中 ⏳', cls:'b-am'},
-    scoring:    {label:'スコアリング中 ⏳', cls:'b-am'},
-    ai_ranking: {label:'AI判定中 ⏳', cls:'b-vt'},
-    matched:    {label:'✅ AG確定', cls:'b-em'},
-    needs_hq:   {label:'⚠️ HQ対応', cls:'b-rd'},
+    pending_ai:  {label:'投稿受付',       cls:'b-mu'},
+    analyzing:   {label:'AI解析中 ⏳',    cls:'b-am'},
+    scoring:     {label:'スコアリング ⏳', cls:'b-am'},
+    ai_ranking:  {label:'AI判定中 ⏳',    cls:'b-vt'},
+    waiting_ag:  {label:'📢 AG応答待ち',  cls:'b-sk'},
+    matched:     {label:'✅ AG確定',       cls:'b-em'},
+    needs_hq:    {label:'⚠️ HQ対応',      cls:'b-rd'},
   };
   const m = meta[lead.status]||{label:lead.status,cls:'b-mu'};
   el.className = 'badge '+m.cls;
@@ -1377,6 +1411,16 @@ function render() {
   if (ROLE === 'pt') { renderPTView(); return; }
   if (ROLE === 'hq') { renderHQView(); }
   renderKPI(); filterCases();
+  if (ROLE === 'ag') {
+    // AG掲示板エリアを確保
+    let box = document.getElementById('ag-board-box');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'ag-board-box';
+      document.getElementById('kpi-area').after(box);
+    }
+    renderAGNotifications();
+  }
 }
 
 function renderPTView() {
@@ -1417,9 +1461,15 @@ function renderPTView() {
             <div style="font-size:18px">🏘️</div>
             <div>
               <div style="font-size:12px;font-weight:700;color:var(--em)">担当AG: ${l.assignedAgName}</div>
-              <div style="font-size:10px;color:var(--muted);margin-top:2px">${l.matchReason||''}</div>
+              <div style="font-size:10px;color:var(--muted);margin-top:2px">${l._topMatchReason||''}</div>
             </div>
-            ${l.matchScore ? `<div style="margin-left:auto;text-align:center"><div style="font-size:18px;font-weight:700;color:var(--em)">${l.matchScore}</div><div style="font-size:9px;color:var(--faint)">適合スコア</div></div>` : ''}
+            ${l._topMatchScore ? `<div style="margin-left:auto;text-align:center"><div style="font-size:18px;font-weight:700;color:var(--em)">${l._topMatchScore}</div><div style="font-size:9px;color:var(--faint)">適合スコア</div></div>` : ''}
+          </div>` : ''}
+          ${l.status==='waiting_ag' ? `
+          <div style="margin-top:10px;padding:10px 12px;background:var(--sk-bg);border-radius:var(--r-sm)">
+            <div style="font-size:11px;font-weight:700;color:var(--sk);margin-bottom:4px">📢 AG応答待ち中</div>
+            <div style="font-size:10px;color:var(--muted)">通知済み: ${(l._notifiedAgNames||[]).join('・')}</div>
+            <div style="font-size:10px;color:var(--faint);margin-top:2px">いずれかのAGが「対応する」を選択すると確定します</div>
           </div>` : ''}
           ${l._aiAnalysis?.summary ? `<div style="margin-top:8px;font-size:10px;color:var(--faint)">🤖 ${l._aiAnalysis.summary}</div>` : ''}
           <div style="margin-top:6px;font-size:10px;color:var(--faint);font-family:'DM Mono',monospace">投稿: ${l.createdAt}</div>
@@ -1441,6 +1491,44 @@ function renderHQView() {
     <div style="font-size:11px;font-weight:700;color:var(--rd);margin-bottom:8px">⚠️ HQ確認が必要な案件（${alerts.length}件）</div>
     ${alerts.map(l=>`<div style="font-size:12px;color:var(--ink);padding:4px 0;border-bottom:1px solid var(--bd)">${l.name} — ${l._hqAlertReason||'AGが見つかりませんでした'}</div>`).join('')}
   </div>`;
+}
+
+function renderAGNotifications() {
+  // AG視点: 自分に通知されている waiting_ag 案件を掲示板として表示
+  const currentAgId = 'HR-0012'; // デモ: 吉田 さくら
+  const notified = HR_LEADS.filter(l =>
+    l.status === 'waiting_ag' &&
+    l._notifiedAgIds?.includes(currentAgId)
+  );
+  const el = document.getElementById('ag-board-box');
+  if (!el) return;
+  if (!notified.length) { el.innerHTML = ''; return; }
+  el.innerHTML = `
+    <div style="background:var(--am-bg);border:1px solid rgba(217,119,6,.25);border-radius:var(--r);padding:12px 16px;margin-bottom:16px">
+      <div style="font-size:12px;font-weight:700;color:var(--am);margin-bottom:10px">
+        📢 対応待ち案件（${notified.length}件） — 先着順。クライアント詳細は引受け後に開示されます。
+      </div>
+      ${notified.map(l => {
+        const ai = l._aiAnalysis||{};
+        return `<div style="background:var(--white);border:1px solid var(--bd);border-radius:var(--r-sm);padding:12px 14px;margin-bottom:8px">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px">
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--navy)">🔒 転職希望者 — ${l.targetJob}</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px">希望年収: ${l.targetSalary}万円〜 / 経験: ${l.experience||'—'}</div>
+            </div>
+            <div style="display:flex;gap:6px;flex-shrink:0">
+              ${ai.urgencyLevel>=8 ? '<span class="badge b-rd">🔴 急案件</span>' : ''}
+              ${l._topMatchScore ? `<span class="badge b-em">適合 ${l._topMatchScore}点</span>` : ''}
+            </div>
+          </div>
+          ${ai.summary ? `<div style="font-size:11px;color:var(--muted);padding:7px 10px;background:var(--cream2);border-radius:6px;margin-bottom:10px">${ai.summary}</div>` : ''}
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-em btn-sm" onclick="hrAgAccept('${l.id}')">✅ 対応する（先着）</button>
+            <button class="btn btn-g btn-sm" onclick="hrAgPass('${l.id}')">⏭ パス</button>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
 }
 
 function toast(msg,type='ok') {
