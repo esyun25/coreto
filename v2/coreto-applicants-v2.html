@@ -329,7 +329,31 @@ function openDrawer(id) {
     <div class="d-section">
       <div class="d-section-title">基本情報</div>
       ${row('応募日', a.date)}
-      ${row('種別', ROLE_LABEL[a.role]||a.role)}
+      <div class="d-row" style="align-items:center">
+        <span class="d-label">応募職種</span>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span id="role-badge-${a.id}" class="badge b-gold" style="font-size:9px">${ROLE_LABEL[a.role]||a.role}</span>
+          <button class="btn btn-ghost btn-sm" style="padding:3px 10px;font-size:10px"
+            onclick="toggleRoleEdit('${a.id}')">✏️ 変更</button>
+        </div>
+      </div>
+      <div id="role-edit-${a.id}" style="display:none;padding:10px 0 4px">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:8px;font-weight:700">変更後の職種を選択</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
+          ${Object.entries(ROLE_LABEL).map(([k,v])=>`
+            <div class="role-choice-card ${a.role===k?'selected':''}" data-role="${k}"
+              onclick="selectRoleChange('${a.id}','${k}',this)"
+              style="border:1.5px solid ${a.role===k?'var(--navy)':'var(--bd)'};border-radius:8px;
+                padding:10px;cursor:pointer;text-align:center;font-size:11px;font-weight:700;
+                background:${a.role===k?'rgba(13,26,45,.05)':'#fff'};transition:.13s">
+              ${{  'ag-re':'🏠 不動産AG','ag-hr':'👤 人材AG','pt':'🌐 PT' }[k]||v}
+            </div>`).join('')}
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn btn-ghost btn-sm" style="flex:1" onclick="toggleRoleEdit('${a.id}')">キャンセル</button>
+          <button class="btn btn-primary btn-sm" style="flex:1" onclick="applyRoleChange('${a.id}')">変更を保存</button>
+        </div>
+      </div>
       ${row('電話番号', a.phone)}
       ${row('メール', `<a href="mailto:${a.email}" style="color:var(--sk)">${a.email}</a>`)}
       ${row('居住地', a.pref)}
@@ -374,6 +398,41 @@ function openDrawer(id) {
 function closeDrawer() {
   document.getElementById('detail-drawer').classList.remove('open');
   document.getElementById('drawer-overlay').classList.remove('show');
+}
+
+function toggleRoleEdit(id) {
+  const el = document.getElementById(`role-edit-${id}`);
+  if (!el) return;
+  el.style.display = el.style.display === 'none' ? '' : 'none';
+}
+
+let _pendingRole = {};
+function selectRoleChange(id, role, el) {
+  _pendingRole[id] = role;
+  const wrap = document.getElementById(`role-edit-${id}`);
+  wrap.querySelectorAll('.role-choice-card').forEach(c => {
+    const isSelected = c.dataset.role === role;
+    c.style.borderColor  = isSelected ? 'var(--navy)' : 'var(--bd)';
+    c.style.background   = isSelected ? 'rgba(13,26,45,.05)' : '#fff';
+  });
+}
+
+function applyRoleChange(id) {
+  const newRole = _pendingRole[id];
+  if (!newRole) { showToast('⚠️ 職種を選択してください','warn'); return; }
+  const a = APPLICANTS.find(x => x.id === id);
+  if (!a) return;
+  const oldLabel = ROLE_LABEL[a.role] || a.role;
+  a.role = newRole;
+  // バッジ更新
+  const badge = document.getElementById(`role-badge-${id}`);
+  if (badge) badge.textContent = ROLE_LABEL[newRole] || newRole;
+  // 編集UI閉じる
+  toggleRoleEdit(id);
+  // テーブル再描画
+  renderList();
+  showToast(`✅ 職種を「${oldLabel}」→「${ROLE_LABEL[newRole]}」に変更しました`);
+  delete _pendingRole[id];
 }
 
 function changeStatus(id, newStatus, el) {
