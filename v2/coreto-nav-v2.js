@@ -193,9 +193,9 @@ const NAV = {
     { section:'ツール', items:[
       { icon:'📚', label:'マニュアル・FAQ',       href:'coreto-faq-v2.html',          key:'faq' },
       { icon:'📲', label:'LINE再連携',             href:'coreto-hub-v2.html#line_relink', key:'line_relink' },
+      { icon:'🔗', label:'リクルートリンク発行',   href:'coreto-recruit-link-v2.html', key:'recruit_link' },
     ]},
   ],
-  intern: [
     { section:'本日の業務', items:[
       { icon:'📊', label:'当日の実績',             href:'coreto-hub-v2.html',          key:'dashboard' },
       { icon:'📍', label:'訪問を記録する',         href:'coreto-hub-v2.html#visit',    key:'visit' },
