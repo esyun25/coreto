@@ -112,6 +112,13 @@ html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:
 .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--gold);background:var(--white)}
 .field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 /* AI */
+
+/* UPLOAD */
+.upload-zone{border:2px dashed var(--bd2);border-radius:var(--r);padding:16px;text-align:center;cursor:pointer;transition:.2s;background:var(--cream2)}
+.upload-zone:hover{border-color:var(--gold);background:rgba(200,169,81,.05)}
+.upload-zone.drag{border-color:var(--vt);background:var(--vt-bg)}
+.doc-item{display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--cream2);border-radius:var(--r-sm);margin-bottom:6px;border:1px solid var(--bd)}
+.doc-status{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0}
 @keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
@@ -402,7 +409,10 @@ function renderCaseList(list) {
       <div><div style="font-size:11px;font-weight:700;color:var(--navy)">${stepIcon} ${stepLabel}</div>
         <div style="display:flex;gap:3px;margin-top:5px">${HR_STEPS.map((_,i)=>`<div style="flex:1;height:3px;border-radius:2px;background:${i<c.step?'var(--em)':i===c.step?'var(--am)':'var(--bd)'}"></div>`).join('')}</div></div>
       <div><span class="badge ${sm.cls}">${sm.label}</span></div>
-      <div><button class="btn btn-sm btn-g" onclick="event.stopPropagation();openDetail('${c.id}')">詳細 ›</button></div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <button class="btn btn-sm btn-g" onclick="event.stopPropagation();openDetail('${c.id}')">詳細 ›</button>
+        ${getDaysSince(c.lastUpdate)>=5&&(c.status==='active'||c.status==='offer')?`<button id="stag-btn-${c.id}" class="btn btn-sm btn-am" style="font-size:10px" onclick="event.stopPropagation();showStagnationAdvice('${c.id}')">✨ 停滞</button>`:''}
+      </div>
     </div>`;
   }).join('');
 
@@ -526,6 +536,24 @@ function openDetail(id) {
       </div>` : ''}
     </div>
     ${feeHtml}
+
+    <!-- 書類アップロード / AI自動解析 -->
+    <div style="margin-bottom:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted)">書類管理 / AI自動解析</div>
+      </div>
+      <div id="doc-list-${c.id}" style="margin-bottom:8px"></div>
+      <div class="upload-zone" id="upload-zone-${c.id}"
+        onclick="document.getElementById('file-input-${c.id}').click()"
+        ondragover="event.preventDefault();this.classList.add('drag')"
+        ondragleave="this.classList.remove('drag')"
+        ondrop="handleDrop(event,'${c.id}')">
+        <div style="font-size:22px;margin-bottom:4px">📄</div>
+        <div style="font-size:12px;font-weight:600;color:var(--muted)">履歴書・職務経歴書をドロップ or クリック</div>
+        <div style="font-size:10px;color:var(--faint);margin-top:2px">PDF / 画像 — アップロード後にAIが自動解析します</div>
+        <input type="file" id="file-input-${c.id}" accept=".pdf,image/*" style="display:none" onchange="handleFileSelect(event,'${c.id}')">
+      </div>
+    </div>
     <!-- 紹介先企業（AGが管理） -->
     <div style="margin-bottom:14px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
@@ -542,6 +570,7 @@ function openDetail(id) {
 
   document.getElementById('detail-foot').innerHTML = `
     <button class="btn btn-g" onclick="closeModal('modal-detail')">閉じる</button>
+    ${c.status==='closed'?`<button id="notify-btn-${c.id}" class="btn btn-sm btn-em" onclick="generateClosedNotification('${c.id}')">📢 通知文生成</button>`:''}
     <button class="btn btn-vt btn-sm" id="ai-detail-btn" onclick="aiSupport('${c.id}')">✨ AIアドバイス</button>`;
 
   openModal('modal-detail');
@@ -752,6 +781,212 @@ async function runAI() {
   finally{if(btn){btn.disabled=false;btn.innerHTML='✨ AIサポート';}}
 }
 
+
+// ═══════════════════════════════════════════
+// 書類管理 / AI自動解析
+// ═══════════════════════════════════════════
+const DOCS = {}; // {caseId: [{name, type, status, aiResult, file}]}
+
+const HR_DOC_PROMPT = `この書類（履歴書または職務経歴書）を解析してください。
+以下のJSONのみで返答（前置き不要・日本語）:
+{
+  "docType": "履歴書 or 職務経歴書 or 不明",
+  "name": "氏名（読み取れれば）",
+  "checks": [
+    {"id":"c1","label":"空白期間の有無","result":"OK or 要確認 or 不明","detail":"詳細"},
+    {"id":"c2","label":"スキルと希望職種の整合性","result":"OK or 要確認 or 不明","detail":"詳細"},
+    {"id":"c3","label":"年収と経験年数の整合性","result":"OK or 要確認 or 不明","detail":"詳細"},
+    {"id":"c4","label":"記載内容の矛盾・不整合","result":"OK or 要確認 or 不明","detail":"詳細"},
+    {"id":"c5","label":"転職回数（多い場合フラグ）","result":"OK or 要確認 or 不明","detail":"詳細"}
+  ],
+  "summary": "総合所見（1文）",
+  "caution": "特記事項（なければnull）"
+}`;
+
+function handleDrop(e, caseId) {
+  e.preventDefault();
+  document.getElementById('upload-zone-'+caseId)?.classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if (file) processDoc(file, caseId);
+}
+function handleFileSelect(e, caseId) {
+  const file = e.target.files[0];
+  if (file) processDoc(file, caseId);
+}
+
+async function processDoc(file, caseId) {
+  if (!DOCS[caseId]) DOCS[caseId] = [];
+  const docId = 'doc-' + Date.now();
+  const doc = {id:docId, name:file.name, type:file.type, status:'analyzing', aiResult:null, file};
+  DOCS[caseId].push(doc);
+  renderDocList(caseId);
+
+  // base64変換
+  const b64 = await new Promise(res => {
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(',')[1]);
+    r.readAsDataURL(file);
+  });
+
+  try {
+    const mediaType = file.type.startsWith('image') ? file.type : 'application/pdf';
+    const contentBlock = mediaType === 'application/pdf'
+      ? {type:'document', source:{type:'base64', media_type:'application/pdf', data:b64}}
+      : {type:'image', source:{type:'base64', media_type:mediaType, data:b64}};
+
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514', max_tokens:1200,
+        messages:[{role:'user', content:[contentBlock, {type:'text', text:HR_DOC_PROMPT}]}]
+      })
+    });
+    const data = await resp.json();
+    const text = data.content?.find(b=>b.type==='text')?.text || '{}';
+    doc.aiResult = JSON.parse(text.replace(/```json|```/g,'').trim());
+    doc.status = 'done';
+  } catch(e) {
+    doc.status = 'error'; doc.error = e.message;
+  }
+  renderDocList(caseId);
+}
+
+function renderDocList(caseId) {
+  const el = document.getElementById('doc-list-'+caseId); if(!el) return;
+  const docs = DOCS[caseId] || [];
+  if (!docs.length) { el.innerHTML=''; return; }
+  el.innerHTML = docs.map(d => {
+    if (d.status==='analyzing') return `
+      <div class="doc-item">
+        <div class="doc-status" style="background:var(--am-bg);color:var(--am)"><span style="animation:spin .8s linear infinite;display:inline-block">⏳</span></div>
+        <div style="flex:1"><div style="font-size:12px;font-weight:600">${d.name}</div><div style="font-size:10px;color:var(--am)">AI解析中...</div></div>
+      </div>`;
+    if (d.status==='error') return `
+      <div class="doc-item">
+        <div class="doc-status" style="background:var(--rd-bg);color:var(--rd)">✕</div>
+        <div style="flex:1"><div style="font-size:12px;font-weight:600">${d.name}</div><div style="font-size:10px;color:var(--rd)">解析失敗: ${d.error||''}</div></div>
+      </div>`;
+    const r = d.aiResult || {};
+    const warns = (r.checks||[]).filter(c=>c.result==='要確認');
+    return `
+      <div class="doc-item" style="flex-direction:column;align-items:flex-start;gap:6px">
+        <div style="display:flex;align-items:center;gap:10px;width:100%">
+          <div class="doc-status" style="background:${warns.length?'var(--am-bg)':'var(--em-bg)'};color:${warns.length?'var(--am)':'var(--em)'}">${warns.length?'⚠':'✓'}</div>
+          <div style="flex:1">
+            <div style="font-size:12px;font-weight:600">${d.name} <span style="font-size:10px;color:var(--faint);font-weight:400">${r.docType||''}</span></div>
+            <div style="font-size:10px;color:${warns.length?'var(--am)':'var(--em)'};">${warns.length?warns.length+'件 要確認あり':'全項目OK'} — ${r.summary||''}</div>
+          </div>
+          <button class="btn btn-sm btn-g" style="font-size:10px" onclick="toggleDocDetail('${d.id}')">詳細</button>
+        </div>
+        <div id="doc-detail-${d.id}" style="display:none;width:100%;padding:8px 10px;background:var(--cream2);border-radius:6px">
+          ${(r.checks||[]).map(c=>`
+            <div style="display:flex;align-items:flex-start;gap:7px;padding:4px 0;border-bottom:1px solid var(--bd)">
+              <span style="font-size:11px;color:${c.result==='OK'?'var(--em)':c.result==='要確認'?'var(--am)':'var(--faint)'};flex-shrink:0;min-width:56px;font-weight:700">${c.result}</span>
+              <div><div style="font-size:11px;font-weight:600;color:var(--ink)">${c.label}</div><div style="font-size:10px;color:var(--muted)">${c.detail||''}</div></div>
+            </div>`).join('')}
+          ${r.caution?`<div style="margin-top:6px;font-size:10px;color:var(--rd);font-weight:600">⚠️ ${r.caution}</div>`:''}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function toggleDocDetail(docId) {
+  const el = document.getElementById('doc-detail-'+docId);
+  if (el) el.style.display = el.style.display==='none' ? 'block' : 'none';
+}
+
+// ═══════════════════════════════════════════
+// 停滞アラート
+// ═══════════════════════════════════════════
+function getDaysSince(dateStr) {
+  if (!dateStr) return 0;
+  const d = new Date(dateStr.replace(/\//g,'-'));
+  return Math.floor((Date.now() - d.getTime()) / 86400000);
+}
+
+async function showStagnationAdvice(id) {
+  const c = CASES.find(x=>x.id===id); if(!c) return;
+  const days = getDaysSince(c.lastUpdate);
+  const btn = document.getElementById('stag-btn-'+id);
+  if (btn) { btn.disabled=true; btn.innerHTML='<span style="animation:spin .8s linear infinite;display:inline-block">✨</span>'; }
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:600,messages:[{role:'user',content:
+        `人材紹介AG「鈴木 花子」の担当案件「${c.name}」が${days}日間進捗なし。
+現在ステップ: ${HR_STEPS[c.step]}、希望: ${c.targetJob} / ${c.targetSalary}万円〜
+停滞打開のアドバイスをJSONのみで:
+{"reason":"停滞の考えられる原因","actions":["アクション①","②","③"],"message":"クライアントへの連絡文例（1文）"}`
+      }]})
+    });
+    const data = await resp.json();
+    const fb = JSON.parse((data.content?.find(b=>b.type==='text')?.text||'{}').replace(/```json|```/g,'').trim());
+    const box = document.createElement('div');
+    box.style.cssText='position:fixed;bottom:80px;right:24px;width:340px;background:#0D1A2D;border:1px solid rgba(217,119,6,.4);border-radius:12px;padding:16px;z-index:600;box-shadow:0 8px 32px rgba(0,0,0,.3);font-family:Outfit,sans-serif';
+    box.innerHTML=`
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-size:11px;font-weight:700;color:var(--am)">⚠️ 停滞アドバイス — ${c.name}（${days}日）</div>
+        <button onclick="this.closest('div').remove()" style="background:none;border:none;color:rgba(255,255,255,.4);cursor:pointer;font-size:14px">✕</button>
+      </div>
+      <div style="font-size:11px;color:rgba(255,255,255,.6);margin-bottom:8px">原因: ${fb.reason||''}</div>
+      ${(fb.actions||[]).map(a=>`<div style="font-size:11px;color:rgba(255,255,255,.8);padding:3px 0;display:flex;gap:6px"><span style="color:var(--gold)">⚡</span>${a}</div>`).join('')}
+      ${fb.message?`<div style="margin-top:10px;padding:8px 10px;background:rgba(217,119,6,.15);border-radius:6px;font-size:11px;color:rgba(255,255,255,.8);font-style:italic">「${fb.message}」</div>`:''}`;
+    document.body.appendChild(box);
+  } catch(e) { toast('停滞アドバイス取得失敗','warn'); }
+  finally { if(btn){btn.disabled=false;btn.innerHTML='✨ 停滞';} }
+}
+
+// ═══════════════════════════════════════════
+// 成約通知文生成
+// ═══════════════════════════════════════════
+async function generateClosedNotification(id) {
+  const c = CASES.find(x=>x.id===id); if(!c) return;
+  const btn = document.getElementById('notify-btn-'+id);
+  if(btn){btn.disabled=true;btn.innerHTML='<span style="animation:spin .8s linear infinite;display:inline-block">✨</span>';}
+  try {
+    const fee = c.finalSalary && c.feeRate ? Math.round(c.finalSalary*10000*c.feeRate/100) : 0;
+    const resp = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:600,messages:[{role:'user',content:
+        `人材紹介の成約通知文を生成してください。
+担当AG: 鈴木 花子 / 成約者: ${c.name} / 入社先: ${c.companies.find(x=>x.result==='承諾')?.name||'—'}
+ポジション: ${c.targetJob} / 入社年収: ${c.finalSalary||'—'}万円 / 成功報酬: ¥${fee.toLocaleString()}
+JSONのみ: {"slack":"Slack通知文（絵文字あり・2〜3行）","line_works":"LINE WORKS用（丁寧語・3〜4行）","pt_message":"PT向け報告文（${c.ptName||''}宛・1〜2行）"}`
+      }]})
+    });
+    const data = await resp.json();
+    const fb = JSON.parse((data.content?.find(b=>b.type==='text')?.text||'{}').replace(/```json|```/g,'').trim());
+    const box = document.createElement('div');
+    box.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:700;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(2px)';
+    box.onclick=e=>{if(e.target===box)box.remove()};
+    box.innerHTML=`
+      <div style="background:#fff;border-radius:12px;width:500px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.2);overflow:hidden">
+        <div style="background:var(--navy);padding:16px 20px;display:flex;justify-content:space-between;align-items:center">
+          <div style="font-family:'Cormorant Garamond',serif;font-size:15px;font-weight:700;letter-spacing:2px;color:var(--gold)">✨ 成約通知文生成</div>
+          <button onclick="this.closest('div[style*=fixed]').remove()" style="background:rgba(255,255,255,.1);border:none;width:26px;height:26px;border-radius:50%;color:rgba(255,255,255,.6);cursor:pointer">✕</button>
+        </div>
+        <div style="padding:18px 20px">
+          <div style="margin-bottom:14px">
+            <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:6px;letter-spacing:1px">💬 Slack通知</div>
+            <div style="background:var(--cream2);border-radius:var(--r-sm);padding:10px 12px;font-size:12px;white-space:pre-line">${fb.slack||''}</div>
+            <button onclick="navigator.clipboard.writeText(this.previousElementSibling.textContent).then(()=>this.textContent='✓ コピー済み')" style="margin-top:4px;font-size:10px;color:var(--muted);background:none;border:1px solid var(--bd);border-radius:4px;padding:2px 8px;cursor:pointer">コピー</button>
+          </div>
+          <div style="margin-bottom:14px">
+            <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:6px;letter-spacing:1px">📱 LINE WORKS</div>
+            <div style="background:var(--cream2);border-radius:var(--r-sm);padding:10px 12px;font-size:12px;white-space:pre-line">${fb.line_works||''}</div>
+            <button onclick="navigator.clipboard.writeText(this.previousElementSibling.textContent).then(()=>this.textContent='✓ コピー済み')" style="margin-top:4px;font-size:10px;color:var(--muted);background:none;border:1px solid var(--bd);border-radius:4px;padding:2px 8px;cursor:pointer">コピー</button>
+          </div>
+          ${fb.pt_message&&c.ptCode?`<div>
+            <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:6px;letter-spacing:1px">🤝 PT（${c.ptName||c.ptCode}）への報告</div>
+            <div style="background:var(--em-bg);border-radius:var(--r-sm);padding:10px 12px;font-size:12px;white-space:pre-line">${fb.pt_message}</div>
+            <button onclick="navigator.clipboard.writeText(this.previousElementSibling.textContent).then(()=>this.textContent='✓ コピー済み')" style="margin-top:4px;font-size:10px;color:var(--muted);background:none;border:1px solid var(--bd);border-radius:4px;padding:2px 8px;cursor:pointer">コピー</button>
+          </div>`:''}
+        </div>
+      </div>`;
+    document.body.appendChild(box);
+  } catch(e) { toast('通知文生成失敗','warn'); }
+  finally { if(btn){btn.disabled=false;btn.innerHTML='📢 通知文生成';} }
+}
 // ═══════════════════════════════════════════
 // UTILS
 // ═══════════════════════════════════════════
