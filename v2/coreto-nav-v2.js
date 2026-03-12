@@ -95,9 +95,9 @@ const NAV = {
       { icon:'⚠️', label:'早期退職アラート',         href:'coreto-early-quit-v2.html',    key:'early_quit' },
     ]},
     { section:'スタッフ管理', items:[
-      { icon:'🏢', label:'AG管理（権限・育成）',   href:'coreto-hq-admin-v2.html',     key:'hq_admin' },
+      { icon:'🏢', label:'AG管理（権限・育成）',   href:'coreto-user-mgmt-v2.html',     key:'hq_mgmt' },
       { icon:'📉', label:'AG離脱リスク管理',         href:'coreto-agent-retention-v2.html', key:'agent_retention' },
-      { icon:'🤝', label:'PT管理',                 href:'coreto-pt-admin-v2.html',  key:'pt_mgmt' },
+      { icon:'🤝', label:'PT管理',                 href:'coreto-user-mgmt-v2.html',  key:'hq_mgmt' },
       { icon:'🎓', label:'インターン管理',          href:'coreto-intern-v2.html',       key:'intern' },
       { icon:'📝', label:'応募者管理',               href:'coreto-applicants-v2.html',   key:'applicants' },
       { icon:'🔗', label:'リクルートリンク発行',     href:'coreto-recruit-link-v2.html', key:'recruit_link' },
