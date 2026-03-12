@@ -198,41 +198,44 @@ html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:
   border:none;background:transparent;color:var(--muted);transition:.15s;font-family:'Outfit',sans-serif}
 .role-btn.active{background:#fff;color:var(--navy);box-shadow:var(--sh)}
 
-@media(max-width:768px){.sb{display:none}.stat-grid{grid-template-columns:1fr 1fr}.form-grid-2,.form-grid-3{grid-template-columns:1fr}}
+
+/* ── Mobile ── */
+.mob-ham{display:none;flex-direction:column;justify-content:center;width:36px;height:36px;cursor:pointer;background:transparent;border:none;flex-shrink:0}
+.mob-ham span{display:block;width:18px;height:2px;background:rgba(255,255,255,.72);margin:3px 0;border-radius:1px}
+.mob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:150}
+.mob-overlay.show{display:block}
+@media(max-width:768px){
+  .mob-ham{display:flex}
+  .sb{position:fixed;left:calc(-1 * var(--sw));top:0;height:100vh;z-index:200;transition:left .25s ease}
+  .sb.open{left:0}
+}
+@media(max-width:768px){.sb_REMOVED{display:none}.stat-grid{grid-template-columns:1fr 1fr}.form-grid-2,.form-grid-3{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
+<div class="mob-overlay" id="mob-overlay" onclick="closeSb()"></div>
 <div class="shell">
 
 <!-- ── サイドバー ── -->
-<div class="sb">
+<nav class="sb">
   <div class="sb-head">
-    <div class="sb-logo">CORETO</div>
-    <div class="sb-ver">COREBLDG v2</div>
+    <div class="sb-logo">CORE<br>BLDG</div>
+    <div class="sb-ver">v2.0 — CORETO</div>
   </div>
-  <div class="sb-nav">
-    <div class="nav-sec">マッチング</div>
-    <a class="nav-item active" href="coreto-matching-v2.html">🤖 AIマッチング</a>
-    <div class="nav-sec">メニュー</div>
-    <a class="nav-item" href="coreto-hub-v2.html">🏠 ホーム</a>
-    <a class="nav-item" href="coreto-cases-v2.html">📁 案件管理</a>
-    <a class="nav-item" href="coreto-pipeline-v2.html">📊 パイプライン</a>
-    <a class="nav-item" href="coreto-crm-v2.html">👥 CRM</a>
-  </div>
-  <div class="sb-foot">
-    <div class="sb-user">
-      <div class="sb-av" id="sb-av">HQ</div>
-      <div>
-        <div class="sb-uname" id="sb-uname">HQ 管理者</div>
-        <div class="sb-urole" id="sb-urole">admin</div>
-      </div>
+  <div class="sb-user">
+    <div class="sb-av" id="sb-av">--</div>
+    <div>
+      <div id="sb-name" style="font-size:11px;font-weight:600;color:rgba(255,255,255,.8)">...</div>
+      <div id="sb-role" style="font-size:9px;color:rgba(255,255,255,.3);font-family:'DM Mono',monospace">...</div>
     </div>
   </div>
-</div>
+  <div class="sb-nav" id="sb-nav"></div>
+</nav>
 
 <!-- ── メイン ── -->
 <div class="main">
   <div class="top-bar">
+    <button class="mob-ham" onclick="toggleSb()"><span></span><span></span><span></span></button>
     <div>
       <div class="top-title">🤖 AI マッチングエンジン</div>
       <div class="top-sub">PT投稿〜マッチング確定まで全自動 / HQは結果確認のみ</div>
@@ -1782,6 +1785,19 @@ document.addEventListener('DOMContentLoaded',()=>{
   leads.filter(l=>l.status==='pending_ai'&&!l._aiAnalysis).forEach(l=>{
     setTimeout(()=>autoMatchPipeline(l.id), 800);
   });
+});
+</script>
+<script src="coreto-nav-v2.js"></script>
+<script>
+window.addEventListener('DOMContentLoaded', () => {
+  CNAV.init('matching');
+  window.toggleSb = ()=>{ document.querySelector('.sb').classList.toggle('open'); document.getElementById('mob-overlay').classList.toggle('show'); };
+  window.closeSb  = ()=>{ document.querySelector('.sb').classList.remove('open');  document.getElementById('mob-overlay').classList.remove('show'); };
+  // sb-unameはCNAVが上書きするが旧IDもケア
+  const uname = document.getElementById('sb-uname');
+  const urole = document.getElementById('sb-urole');
+  if (uname) uname.remove();
+  if (urole) urole.remove();
 });
 </script>
 </body>
