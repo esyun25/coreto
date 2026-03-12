@@ -140,11 +140,6 @@ select.form-input{cursor:pointer}
           <div class="sec-title">🔗 リンクを発行する</div>
         </div>
         <div class="issue-panel">
-          <!-- 用途 -->
-          <div style="margin-bottom:14px">
-            <label class="form-label">用途 / リンク名 <span style="color:var(--rd)">*</span></label>
-            <input id="link-label" class="form-input" placeholder="例：名刺配布用、Instagram用、勉強会配布">
-          </div>
           <!-- 応募職種フィルタ -->
           <div style="margin-bottom:14px">
             <label class="form-label">誘導する職種</label>
@@ -206,7 +201,6 @@ select.form-input{cursor:pointer}
           <thead>
             <tr>
               <th>発行日時</th>
-              <th>用途 / リンク名</th>
               <th>職種指定</th>
               <th>紹介コード</th>
               <th>メモ</th>
@@ -252,16 +246,9 @@ let _currentUrl = '';
 
 // ── リンク発行 ────────────────────────────────────────────
 function generateLink() {
-  const label = document.getElementById('link-label').value.trim();
   const role  = document.getElementById('link-role').value;
   const memo  = document.getElementById('link-memo').value.trim();
-
-  if (!label) {
-    document.getElementById('link-label').style.borderColor = 'var(--rd)';
-    showToast('⚠️ 用途・リンク名を入力してください', 'err');
-    return;
-  }
-  document.getElementById('link-label').style.borderColor = '';
+  const label = memo || ROLE_LABEL[role] || '全種別';
 
   const refCode = SESSION.userId; // AG-0042 など
   const params  = new URLSearchParams({ ref: refCode });
@@ -290,7 +277,6 @@ function generateLink() {
   showToast('✅ リンクを発行しました');
 
   // フォームリセット
-  document.getElementById('link-label').value = '';
   document.getElementById('link-memo').value = '';
 }
 
@@ -330,7 +316,6 @@ function renderHistory() {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td style="font-size:11px;color:var(--muted);white-space:nowrap">${h.datetime}</td>
-      <td style="font-weight:600">${h.label}</td>
       <td><span class="badge b-nt" style="font-size:9px">${roleText}</span></td>
       <td class="mono">${h.refCode}</td>
       <td style="font-size:11px;color:var(--muted)">${h.memo||'—'}</td>
