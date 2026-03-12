@@ -795,33 +795,89 @@ function renderDashboard(){
 
 function renderAiPending(){
   const pending = DOCS.filter(d =>
-    (d.flow==='A' && d.stepIdx===3) ||
+    (d.flow==='A' && d.stepIdx===0) ||   // AI判定中（新フロー）
+    (d.flow==='A' && d.stepIdx===3) ||   // 旧: HQ承認待ち
     (d.flow==='C' && d.stepIdx===1)
   );
   if (!pending.length) return '';
+
+  const cardHtml = pending.map(d => {
+    const status = d.aiStatus || (d.aiResult ? 'done' : 'pending');
+    const hasDefects = d.aiResult?.defects?.length > 0;
+    const confColor = (c) => c >= 90 ? 'var(--em)' : c >= 70 ? 'var(--am)' : 'var(--rd)';
+
+    if (status === 'running') {
+      return `
+        <div class="ai-result" style="margin-bottom:8px">
+          <div style="display:flex;align-items:center;gap:10px;padding:4px 0">
+            <span style="animation:spin .8s linear infinite;display:inline-block;font-size:16px">🤖</span>
+            <div>
+              <div class="ai-label">${d.id} — AI判定中…</div>
+              <div style="font-size:10px;color:#a78bfa">書類データをClaudeが分析しています</div>
+            </div>
+          </div>
+        </div>`;
+    }
+    if (status === 'error') {
+      return `
+        <div class="ai-result" style="margin-bottom:8px;border:1px solid rgba(220,38,38,.4)">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <div>
+              <div class="ai-label" style="color:#f87171">⚠️ AI判定エラー — ${d.id}</div>
+              <div style="font-size:10px;color:#f87171">${d.aiError || '接続エラー'}</div>
+            </div>
+            <button class="act-btn act-em" style="font-size:10px" onclick="runAiJudge('${d.id}')">🔄 再試行</button>
+          </div>
+        </div>`;
+    }
+    // done / pending（既存サンプルデータ）
+    return `
+      <div class="ai-result" style="margin-bottom:8px${hasDefects ? ';border:1px solid rgba(220,38,38,.4)' : ''}">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px">
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+              <div class="ai-label">判定結果</div>
+              <span style="font-family:'DM Mono',monospace;font-size:9px;color:rgba(255,255,255,.3)">${d.id}</span>
+            </div>
+            <div class="ai-val">${d.aiResult?.caseId} ／ ${d.aiResult?.caseName}</div>
+            <div class="ai-conf" style="color:${confColor(d.aiResult?.confidence||0)}">
+              信頼度 ${d.aiResult?.confidence}%
+            </div>
+            ${d.aiResult?.reasoning ? `<div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:4px">💬 ${d.aiResult.reasoning}</div>` : ''}
+            ${hasDefects ? `
+              <div style="margin-top:8px;background:rgba(220,38,38,.15);border-radius:6px;padding:7px 10px">
+                <div style="font-size:10px;font-weight:700;color:#f87171;margin-bottom:4px">⚠️ 不備検出</div>
+                ${(d.aiResult.defects||[]).map(df=>`<div style="font-size:10px;color:#fca5a5">• ${df}</div>`).join('')}
+              </div>` : `
+              <div style="margin-top:6px;font-size:10px;color:rgba(167,243,208,.8)">✅ ${d.aiResult?.defectSummary||'不備なし'}</div>`}
+          </div>
+          <div style="display:flex;gap:6px;flex-shrink:0;margin-left:12px">
+            <button class="act-btn act-em" style="font-size:10px"
+              onclick="approveAi('${d.id}')">✅ 承認</button>
+            <button class="act-btn" style="font-size:10px;background:var(--rd-bg);
+              color:var(--rd);border:none;border-radius:7px;font-weight:700"
+              onclick="rejectAi('${d.id}')">❌ 却下</button>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+
+  const runningCount = pending.filter(d => d.aiStatus === 'running').length;
+  const defectCount  = pending.filter(d => d.aiResult?.defects?.length > 0).length;
+  const headerSub = runningCount > 0
+    ? `<span style="font-size:9px;color:#a78bfa;margin-left:6px">判定中 ${runningCount}件</span>`
+    : defectCount > 0
+    ? `<span style="background:var(--rd);color:#fff;font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;margin-left:6px">不備 ${defectCount}件</span>`
+    : '';
+
   return `
     <div style="background:linear-gradient(135deg,#1a0f40,#2d1b69);border-radius:12px;
       padding:16px;margin-bottom:16px">
-      <div style="font-size:11px;font-weight:700;color:#C4B5FD;margin-bottom:10px">
-        🤖 AI判定結果 — HQ承認待ち（${pending.length}件）
+      <div style="font-size:11px;font-weight:700;color:#C4B5FD;margin-bottom:10px;
+        display:flex;align-items:center">
+        🤖 AI判定 — HQ承認待ち（${pending.length}件）${headerSub}
       </div>
-      ${pending.map(d=>`
-        <div class="ai-result" style="margin-bottom:8px">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-            <div>
-              <div class="ai-label">判定結果</div>
-              <div class="ai-val">${d.aiResult?.caseId} ／ ${d.aiResult?.caseName}</div>
-              <div class="ai-conf">信頼度 ${d.aiResult?.confidence}%</div>
-            </div>
-            <div style="display:flex;gap:6px">
-              <button class="act-btn act-em" style="font-size:10px"
-                onclick="approveAi('${d.id}')">✅ 承認</button>
-              <button class="act-btn" style="font-size:10px;background:var(--rd-bg);
-                color:var(--rd);border:none;border-radius:7px;font-weight:700"
-                onclick="rejectAi('${d.id}')">❌ 却下</button>
-            </div>
-          </div>
-        </div>`).join('')}
+      ${cardHtml}
     </div>`;
 }
 
@@ -1075,7 +1131,96 @@ function advance(docId){
   if (!doc) return;
   doc.stepIdx++;
   doc.lastUpdated = new Date().toLocaleString('ja-JP').slice(5,-3);
-  showToast('✅ ステップを更新しました', 'ok');
+  // Flow A: stepIdx=0（AI判定中）に到達したらAI自動判定を発火
+  if (doc.flow === 'A' && doc.stepIdx === 0) {
+    showToast('🤖 AI案件判定を開始します…', 'ok');
+    runAiJudge(docId);
+  } else {
+    showToast('✅ ステップを更新しました', 'ok');
+  }
+  refreshCurrentTab();
+}
+
+// ── AI書類不備検出・案件特定 ────────────────────────────
+async function runAiJudge(docId) {
+  const doc = DOCS.find(d => d.id === docId);
+  if (!doc) return;
+
+  // AI判定中バッジを更新
+  doc.aiStatus = 'running';
+  refreshCurrentTab();
+
+  // CASE_DB から候補リストを作成してAIに渡す
+  const candidates = CASE_DB.map(c => ({
+    caseId: c.caseId,
+    caseName: c.caseName,
+    propertyName: c.propertyName,
+    agId: c.agent.agId,
+    agName: c.agent.name,
+  }));
+
+  const prompt = `あなたはCORETO（不動産仲介）のAI書類判定システムです。
+スキャンされた書類の情報と案件データベースを照合し、最も一致する案件を特定してください。
+
+【スキャン書類情報】
+書類ID: ${doc.id}
+バーコード登録日時: ${doc.arrivedAt}
+フロー種別: ${doc.flow}（HQ→クライアント送付書類）
+捺印状態: ${doc.hankoOk ? '確認済み' : '未確認'}
+既存caseId（手動入力済みがあれば）: ${doc.caseId || 'なし'}
+
+【案件候補（データベース全件）】
+${JSON.stringify(candidates, null, 2)}
+
+【判定タスク】
+1. スキャン書類に最も対応する案件を1件特定してください
+2. 書類の不備（捺印漏れ・ページ不足など）があれば検出してください
+3. 信頼度（%）を算出してください
+
+JSONのみで回答（前置き・コードブロック不要）:
+{"caseId":"RC-XXXXX","caseName":"○○ 様 ／ ○○","confidence":97,"defects":[],"defectSummary":"不備なし","reasoning":"判定根拠（1文）"}
+
+defectsの例: ["捺印漏れの可能性", "重説書類のページ数が不足している可能性"]
+defectsが空の場合は [] とし、defectSummaryは "不備なし" としてください。`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 600,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await resp.json();
+    const text = data.content?.find(b => b.type === 'text')?.text || '{}';
+    const res = JSON.parse(text.replace(/```json|```/g, '').trim());
+
+    doc.aiResult = {
+      caseId:       res.caseId || doc.caseId,
+      caseName:     res.caseName || doc.caseName,
+      confidence:   res.confidence || 0,
+      defects:      res.defects || [],
+      defectSummary: res.defectSummary || '—',
+      reasoning:    res.reasoning || '',
+    };
+    doc.aiStatus = 'done';
+
+    // 不備が検出された場合はアラート
+    if (doc.aiResult.defects.length > 0) {
+      showToast(`⚠️ 不備検出: ${doc.aiResult.defects[0]}`, 'warn');
+    } else {
+      showToast(`✅ AI判定完了: ${doc.aiResult.caseId} (信頼度${doc.aiResult.confidence}%)`, 'ok');
+    }
+  } catch (e) {
+    doc.aiResult = doc.aiResult || { caseId: doc.caseId, caseName: doc.caseName, confidence: 0 };
+    doc.aiStatus = 'error';
+    doc.aiError = e.message;
+    showToast('⚠️ AI判定エラー: ' + e.message);
+  }
+
+  doc.lastUpdated = new Date().toLocaleString('ja-JP').slice(5, -3);
   refreshCurrentTab();
 }
 

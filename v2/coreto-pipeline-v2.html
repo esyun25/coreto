@@ -332,6 +332,7 @@ body, input, select, textarea, button { font-family:'Outfit','Noto Sans JP',sans
     </div>
     <div class="tb-act" style="margin-left:auto;display:flex;gap:8px;align-items:center">
       <button class="btn btn-ghost btn-sm" onclick="exportCSV()">📤 CSVエクスポート</button>
+      <button class="btn btn-primary btn-sm" onclick="runBulkAI()" id="bulk-ai-btn">✨ 一括AI異常検知</button>
     </div>
   </div>
 
@@ -348,7 +349,19 @@ body, input, select, textarea, button { font-family:'Outfit','Noto Sans JP',sans
     </div>
   </div>
 
-  <div class="page plm-body" id="plm-body"></div>
+  <div class="page plm-body" id="plm-body">
+  <div id="bulk-ai-panel" style="display:none;background:linear-gradient(135deg,#0D1A2D,#1E3252);
+    border-radius:12px;padding:18px;margin-bottom:16px;border:1px solid rgba(200,169,81,.2)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:700;color:var(--gold)">✨ AI一括異常検知レポート</div>
+      <button onclick="document.getElementById('bulk-ai-panel').style.display='none'"
+        style="background:none;border:none;color:rgba(255,255,255,.4);cursor:pointer;font-size:14px">✕</button>
+    </div>
+    <div id="bulk-ai-content" style="font-size:12px;color:rgba(255,255,255,.8);line-height:1.8">
+      分析結果がここに表示されます
+    </div>
+  </div>
+</div>
 </div><!-- content -->
 </div><!-- shell -->
 <div class="mob-overlay" onclick="toggleSb()"></div>
@@ -550,7 +563,79 @@ function renderAll() {
     </div>`;
   }
 
-  document.getElementById('plm-body').innerHTML = kpiHtml + rowsHtml;
+  const aiPanel = document.getElementById('bulk-ai-panel') ? document.getElementById('bulk-ai-panel').outerHTML : '';
+  document.getElementById('plm-body').innerHTML = aiPanel + kpiHtml + rowsHtml;
+}
+
+// ── 一括AI異常検知 ────────────────────────────────────────
+async function runBulkAI() {
+  const btn = document.getElementById('bulk-ai-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '✨ 分析中...'; }
+
+  const panel = document.getElementById('bulk-ai-panel');
+  const content = document.getElementById('bulk-ai-content');
+  if (panel) panel.style.display = '';
+  if (content) content.innerHTML = '<span style="animation:spin .8s linear infinite;display:inline-block;margin-right:8px">✨</span>全案件を分析中...';
+
+  const stagnant = CASES.filter(c => c.daysOld >= 7);
+  const prompt = `以下はCORETO不動産・人材仲介パイプラインの全案件データです。
+異常・リスク・要注意ポイントを検知し、JSONのみで回答（前置き・コードブロック不要）:
+
+案件データ:
+${JSON.stringify(CASES.map(c=>({id:c.id,type:c.type,name:c.name,ag:c.ag,step:c.step,daysOld:c.daysOld,fee:c.fee,pt:c.pt||'なし'})), null, 2)}
+
+検知項目:
+- 14日以上停滞している案件（異常停滞）
+- 7〜13日停滞でリスクが高い案件
+- 同一AGが多数の案件を抱えて進捗が遅い場合
+- フロー上の矛盾・不自然な進行
+- 今週中に対応が必要な緊急案件
+
+回答フォーマット:
+{"alerts":[{"level":"high/medium/low","caseId":"RENT-xxxx","title":"アラートタイトル","detail":"具体的な状況と推奨アクション（1〜2文）"}],"summary":"全体所見（1〜2文）","urgentCount":0}`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1200,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await resp.json();
+    const text = data.content?.find(b => b.type === 'text')?.text || '{}';
+    const res = JSON.parse(text.replace(/```json|```/g,'').trim());
+    const levelColor = l => l==='high'?'var(--rd)':l==='medium'?'var(--am)':'var(--em)';
+    const levelLabel = l => l==='high'?'緊急':l==='medium'?'注意':'確認';
+
+    content.innerHTML = `
+      ${res.summary ? `<div style="color:rgba(200,169,81,.9);font-size:11px;margin-bottom:12px;
+        padding-bottom:10px;border-bottom:1px solid rgba(255,255,255,.1)">
+        💬 ${res.summary}
+        ${res.urgentCount ? `<span style="background:var(--rd);color:#fff;font-size:10px;font-weight:700;
+          padding:2px 8px;border-radius:20px;margin-left:8px">緊急 ${res.urgentCount}件</span>` : ''}
+      </div>` : ''}
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${(res.alerts||[]).map(a=>`
+          <div style="background:rgba(255,255,255,.07);border-radius:8px;padding:10px 12px;
+            border-left:3px solid ${levelColor(a.level)}">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+              <span style="background:${levelColor(a.level)};color:#fff;font-size:9px;font-weight:700;
+                padding:2px 7px;border-radius:20px">${levelLabel(a.level)}</span>
+              <span style="font-family:'DM Mono',monospace;font-size:10px;color:rgba(255,255,255,.4)">${a.caseId}</span>
+              <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,.9)">${a.title}</span>
+            </div>
+            <div style="font-size:11px;color:rgba(255,255,255,.6)">${a.detail}</div>
+          </div>`).join('')}
+      </div>`;
+    if (btn) { btn.disabled = false; btn.textContent = '✨ 一括AI異常検知'; }
+    showToast(`✅ AI異常検知完了 — ${(res.alerts||[]).length}件のアラート`);
+  } catch(e) {
+    content.innerHTML = `<div style="color:#f87171">⚠️ AI接続エラー: ${e.message}</div>`;
+    if (btn) { btn.disabled = false; btn.textContent = '✨ 一括AI異常検知'; }
+  }
 }
 
 // ── AIアドバイス（停滞案件のみ）───────────────────────────
