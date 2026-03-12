@@ -148,6 +148,7 @@ const NAV = {
       { icon:'📚', label:'マニュアル・FAQ',       href:'coreto-faq-v2.html',          key:'faq' },
       { icon:'📲', label:'LINE再連携',             href:'coreto-hub-v2.html#line_relink', key:'line_relink' },
       { icon:'🔗', label:'リクルートリンク発行',   href:'coreto-recruit-link-v2.html', key:'recruit_link' },
+      { icon:'🎓', label:'オンボーディング',         href:'coreto-onboarding-v2.html',   key:'onboarding' },
     ]},
   ],
   hr_ag: [
@@ -171,6 +172,7 @@ const NAV = {
       { icon:'📚', label:'マニュアル・FAQ',       href:'coreto-faq-v2.html',          key:'faq' },
       { icon:'📲', label:'LINE再連携',             href:'coreto-hub-v2.html#line_relink', key:'line_relink' },
       { icon:'🔗', label:'リクルートリンク発行',   href:'coreto-recruit-link-v2.html', key:'recruit_link' },
+      { icon:'🎓', label:'オンボーディング',         href:'coreto-onboarding-v2.html',   key:'onboarding' },
     ]},
   ],
   pt: [
@@ -195,6 +197,7 @@ const NAV = {
       { icon:'📚', label:'マニュアル・FAQ',       href:'coreto-faq-v2.html',          key:'faq' },
       { icon:'📲', label:'LINE再連携',             href:'coreto-hub-v2.html#line_relink', key:'line_relink' },
       { icon:'🔗', label:'リクルートリンク発行',   href:'coreto-recruit-link-v2.html', key:'recruit_link' },
+      { icon:'🎓', label:'オンボーディング',         href:'coreto-onboarding-v2.html',   key:'onboarding' },
     ]},
   ],
     { section:'本日の業務', items:[
