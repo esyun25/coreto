@@ -253,7 +253,8 @@ const STEPS = [
   {num:2, label:'SMS認証'},
   {num:3, label:'書類提出'},
   {num:4, label:'LINE'},
-  {num:5, label:'確認・送信'},
+  {num:5, label:'契約書確認'},
+  {num:6, label:'確認・送信'},
 ];
 
 function showToast(msg, type='') {
@@ -282,7 +283,7 @@ function renderStep(n) {
   STEP = n;
   renderStepBar();
   window.scrollTo({top:0, behavior:'smooth'});
-  [null,s1,s2,s3,s4,s5][n]?.();
+  [null,s1,s2,s3,s4,s5,s6][n]?.();
 }
 function next() { renderStep(STEP+1); }
 function back() { renderStep(STEP-1); }
@@ -588,9 +589,8 @@ function s3() {
         <input type="file" id="pt-selfie" accept="image/*" capture="user" style="display:none"
           onchange="handleUpload('selfie',this)">
         ${DATA.selfie
-          ? \`<div style="font-size:12px;color:var(--em);font-weight:600">✅ \${DATA.selfie.name}</div>\`
-          : \`<div style="font-size:28px;margin-bottom:6px">🤳</div>
-             <div style="font-size:12px;color:var(--muted)">自撮り写真をアップロード</div>\`}
+          ? '<div style="font-size:12px;color:var(--em);font-weight:600">✅ ' + DATA.selfie.name + '</div>'
+          : '<div style="font-size:28px;margin-bottom:6px">🤳</div><div style="font-size:12px;color:var(--muted)">自撮り写真をアップロード</div>'}
       </div>
     </div>
     <div id="kyc-ai-status" style="display:none;margin-top:4px"></div>
@@ -754,9 +754,91 @@ function validateS4(code) {
 }
 
 // ════════════════════════════════════════════════
-// STEP 5: 確認・送信
+// STEP 6: 確認・送信
+// ════════════════════════════════════════════════
+// STEP 5: 契約書確認
 // ════════════════════════════════════════════════
 function s5() {
+  document.getElementById('step-content').innerHTML = `
+  <div class="card">
+    <div class="card-title">📝 契約書の確認</div>
+    <div class="card-sub">
+      入会にあたり、以下の書類をご確認ください。すべてにチェックを入れてから次へ進んでください。
+    </div>
+
+    <!-- パートナー契約書 -->
+    <div style="border:1.5px solid var(--bd);border-radius:10px;overflow:hidden;margin-bottom:14px">
+      <div style="padding:14px 16px;background:#F8F9FA;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:10px">
+        <span style="font-size:20px">📄</span>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700">パートナー登録契約書</div>
+          <div style="font-size:10px;color:var(--muted)">全5条 · 紹介手数料25%・守秘義務・競業避止</div>
+        </div>
+        <a href="#" target="_blank" style="display:inline-flex;align-items:center;gap:5px;padding:6px 14px;border-radius:7px;background:var(--navy);color:#fff;font-size:11px;font-weight:600;text-decoration:none">全文を読む ↗</a>
+      </div>
+      <div style="padding:12px 16px;display:flex;align-items:flex-start;gap:10px">
+        <input type="checkbox" id="pt-cb-contract" style="width:16px;height:16px;margin-top:2px;accent-color:var(--navy);flex-shrink:0" onchange="ptCheckAll()">
+        <label for="pt-cb-contract" style="font-size:12px;line-height:1.6;cursor:pointer">パートナー登録契約書の全文を読み、内容に同意します</label>
+      </div>
+    </div>
+
+    <!-- 個人情報取扱同意書 -->
+    <div style="border:1.5px solid var(--bd);border-radius:10px;overflow:hidden;margin-bottom:14px">
+      <div style="padding:14px 16px;background:#F8F9FA;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:10px">
+        <span style="font-size:20px">🔒</span>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700">個人情報の取り扱いに関する同意書</div>
+          <div style="font-size:10px;color:var(--muted)">収集情報・利用目的・第三者提供</div>
+        </div>
+        <a href="#" target="_blank" style="display:inline-flex;align-items:center;gap:5px;padding:6px 14px;border-radius:7px;background:var(--navy);color:#fff;font-size:11px;font-weight:600;text-decoration:none">全文を読む ↗</a>
+      </div>
+      <div style="padding:12px 16px;display:flex;align-items:flex-start;gap:10px">
+        <input type="checkbox" id="pt-cb-privacy" style="width:16px;height:16px;margin-top:2px;accent-color:var(--navy);flex-shrink:0" onchange="ptCheckAll()">
+        <label for="pt-cb-privacy" style="font-size:12px;line-height:1.6;cursor:pointer">個人情報の取り扱いに関する同意書の全文を読み、内容に同意します</label>
+      </div>
+    </div>
+
+    <!-- システム利用規約 -->
+    <div style="border:1.5px solid var(--bd);border-radius:10px;overflow:hidden;margin-bottom:20px">
+      <div style="padding:14px 16px;background:#F8F9FA;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:10px">
+        <span style="font-size:20px">💻</span>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700">COREBLDGシステム利用規約</div>
+          <div style="font-size:10px;color:var(--muted)">アカウント管理・禁止事項・免責事項</div>
+        </div>
+        <a href="#" target="_blank" style="display:inline-flex;align-items:center;gap:5px;padding:6px 14px;border-radius:7px;border:1.5px solid var(--bd);color:var(--ink);font-size:11px;font-weight:600;text-decoration:none">全文を読む ↗</a>
+      </div>
+      <div style="padding:12px 16px;display:flex;align-items:flex-start;gap:10px">
+        <input type="checkbox" id="pt-cb-tos" style="width:16px;height:16px;margin-top:2px;accent-color:var(--navy);flex-shrink:0" onchange="ptCheckAll()">
+        <label for="pt-cb-tos" style="font-size:12px;line-height:1.6;cursor:pointer">COREBLDGシステム利用規約を読み、内容に同意します</label>
+      </div>
+    </div>
+
+    <!-- クラウドサイン案内 -->
+    <div style="padding:14px 16px;border-radius:10px;background:linear-gradient(135deg,rgba(13,26,45,.04),rgba(200,169,81,.06));border:1.5px solid rgba(200,169,81,.2);margin-bottom:20px">
+      <div style="font-size:12px;font-weight:700;margin-bottom:6px">☁️ 電子署名（クラウドサイン）について</div>
+      <div style="font-size:11px;color:var(--muted);line-height:1.8">
+        申込送信後、本部より<strong>クラウドサイン</strong>を通じてパートナー契約書・個人情報同意書の署名依頼メールをお送りします。メールのリンクから署名いただくことで正式にパートナー登録が完了します。
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="back()">← 戻る</button>
+      <button class="btn btn-primary" id="pt-btn-next" onclick="next()" disabled style="opacity:.4;cursor:not-allowed">
+        確認へ進む →
+      </button>
+    </div>
+  </div>`;
+}
+
+function ptCheckAll() {
+  const allChecked = ['pt-cb-contract','pt-cb-privacy','pt-cb-tos'].every(id => document.getElementById(id)?.checked);
+  const btn = document.getElementById('pt-btn-next');
+  if (btn) { btn.disabled = !allChecked; btn.style.opacity = allChecked ? '1' : '.4'; btn.style.cursor = allChecked ? 'pointer' : 'not-allowed'; }
+}
+
+// ════════════════════════════════════════════════
+function s6() {
   const isInd = DATA.entity === 'individual';
   const rows = [
     ['登録種別', isInd ? '👤 個人パートナー' : '🏢 法人パートナー'],

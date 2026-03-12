@@ -284,7 +284,8 @@ const STEPS = [
   { num:5, label:'口座登録' },
   { num:6, label:'決済情報' },
   { num:7, label:'LINE' },
-  { num:8, label:'確認・送信' },
+  { num:8, label:'契約書確認' },
+  { num:9, label:'確認・送信' },
 ];
 
 function initForm() {
@@ -327,7 +328,7 @@ function renderStep(n) {
   STEP = n;
   renderStepBar();
   window.scrollTo({ top: 0, behavior: 'smooth' });
-  const renders = [null, s1,s2,s3,s4,s5,s6,s7,s8];
+  const renders = [null, s1,s2,s3,s4,s5,s6,s7,s8,s9];
   renders[n]?.();
 }
 
@@ -1070,9 +1071,117 @@ function validateS7(code) {
 }
 
 // ═══════════════════════════════════════════════════════
-// STEP 8: 確認・送信
+// STEP 8: 契約書確認
 // ═══════════════════════════════════════════════════════
+
 function s8() {
+  document.getElementById('step-content').innerHTML = `
+  <div class="card">
+    <div class="card-title">📝 契約書の確認</div>
+    <div class="card-sub">
+      入会にあたり、以下の書類をご確認ください。<br>
+      各書類のリンクから全文をご確認いただき、すべてにチェックを入れてから次へお進みください。
+    </div>
+
+    <!-- 業務委託契約書 -->
+    <div style="border:1.5px solid var(--bd);border-radius:10px;overflow:hidden;margin-bottom:14px">
+      <div style="padding:14px 16px;background:var(--cream2,#F8F9FA);border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:10px">
+        <span style="font-size:20px">📄</span>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700">業務委託契約書</div>
+          <div style="font-size:10px;color:var(--muted)">全7条 · 報酬率・守秘義務・競業避止・違約金条項を含む</div>
+        </div>
+        <a id="contract-link-1" href="#" target="_blank"
+          style="display:inline-flex;align-items:center;gap:5px;padding:6px 14px;border-radius:7px;
+          background:var(--navy);color:#fff;font-size:11px;font-weight:600;text-decoration:none">
+          全文を読む ↗
+        </a>
+      </div>
+      <div style="padding:12px 16px;display:flex;align-items:flex-start;gap:10px">
+        <input type="checkbox" id="cb-contract" style="width:16px;height:16px;margin-top:2px;accent-color:var(--navy);flex-shrink:0" onchange="checkAllContracts()">
+        <label for="cb-contract" style="font-size:12px;line-height:1.6;cursor:pointer">
+          業務委託契約書の全文を読み、内容に同意します
+        </label>
+      </div>
+    </div>
+
+    <!-- 個人情報取扱同意書 -->
+    <div style="border:1.5px solid var(--bd);border-radius:10px;overflow:hidden;margin-bottom:14px">
+      <div style="padding:14px 16px;background:var(--cream2,#F8F9FA);border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:10px">
+        <span style="font-size:20px">🔒</span>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700">個人情報の取り扱いに関する同意書</div>
+          <div style="font-size:10px;color:var(--muted)">収集情報・利用目的・第三者提供・開示請求の手順</div>
+        </div>
+        <a id="contract-link-2" href="#" target="_blank"
+          style="display:inline-flex;align-items:center;gap:5px;padding:6px 14px;border-radius:7px;
+          background:var(--navy);color:#fff;font-size:11px;font-weight:600;text-decoration:none">
+          全文を読む ↗
+        </a>
+      </div>
+      <div style="padding:12px 16px;display:flex;align-items:flex-start;gap:10px">
+        <input type="checkbox" id="cb-privacy" style="width:16px;height:16px;margin-top:2px;accent-color:var(--navy);flex-shrink:0" onchange="checkAllContracts()">
+        <label for="cb-privacy" style="font-size:12px;line-height:1.6;cursor:pointer">
+          個人情報の取り扱いに関する同意書の全文を読み、内容に同意します
+        </label>
+      </div>
+    </div>
+
+    <!-- COREBLDGシステム利用規約（チェックのみ） -->
+    <div style="border:1.5px solid var(--bd);border-radius:10px;overflow:hidden;margin-bottom:20px">
+      <div style="padding:14px 16px;background:var(--cream2,#F8F9FA);border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:10px">
+        <span style="font-size:20px">💻</span>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700">COREBLDGシステム利用規約</div>
+          <div style="font-size:10px;color:var(--muted)">アカウント管理・禁止事項・免責事項</div>
+        </div>
+        <a href="#" target="_blank"
+          style="display:inline-flex;align-items:center;gap:5px;padding:6px 14px;border-radius:7px;
+          border:1.5px solid var(--bd);color:var(--ink);font-size:11px;font-weight:600;text-decoration:none">
+          全文を読む ↗
+        </a>
+      </div>
+      <div style="padding:12px 16px;display:flex;align-items:flex-start;gap:10px">
+        <input type="checkbox" id="cb-tos" style="width:16px;height:16px;margin-top:2px;accent-color:var(--navy);flex-shrink:0" onchange="checkAllContracts()">
+        <label for="cb-tos" style="font-size:12px;line-height:1.6;cursor:pointer">
+          COREBLDGシステム利用規約の全文を読み、内容に同意します
+        </label>
+      </div>
+    </div>
+
+    <!-- 電子署名についての案内 -->
+    <div style="padding:14px 16px;border-radius:10px;background:linear-gradient(135deg,rgba(13,26,45,.04),rgba(200,169,81,.06));border:1.5px solid rgba(200,169,81,.2);margin-bottom:20px">
+      <div style="font-size:12px;font-weight:700;margin-bottom:6px">☁️ 電子署名（クラウドサイン）について</div>
+      <div style="font-size:11px;color:var(--muted);line-height:1.8">
+        申込送信後、本部より<strong>クラウドサイン</strong>を通じて業務委託契約書・個人情報同意書の署名依頼メールをお送りします。<br>
+        メールのリンクから署名いただくことで正式に契約が成立します。署名後、双方に控えのPDFが送られます。
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="back()">← 戻る</button>
+      <button class="btn btn-primary" id="btn-to-confirm" onclick="next()" disabled
+        style="opacity:.4;cursor:not-allowed">
+        確認へ進む →
+      </button>
+    </div>
+  </div>`;
+}
+
+function checkAllContracts() {
+  const allChecked = ['cb-contract','cb-privacy','cb-tos'].every(id => document.getElementById(id)?.checked);
+  const btn = document.getElementById('btn-to-confirm');
+  if (btn) {
+    btn.disabled = !allChecked;
+    btn.style.opacity = allChecked ? '1' : '.4';
+    btn.style.cursor = allChecked ? 'pointer' : 'not-allowed';
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// STEP 9: 確認・送信
+// ═══════════════════════════════════════════════════════
+function s9() {
   const isRE = DATA.type === 're';
   const isSennin = isRE && DATA.takken === 'あり' && DATA.takkenType === '専任';
 
@@ -1110,14 +1219,12 @@ function s8() {
       送信後、AIが書類を自動解析し本部が最終確認を行い、<br>
       IDとパスワードをメールでお送りします。
     </div></div>
-    <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;margin-bottom:12px">
-      <input type="checkbox" id="agree-cb" style="width:16px;height:16px;margin-top:2px;accent-color:var(--navy)">
-      <span style="font-size:11px;color:var(--ink);font-weight:400;letter-spacing:0">
-        <a href="#" style="color:var(--navy)">業務委託契約書</a>・
-        <a href="#" style="color:var(--navy)">個人情報取扱方針</a>・
-        <a href="#" style="color:var(--navy)">利用規約</a> に同意します
-      </span>
-    </label>
+    <div style="padding:12px 14px;border-radius:8px;background:rgba(200,169,81,.08);border:1.5px solid rgba(200,169,81,.25);margin-bottom:12px">
+      <div style="font-size:11px;color:var(--ink);line-height:1.7">
+        ☁️ <strong>送信後にクラウドサインより署名依頼メールが届きます。</strong><br>
+        業務委託契約書・個人情報同意書への電子署名が完了すると正式に契約が成立します。
+      </div>
+    </div>
   </div>
   <div class="btn-row">
     <button class="btn btn-ghost" onclick="back()">← 戻る</button>
@@ -1126,9 +1233,7 @@ function s8() {
 }
 
 function submitForm() {
-  if (!document.getElementById('agree-cb')?.checked) {
-    showToast('⚠️ 規約への同意が必要です','warn'); return;
-  }
+  // 契約書同意はStep8で完了済み
 
   document.getElementById('step-content').innerHTML = `
   <div class="card">
@@ -1159,7 +1264,26 @@ function submitForm() {
           </div>
         </div>
 
+                <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:16px">
+          <div style="width:28px;height:28px;border-radius:50%;background:#FFFBEB;
+            border:1.5px solid rgba(200,169,81,.4);display:flex;align-items:center;
+            justify-content:center;font-size:13px;flex-shrink:0;animation:pulse 2s infinite">☁️</div>
+          <div style="padding-top:4px">
+            <div style="font-size:12px;font-weight:700;color:#92610A">クラウドサインで電子署名</div>
+            <div style="font-size:10px;color:#5F6368;margin-top:2px">
+              本部より署名依頼メールをお送りします<br>
+              メールのリンクから業務委託契約書・個人情報同意書に署名してください
+            </div>
+          </div>
+        </div>
+
         <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:16px">
+          <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0">
+            <div style="width:1px;height:16px;background:#E8EAED;margin-top:-14px;margin-left:13px"></div>
+          </div>
+        </div>
+
+<div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:16px">
           <div style="width:28px;height:28px;border-radius:50%;background:#FFFBEB;
             border:1.5px solid rgba(217,119,6,.3);display:flex;align-items:center;
             justify-content:center;font-size:13px;flex-shrink:0;animation:pulse 2s infinite">⏳</div>
