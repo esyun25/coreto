@@ -108,6 +108,7 @@ const NAV = {
       { icon:'⚡', label:'即時払い審査',            href:'coreto-instant-pay-v2.html',  key:'instant_pay', badge:'1', badgeColor:'amber' },
       { icon:'📝', label:'成約報告一覧',            href:'coreto-contract-report-v2.html', key:'contract_report' },
       { icon:'📲', label:'LINE認証管理',           href:'coreto-line-auth-v2.html',    key:'line_auth' },
+      { icon:'🤖', label:'LINE AIチャット管理',     href:'coreto-line-ai-v2.html',      key:'line_ai' },
       { icon:'🔔', label:'通知ログ',               href:'coreto-hub-v2.html#notif',    key:'notif' },
     ]},
     { section:'事業SFA', items:[

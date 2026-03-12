@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LINE AIチャット管理 — COREBLDG</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0D1A2D;--navy-m:#152238;--navy-l:#1E3252;
+  --gold:#C8A951;--gold-dim:rgba(200,169,81,.15);
+  --ink:#202124;--muted:#5F6368;--faint:#80868B;--label:#5F6368;
+  --em:#059669;--em-bg:#ECFDF5;--am:#D97706;--am-bg:#FFFBEB;
+  --rd:#DC2626;--rd-bg:#FEF2F2;--sk:#0284C7;--sk-bg:#F0F9FF;
+  --bd:#E8EAED;--bd2:#DADCE0;--cream2:#F8F9FA;
+  --line:#06C755;--line-dim:rgba(6,199,85,.12);
+  --sw:240px;--r:10px;
+  --sh:0 1px 2px rgba(60,64,67,.1),0 1px 3px rgba(60,64,67,.06);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:#fff}
+.shell{display:flex;height:100vh}
+/* サイドバー */
+.sb{width:var(--sw);background:var(--navy);display:flex;flex-direction:column;flex-shrink:0;position:relative}
+.sb::after{content:'';position:absolute;top:0;right:0;width:1px;height:100%;background:linear-gradient(180deg,transparent,rgba(200,169,81,.2),transparent)}
+.sb-head{padding:20px 18px 14px;border-bottom:1px solid rgba(255,255,255,.07)}
+.sb-logo{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:var(--gold);letter-spacing:2px}
+.sb-ver{font-size:9px;color:rgba(255,255,255,.25);margin-top:4px}
+.sb-user{display:flex;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid rgba(255,255,255,.07)}
+.sb-av{width:32px;height:32px;border-radius:50%;background:rgba(200,169,81,.2);border:1.5px solid rgba(200,169,81,.4);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--gold);flex-shrink:0}
+.sb-nav{flex:1;overflow-y:auto;padding:10px 0}
+/* メイン */
+.content{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.topbar{display:flex;align-items:center;gap:12px;padding:0 24px;height:56px;border-bottom:1px solid var(--bd);background:#fff;flex-shrink:0}
+.mob-ham{display:none;flex-direction:column;gap:5px;background:none;border:none;cursor:pointer;padding:4px}
+.mob-ham span{display:block;width:20px;height:2px;background:var(--ink);border-radius:2px}
+.tb-title{font-size:15px;font-weight:700;color:var(--ink)}
+.tb-crumb{font-size:10px;color:var(--muted)}
+.tb-crumb a{color:var(--muted);text-decoration:none}
+.page{flex:1;overflow-y:auto;padding:24px;background:var(--cream2)}
+/* LINE アカウントタブ */
+.line-tabs{display:flex;gap:8px;margin-bottom:20px}
+.line-tab{display:flex;align-items:center;gap:8px;padding:10px 18px;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;border:2px solid var(--bd);background:#fff;transition:.15s;color:var(--muted)}
+.line-tab.active{border-color:var(--line);background:var(--line-dim);color:var(--line)}
+.line-dot{width:8px;height:8px;border-radius:50%;background:var(--faint);flex-shrink:0}
+.line-tab.active .line-dot{background:var(--line)}
+/* ボタン */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Outfit','Noto Sans JP',sans-serif;transition:.15s;border:none}
+.btn-primary{background:var(--navy);color:#fff}
+.btn-primary:hover{opacity:.9}
+.btn-ghost{background:transparent;color:var(--ink);border:1.5px solid var(--bd)}
+.btn-ghost:hover{background:var(--cream2)}
+.btn-em{background:var(--em);color:#fff}
+.btn-line{background:var(--line);color:#fff}
+.btn-am{background:var(--am);color:#fff}
+.btn-sm{padding:5px 12px;font-size:11px}
+/* バッジ */
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700}
+.b-em{background:var(--em-bg);color:var(--em)}
+.b-am{background:var(--am-bg);color:var(--am)}
+.b-rd{background:var(--rd-bg);color:var(--rd)}
+.b-sk{background:var(--sk-bg);color:var(--sk)}
+.b-line{background:var(--line-dim);color:var(--line)}
+.b-nt{background:#F3F4F6;color:#374151}
+/* カード */
+.sec{background:#fff;border:1px solid var(--bd);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden;margin-bottom:16px}
+.sec-head{padding:13px 18px;border-bottom:1px solid var(--bd);background:var(--cream2);display:flex;align-items:center;justify-content:space-between;gap:8px}
+.sec-title{font-size:12px;font-weight:700;color:var(--ink);text-transform:uppercase;letter-spacing:.5px}
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.kpi-card{background:#fff;border:1px solid var(--bd);border-radius:var(--r);padding:14px 16px;box-shadow:var(--sh)}
+.kpi-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
+.kpi-val{font-size:24px;font-weight:300;color:var(--ink);font-variant-numeric:tabular-nums}
+.kpi-sub{font-size:10px;color:var(--muted);margin-top:3px}
+/* グリッド */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+/* フォーム */
+.form-label{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.3px;display:block;margin-bottom:5px}
+.form-input{width:100%;padding:9px 12px;border:1.5px solid var(--bd);border-radius:7px;font-size:12px;color:var(--ink);font-family:'Outfit','Noto Sans JP',sans-serif;outline:none;transition:.15s;background:#fff}
+.form-input:focus{border-color:var(--navy);box-shadow:0 0 0 3px rgba(13,26,45,.07)}
+textarea.form-input{resize:vertical;min-height:80px;line-height:1.7}
+/* チャット履歴 */
+.chat-row{display:flex;gap:10px;padding:12px 14px;border-bottom:1px solid var(--bd);cursor:pointer;transition:.1s}
+.chat-row:hover{background:rgba(13,26,45,.02)}
+.chat-row.unread{background:var(--sk-bg)}
+.chat-row.hq-flagged{background:var(--am-bg)}
+.chat-av{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.chat-meta{font-size:10px;color:var(--muted)}
+.chat-last{font-size:12px;color:var(--ink);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chat-time{font-size:10px;color:var(--faint);white-space:nowrap}
+/* チャット詳細 */
+.chat-detail{display:none;flex-direction:column;height:calc(100vh - 56px - 48px - 70px)}
+.chat-detail.open{display:flex}
+.msg-list{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;background:var(--cream2)}
+.msg-bubble{max-width:72%;padding:10px 14px;border-radius:14px;font-size:12px;line-height:1.7}
+.msg-user{background:#fff;border:1px solid var(--bd);align-self:flex-start;border-bottom-left-radius:4px}
+.msg-ai{background:var(--line-dim);border:1px solid rgba(6,199,85,.2);align-self:flex-end;border-bottom-right-radius:4px;color:var(--ink)}
+.msg-hq{background:#FFF7ED;border:1px solid rgba(217,119,6,.2);align-self:flex-end;border-bottom-right-radius:4px}
+.msg-sender{font-size:9px;font-weight:700;color:var(--muted);margin-bottom:3px}
+.chat-input-row{padding:12px 16px;border-top:1px solid var(--bd);background:#fff;display:flex;gap:8px}
+/* FAQカード */
+.faq-card{border:1px solid var(--bd);border-radius:9px;padding:14px;margin-bottom:10px;background:#fff}
+.faq-q{font-size:12px;font-weight:700;color:var(--ink);margin-bottom:6px}
+.faq-a{font-size:11px;color:var(--muted);line-height:1.6}
+.faq-tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:8px}
+/* AI人格設定 */
+.persona-card{border:2px solid var(--bd);border-radius:9px;padding:14px;cursor:pointer;transition:.15s}
+.persona-card.sel{border-color:var(--line);background:var(--line-dim)}
+.persona-name{font-size:13px;font-weight:700;color:var(--ink);margin-bottom:4px}
+.persona-desc{font-size:11px;color:var(--muted)}
+/* AI テスト */
+.test-bubble-user{background:var(--cream2);border:1px solid var(--bd);border-radius:12px 12px 2px 12px;padding:10px 14px;font-size:12px;align-self:flex-end;max-width:75%}
+.test-bubble-ai{background:var(--line-dim);border:1px solid rgba(6,199,85,.2);border-radius:12px 12px 12px 2px;padding:10px 14px;font-size:12px;align-self:flex-start;max-width:75%}
+/* タブレット・モバイル */
+.mob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:99}
+@media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(2,1fr)}.grid-2{grid-template-columns:1fr}.grid-3{grid-template-columns:1fr}}
+@media(max-width:900px){.mob-ham{display:flex}.sb{position:fixed;left:-100%;top:0;bottom:0;z-index:100;transition:.25s}.sb.open{left:0}.mob-overlay.show{display:block}}
+</style>
+</head>
+<body>
+<div class="shell">
+<nav class="sb">
+  <div class="sb-head">
+    <div class="sb-logo">CORE<br>BLDG</div>
+    <div class="sb-ver">v2.0 — CORETO</div>
+  </div>
+  <div class="sb-user">
+    <div class="sb-av">HQ</div>
+    <div>
+      <div style="font-size:11px;font-weight:600;color:rgba(255,255,255,.8)">HQ管理者</div>
+      <div style="font-size:9px;color:rgba(255,255,255,.3);font-family:'DM Mono',monospace">HQ-0001</div>
+    </div>
+  </div>
+  <div class="sb-nav" id="sb-nav"></div>
+</nav>
+
+<div class="content">
+  <div class="topbar">
+    <button class="mob-ham" onclick="toggleSb()"><span></span><span></span><span></span></button>
+    <div>
+      <div class="tb-title">LINE AIチャット管理</div>
+      <div class="tb-crumb"><a href="coreto-hub-v2.html">COREBLDG</a> › LINE AIチャット管理</div>
+    </div>
+    <div style="margin-left:auto;display:flex;gap:8px">
+      <span id="ai-status-badge" class="badge b-em">🟢 AI稼働中</span>
+      <button class="btn btn-ghost btn-sm" onclick="openBroadcastModal()">📢 一斉配信</button>
+    </div>
+  </div>
+
+  <div class="page" id="main-page">
+    <!-- LINE アカウント切替タブ -->
+    <div class="line-tabs">
+      <div class="line-tab active" id="tab-line1" onclick="switchAccount('line1')">
+        <div class="line-dot"></div>
+        LINE① AG・PT向け（社内）
+      </div>
+      <div class="line-tab" id="tab-line2" onclick="switchAccount('line2')">
+        <div class="line-dot"></div>
+        LINE② クライアント向け（外部）
+      </div>
+    </div>
+
+    <!-- サブナビ -->
+    <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap">
+      <button class="btn btn-sm" id="subnav-overview"   onclick="showSection('overview')"   style="background:var(--navy);color:#fff">📊 概要</button>
+      <button class="btn btn-ghost btn-sm" id="subnav-history"  onclick="showSection('history')" >💬 チャット履歴</button>
+      <button class="btn btn-ghost btn-sm" id="subnav-faq"     onclick="showSection('faq')"     >📋 FAQ管理</button>
+      <button class="btn btn-ghost btn-sm" id="subnav-settings" onclick="showSection('settings')" >⚙️ AI設定</button>
+      <button class="btn btn-ghost btn-sm" id="subnav-test"    onclick="showSection('test')"    >🧪 AIテスト</button>
+    </div>
+
+    <!-- ① 概要 -->
+    <div id="sec-overview">
+      <div class="kpi-grid" id="kpi-grid"></div>
+      <div class="grid-2">
+        <!-- 最近のチャット -->
+        <div class="sec">
+          <div class="sec-head">
+            <div class="sec-title">💬 最近のチャット</div>
+            <button class="btn btn-ghost btn-sm" onclick="showSection('history')">すべて表示</button>
+          </div>
+          <div id="recent-chats"></div>
+        </div>
+        <!-- AI応答ログ -->
+        <div class="sec">
+          <div class="sec-head"><div class="sec-title">🤖 AI応答ログ（直近10件）</div></div>
+          <div id="ai-log" style="max-height:320px;overflow-y:auto"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ② チャット履歴 -->
+    <div id="sec-history" style="display:none">
+      <div class="grid-2" style="align-items:start">
+        <!-- 左: 一覧 -->
+        <div class="sec" style="overflow:hidden">
+          <div class="sec-head">
+            <div class="sec-title">ユーザー一覧</div>
+            <div style="display:flex;gap:6px">
+              <select class="form-input" style="font-size:11px;padding:4px 8px;width:auto" id="filter-status" onchange="renderChatList()">
+                <option value="">全て</option>
+                <option value="unread">未読</option>
+                <option value="hq">HQ介入中</option>
+                <option value="escalated">エスカレート</option>
+              </select>
+            </div>
+          </div>
+          <div id="chat-list" style="max-height:500px;overflow-y:auto"></div>
+        </div>
+        <!-- 右: 詳細 -->
+        <div class="sec" id="chat-detail-panel" style="overflow:hidden">
+          <div id="chat-detail-placeholder" style="padding:60px 20px;text-align:center;color:var(--muted)">
+            <div style="font-size:32px;margin-bottom:10px">💬</div>
+            <div style="font-size:12px">左のリストからユーザーを選択してください</div>
+          </div>
+          <div id="chat-detail-content" style="display:none;flex-direction:column;height:500px">
+            <div id="chat-detail-header" style="padding:12px 16px;border-bottom:1px solid var(--bd);background:var(--cream2);display:flex;align-items:center;justify-content:space-between"></div>
+            <div id="msg-list" class="msg-list" style="flex:1"></div>
+            <div id="hq-input-area" style="display:none;padding:12px 16px;border-top:1px solid var(--bd);background:#fff">
+              <div style="font-size:10px;font-weight:700;color:var(--am);margin-bottom:6px">⚡ HQ介入モード — このメッセージはHQが直接送信します</div>
+              <div style="display:flex;gap:8px">
+                <input id="hq-msg-input" class="form-input" placeholder="HQからのメッセージを入力..." style="flex:1">
+                <button class="btn btn-am btn-sm" onclick="sendHQMessage()">送信</button>
+                <button class="btn btn-ghost btn-sm" onclick="exitHQMode()">AI復帰</button>
+              </div>
+            </div>
+            <div id="ai-input-area" style="padding:12px 16px;border-top:1px solid var(--bd);background:#fff">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+                <div style="font-size:10px;color:var(--muted)">🤖 AI自動応答中</div>
+                <button class="btn btn-am btn-sm" onclick="enterHQMode()">⚡ HQ介入</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ③ FAQ管理 -->
+    <div id="sec-faq" style="display:none">
+      <div class="sec">
+        <div class="sec-head">
+          <div class="sec-title">📋 自動応答シナリオ（FAQ）</div>
+          <button class="btn btn-primary btn-sm" onclick="openFaqModal()">＋ 追加</button>
+        </div>
+        <div style="padding:16px" id="faq-list"></div>
+      </div>
+    </div>
+
+    <!-- ④ AI設定 -->
+    <div id="sec-settings" style="display:none">
+      <div class="grid-2">
+        <!-- 人格選択 -->
+        <div class="sec">
+          <div class="sec-head"><div class="sec-title">🤖 AI人格設定</div></div>
+          <div style="padding:16px;display:flex;flex-direction:column;gap:10px" id="persona-cards"></div>
+        </div>
+        <!-- システムプロンプト -->
+        <div class="sec">
+          <div class="sec-head">
+            <div class="sec-title">📝 システムプロンプト</div>
+            <button class="btn btn-primary btn-sm" onclick="savePrompt()">保存</button>
+          </div>
+          <div style="padding:16px">
+            <div style="margin-bottom:12px">
+              <label class="form-label">アカウント別プロンプト</label>
+              <textarea id="system-prompt" class="form-input" style="min-height:200px;font-size:11px;line-height:1.8"></textarea>
+            </div>
+            <div style="margin-bottom:12px">
+              <label class="form-label">エスカレーション条件</label>
+              <textarea id="escalation-rules" class="form-input" style="min-height:80px;font-size:11px" placeholder="例: クレーム・解約・緊急 などのキーワードが含まれた場合HQに通知"></textarea>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:1.5px solid var(--bd);border-radius:8px">
+              <div>
+                <div style="font-size:12px;font-weight:600">AI自動応答</div>
+                <div style="font-size:10px;color:var(--muted)">OFFにするとHQ手動対応モードになります</div>
+              </div>
+              <label style="position:relative;width:40px;height:22px;cursor:pointer">
+                <input type="checkbox" id="ai-toggle" style="opacity:0;width:0;height:0" checked onchange="toggleAI(this)">
+                <span id="ai-toggle-track" style="position:absolute;inset:0;background:var(--line);border-radius:11px;transition:.2s"></span>
+                <span id="ai-toggle-thumb" style="position:absolute;left:2px;top:2px;width:18px;height:18px;background:#fff;border-radius:50%;transition:.2s;transform:translateX(18px)"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+        <!-- 応答速度・制限 -->
+        <div class="sec">
+          <div class="sec-head"><div class="sec-title">⚙️ 応答設定</div></div>
+          <div style="padding:16px;display:flex;flex-direction:column;gap:12px">
+            <div>
+              <label class="form-label">応答遅延（リアル感を演出）</label>
+              <select class="form-input" id="response-delay">
+                <option value="0">即時（0秒）</option>
+                <option value="1500" selected>1〜2秒（推奨）</option>
+                <option value="3000">2〜4秒</option>
+              </select>
+            </div>
+            <div>
+              <label class="form-label">1メッセージ最大文字数</label>
+              <select class="form-input">
+                <option value="200" selected>200文字（標準）</option>
+                <option value="400">400文字</option>
+                <option value="600">600文字（詳細モード）</option>
+              </select>
+            </div>
+            <div>
+              <label class="form-label">営業時間外の自動返信</label>
+              <textarea class="form-input" style="min-height:60px" placeholder="例: ただいま営業時間外（21:00〜09:00）です。翌営業時間にご対応いたします。"></textarea>
+            </div>
+            <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="showToast('✅ 応答設定を保存しました')">保存</button>
+          </div>
+        </div>
+        <!-- 通知設定 -->
+        <div class="sec">
+          <div class="sec-head"><div class="sec-title">🔔 通知設定</div></div>
+          <div style="padding:16px;display:flex;flex-direction:column;gap:10px">
+            ${['エスカレーション発生時にSlack通知','未読が30分以上経過時に通知','AI判定不能メッセージを通知','新規友だち追加時に通知'].map((label,i)=>`
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bd)">
+              <div style="font-size:12px">${label}</div>
+              <label style="position:relative;width:36px;height:20px;cursor:pointer;flex-shrink:0">
+                <input type="checkbox" ${i<2?'checked':''} style="opacity:0;width:0;height:0" onchange="this.nextElementSibling.style.background=this.checked?'var(--line)':'#ccc'">
+                <span style="position:absolute;inset:0;background:${i<2?'var(--line)':'#ccc'};border-radius:10px;transition:.2s"></span>
+                <span style="position:absolute;left:${i<2?'18px':'2px'};top:2px;width:16px;height:16px;background:#fff;border-radius:50%;transition:.2s"></span>
+              </label>
+            </div>`).join('')}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ⑤ AIテスト -->
+    <div id="sec-test" style="display:none">
+      <div class="grid-2">
+        <div class="sec">
+          <div class="sec-head"><div class="sec-title">🧪 AI応答テスト</div></div>
+          <div style="padding:16px">
+            <div style="background:var(--cream2);border-radius:10px;padding:14px;min-height:280px;display:flex;flex-direction:column;gap:10px;margin-bottom:12px" id="test-chat"></div>
+            <div style="display:flex;gap:8px">
+              <input id="test-input" class="form-input" placeholder="テストメッセージを入力..." onkeydown="if(event.key==='Enter')sendTest()">
+              <button class="btn btn-line" onclick="sendTest()">送信</button>
+            </div>
+            <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
+              <div style="font-size:10px;color:var(--muted);width:100%;margin-bottom:4px">クイックテスト：</div>
+              ${['初期費用を教えてください','物件を見たいです','もう解約したいです','担当を変えてほしい','宅建試験について教えて'].map(q=>`
+              <button class="btn btn-ghost btn-sm" onclick="quickTest('${q}')">${q}</button>`).join('')}
+            </div>
+          </div>
+        </div>
+        <div class="sec">
+          <div class="sec-head"><div class="sec-title">📊 テスト結果メタデータ</div></div>
+          <div style="padding:16px" id="test-meta">
+            <div style="text-align:center;padding:40px;color:var(--muted);font-size:12px">
+              テスト送信後に応答の詳細が表示されます
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- 一斉配信モーダル -->
+<div id="broadcast-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:12px;width:min(500px,94vw);max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+    <div style="padding:18px 22px;border-bottom:1px solid var(--bd);background:var(--cream2);border-radius:12px 12px 0 0;display:flex;justify-content:space-between;align-items:center">
+      <div style="font-size:14px;font-weight:700">📢 一斉配信メッセージ作成</div>
+      <button class="btn btn-ghost btn-sm" onclick="closeBroadcastModal()">✕</button>
+    </div>
+    <div style="padding:22px">
+      <div style="margin-bottom:14px">
+        <label class="form-label">配信先</label>
+        <select class="form-input" id="broadcast-target">
+          <option value="all">全ユーザー</option>
+          <option value="ag">AGのみ</option>
+          <option value="pt">PTのみ</option>
+          <option value="client">クライアントのみ</option>
+        </select>
+      </div>
+      <div style="margin-bottom:14px">
+        <label class="form-label">メッセージ種別</label>
+        <select class="form-input" id="broadcast-type" onchange="updateBroadcastPreview()">
+          <option value="text">テキスト</option>
+          <option value="ai">AI生成</option>
+        </select>
+      </div>
+      <div style="margin-bottom:14px" id="broadcast-ai-prompt-row" style="display:none">
+        <label class="form-label">AI生成プロンプト</label>
+        <input class="form-input" id="broadcast-ai-prompt" placeholder="例：今月の成約件数と来月の目標を告知するメッセージを作成">
+        <button class="btn btn-ghost btn-sm" style="margin-top:6px" onclick="generateBroadcast()">✨ AI生成</button>
+      </div>
+      <div style="margin-bottom:14px">
+        <label class="form-label">メッセージ本文</label>
+        <textarea class="form-input" id="broadcast-body" style="min-height:120px" placeholder="配信メッセージを入力..."></textarea>
+      </div>
+      <div style="margin-bottom:18px">
+        <label class="form-label">配信日時</label>
+        <select class="form-input" id="broadcast-timing">
+          <option value="now">今すぐ送信</option>
+          <option value="schedule">日時指定</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-ghost" style="flex:1;justify-content:center" onclick="closeBroadcastModal()">キャンセル</button>
+        <button class="btn btn-line" style="flex:1;justify-content:center" onclick="sendBroadcast()">📢 配信する（デモ）</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FAQ編集モーダル -->
+<div id="faq-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:12px;width:min(480px,94vw);max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+    <div style="padding:18px 22px;border-bottom:1px solid var(--bd);background:var(--cream2);border-radius:12px 12px 0 0;display:flex;justify-content:space-between;align-items:center">
+      <div style="font-size:14px;font-weight:700" id="faq-modal-title">FAQ追加</div>
+      <button class="btn btn-ghost btn-sm" onclick="closeFaqModal()">✕</button>
+    </div>
+    <div style="padding:22px">
+      <div style="margin-bottom:14px">
+        <label class="form-label">トリガーキーワード（カンマ区切り）</label>
+        <input class="form-input" id="faq-keywords" placeholder="例: 初期費用, 敷金, 礼金, 費用">
+      </div>
+      <div style="margin-bottom:14px">
+        <label class="form-label">質問（表示用）</label>
+        <input class="form-input" id="faq-q" placeholder="例: 初期費用はいくらですか？">
+      </div>
+      <div style="margin-bottom:14px">
+        <label class="form-label">回答テンプレート</label>
+        <textarea class="form-input" id="faq-a" style="min-height:100px" placeholder="AIがこの回答をベースに自然な文体で返答します"></textarea>
+      </div>
+      <div style="margin-bottom:18px">
+        <label class="form-label">カテゴリ</label>
+        <select class="form-input" id="faq-cat">
+          <option value="費用">費用</option>
+          <option value="物件">物件</option>
+          <option value="契約">契約</option>
+          <option value="報酬">報酬</option>
+          <option value="システム">システム</option>
+          <option value="その他">その他</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-ghost" style="flex:1;justify-content:center" onclick="closeFaqModal()">キャンセル</button>
+        <button class="btn btn-primary" style="flex:1;justify-content:center" onclick="saveFaq()">保存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="mob-overlay" onclick="toggleSb()"></div>
+<div id="la-toast" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--navy);color:#fff;padding:10px 20px;border-radius:8px;font-size:12px;font-weight:600;opacity:0;transition:.3s;z-index:999;pointer-events:none;white-space:nowrap"></div>
+
+<script src="coreto-nav-v2.js"></script>
+<script>
+function toggleSb(){ document.querySelector('.sb').classList.toggle('open'); document.querySelector('.mob-overlay').classList.toggle('show'); }
+function showToast(msg,type){
+  const t=document.getElementById('la-toast');
+  t.textContent=msg; t.style.background=type==='err'?'var(--rd)':type==='warn'?'var(--am)':'var(--navy)';
+  t.style.opacity='1'; t.style.transform='translateX(-50%) translateY(0)';
+  setTimeout(()=>{t.style.opacity='0'; t.style.transform='translateX(-50%) translateY(10px)';},3000);
+}
+
+// ── データ定義 ──────────────────────────────────────────────
+let currentAccount = 'line1';
+let currentChatId  = null;
+
+const ACCOUNTS = {
+  line1: {
+    label:'LINE① AG・PT向け',
+    color:'#06C755',
+    kpi:{ friends:57, today:12, ai_rate:89, escalated:2 },
+    prompt:`あなたはCORETO（不動産・人材紹介プラットフォーム）のAIアシスタントです。
+COREBLDGを利用するAG（エージェント）・PT（パートナー）の質問に答えます。
+
+【トーン】
+- 親しみやすく、プロフェッショナル
+- 具体的で簡潔な回答（200文字以内）
+- 敬語を使用
+
+【応答できる内容】
+- コミッション率・報酬計算
+- 案件の進捗確認方法
+- システム（COREBLDG）の操作方法
+- ランク制度・月会費
+
+【HQへエスカレートする条件】
+- 解約・退会の意思表示
+- クレーム・強い不満
+- 回答に迷う法律・税務の質問`,
+    escalation: 'クレーム、解約、退会、問題、困った、怒',
+  },
+  line2: {
+    label:'LINE② クライアント向け',
+    color:'#06C755',
+    kpi:{ friends:124, today:31, ai_rate:76, escalated:5 },
+    prompt:`あなたはCORETO不動産サービスのAIアシスタントです。
+お部屋を探しているクライアント（一般の方）の質問に答えます。
+
+【トーン】
+- 温かみがあり、わかりやすい言葉で
+- 専門用語は避ける
+- 安心感を与える
+
+【応答できる内容】
+- 物件探しの一般的な流れ
+- 初期費用の目安（敷金・礼金・仲介手数料）
+- 内見のご予約方法
+- 契約に必要な書類
+
+【HQへエスカレートする条件】
+- 強いクレーム
+- 個人情報・詳細な物件条件の問い合わせ
+- 緊急の連絡（鍵・設備トラブル）`,
+    escalation: 'クレーム、返金、解約、訴える、怒、問題',
+  },
+};
+
+const CHAT_DATA = {
+  line1: [
+    { id:'u1', name:'木下 大輔', tag:'AG-10001', rank:'gold', msgs:[
+      {from:'user',text:'今月の報酬はいつ振り込まれますか？',time:'10:21'},
+      {from:'ai',text:'毎月20日締め・25日払いです。月会費はGoldランクのため無料です。詳しくはコミッション明細ページをご確認ください。',time:'10:21'},
+      {from:'user',text:'わかりました。ありがとう',time:'10:23'},
+    ], unread:0, status:'normal', lastMsg:'わかりました。ありがとう', lastTime:'10:23' },
+    { id:'u2', name:'大橋 幸代', tag:'AG-10002', rank:'silver', msgs:[
+      {from:'user',text:'IT重説の予約ってどこからできますか',time:'09:14'},
+      {from:'ai',text:'COREBLDGの「IT重説」メニューからご予約いただけます。担当HQが日程を確認後、ZoomのURLをお送りします。',time:'09:14'},
+      {from:'user',text:'もうやめたいんですが…正直きつくて',time:'09:45'},
+      {from:'hq',text:'【HQ】木下マネージャーよりご連絡します。一度お時間いただけますか？個別でお話しましょう。',time:'09:52'},
+    ], unread:1, status:'hq', lastMsg:'一度お時間いただけますか？', lastTime:'09:52' },
+    { id:'u3', name:'林 浩二', tag:'PT-0007', rank:'silver', msgs:[
+      {from:'user',text:'光通信の案件、何件まで投げられますか',time:'昨日'},
+      {from:'ai',text:'PTの場合、光通信案件は件数上限なく投げることができます。COREBLDGの「光通信」メニューからご入力ください。',time:'昨日'},
+    ], unread:0, status:'normal', lastMsg:'件数上限なく投げることができます', lastTime:'昨日' },
+  ],
+  line2: [
+    { id:'c1', name:'田中 一郎', tag:'クライアント', rank:null, msgs:[
+      {from:'user',text:'渋谷で1LDK探しています。予算は15万円くらいです',time:'11:02'},
+      {from:'ai',text:'渋谷エリアの1LDKで15万円前後ですね！担当エージェントより物件情報をご提案します。内見ご希望の日程はいつ頃がよいですか？',time:'11:02'},
+      {from:'user',text:'今週末か来週末なら空いています',time:'11:05'},
+    ], unread:2, status:'normal', lastMsg:'今週末か来週末なら空いています', lastTime:'11:05' },
+    { id:'c2', name:'鈴木 花子', tag:'クライアント', rank:null, msgs:[
+      {from:'user',text:'敷金って返ってきますか？',time:'10:30'},
+      {from:'ai',text:'基本的には退去時の原状回復費用を差し引いた残額が返還されます。物件・契約条件によって異なりますので、担当エージェントにもご確認ください。',time:'10:30'},
+    ], unread:0, status:'normal', lastMsg:'退去時の原状回復費用を差し引いた残額が返還', lastTime:'10:30' },
+    { id:'c3', name:'高橋 健司', tag:'クライアント', rank:null, msgs:[
+      {from:'user',text:'担当を変えてほしいのですが。前回の対応が最悪でした',time:'09:55'},
+      {from:'ai',text:'ご不便をおかけして大変申し訳ございません。担当変更のご要望は本部にて承ります。本部より改めてご連絡差し上げます。',time:'09:55'},
+      {from:'hq',text:'【HQ】ご不満をおかけして誠に申し訳ございません。本部の田中と申します。詳しいお話をお聞かせいただけますか？',time:'10:02'},
+    ], unread:0, status:'escalated', lastMsg:'本部より改めてご連絡差し上げます', lastTime:'10:02' },
+  ],
+};
+
+const FAQ_DATA = {
+  line1: [
+    { id:'f1', keywords:'コミッション,報酬,手数料', q:'コミッション率はいくらですか？', a:'ランクによって異なります。Bronze 65%、Silver 67.5%、Gold 70%、Platinum 75%です（不動産仲介の場合）。', cat:'報酬' },
+    { id:'f2', keywords:'月会費,費用', q:'月会費はいくらかかりますか？', a:'Bronze ¥980/月、Silver ¥490/月、Gold・Platinum 無料です。専任宅建士登録の場合も無料です。', cat:'費用' },
+    { id:'f3', keywords:'IT重説,重要事項,重説', q:'IT重説の予約方法を教えてください', a:'COREBLDGの「IT重説」メニューからご予約できます。担当HQが確認後、Zoom URLをお送りします。', cat:'システム' },
+  ],
+  line2: [
+    { id:'f4', keywords:'初期費用,敷金,礼金,仲介手数料', q:'初期費用はいくらかかりますか？', a:'一般的には賃料の4〜6ヶ月分が目安です。敷金1・礼金1・仲介手数料1ヶ月分（税別）＋前家賃などがかかります。', cat:'費用' },
+    { id:'f5', keywords:'内見,見学,見たい', q:'内見の予約をしたいです', a:'ご希望の物件と日程をお知らせください。担当エージェントより調整してご連絡します。', cat:'物件' },
+    { id:'f6', keywords:'必要書類,書類,審査', q:'入居審査に必要な書類は？', a:'一般的には本人確認書類（運転免許証等）・収入証明・保証人の書類が必要です。物件によって異なります。', cat:'契約' },
+  ],
+};
+
+const PERSONAS = [
+  { id:'friendly', name:'フレンドリー型', desc:'親しみやすく、絵文字も使いながら丁寧に対応。若い層に◎' },
+  { id:'professional', name:'プロフェッショナル型', desc:'丁寧かつ簡潔。ビジネスライクで信頼感を重視。', selected:true },
+  { id:'concierge', name:'コンシェルジュ型', desc:'高級感のある丁寧な敬語。高単価クライアント向け。' },
+];
+
+const AI_LOGS = [
+  { time:'11:05', user:'田中 一郎', q:'今週末か来週末なら空いています', intent:'内見希望', confidence:92, escalated:false },
+  { time:'10:30', user:'鈴木 花子', q:'敷金って返ってきますか？', intent:'費用確認', confidence:97, escalated:false },
+  { time:'09:55', user:'高橋 健司', q:'担当を変えてほしいのですが', intent:'クレーム', confidence:85, escalated:true },
+  { time:'09:45', user:'大橋 幸代', q:'もうやめたいんですが', intent:'退会意向', confidence:91, escalated:true },
+  { time:'09:14', user:'大橋 幸代', q:'IT重説の予約ってどこからできますか', intent:'操作質問', confidence:99, escalated:false },
+];
+
+// ── 描画関数 ─────────────────────────────────────────────
+function switchAccount(acct) {
+  currentAccount = acct;
+  currentChatId = null;
+  document.getElementById('tab-line1').classList.toggle('active', acct==='line1');
+  document.getElementById('tab-line2').classList.toggle('active', acct==='line2');
+  // プロンプトを更新
+  const p = document.getElementById('system-prompt');
+  if (p) p.value = ACCOUNTS[acct].prompt;
+  const e = document.getElementById('escalation-rules');
+  if (e) e.value = ACCOUNTS[acct].escalation;
+  // 各セクション再描画
+  renderKPI(); renderRecentChats(); renderAILog();
+  renderChatList(); renderFAQ(); renderPersonas();
+  // 詳細パネルリセット
+  document.getElementById('chat-detail-placeholder').style.display='';
+  document.getElementById('chat-detail-content').style.display='none';
+}
+
+function showSection(key) {
+  ['overview','history','faq','settings','test'].forEach(k => {
+    document.getElementById('sec-'+k).style.display = k===key?'':'none';
+    const btn = document.getElementById('subnav-'+k);
+    if (btn) { btn.style.background = k===key?'var(--navy)':''; btn.style.color = k===key?'#fff':''; btn.className = k===key?'btn btn-sm':'btn btn-ghost btn-sm'; }
+  });
+}
+
+function renderKPI() {
+  const kpi = ACCOUNTS[currentAccount].kpi;
+  document.getElementById('kpi-grid').innerHTML = [
+    { label:'友だち数', val:kpi.friends+'名', sub:'累計', color:'var(--sk)' },
+    { label:'本日のメッセージ数', val:kpi.today+'件', sub:'受信', color:'var(--em)' },
+    { label:'AI自動応答率', val:kpi.ai_rate+'%', sub:'HQ手動対応 '+(100-kpi.ai_rate)+'%', color:'var(--line)' },
+    { label:'エスカレーション', val:kpi.escalated+'件', sub:'本日・対応待ち', color:'var(--am)' },
+  ].map(k=>`<div class="kpi-card" style="border-top:3px solid ${k.color}">
+    <div class="kpi-label">${k.label}</div>
+    <div class="kpi-val" style="color:${k.color}">${k.val}</div>
+    <div class="kpi-sub">${k.sub}</div>
+  </div>`).join('');
+}
+
+function renderRecentChats() {
+  const chats = CHAT_DATA[currentAccount] || [];
+  document.getElementById('recent-chats').innerHTML = chats.slice(0,4).map(c=>`
+    <div class="chat-row ${c.unread>0?'unread':''} ${c.status==='hq'?'hq-flagged':''}"
+      onclick="showSection('history');openChat('${c.id}')">
+      <div class="chat-av" style="background:${c.unread>0?'var(--sk-bg)':c.status==='hq'?'var(--am-bg)':'var(--cream2)'}">
+        ${c.name.slice(0,1)}
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="font-size:12px;font-weight:700">${c.name}
+            <span class="badge ${c.status==='hq'?'b-am':c.status==='escalated'?'b-rd':'b-nt'}" style="font-size:9px;margin-left:4px">
+              ${c.status==='hq'?'HQ介入中':c.status==='escalated'?'エスカレ':'通常'}
+            </span>
+          </div>
+          <div class="chat-time">${c.lastTime}</div>
+        </div>
+        <div class="chat-last" style="color:var(--muted)">${c.lastMsg}</div>
+        <div class="chat-meta">${c.tag}</div>
+      </div>
+      ${c.unread>0?`<span class="badge b-sk" style="font-size:9px">${c.unread}</span>`:''}
+    </div>`).join('');
+}
+
+function renderAILog() {
+  document.getElementById('ai-log').innerHTML = AI_LOGS.map(l=>`
+    <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-bottom:1px solid var(--bd)">
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--faint);white-space:nowrap;margin-top:2px">${l.time}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:11px;font-weight:700">${l.user}</div>
+        <div style="font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.q}</div>
+        <div style="display:flex;gap:6px;margin-top:4px">
+          <span class="badge b-nt" style="font-size:9px">${l.intent}</span>
+          <span class="badge ${l.confidence>=90?'b-em':'b-am'}" style="font-size:9px">信頼度${l.confidence}%</span>
+          ${l.escalated?'<span class="badge b-rd" style="font-size:9px">エスカレ</span>':''}
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function renderChatList() {
+  const filter = document.getElementById('filter-status')?.value || '';
+  let chats = CHAT_DATA[currentAccount] || [];
+  if (filter==='unread') chats = chats.filter(c=>c.unread>0);
+  else if (filter==='hq') chats = chats.filter(c=>c.status==='hq');
+  else if (filter==='escalated') chats = chats.filter(c=>c.status==='escalated');
+  document.getElementById('chat-list').innerHTML = chats.map(c=>`
+    <div class="chat-row ${c.unread>0?'unread':''} ${c.status==='hq'?'hq-flagged':''}"
+      onclick="openChat('${c.id}')" style="${currentChatId===c.id?'background:var(--gold-dim);':''}">
+      <div class="chat-av" style="background:var(--cream2)">${c.name.slice(0,1)}</div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;justify-content:space-between">
+          <div style="font-size:12px;font-weight:700">${c.name}</div>
+          <div class="chat-time">${c.lastTime}</div>
+        </div>
+        <div class="chat-last">${c.lastMsg}</div>
+        <div style="display:flex;gap:4px;margin-top:3px">
+          <span class="badge b-nt" style="font-size:9px">${c.tag}</span>
+          ${c.status==='hq'?'<span class="badge b-am" style="font-size:9px">HQ介入中</span>':''}
+          ${c.status==='escalated'?'<span class="badge b-rd" style="font-size:9px">エスカレ</span>':''}
+          ${c.unread>0?`<span class="badge b-sk" style="font-size:9px">${c.unread}件未読</span>`:''}
+        </div>
+      </div>
+    </div>`).join('') || '<div style="padding:24px;text-align:center;color:var(--muted);font-size:12px">該当なし</div>';
+}
+
+function openChat(uid) {
+  currentChatId = uid;
+  renderChatList();
+  const chat = (CHAT_DATA[currentAccount]||[]).find(c=>c.id===uid);
+  if (!chat) return;
+  chat.unread = 0;
+  renderChatList();
+  document.getElementById('chat-detail-placeholder').style.display = 'none';
+  const content = document.getElementById('chat-detail-content');
+  content.style.display = 'flex';
+  // ヘッダー
+  document.getElementById('chat-detail-header').innerHTML = `
+    <div>
+      <div style="font-size:13px;font-weight:700">${chat.name}</div>
+      <div style="font-size:10px;color:var(--muted)">${chat.tag} · ${chat.status==='hq'?'<span style="color:var(--am);font-weight:700">HQ介入中</span>':chat.status==='escalated'?'<span style="color:var(--rd);font-weight:700">エスカレーション済み</span>':'AI応答中'}</div>
+    </div>
+    <div style="display:flex;gap:6px">
+      <button class="btn btn-ghost btn-sm" onclick="showToast('外部LINEを開きます（デモ）')">📲 LINEで開く</button>
+    </div>`;
+  // メッセージ
+  document.getElementById('msg-list').innerHTML = chat.msgs.map(m=>`
+    <div style="display:flex;flex-direction:column;align-items:${m.from==='user'?'flex-start':'flex-end'}">
+      <div style="font-size:9px;color:var(--muted);margin-bottom:2px">
+        ${m.from==='ai'?'🤖 AI':m.from==='hq'?'⚡ HQ':chat.name}
+      </div>
+      <div class="msg-bubble ${m.from==='user'?'msg-user':m.from==='ai'?'msg-ai':'msg-hq'}">${m.text}</div>
+      <div style="font-size:9px;color:var(--faint);margin-top:2px">${m.time}</div>
+    </div>`).join('');
+  // HQ介入中の場合は入力エリア切替
+  if (chat.status==='hq') {
+    document.getElementById('ai-input-area').style.display='none';
+    document.getElementById('hq-input-area').style.display='';
+  } else {
+    document.getElementById('ai-input-area').style.display='';
+    document.getElementById('hq-input-area').style.display='none';
+  }
+  // スクロール
+  const ml = document.getElementById('msg-list');
+  setTimeout(()=>{ ml.scrollTop = ml.scrollHeight; }, 50);
+}
+
+function enterHQMode() {
+  const chat = (CHAT_DATA[currentAccount]||[]).find(c=>c.id===currentChatId);
+  if (chat) chat.status = 'hq';
+  document.getElementById('ai-input-area').style.display='none';
+  document.getElementById('hq-input-area').style.display='';
+  showToast('⚡ HQ介入モードに切り替えました');
+  renderChatList();
+}
+
+function exitHQMode() {
+  const chat = (CHAT_DATA[currentAccount]||[]).find(c=>c.id===currentChatId);
+  if (chat) chat.status = 'normal';
+  document.getElementById('hq-input-area').style.display='none';
+  document.getElementById('ai-input-area').style.display='';
+  showToast('🤖 AI応答モードに復帰しました');
+  renderChatList();
+}
+
+function sendHQMessage() {
+  const input = document.getElementById('hq-msg-input');
+  const text = input.value.trim();
+  if (!text) return;
+  const chat = (CHAT_DATA[currentAccount]||[]).find(c=>c.id===currentChatId);
+  if (!chat) return;
+  const now = new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+  chat.msgs.push({ from:'hq', text:'【HQ】'+text, time:now });
+  chat.lastMsg = text;
+  input.value = '';
+  openChat(currentChatId);
+  showToast('✅ HQメッセージを送信しました（デモ）');
+}
+
+function renderFAQ() {
+  const faqs = FAQ_DATA[currentAccount] || [];
+  document.getElementById('faq-list').innerHTML = faqs.map(f=>`
+    <div class="faq-card">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+        <div style="flex:1">
+          <div class="faq-q">Q: ${f.q}</div>
+          <div class="faq-a">${f.a}</div>
+          <div class="faq-tags">
+            <span class="badge b-nt" style="font-size:9px">${f.cat}</span>
+            ${f.keywords.split(',').map(k=>`<span class="badge b-sk" style="font-size:9px">${k.trim()}</span>`).join('')}
+          </div>
+        </div>
+        <div style="display:flex;gap:4px;flex-shrink:0">
+          <button class="btn btn-ghost btn-sm" onclick="editFaq('${f.id}')">✏️</button>
+          <button class="btn btn-ghost btn-sm" style="color:var(--rd)" onclick="deleteFaq('${f.id}')">🗑</button>
+        </div>
+      </div>
+    </div>`).join('') || '<div style="text-align:center;padding:24px;color:var(--muted);font-size:12px">FAQが登録されていません</div>';
+}
+
+function renderPersonas() {
+  document.getElementById('persona-cards').innerHTML = PERSONAS.map(p=>`
+    <div class="persona-card ${p.selected?'sel':''}" onclick="selectPersona('${p.id}')">
+      <div class="persona-name">${p.name}</div>
+      <div class="persona-desc">${p.desc}</div>
+    </div>`).join('');
+}
+
+function selectPersona(id) {
+  PERSONAS.forEach(p=>p.selected = p.id===id);
+  renderPersonas();
+  showToast(`✅ 「${PERSONAS.find(p=>p.id===id)?.name}」を選択しました`);
+}
+
+// ── AI設定 ─────────────────────────────────────────────────
+function savePrompt() {
+  ACCOUNTS[currentAccount].prompt = document.getElementById('system-prompt').value;
+  ACCOUNTS[currentAccount].escalation = document.getElementById('escalation-rules').value;
+  showToast('✅ AIプロンプトを保存しました');
+}
+
+function toggleAI(el) {
+  const on = el.checked;
+  document.getElementById('ai-toggle-track').style.background = on ? 'var(--line)' : '#ccc';
+  document.getElementById('ai-toggle-thumb').style.transform = on ? 'translateX(18px)' : 'translateX(0)';
+  document.getElementById('ai-status-badge').textContent = on ? '🟢 AI稼働中' : '🔴 AI停止中';
+  document.getElementById('ai-status-badge').className = 'badge ' + (on ? 'b-em' : 'b-rd');
+  showToast(on ? '🤖 AI自動応答をONにしました' : '⚠️ AI自動応答をOFFにしました（手動対応モード）');
+}
+
+// ── AIテスト ───────────────────────────────────────────────
+let testHistory = [];
+
+function quickTest(q) {
+  document.getElementById('test-input').value = q;
+  sendTest();
+}
+
+async function sendTest() {
+  const input = document.getElementById('test-input');
+  const q = input.value.trim();
+  if (!q) return;
+  input.value = '';
+
+  const userMsg = { role:'user', text:q };
+  testHistory.push(userMsg);
+  renderTestChat();
+
+  const persona = PERSONAS.find(p=>p.selected) || PERSONAS[1];
+  const systemPrompt = ACCOUNTS[currentAccount].prompt + `\n\n【AIテスト中】応答は${persona.name}スタイルで。200文字以内。`;
+
+  const metaEl = document.getElementById('test-meta');
+  const startTime = Date.now();
+  metaEl.innerHTML = '<div style="font-size:11px;color:var(--muted);padding:12px">🤖 応答生成中...</div>';
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:400,
+        system: systemPrompt,
+        messages: testHistory.filter(m=>m.role).map(m=>({ role:m.role, content:m.text })),
+      })
+    });
+    const data = await resp.json();
+    const aiText = data.content?.find(b=>b.type==='text')?.text || '—';
+    const elapsed = Date.now() - startTime;
+
+    testHistory.push({ role:'assistant', text:aiText });
+    renderTestChat();
+
+    // エスカレーション判定
+    const escalWords = ACCOUNTS[currentAccount].escalation.split(',').map(s=>s.trim());
+    const isEscal = escalWords.some(w => q.includes(w));
+
+    // メタ表示
+    metaEl.innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:10px;padding:4px">
+        ${[
+          ['モデル','claude-sonnet-4-20250514'],
+          ['応答時間', elapsed+'ms'],
+          ['入力トークン（推定）', Math.ceil(systemPrompt.length/2)],
+          ['出力文字数', aiText.length+'文字'],
+          ['使用人格', persona.name],
+          ['エスカレーション判定', isEscal?'🔴 HQ通知対象':'🟢 通常応答'],
+        ].map(([label,val])=>`
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--bd)">
+            <div style="font-size:11px;color:var(--muted)">${label}</div>
+            <div style="font-size:11px;font-weight:600">${val}</div>
+          </div>`).join('')}
+      </div>`;
+
+    if (isEscal) showToast('⚠️ エスカレーションキーワードを検出', 'warn');
+  } catch(e) {
+    testHistory.push({ role:'assistant', text:'⚠️ AI接続エラー: '+e.message });
+    renderTestChat();
+    metaEl.innerHTML = `<div style="color:var(--rd);padding:12px;font-size:11px">エラー: ${e.message}</div>`;
+  }
+}
+
+function renderTestChat() {
+  document.getElementById('test-chat').innerHTML = testHistory.map(m=>`
+    <div style="display:flex;justify-content:${m.role==='user'?'flex-end':'flex-start'}">
+      <div class="${m.role==='user'?'test-bubble-user':'test-bubble-ai'}">${m.text}</div>
+    </div>`).join('') || '<div style="text-align:center;color:var(--muted);font-size:11px;margin-top:60px">メッセージを入力してAIの応答を確認できます</div>';
+  const el = document.getElementById('test-chat');
+  el.scrollTop = el.scrollHeight;
+}
+
+// ── FAQ CRUD ───────────────────────────────────────────────
+let _editFaqId = null;
+
+function openFaqModal(id) {
+  _editFaqId = id || null;
+  if (id) {
+    const f = FAQ_DATA[currentAccount].find(x=>x.id===id);
+    if (f) {
+      document.getElementById('faq-modal-title').textContent = 'FAQ編集';
+      document.getElementById('faq-keywords').value = f.keywords;
+      document.getElementById('faq-q').value = f.q;
+      document.getElementById('faq-a').value = f.a;
+      document.getElementById('faq-cat').value = f.cat;
+    }
+  } else {
+    document.getElementById('faq-modal-title').textContent = 'FAQ追加';
+    ['faq-keywords','faq-q','faq-a'].forEach(id=>document.getElementById(id).value='');
+  }
+  document.getElementById('faq-modal').style.display='flex';
+}
+function closeFaqModal(){ document.getElementById('faq-modal').style.display='none'; }
+function editFaq(id){ openFaqModal(id); }
+function deleteFaq(id){
+  if (!confirm('このFAQを削除しますか？')) return;
+  FAQ_DATA[currentAccount] = FAQ_DATA[currentAccount].filter(f=>f.id!==id);
+  renderFAQ(); showToast('🗑 FAQを削除しました');
+}
+function saveFaq(){
+  const kw = document.getElementById('faq-keywords').value.trim();
+  const q  = document.getElementById('faq-q').value.trim();
+  const a  = document.getElementById('faq-a').value.trim();
+  const cat= document.getElementById('faq-cat').value;
+  if (!q || !a) { showToast('⚠️ 質問と回答を入力してください','err'); return; }
+  if (_editFaqId) {
+    const f = FAQ_DATA[currentAccount].find(x=>x.id===_editFaqId);
+    if (f) { f.keywords=kw; f.q=q; f.a=a; f.cat=cat; }
+  } else {
+    FAQ_DATA[currentAccount].push({ id:'f'+Date.now(), keywords:kw, q, a, cat });
+  }
+  closeFaqModal(); renderFAQ(); showToast('✅ FAQを保存しました');
+}
+
+// ── 一斉配信 ───────────────────────────────────────────────
+function openBroadcastModal(){ document.getElementById('broadcast-modal').style.display='flex'; }
+function closeBroadcastModal(){ document.getElementById('broadcast-modal').style.display='none'; }
+
+function updateBroadcastPreview() {
+  const type = document.getElementById('broadcast-type').value;
+  const row = document.getElementById('broadcast-ai-prompt-row');
+  if (row) row.style.display = type==='ai' ? '' : 'none';
+}
+
+async function generateBroadcast() {
+  const promptText = document.getElementById('broadcast-ai-prompt').value.trim();
+  if (!promptText) { showToast('⚠️ プロンプトを入力してください','err'); return; }
+  const bodyEl = document.getElementById('broadcast-body');
+  bodyEl.value = '✨ AI生成中...';
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514', max_tokens:300,
+        system:'あなたはCORETOのLINE配信担当です。指示に従い簡潔なLINEメッセージ本文のみ返答してください（150文字以内）。',
+        messages:[{role:'user',content:promptText}]
+      })
+    });
+    const data = await resp.json();
+    bodyEl.value = data.content?.find(b=>b.type==='text')?.text || '';
+    showToast('✅ メッセージを生成しました');
+  } catch(e) {
+    bodyEl.value = '';
+    showToast('⚠️ 生成エラー: '+e.message,'err');
+  }
+}
+
+function sendBroadcast() {
+  const body = document.getElementById('broadcast-body').value.trim();
+  if (!body) { showToast('⚠️ メッセージを入力してください','err'); return; }
+  console.log('[CORETO] LINE配信:', {
+    account: currentAccount,
+    target: document.getElementById('broadcast-target').value,
+    body,
+    timing: document.getElementById('broadcast-timing').value,
+  });
+  closeBroadcastModal();
+  showToast('📢 配信しました（デモ: console.logに出力）');
+}
+
+// ── 初期化 ─────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  CNAV.init('line_ai');
+  switchAccount('line1');
+  showSection('overview');
+  // プロンプト初期値
+  document.getElementById('system-prompt').value = ACCOUNTS['line1'].prompt;
+  document.getElementById('escalation-rules').value = ACCOUNTS['line1'].escalation;
+});
+</script>
+</body>
+</html>
