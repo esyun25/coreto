@@ -91,7 +91,6 @@ const NAV = {
         { icon:'🏠', label:'HQダッシュボード',    href:'coreto-hub-v2.html',             key:'dashboard'       },
         { icon:'📊', label:'経営ダッシュボード',   href:'coreto-dashboard-exec-v2.html',  key:'exec_dashboard'  },
         { icon:'📈', label:'案件パイプライン',     href:'coreto-pipeline-v2.html',        key:'pipeline'        },
-        { icon:'🌐', label:'紹介ネットワーク',     href:'coreto-network-v2.html',         key:'network'         },
       ],
     },
     {
@@ -152,6 +151,7 @@ const NAV = {
         { icon:'📨', label:'PT招待・新規登録',     href:'coreto-partner-signup-v2.html',  key:'pt_invite'       },
         { icon:'🎓', label:'インターン管理',       href:'coreto-intern-v2.html',          key:'intern'          },
         { icon:'📉', label:'AG離脱リスク管理',     href:'coreto-agent-retention-v2.html', key:'agent_retention' },
+        { icon:'🌐', label:'紹介ネットワーク図',   href:'coreto-network-v2.html',         key:'network'         },
         { icon:'🏢', label:'ユーザー・権限管理',   href:'coreto-user-mgmt-v2.html',       key:'hq_mgmt'         },
       ],
     },
