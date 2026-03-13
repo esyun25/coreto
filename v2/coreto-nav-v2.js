@@ -1,12 +1,18 @@
 /**
  * COREBLDG v2 — 共有ナビゲーションモジュール
- * 各外部ページに <script src="coreto-nav-v2.js"></script>
- * <script>CNAV.init('PAGE_KEY');</script> で呼び出す
+ * <script src="coreto-nav-v2.js"></script>
+ * <script>CNAV.init('PAGE_KEY');</script>
+ *
+ * ナビゲーション設計方針 (v2.4):
+ *   - 業務ドメイン別にセクションを分割（不動産 / 人材 / 光通信）
+ *   - 各ドメイン内は業務フロー順（案件 → 書類 → IT重説 → 成約 → 入金）
+ *   - 管理・システム系は最下部
+ *   - ロール別に「できること」のみ表示（PT扱いは別セクション）
  */
 const CNAV = (() => {
 
 const INJECT_CSS = `
-.cnav-section { margin-bottom:4px; }
+.cnav-section { margin-bottom:2px; }
 .cnav-section-label {
   font-size:9px; font-weight:600; letter-spacing:2px; text-transform:uppercase;
   color:rgba(255,255,255,.18); padding:10px 8px 4px;
@@ -63,204 +69,362 @@ function injectCSS() {
   document.head.appendChild(s);
 }
 
-// ──────────────────────────────────────────────────────
-// ナビ定義
-// ──────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════
+//  NAV 定義
+//
+//  【設計原則】
+//  HQ    : 全業務・全管理機能。ドメイン別（不動産/人材/光通信）に分割
+//  RE-AG : 不動産業務フロー順。光通信AG権限。人材はPT扱い（閲覧）
+//  HR-AG : 人材業務フロー順。光通信AG権限。不動産はPT扱い（閲覧）
+//  光通信AG: 光通信業務のみフルAG。不動産・人材はPT扱い（閲覧）
+//  PT    : 各ドメインへの紹介投げ・進捗閲覧のみ
+//  インターン: 訪問記録・光通信リード投げのみ
+// ════════════════════════════════════════════════════════════════
 const NAV = {
 
   // ════════════════ HQ ════════════════
+  // HQは全業務を監督・管理する立場。ドメイン別に業務フローで並べる。
   hq: [
-    { section:'ダッシュボード', items:[
-      { icon:'🏠', label:'HQダッシュボード',        href:'coreto-hub-v2.html',              key:'dashboard' },
-      { icon:'📊', label:'経営ダッシュボード',        href:'coreto-dashboard-exec-v2.html',   key:'exec_dashboard' },
-      { icon:'🌐', label:'紹介ネットワーク',         href:'coreto-network-v2.html',          key:'network' },
-    ]},
-    { section:'CRM / 案件', items:[
-      { icon:'👥', label:'クライアント管理',         href:'coreto-crm-v2.html',              key:'crm' },
-      { icon:'🏘️', label:'不動産案件（全体）',       href:'coreto-cases-v2.html',            key:'cases',        badge:'8' },
-      { icon:'👤', label:'人材案件（全体）',         href:'coreto-hr-matching-v2.html',      key:'hr_cases_all', badge:'4' },
-      { icon:'💰', label:'入金監視',                 href:'coreto-remittance-v2.html',       key:'remit',        badge:'3', badgeColor:'amber' },
-      { icon:'📋', label:'書類審査チェック',         href:'coreto-screening-v2.html',        key:'screening',    badge:'5', badgeColor:'amber' },
-      { icon:'🔑', label:'IT重説管理',               href:'coreto-itsetsu-v2.html',          key:'itsetsu',      badge:'2', badgeColor:'amber' },
-      { icon:'📊', label:'案件パイプライン',          href:'coreto-pipeline-v2.html',         key:'pipeline' },
-      { icon:'🔗', label:'PTマッチング',              href:'coreto-matching-v2.html',         key:'matching',     badge:'3', badgeColor:'red' },
-      { icon:'🏦', label:'初期費用明細チェック',      href:'coreto-invoice-check-v2.html',    key:'invoice_check' },
-      { icon:'📷', label:'バーコードスキャン',        href:'coreto-barcode-scan-v2.html',     key:'barcode_scan' },
-    ]},
-    { section:'財務・報酬', items:[
-      { icon:'💴', label:'月次報酬確定・振込',         href:'coreto-payroll-v2.html',          key:'payroll' },
-      { icon:'🏦', label:'月次締め・全銀出力',         href:'coreto-batch-close-v2.html',      key:'batch_close' },
-      { icon:'📋', label:'月次報酬レポート',           href:'coreto-monthly-report-v2.html',   key:'monthly_report' },
-      { icon:'🧾', label:'請求書・領収書発行',         href:'coreto-hq-receipt-v2.html',       key:'receipt' },
-      { icon:'⚠️', label:'早期退職アラート',           href:'coreto-early-quit-v2.html',       key:'early_quit' },
-    ]},
-    { section:'スタッフ管理', items:[
-      { icon:'🏢', label:'ユーザー・権限管理',        href:'coreto-user-mgmt-v2.html',        key:'hq_mgmt' },
-      { icon:'📉', label:'AG離脱リスク管理',           href:'coreto-agent-retention-v2.html',  key:'agent_retention' },
-      { icon:'🎓', label:'インターン管理',             href:'coreto-intern-v2.html',           key:'intern' },
-      { icon:'📝', label:'応募者管理',                 href:'coreto-applicants-v2.html',       key:'applicants' },
-      { icon:'🔗', label:'リクルートリンク発行',       href:'coreto-recruit-link-v2.html',     key:'recruit_link' },
-      { icon:'📨', label:'AG招待・新規登録',           href:'coreto-agent-signup-v2.html',     key:'agent_invite' },
-      { icon:'📨', label:'PT招待・新規登録',           href:'coreto-partner-signup-v2.html',   key:'pt_invite' },
-    ]},
-    { section:'報酬 / 通知', items:[
-      { icon:'💴', label:'報酬・支払い（全体）',       href:'coreto-payment-v2.html',          key:'payment' },
-      { icon:'⚡', label:'即時払い審査',               href:'coreto-instant-pay-v2.html',      key:'instant_pay',  badge:'1', badgeColor:'amber' },
-      { icon:'📝', label:'成約報告一覧',               href:'coreto-contract-report-v2.html',  key:'contract_report' },
-      { icon:'📲', label:'LINE認証管理',               href:'coreto-line-auth-v2.html',        key:'line_auth' },
-      { icon:'🤖', label:'LINE AIチャット管理',         href:'coreto-line-ai-v2.html',          key:'line_ai' },
-      { icon:'🔔', label:'通知ログ',                   href:'coreto-notification-v2.html',     key:'notif' },
-    ]},
-    { section:'事業SFA', items:[
-      { icon:'⚡', label:'光通信SFA（全体）',          href:'coreto-utility-v2.html',          key:'utility' },
-      { icon:'👔', label:'士業連携管理',               href:'coreto-judicial-v2.html',         key:'judicial' },
-    ]},
-    { section:'システム', items:[
-      { icon:'🔐', label:'ID・アカウント管理',         href:'coreto-id-manager-v2.html',       key:'id_manager' },
-      { icon:'🛡️', label:'権限マトリクス（RBAC）',    href:'coreto-admin-rbac-v2.html',       key:'rbac' },
-      { icon:'🏛️', label:'宅建業者登録管理',          href:'coreto-takken-v2.html',           key:'takken' },
-      { icon:'📚', label:'研修コンテンツ管理',         href:'coreto-onboarding-v2.html',       key:'onboard_mgmt' },
-    ]},
+    {
+      section: '概要',
+      items: [
+        { icon:'🏠', label:'HQダッシュボード',    href:'coreto-hub-v2.html',             key:'dashboard'       },
+        { icon:'📊', label:'経営ダッシュボード',   href:'coreto-dashboard-exec-v2.html',  key:'exec_dashboard'  },
+        { icon:'📈', label:'案件パイプライン',     href:'coreto-pipeline-v2.html',        key:'pipeline'        },
+        { icon:'🌐', label:'紹介ネットワーク',     href:'coreto-network-v2.html',         key:'network'         },
+      ],
+    },
+    {
+      // 不動産業務：案件受付 → 書類審査 → IT重説 → 初期費用確認 → 成約報告
+      section: '不動産業務',
+      items: [
+        { icon:'🏘️', label:'不動産案件（全体）',  href:'coreto-cases-v2.html',           key:'cases',           badge:'8'           },
+        { icon:'📋', label:'書類審査チェック',     href:'coreto-screening-v2.html',       key:'screening',       badge:'5', badgeColor:'amber' },
+        { icon:'🔑', label:'IT重説管理',           href:'coreto-itsetsu-v2.html',         key:'itsetsu',         badge:'2', badgeColor:'amber' },
+        { icon:'🏦', label:'初期費用明細チェック', href:'coreto-invoice-check-v2.html',   key:'invoice_check'   },
+        { icon:'📷', label:'バーコードスキャン',   href:'coreto-barcode-scan-v2.html',    key:'barcode_scan'    },
+        { icon:'📝', label:'成約報告一覧',         href:'coreto-contract-report-v2.html', key:'contract_report' },
+        { icon:'⚖️', label:'士業連携管理',         href:'coreto-judicial-v2.html',        key:'judicial'        },
+      ],
+    },
+    {
+      // 人材業務：案件受付 → マッチング → 成約
+      section: '人材業務',
+      items: [
+        { icon:'👤', label:'人材案件（全体）',     href:'coreto-hr-matching-v2.html',     key:'hr_cases_all',    badge:'4'           },
+        { icon:'🔗', label:'PTマッチング',         href:'coreto-matching-v2.html',        key:'matching',        badge:'3', badgeColor:'red' },
+      ],
+    },
+    {
+      // 光通信業務：SFA管理のみ（案件はAGが入力）
+      section: '光通信業務',
+      items: [
+        { icon:'⚡', label:'光通信SFA（全体）',    href:'coreto-utility-v2.html',         key:'utility'         },
+      ],
+    },
+    {
+      // CRM：全ドメイン共通のクライアント管理
+      section: 'CRM・クライアント',
+      items: [
+        { icon:'👥', label:'クライアント管理',     href:'coreto-crm-v2.html',             key:'crm'             },
+        { icon:'⚠️', label:'早期退職アラート',     href:'coreto-early-quit-v2.html',      key:'early_quit'      },
+      ],
+    },
+    {
+      // 財務・入金：入金確認 → 即時払い審査 → 月次報酬 → 締め → CSV出力
+      section: '財務・入金',
+      items: [
+        { icon:'💰', label:'入金監視',             href:'coreto-remittance-v2.html',      key:'remit',           badge:'3', badgeColor:'amber' },
+        { icon:'⚡', label:'即時払い審査',          href:'coreto-instant-pay-v2.html',     key:'instant_pay',     badge:'1', badgeColor:'amber' },
+        { icon:'💴', label:'月次報酬確定・振込',   href:'coreto-payroll-v2.html',         key:'payroll'         },
+        { icon:'🏦', label:'月次締め・全銀出力',   href:'coreto-batch-close-v2.html',     key:'batch_close'     },
+        { icon:'📋', label:'月次報酬レポート',     href:'coreto-monthly-report-v2.html',  key:'monthly_report'  },
+        { icon:'🧾', label:'請求書・領収書発行',   href:'coreto-hq-receipt-v2.html',      key:'receipt'         },
+      ],
+    },
+    {
+      // スタッフ・採用：採用から入会・育成まで
+      section: 'スタッフ・採用',
+      items: [
+        { icon:'📝', label:'応募者管理',           href:'coreto-applicants-v2.html',      key:'applicants'      },
+        { icon:'🔗', label:'リクルートリンク発行', href:'coreto-recruit-link-v2.html',    key:'recruit_link'    },
+        { icon:'📨', label:'AG招待・新規登録',     href:'coreto-agent-signup-v2.html',    key:'agent_invite'    },
+        { icon:'📨', label:'PT招待・新規登録',     href:'coreto-partner-signup-v2.html',  key:'pt_invite'       },
+        { icon:'🎓', label:'インターン管理',       href:'coreto-intern-v2.html',          key:'intern'          },
+        { icon:'📉', label:'AG離脱リスク管理',     href:'coreto-agent-retention-v2.html', key:'agent_retention' },
+        { icon:'🏢', label:'ユーザー・権限管理',   href:'coreto-user-mgmt-v2.html',       key:'hq_mgmt'         },
+      ],
+    },
+    {
+      // 通知・連携：LINE・通知系をまとめる
+      section: '通知・連携',
+      items: [
+        { icon:'📲', label:'LINE認証管理',         href:'coreto-line-auth-v2.html',       key:'line_auth'       },
+        { icon:'🤖', label:'LINE AIチャット管理',  href:'coreto-line-ai-v2.html',         key:'line_ai'         },
+        { icon:'🔔', label:'通知ログ',             href:'coreto-notification-v2.html',    key:'notif'           },
+      ],
+    },
+    {
+      // システム：管理者のみが触る設定系
+      section: 'システム',
+      items: [
+        { icon:'🔐', label:'ID・アカウント管理',   href:'coreto-id-manager-v2.html',      key:'id_manager'      },
+        { icon:'🛡️', label:'権限マトリクス',       href:'coreto-admin-rbac-v2.html',      key:'rbac'            },
+        { icon:'🏛️', label:'宅建業者登録管理',    href:'coreto-takken-v2.html',          key:'takken'          },
+        { icon:'📚', label:'研修コンテンツ管理',   href:'coreto-onboarding-v2.html',      key:'onboard_mgmt'    },
+      ],
+    },
   ],
 
-  // ════════════════ RE-AG ════════════════
+  // ════════════════ RE-AG（不動産エージェント）════════════════
+  // 主業務は不動産（賃貸・売買）。光通信もAG権限あり。人材はPT扱い。
   re_ag: [
-    { section:'マイページ', items:[
-      { icon:'🏠', label:'マイダッシュボード',         href:'coreto-hub-v2.html',              key:'dashboard' },
-      { icon:'🏅', label:'ランク・報酬明細',           href:'coreto-payment-v2.html',          key:'payment' },
-    ]},
-    { section:'不動産（AG権限）', items:[
-      { icon:'🏘️', label:'担当案件',                   href:'coreto-cases-v2.html',            key:'cases',        badge:'4' },
-      { icon:'👥', label:'クライアント管理',           href:'coreto-crm-v2.html',              key:'crm' },
-      { icon:'📝', label:'成約報告',                   href:'coreto-contract-report-v2.html',  key:'contract_report' },
-      { icon:'📝', label:'売買成約報告',               href:'coreto-sale-report-v2.html',      key:'sale_report' },
-      { icon:'🏠', label:'内見管理',                   href:'coreto-showing-v2.html',          key:'showing' },
-      { icon:'🔑', label:'IT重説チェック',             href:'coreto-itsetsu-v2.html',          key:'itsetsu' },
-      { icon:'🏦', label:'初期費用明細チェック',       href:'coreto-invoice-check-v2.html',    key:'invoice_check' },
-      { icon:'💰', label:'入金確認',                   href:'coreto-remittance-v2.html',       key:'remit' },
-      { icon:'⚡', label:'即時払い申請',               href:'coreto-instant-pay-v2.html',      key:'instant_pay' },
-    ]},
-    { section:'光通信（AG権限）', items:[
-      { icon:'⚡', label:'光通信 担当案件',            href:'coreto-utility-v2.html',          key:'utility',      badge:'2', badgeColor:'gold' },
-    ]},
-    { section:'人材（PT扱い・閲覧のみ）', items:[
-      { icon:'🔒', label:'人材紹介 進捗確認',          href:'coreto-pt-portal-v2.html#hr',     key:'hr_ref',       note:'PT扱い' },
-    ]},
-    { section:'マイアカウント', items:[
-      { icon:'⚙️', label:'アカウント設定',             href:'coreto-account-v2.html',          key:'account' },
-      { icon:'🏅', label:'ランク・コミッション',       href:'coreto-rank-v2.html',             key:'rank' },
-      { icon:'📃', label:'業務委託契約書',             href:'coreto-contract-v2.html',         key:'contract' },
-      { icon:'🪪', label:'eKYC・口座登録',             href:'coreto-kyc-v2.html',              key:'kyc' },
-      { icon:'📚', label:'マニュアル・FAQ',           href:'coreto-faq-v2.html',              key:'faq' },
-      { icon:'📲', label:'LINE再連携',                 href:'coreto-hub-v2.html#line_relink',  key:'line_relink' },
-      { icon:'🔗', label:'リクルートリンク発行',       href:'coreto-recruit-link-v2.html',     key:'recruit_link' },
-      { icon:'🎓', label:'オンボーディング',           href:'coreto-onboarding-v2.html',       key:'onboarding' },
-    ]},
+    {
+      section: 'マイページ',
+      items: [
+        { icon:'🏠', label:'ダッシュボード',       href:'coreto-hub-v2.html',             key:'dashboard'       },
+        { icon:'🏅', label:'ランク・コミッション', href:'coreto-rank-v2.html',            key:'rank'            },
+        { icon:'💴', label:'報酬明細',             href:'coreto-payment-v2.html',         key:'payment'         },
+      ],
+    },
+    {
+      // 不動産AG業務：案件受付から成約・入金まで一連のフロー
+      section: '不動産業務（AG権限）',
+      items: [
+        { icon:'🏘️', label:'担当案件一覧',         href:'coreto-cases-v2.html',           key:'cases',          badge:'4'            },
+        { icon:'👥', label:'クライアント管理',     href:'coreto-crm-v2.html',             key:'crm'             },
+        { icon:'🏠', label:'内見管理',             href:'coreto-showing-v2.html',         key:'showing'         },
+        { icon:'🔑', label:'IT重説チェックリスト', href:'coreto-itsetsu-v2.html',         key:'itsetsu'         },
+        { icon:'🏦', label:'初期費用明細チェック', href:'coreto-invoice-check-v2.html',   key:'invoice_check'   },
+        { icon:'📝', label:'成約報告（賃貸）',     href:'coreto-contract-report-v2.html', key:'contract_report' },
+        { icon:'📝', label:'成約報告（売買）',     href:'coreto-sale-report-v2.html',     key:'sale_report'     },
+      ],
+    },
+    {
+      // 入金・支払：入金確認と即時払い申請
+      section: '入金・支払い',
+      items: [
+        { icon:'💰', label:'入金確認',             href:'coreto-remittance-v2.html',      key:'remit'           },
+        { icon:'⚡', label:'即時払い申請',          href:'coreto-instant-pay-v2.html',     key:'instant_pay'     },
+      ],
+    },
+    {
+      // 光通信：RE-AGもAG権限で案件入力・成約報告が可能
+      section: '光通信業務（AG権限）',
+      items: [
+        { icon:'⚡', label:'担当案件（光通信）',   href:'coreto-utility-v2.html',         key:'utility',         badge:'2', badgeColor:'gold' },
+      ],
+    },
+    {
+      // 人材：RE-AGはPT扱い（紹介投げと進捗確認のみ）
+      section: '人材紹介（閲覧のみ）',
+      items: [
+        { icon:'🔒', label:'人材紹介 進捗確認',   href:'coreto-pt-portal-v2.html#hr',    key:'hr_ref',          note:'PT扱い'        },
+      ],
+    },
+    {
+      // 採用：自分のリクルートリンクで仲間を増やす
+      section: '採用',
+      items: [
+        { icon:'🔗', label:'リクルートリンク発行', href:'coreto-recruit-link-v2.html',    key:'recruit_link'    },
+      ],
+    },
+    {
+      section: 'マイアカウント',
+      items: [
+        { icon:'⚙️', label:'アカウント設定',       href:'coreto-account-v2.html',         key:'account'         },
+        { icon:'📃', label:'業務委託契約書',       href:'coreto-contract-v2.html',        key:'contract'        },
+        { icon:'🪪', label:'eKYC・口座登録',       href:'coreto-kyc-v2.html',             key:'kyc'             },
+        { icon:'📚', label:'マニュアル・FAQ',     href:'coreto-faq-v2.html',             key:'faq'             },
+        { icon:'📲', label:'LINE再連携',           href:'coreto-hub-v2.html#line_relink', key:'line_relink'     },
+        { icon:'🎓', label:'オンボーディング',     href:'coreto-onboarding-v2.html',      key:'onboarding'      },
+      ],
+    },
   ],
 
-  // ════════════════ HR-AG ════════════════
+  // ════════════════ HR-AG（人材エージェント）════════════════
+  // 主業務は人材紹介。光通信もAG権限あり。不動産はPT扱い。
   hr_ag: [
-    { section:'マイページ', items:[
-      { icon:'🏠', label:'マイダッシュボード',         href:'coreto-hub-v2.html',              key:'dashboard' },
-      { icon:'🏅', label:'ランク・報酬明細',           href:'coreto-payment-v2.html',          key:'payment' },
-    ]},
-    { section:'人材（AG権限）', items:[
-      { icon:'🤖', label:'人材案件管理',               href:'coreto-hr-matching-v2.html',      key:'hr_matching',  badge:'3', badgeColor:'amber' },
-      { icon:'👥', label:'クライアント管理',           href:'coreto-crm-v2.html',              key:'crm' },
-      { icon:'📝', label:'成約報告',                   href:'coreto-contract-report-v2.html',  key:'contract_report' },
-      { icon:'⚡', label:'即時払い申請',               href:'coreto-instant-pay-v2.html',      key:'instant_pay' },
-    ]},
-    { section:'光通信（AG権限）', items:[
-      { icon:'⚡', label:'光通信 担当案件',            href:'coreto-utility-v2.html',          key:'utility',      badge:'1', badgeColor:'gold' },
-    ]},
-    { section:'不動産（PT扱い・閲覧のみ）', items:[
-      { icon:'🔒', label:'不動産紹介 進捗確認',        href:'coreto-pt-portal-v2.html#re',     key:'re_ref',       note:'PT扱い' },
-    ]},
-    { section:'マイアカウント', items:[
-      { icon:'⚙️', label:'アカウント設定',             href:'coreto-account-v2.html',          key:'account' },
-      { icon:'🏅', label:'ランク・コミッション',       href:'coreto-rank-v2.html',             key:'rank' },
-      { icon:'📃', label:'業務委託契約書',             href:'coreto-contract-v2.html',         key:'contract' },
-      { icon:'🪪', label:'eKYC・口座登録',             href:'coreto-kyc-v2.html',              key:'kyc' },
-      { icon:'📚', label:'マニュアル・FAQ',           href:'coreto-faq-v2.html',              key:'faq' },
-      { icon:'📲', label:'LINE再連携',                 href:'coreto-hub-v2.html#line_relink',  key:'line_relink' },
-      { icon:'🔗', label:'リクルートリンク発行',       href:'coreto-recruit-link-v2.html',     key:'recruit_link' },
-      { icon:'🎓', label:'オンボーディング',           href:'coreto-onboarding-v2.html',       key:'onboarding' },
-    ]},
-  ],
-
-  // ════════════════ PT ════════════════
-  pt: [
-    { section:'ポータル', items:[
-      { icon:'🏠', label:'PTポータル',                 href:'coreto-hub-v2.html',              key:'dashboard' },
-      { icon:'🔑', label:'紹介コード',                 href:'coreto-hub-v2.html#code',         key:'code' },
-      { icon:'💴', label:'報酬明細',                   href:'coreto-payment-v2.html',          key:'payment' },
-    ]},
-    { section:'不動産（紹介・閲覧のみ）', items:[
-      { icon:'🏘️', label:'不動産案件を紹介する',       href:'coreto-pt-portal-v2.html#re',     key:'re_refer' },
-    ]},
-    { section:'人材（紹介・閲覧のみ）', items:[
-      { icon:'👤', label:'人材案件を紹介する',         href:'coreto-pt-portal-v2.html#hr',     key:'hr_refer' },
-    ]},
-    { section:'光通信（案件投稿可）', items:[
-      { icon:'⚡', label:'光通信案件を投稿する',       href:'coreto-pt-portal-v2.html#util',   key:'util_submit',  badge:'NEW', badgeColor:'gold' },
-    ]},
-    { section:'進捗確認', items:[
-      { icon:'📊', label:'紹介案件の進捗',             href:'coreto-pt-portal-v2.html#progress', key:'progress' },
-    ]},
-    { section:'ツール', items:[
-      { icon:'📚', label:'マニュアル・FAQ',           href:'coreto-faq-v2.html',              key:'faq' },
-      { icon:'📲', label:'LINE再連携',                 href:'coreto-hub-v2.html#line_relink',  key:'line_relink' },
-      { icon:'🔗', label:'リクルートリンク発行',       href:'coreto-recruit-link-v2.html',     key:'recruit_link' },
-      { icon:'🎓', label:'オンボーディング',           href:'coreto-onboarding-v2.html',       key:'onboarding' },
-    ]},
+    {
+      section: 'マイページ',
+      items: [
+        { icon:'🏠', label:'ダッシュボード',       href:'coreto-hub-v2.html',             key:'dashboard'       },
+        { icon:'🏅', label:'ランク・コミッション', href:'coreto-rank-v2.html',            key:'rank'            },
+        { icon:'💴', label:'報酬明細',             href:'coreto-payment-v2.html',         key:'payment'         },
+      ],
+    },
+    {
+      // 人材AG業務：求人受付・候補者マッチング・成約報告
+      section: '人材業務（AG権限）',
+      items: [
+        { icon:'👤', label:'担当案件一覧',         href:'coreto-hr-matching-v2.html',     key:'hr_matching',     badge:'3', badgeColor:'amber' },
+        { icon:'👥', label:'クライアント管理',     href:'coreto-crm-v2.html',             key:'crm'             },
+        { icon:'📝', label:'成約報告',             href:'coreto-contract-report-v2.html', key:'contract_report' },
+      ],
+    },
+    {
+      section: '入金・支払い',
+      items: [
+        { icon:'⚡', label:'即時払い申請',          href:'coreto-instant-pay-v2.html',     key:'instant_pay'     },
+      ],
+    },
+    {
+      // 光通信：HR-AGもAG権限で案件入力が可能
+      section: '光通信業務（AG権限）',
+      items: [
+        { icon:'⚡', label:'担当案件（光通信）',   href:'coreto-utility-v2.html',         key:'utility',         badge:'1', badgeColor:'gold' },
+      ],
+    },
+    {
+      // 不動産：HR-AGはPT扱い（紹介投げと進捗確認のみ）
+      section: '不動産紹介（閲覧のみ）',
+      items: [
+        { icon:'🔒', label:'不動産紹介 進捗確認', href:'coreto-pt-portal-v2.html#re',    key:'re_ref',          note:'PT扱い'        },
+      ],
+    },
+    {
+      section: '採用',
+      items: [
+        { icon:'🔗', label:'リクルートリンク発行', href:'coreto-recruit-link-v2.html',    key:'recruit_link'    },
+      ],
+    },
+    {
+      section: 'マイアカウント',
+      items: [
+        { icon:'⚙️', label:'アカウント設定',       href:'coreto-account-v2.html',         key:'account'         },
+        { icon:'📃', label:'業務委託契約書',       href:'coreto-contract-v2.html',        key:'contract'        },
+        { icon:'🪪', label:'eKYC・口座登録',       href:'coreto-kyc-v2.html',             key:'kyc'             },
+        { icon:'📚', label:'マニュアル・FAQ',     href:'coreto-faq-v2.html',             key:'faq'             },
+        { icon:'📲', label:'LINE再連携',           href:'coreto-hub-v2.html#line_relink', key:'line_relink'     },
+        { icon:'🎓', label:'オンボーディング',     href:'coreto-onboarding-v2.html',      key:'onboarding'      },
+      ],
+    },
   ],
 
   // ════════════════ 光通信AG ════════════════
+  // 主業務は光通信のみ（フルAG）。不動産・人材は両方PT扱い。
   hikari_ag: [
-    { section:'マイページ', items:[
-      { icon:'🏠', label:'マイダッシュボード',         href:'coreto-hub-v2.html',              key:'dashboard' },
-      { icon:'🏅', label:'ランク・報酬明細',           href:'coreto-payment-v2.html',          key:'payment' },
-    ]},
-    { section:'光通信（AG権限）', items:[
-      { icon:'⚡', label:'担当案件（光通信）',         href:'coreto-utility-v2.html',          key:'utility',      badge:'3', badgeColor:'gold' },
-      { icon:'👥', label:'クライアント管理',           href:'coreto-crm-v2.html',              key:'crm' },
-      { icon:'📝', label:'成約報告',                   href:'coreto-contract-report-v2.html',  key:'contract_report' },
-      { icon:'⚡', label:'即時払い申請',               href:'coreto-instant-pay-v2.html',      key:'instant_pay' },
-    ]},
-    { section:'不動産（PT扱い・閲覧のみ）', items:[
-      { icon:'🔒', label:'不動産紹介 進捗確認',        href:'coreto-pt-portal-v2.html#re',     key:'re_ref',       note:'PT扱い' },
-    ]},
-    { section:'人材（PT扱い・閲覧のみ）', items:[
-      { icon:'🔒', label:'人材紹介 進捗確認',          href:'coreto-pt-portal-v2.html#hr',     key:'hr_ref',       note:'PT扱い' },
-    ]},
-    { section:'マイアカウント', items:[
-      { icon:'⚙️', label:'アカウント設定',             href:'coreto-account-v2.html',          key:'account' },
-      { icon:'🏅', label:'ランク・コミッション',       href:'coreto-rank-v2.html',             key:'rank' },
-      { icon:'📃', label:'業務委託契約書',             href:'coreto-contract-v2.html',         key:'contract' },
-      { icon:'🪪', label:'eKYC・口座登録',             href:'coreto-kyc-v2.html',              key:'kyc' },
-      { icon:'📚', label:'マニュアル・FAQ',           href:'coreto-faq-v2.html',              key:'faq' },
-      { icon:'📲', label:'LINE再連携',                 href:'coreto-hub-v2.html#line_relink',  key:'line_relink' },
-      { icon:'🔗', label:'リクルートリンク発行',       href:'coreto-recruit-link-v2.html',     key:'recruit_link' },
-      { icon:'🎓', label:'オンボーディング',           href:'coreto-onboarding-v2.html',       key:'onboarding' },
-    ]},
+    {
+      section: 'マイページ',
+      items: [
+        { icon:'🏠', label:'ダッシュボード',       href:'coreto-hub-v2.html',             key:'dashboard'       },
+        { icon:'🏅', label:'ランク・コミッション', href:'coreto-rank-v2.html',            key:'rank'            },
+        { icon:'💴', label:'報酬明細',             href:'coreto-payment-v2.html',         key:'payment'         },
+      ],
+    },
+    {
+      // 光通信AG業務：案件入力・フォロー・成約報告
+      section: '光通信業務（AG権限）',
+      items: [
+        { icon:'⚡', label:'担当案件一覧',         href:'coreto-utility-v2.html',         key:'utility',         badge:'3', badgeColor:'gold' },
+        { icon:'👥', label:'クライアント管理',     href:'coreto-crm-v2.html',             key:'crm'             },
+        { icon:'📝', label:'成約報告',             href:'coreto-contract-report-v2.html', key:'contract_report' },
+      ],
+    },
+    {
+      section: '入金・支払い',
+      items: [
+        { icon:'⚡', label:'即時払い申請',          href:'coreto-instant-pay-v2.html',     key:'instant_pay'     },
+      ],
+    },
+    {
+      // 不動産・人材はPT扱い（紹介して進捗を見るだけ）
+      section: '他事業への紹介（閲覧のみ）',
+      items: [
+        { icon:'🔒', label:'不動産紹介 進捗確認', href:'coreto-pt-portal-v2.html#re',    key:'re_ref',          note:'PT扱い'        },
+        { icon:'🔒', label:'人材紹介 進捗確認',   href:'coreto-pt-portal-v2.html#hr',    key:'hr_ref',          note:'PT扱い'        },
+      ],
+    },
+    {
+      section: '採用',
+      items: [
+        { icon:'🔗', label:'リクルートリンク発行', href:'coreto-recruit-link-v2.html',    key:'recruit_link'    },
+      ],
+    },
+    {
+      section: 'マイアカウント',
+      items: [
+        { icon:'⚙️', label:'アカウント設定',       href:'coreto-account-v2.html',         key:'account'         },
+        { icon:'📃', label:'業務委託契約書',       href:'coreto-contract-v2.html',        key:'contract'        },
+        { icon:'🪪', label:'eKYC・口座登録',       href:'coreto-kyc-v2.html',             key:'kyc'             },
+        { icon:'📚', label:'マニュアル・FAQ',     href:'coreto-faq-v2.html',             key:'faq'             },
+        { icon:'📲', label:'LINE再連携',           href:'coreto-hub-v2.html#line_relink', key:'line_relink'     },
+        { icon:'🎓', label:'オンボーディング',     href:'coreto-onboarding-v2.html',      key:'onboarding'      },
+      ],
+    },
+  ],
+
+  // ════════════════ PT（パートナー）════════════════
+  // 各ドメインへの紹介投げと進捗確認がメイン。光通信は案件投稿も可能。
+  pt: [
+    {
+      section: 'ポータル',
+      items: [
+        { icon:'🏠', label:'PTポータル',           href:'coreto-hub-v2.html',               key:'dashboard'    },
+        { icon:'🔑', label:'紹介コード・QR',       href:'coreto-hub-v2.html#code',          key:'code'         },
+        { icon:'💴', label:'報酬明細',             href:'coreto-payment-v2.html',           key:'payment'      },
+        { icon:'📊', label:'紹介案件の進捗',       href:'coreto-pt-portal-v2.html#progress',key:'progress'     },
+      ],
+    },
+    {
+      // 不動産への紹介：クライアントを紹介して進捗を確認する
+      section: '不動産紹介',
+      items: [
+        { icon:'🏘️', label:'不動産案件を紹介する', href:'coreto-pt-portal-v2.html#re',      key:'re_refer'     },
+      ],
+    },
+    {
+      // 人材への紹介：転職希望者を紹介して進捗を確認する
+      section: '人材紹介',
+      items: [
+        { icon:'👤', label:'人材案件を紹介する',   href:'coreto-pt-portal-v2.html#hr',      key:'hr_refer'     },
+      ],
+    },
+    {
+      // 光通信：PTは案件投稿まで可能（紹介コミッション発生）
+      section: '光通信（案件投稿可）',
+      items: [
+        { icon:'⚡', label:'光通信案件を投稿する', href:'coreto-pt-portal-v2.html#util',    key:'util_submit',  badge:'NEW', badgeColor:'gold' },
+      ],
+    },
+    {
+      section: 'ツール',
+      items: [
+        { icon:'🔗', label:'リクルートリンク発行', href:'coreto-recruit-link-v2.html',      key:'recruit_link' },
+        { icon:'📚', label:'マニュアル・FAQ',     href:'coreto-faq-v2.html',               key:'faq'          },
+        { icon:'📲', label:'LINE再連携',           href:'coreto-hub-v2.html#line_relink',   key:'line_relink'  },
+        { icon:'🎓', label:'オンボーディング',     href:'coreto-onboarding-v2.html',        key:'onboarding'   },
+      ],
+    },
   ],
 
   // ════════════════ インターン ════════════════
+  // 訪問活動と光通信リード投げに特化。シンプルに保つ。
   intern: [
-    { section:'本日の業務', items:[
-      { icon:'📊', label:'当日の実績',                 href:'coreto-hub-v2.html',              key:'dashboard' },
-      { icon:'📍', label:'訪問を記録する',             href:'coreto-hub-v2.html#visit',        key:'visit' },
-      { icon:'🗺️', label:'担当エリアマップ',           href:'coreto-hub-v2.html#map',          key:'map' },
-    ]},
-    { section:'光通信リード', items:[
-      { icon:'⚡', label:'リードを投稿する',           href:'coreto-hub-v2.html#lead_submit',  key:'lead_submit' },
-    ]},
-    { section:'個人', items:[
-      { icon:'💴', label:'報酬確認',                   href:'coreto-payment-v2.html',          key:'payment' },
-      { icon:'🏆', label:'ランキング',                 href:'coreto-intern-v2.html',           key:'rank' },
-      { icon:'📚', label:'マニュアル・FAQ',           href:'coreto-faq-v2.html',              key:'faq' },
-      { icon:'📲', label:'LINE再連携',                 href:'coreto-hub-v2.html#line_relink',  key:'line_relink' },
-    ]},
+    {
+      section: '本日の業務',
+      items: [
+        { icon:'📊', label:'当日の実績',           href:'coreto-hub-v2.html',             key:'dashboard'    },
+        { icon:'📍', label:'訪問を記録する',       href:'coreto-hub-v2.html#visit',       key:'visit'        },
+        { icon:'🗺️', label:'担当エリアマップ',     href:'coreto-hub-v2.html#map',         key:'map'          },
+      ],
+    },
+    {
+      // 光通信リード：訪問先で獲得したリードを投稿する
+      section: '光通信リード投稿',
+      items: [
+        { icon:'⚡', label:'リードを投稿する',     href:'coreto-hub-v2.html#lead_submit', key:'lead_submit'  },
+      ],
+    },
+    {
+      section: '個人',
+      items: [
+        { icon:'💴', label:'報酬確認',             href:'coreto-payment-v2.html',         key:'payment'      },
+        { icon:'🏆', label:'ランキング',           href:'coreto-intern-v2.html',          key:'rank'         },
+        { icon:'📚', label:'マニュアル・FAQ',     href:'coreto-faq-v2.html',             key:'faq'          },
+        { icon:'📲', label:'LINE再連携',           href:'coreto-hub-v2.html#line_relink', key:'line_relink'  },
+      ],
+    },
   ],
 };
 
@@ -389,7 +553,7 @@ function init(activeKey) {
         return `<a href="${item.href}" class="cnav-item${isActive ? ' active' : ''}">
           <div class="cnav-icon">${item.icon}</div>
           <div class="cnav-label">${item.label}</div>
-          ${item.note ? `<div class="cnav-note">${item.note}</div>` : ''}
+          ${item.note  ? `<div class="cnav-note">${item.note}</div>` : ''}
           ${item.badge ? `<div class="cnav-badge ${badgeCls}">${item.badge}</div>` : ''}
         </a>`;
       }).join('')}
@@ -405,7 +569,7 @@ function session() {
   const role = sessionStorage.getItem('coreto_role') || null;
   if (!role) return null;
   const nameMap = {
-    hq:        { name:'田中 誠一（統括）',       type:'hq',        userId:'HQ-001' },
+    hq:        { name:'田中 誠一（統括）',       type:'hq',        userId:'HQ-001'  },
     re_ag:     { name:'山田 誠（RE-AG）',        type:'re_ag',     userId:'AG-0042' },
     hr_ag:     { name:'鈴木 花子（HR-AG）',      type:'hr_ag',     userId:'AG-0088' },
     hikari_ag: { name:'山田 光太（光通信AG）',   type:'hikari_ag', userId:'AG-0103' },
