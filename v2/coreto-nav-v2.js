@@ -134,7 +134,6 @@ const NAV = {
       { icon:'👥', label:'クライアント管理',           href:'coreto-crm-v2.html',              key:'crm' },
       { icon:'📝', label:'成約報告',                   href:'coreto-contract-report-v2.html',  key:'contract_report' },
       { icon:'📝', label:'売買成約報告',               href:'coreto-sale-report-v2.html',      key:'sale_report' },
-      { icon:'⚠️', label:'早期退職アラート',           href:'coreto-early-quit-v2.html',       key:'early_quit' },
       { icon:'🏠', label:'内見管理',                   href:'coreto-showing-v2.html',          key:'showing' },
       { icon:'🔑', label:'IT重説チェック',             href:'coreto-itsetsu-v2.html',          key:'itsetsu' },
       { icon:'🏦', label:'初期費用明細チェック',       href:'coreto-invoice-check-v2.html',    key:'invoice_check' },

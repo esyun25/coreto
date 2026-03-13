@@ -433,6 +433,14 @@ body, input, select, textarea, button { font-family:'Outfit','Noto Sans JP',sans
 </div>
 
 <script>
+(function(){
+  var _role = sessionStorage.getItem('coreto_role') || '';
+  var _allowed = ["hq", "re_ag", "hr_ag", "hikari_ag"];
+  if (_allowed.length && !_allowed.includes(_role)) {
+    location.replace('coreto-hub-v2.html?unauthorized=1');
+  }
+})();
+
 function toggleSb(){
   document.querySelector('.sb').classList.toggle('open');
   document.querySelector('.mob-overlay').classList.toggle('show');
@@ -535,6 +543,24 @@ renderTable(CLIENTS);
 <script>
 window.addEventListener('DOMContentLoaded', function() {
   CNAV.init('crm');
+  // ── ロール別クライアントフィルタ ──
+  const _s = CNAV.session ? CNAV.session() : null;
+  const _role = (_s && _s.type) || sessionStorage.getItem('coreto_role') || 'hq';
+  if (_role !== 'hq') {
+    // HQ以外: 自分の担当クライアントのみ表示
+    const _myId = _s ? _s.userId : null;
+    if (_myId) {
+      CLIENTS = CLIENTS.filter(c => c.ag === _myId);
+    }
+    // 担当AGフィルタセレクトを非表示
+    const agSel = document.getElementById('f-ag');
+    if (agSel) agSel.closest('.filter-item, .filter-group, div').style.display = 'none';
+    // ページタイトルを「担当クライアント」に変更
+    const title = document.querySelector('.top-bar .tb-title, .tb-title');
+    if (title) title.textContent = '担当クライアント管理';
+  }
+  renderTable();
+  filterTable();
 });
 </script>
 <div class="mob-overlay" onclick="toggleSb()"></div>

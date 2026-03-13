@@ -226,6 +226,14 @@ select.form-input{cursor:pointer}
 
 <script src="coreto-nav-v2.js"></script>
 <script>
+(function(){
+  var _role = sessionStorage.getItem('coreto_role') || '';
+  var _allowed = ["hq", "re_ag", "hr_ag", "hikari_ag", "pt"];
+  if (_allowed.length && !_allowed.includes(_role)) {
+    location.replace('coreto-hub-v2.html?unauthorized=1');
+  }
+})();
+
 function toggleSb(){ document.querySelector('.sb').classList.toggle('open'); document.querySelector('.mob-overlay')?.classList.toggle('show'); }
 function showToast(msg, type){
   const t = document.getElementById('rl-toast');
@@ -236,7 +244,9 @@ function showToast(msg, type){
 }
 
 // ── セッション・ユーザー情報 ──────────────────────────────
-const SESSION = { name:'山田 誠', type:'re_ag', userId:'AG-0042' }; // デモ値（実運用: CNAV.session()）
+// ── セッション取得: CNAV.session()から動的取得 ──
+const _cnavSession = (typeof CNAV !== 'undefined' && CNAV.session) ? CNAV.session() : null;
+const SESSION = _cnavSession || { name:'山田 誠', type:'re_ag', userId:'AG-0042' };
 const ROLE_LABEL = { 'ag-re':'不動産AG（RE）', 'ag-hr':'人材AG（HR）', 'pt':'PT', '':'全種別' };
 const BASE_URL = location.href.replace(/[^/]*$/, '') + 'coreto-apply-v2.html';
 

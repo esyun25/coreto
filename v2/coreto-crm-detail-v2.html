@@ -312,7 +312,7 @@ html, body { background:#FFFFFF !important; }
             <div class="ph-id">CLI-0001 ／ タナカ ユウコ ／ 個人</div>
             <div class="ph-tags">
               <span class="badge badge-sk">商談中</span>
-              <span class="badge badge-gd">AG-0042</span>
+              <span class="badge badge-gd" id="detail-ag-id">AG-0042</span>
               <span class="badge badge-nt">PT紹介</span>
             </div>
           </div>
@@ -596,12 +596,42 @@ html, body { background:#FFFFFF !important; }
 
 <script src="coreto-nav-v2.js"></script>
 <script>
+(function(){
+  var _role = sessionStorage.getItem('coreto_role') || '';
+  var _allowed = ["hq", "re_ag", "hr_ag", "hikari_ag"];
+  if (_allowed.length && !_allowed.includes(_role)) {
+    location.replace('coreto-hub-v2.html?unauthorized=1');
+  }
+})();
+
 function toggleSb(){
   document.querySelector('.sb').classList.toggle('open');
   document.querySelector('.mob-overlay').classList.toggle('show');
 }
 window.addEventListener('DOMContentLoaded', function() {
   CNAV.init('crm');
+  // ── ロール別アクセス制御: 担当外クライアント詳細を閲覧させない ──
+  const _s = CNAV.session ? CNAV.session() : null;
+  const _role = (_s && _s.type) || sessionStorage.getItem('coreto_role') || 'hq';
+  if (_role !== 'hq') {
+    const _myId = _s ? _s.userId : null;
+    const agBadge = document.getElementById('detail-ag-id');
+    const pageAg = agBadge ? agBadge.textContent.trim() : null;
+    if (_myId && pageAg && pageAg !== _myId) {
+      // 担当外: アクセス拒否してCRM一覧に戻す
+      document.querySelector('.content-area, .main-content, main, .shell')?.remove?.();
+      var _errDiv = document.createElement('div');
+      _errDiv.style.cssText = 'display:flex;align-items:center;justify-content:center;height:60vh;flex-direction:column;gap:16px';
+      _errDiv.innerHTML = '<div style="font-size:32px">🔒</div>' +
+        '<div style="font-weight:700;color:#0D1A2D">このクライアントは担当外です</div>';
+      var _btn = document.createElement('button');
+      _btn.className = 'btn btn-primary';
+      _btn.textContent = '← CRM一覧に戻る';
+      _btn.onclick = function(){ location.href = 'coreto-crm-v2.html'; };
+      _errDiv.appendChild(_btn);
+      document.body.appendChild(_errDiv);
+    }
+  }
 });
 
 // ══════════════════════════════════════════════════════════

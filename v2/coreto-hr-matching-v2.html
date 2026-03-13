@@ -245,6 +245,14 @@ html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:
 
 <script src="coreto-nav-v2.js"></script>
 <script>
+(function(){
+  var _role = sessionStorage.getItem('coreto_role') || '';
+  var _allowed = ["hq", "hr_ag"];
+  if (_allowed.length && !_allowed.includes(_role)) {
+    location.replace('coreto-hub-v2.html?unauthorized=1');
+  }
+})();
+
 // ═══════════════════════════════════════════
 // CONSTANTS
 // ═══════════════════════════════════════════
@@ -1541,6 +1549,17 @@ function toast(msg,type='ok') {
 
 window.addEventListener('DOMContentLoaded', () => {
   CNAV.init('hr_matching');
+  // sessionからROLEを自動設定
+  const _s = CNAV.session ? CNAV.session() : null;
+  if (_s) {
+    if (_s.type === 'hq') setRole('hq');
+    else if (_s.type === 'hr_ag') setRole('ag');
+    else setRole('pt');
+    // HR-AG の場合: 担当案件(agId一致)のみに絞り込む
+    if (_s.type === 'hr_ag' && _s.userId) {
+      CASES = CASES.filter(c => c.agId === _s.userId);
+    }
+  }
   render();
 });
 </script>

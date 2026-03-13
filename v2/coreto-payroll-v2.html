@@ -295,7 +295,7 @@ body, input, select, textarea, button { font-family:'Outfit','Noto Sans JP',sans
           <option value="2026-02">2026年2月分</option>
           <option value="2026-01">2026年1月分</option>
         </select>
-        <button class="btn btn-primary btn-sm" onclick="runBatchCheck()">✨ AI支払い検証</button>
+        <button class="btn btn-primary btn-sm" onclick="location.href='coreto-batch-close-v2.html'">📊 月次締め・全銀CSV出力</button>
         <button class="btn btn-sm" style="background:var(--em);color:#fff;border:none" onclick="exportCSV()">📥 GMO振込CSVエクスポート</button>
       </div>
     </div>
@@ -316,15 +316,16 @@ body, input, select, textarea, button { font-family:'Outfit','Noto Sans JP',sans
         </div>
       </div>
 
-      <!-- 8項目自動チェック -->
-      <div class="card" id="batch-check-card">
+      <!-- 月次締め・全銀出力リンク -->
+      <div class="card" id="batch-check-card" style="border:1px solid rgba(200,169,81,.3)">
         <div class="card-head">
-          <div class="card-title">✅ 月末8項目自動チェック</div>
-          <span class="badge b-am" id="check-overall-badge">未実行</span>
+          <div class="card-title">📊 月次締め・AI検証・全銀CSV出力</div>
+          <span class="badge b-em">batch-close</span>
         </div>
         <div class="card-body">
-          <div class="checklist-grid" id="check-list">
-            <div style="text-align:center;color:var(--faint);padding:24px">「8項目チェック実行」ボタンで自動チェックを開始します</div>
+          <div style="text-align:center;padding:24px">
+            <div style="color:var(--muted);font-size:12px;margin-bottom:14px">8項目AI検証・全銀ファイル生成は「月次締め処理」ページで行います</div>
+            <button class="btn btn-primary" onclick="location.href='coreto-batch-close-v2.html'">📊 月次締め処理ページへ →</button>
           </div>
         </div>
       </div>
@@ -359,6 +360,14 @@ body, input, select, textarea, button { font-family:'Outfit','Noto Sans JP',sans
 <div id="ip-toast" class="toast"></div>
 
 <script>
+(function(){
+  var _role = sessionStorage.getItem('coreto_role') || '';
+  var _allowed = ["hq"];
+  if (_allowed.length && !_allowed.includes(_role)) {
+    location.replace('coreto-hub-v2.html?unauthorized=1');
+  }
+})();
+
 function toggleSb(){ document.querySelector('.sb').classList.toggle('open'); document.querySelector('.mob-overlay').classList.toggle('show'); }
 function showToast(msg,type){ const t=document.getElementById('ip-toast'); t.textContent=msg; t.className='toast '+(type||''); t.style.opacity='1'; setTimeout(()=>t.style.opacity='0',3200); }
 
@@ -427,80 +436,6 @@ function renderPayoutTable() {
   document.getElementById('gmo-count').textContent = gmoCount;
 }
 
-// 8項目チェック
-function runBatchCheck() {
-  const btn = document.querySelector('[onclick="runBatchCheck()"]');
-  if (btn) { btn.disabled = true; btn.textContent = '✨ AI検証中...'; }
-
-  // 報酬サマリーをAIに渡すためのデータ整形
-  const summary = PAYOUTS.map(p => {
-    const calc = calcPayout(p);
-    return {
-      id: p.id, name: p.name, rank: p.rank, type: p.type,
-      caseCount: p.cases.length,
-      totalFee: p.cases.reduce((s,c)=>s+c.fee,0),
-      reward: calc.reward,
-      withholding: calc.withholding,
-      instantPay: p.instantPay,
-      payout: calc.payout,
-      legal: p.legal,
-    };
-  });
-
-  const prompt = `以下はCORETO（不動産・人材紹介プラットフォーム）の当月報酬明細データです。
-8項目の支払い検証を行い、異常・要対応があれば具体的なAG名・ID・金額を示してください。
-JSONのみで回答（前置き・コードブロック不要）:
-
-データ:
-${JSON.stringify(summary, null, 2)}
-
-検証項目:
-①全額入金確認 ②未報告案件の有無 ③報酬額の異常値（平均の±50%超） ④源泉徴収計算の正確性（10.21%、100万超は20.42%） ⑤重複成約チェック ⑥成約日の妥当性 ⑦HR第2回報酬の保証期間確認 ⑧振込先口座確認
-
-回答フォーマット:
-{"checks":[{"no":"①","label":"項目名","pass":true,"detail":"詳細（問題があれば対象者名・金額を明記）"},...],"summary":"総合コメント1文"}`;
-
-  fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1200,
-      messages: [{ role: 'user', content: prompt }]
-    })
-  })
-  .then(r => r.json())
-  .then(data => {
-    const text = data.content?.find(b => b.type === 'text')?.text || '{}';
-    const res = JSON.parse(text.replace(/```json|```/g,'').trim());
-    const items = res.checks || [];
-    const html = items.map(it => `
-      <div class="check-item ${it.pass?'pass':'fail'}">
-        <div class="check-icon" style="background:${it.pass?'var(--em-bg)':'var(--rd-bg)'}">${it.pass?'✅':'❌'}</div>
-        <div style="flex:1">
-          <div class="check-label">${it.no} ${it.label}</div>
-          <div class="check-detail">${it.detail}</div>
-        </div>
-        <span class="badge ${it.pass?'b-em':'b-rd'}">${it.pass?'OK':'要対応'}</span>
-      </div>`).join('');
-    document.getElementById('check-list').innerHTML = html;
-    const allPass = items.every(i => i.pass);
-    document.getElementById('check-overall-badge').textContent = allPass ? '全項目OK ✅' : '要対応あり ⚠️';
-    document.getElementById('check-overall-badge').className = 'badge ' + (allPass ? 'b-em' : 'b-rd');
-    if (res.summary) {
-      const sumEl = document.getElementById('check-summary');
-      if (sumEl) sumEl.textContent = '💬 ' + res.summary;
-    }
-    if (btn) { btn.disabled = false; btn.textContent = '✨ AI再検証'; }
-    showToast(allPass ? '✅ AI検証完了: 全項目OK' : '⚠️ AI検証完了: 要対応あり');
-  })
-  .catch(e => {
-    document.getElementById('check-list').innerHTML =
-      `<div style="color:var(--rd);padding:12px;font-size:12px">⚠️ AI接続エラー: ${e.message}<br>
-      <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="runBatchCheck()">再試行</button></div>`;
-    if (btn) { btn.disabled = false; btn.textContent = '✨ AI支払い検証'; }
-  });
-}
 
 
 // GMO振込CSVエクスポート

@@ -311,7 +311,7 @@ body, input, select, textarea, button { font-family:'Outfit','Noto Sans JP',sans
   <div class="page" id="page-view">
     <div class="case-list" id="list-view">
       <!-- Rental -->
-      <div class="case-row" onclick="window.location.href='coreto-rental-v2.html'">
+      <div class="case-row" data-ag="AG-0042" onclick="window.location.href='coreto-rental-v2.html'">
         <div class="case-type-pill type-rental">賃貸</div>
         <div class="case-info">
           <div class="case-id">RENT-0194</div>
@@ -325,7 +325,7 @@ body, input, select, textarea, button { font-family:'Outfit','Noto Sans JP',sans
         </div>
         <div class="case-arrow">›</div>
       </div>
-      <div class="case-row">
+      <div class="case-row" data-ag="AG-0088">
         <div class="case-type-pill type-rental">賃貸</div>
         <div class="case-info">
           <div class="case-id">RENT-0193</div>
@@ -339,7 +339,7 @@ body, input, select, textarea, button { font-family:'Outfit','Noto Sans JP',sans
         </div>
         <div class="case-arrow">›</div>
       </div>
-      <div class="case-row">
+      <div class="case-row" data-ag="AG-0042">
         <div class="case-type-pill type-rental">賃貸</div>
         <div class="case-info">
           <div class="case-id">RENT-0192</div>
@@ -356,7 +356,7 @@ body, input, select, textarea, button { font-family:'Outfit','Noto Sans JP',sans
         <div class="case-arrow">›</div>
       </div>
       <!-- Sale -->
-      <div class="case-row" onclick="window.location.href='coreto-sale-report-v2.html?id=SALE-0044&name=%E5%B1%B1%E6%9C%AC+%E5%A4%A7%E8%BC%94&addr=%E7%9B%AE%E9%BB%92%E5%8C%BA%E4%B8%AD%E7%9B%AE%E9%BB%92&prop=%E5%8C%BA%E5%88%86%E3%83%9E%E3%83%B3%E3%82%B7%E3%83%A7%E3%83%B3&price=38000000&deal=brokerage'">
+      <div class="case-row" data-ag="AG-0042" onclick="window.location.href='coreto-sale-report-v2.html?id=SALE-0044&name=%E5%B1%B1%E6%9C%AC+%E5%A4%A7%E8%BC%94&addr=%E7%9B%AE%E9%BB%92%E5%8C%BA%E4%B8%AD%E7%9B%AE%E9%BB%92&prop=%E5%8C%BA%E5%88%86%E3%83%9E%E3%83%B3%E3%82%B7%E3%83%A7%E3%83%B3&price=38000000&deal=brokerage'">
         <div class="case-type-pill type-sale">売買</div>
         <div class="case-info">
           <div class="case-id">SALE-0044</div>
@@ -383,7 +383,7 @@ body, input, select, textarea, button { font-family:'Outfit','Noto Sans JP',sans
         <div class="case-arrow">›</div>
       </div>
       <!-- Utility -->
-      <div class="case-row">
+      <div class="case-row" data-ag="AG-0042">
         <div class="case-type-pill type-utility">光通信</div>
         <div class="case-info">
           <div class="case-id">UTL-0088</div>
@@ -459,6 +459,14 @@ body, input, select, textarea, button { font-family:'Outfit','Noto Sans JP',sans
 </div>
 
 <script>
+(function(){
+  var _role = sessionStorage.getItem('coreto_role') || '';
+  var _allowed = ["hq", "re_ag"];
+  if (_allowed.length && !_allowed.includes(_role)) {
+    location.replace('coreto-hub-v2.html?unauthorized=1');
+  }
+})();
+
 
 // Mobile sidebar toggle
 function toggleSb(){
@@ -568,6 +576,39 @@ JSONのみ（前置き不要）:
 <script>
 window.addEventListener('DOMContentLoaded', function() {
   CNAV.init('cases');
+
+  // ── ロール別 案件フィルタ ──
+  const _s = CNAV.session ? CNAV.session() : null;
+  const _role = (_s && _s.type) || sessionStorage.getItem('coreto_role') || 'hq';
+  const _myId = _s ? _s.userId : null;  // 例: 'AG-0042'
+
+  if (_role !== 'hq') {
+    // HQ以外: 自分が担当する案件のみ表示
+    const allRows = document.querySelectorAll('.case-row[data-ag]');
+    let visibleCount = 0;
+    allRows.forEach(row => {
+      if (row.getAttribute('data-ag') === _myId) {
+        visibleCount++;
+      } else {
+        row.style.display = 'none';
+      }
+    });
+    // カンバン列も自分の案件のみ表示（data-ag属性があるカードのみ）
+    document.querySelectorAll('.kanban-card[data-ag]').forEach(card => {
+      if (card.getAttribute('data-ag') !== _myId) card.style.display = 'none';
+    });
+    // 「新規案件」ボタンはAGも使用可
+    // ヘッダーにフィルタ中の旨を表示
+    const tb = document.querySelector('.top-bar .tb-title');
+    if (tb) tb.textContent = '担当案件一覧';
+    // 担当者フィルタセレクトを非表示
+    const agFilter = document.querySelector('select');
+    if (agFilter && agFilter.innerHTML.includes('AG-')) agFilter.closest('.filter-group, .filter-wrap, div').style.display = 'none';
+    // 件数バッジを更新
+    const badge = document.querySelector('.badge-count, .tb-badge');
+    if (badge) badge.textContent = visibleCount + '件';
+  }
+
   // URLパラメータでタブ自動切替（?type=hr など）
   const params = new URLSearchParams(window.location.search);
   const typeParam = params.get('type');
