@@ -287,9 +287,9 @@ const LS_AGENTS = 'MATCHING_AGENTS';
 function lsGet(k){try{return JSON.parse(localStorage.getItem(k)||'null');}catch(e){return null;}}
 function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
 
-const AREA_GRAPH = {
+let AREA_GRAPH = {
   adjacent: (a,b) => {
-    const map = {
+    let map = {
       '渋谷':['目黒','港','新宿','中野','世田谷'],
       '新宿':['渋谷','中野','豊島','文京','千代田'],
       '港':['渋谷','千代田','中央','品川','目黒'],
@@ -308,7 +308,7 @@ const AREA_GRAPH = {
 };
 
 function initDemoAgents(){
-  const agents = [
+  let agents = [
     {id:'AG-0042',name:'中村 陽子',rank:'Platinum',type:'RE',areas:['渋谷','目黒','港','世田谷'],
      elo:1680,closedCases:94,totalCases:102,activeCases:6,avgRating:4.85,reviewCount:89,
      completionRate:0.97,avgResponseMin:8,daysRegistered:540,status:'active',
@@ -363,7 +363,7 @@ function initDemoAgents(){
 }
 
 function initDemoLeads(){
-  const leads = [
+  let leads = [
     {id:'LD-2026-001',ptId:'PT-30007',ptName:'佐藤 美咲',ptReputation:4.3,
      type:'rental',area:'渋谷',budget:180000,budgetFlex:1,
      title:'渋谷区 2LDK 外国人家族',
@@ -413,8 +413,8 @@ function saveAgents(v){ lsSet(LS_AGENTS,v); }
 // MATCHING ENGINE — Layer 1: Hard Filter
 // ══════════════════════════════════════════════════════════════
 function hardFilter(agents, lead){
-  const rankOrder = {Bronze:1,Silver:2,Gold:3,Platinum:4};
-  const caps = {Platinum:99,Gold:12,Silver:8,Bronze:5};
+  let rankOrder = {Bronze:1,Silver:2,Gold:3,Platinum:4};
+  let caps = {Platinum:99,Gold:12,Silver:8,Bronze:5};
   return agents.filter(ag => {
     if(lead.type==='rental'&&ag.type==='HR') return false;
     if(lead.type==='hr'&&ag.type==='RE') return false;
@@ -431,43 +431,43 @@ function hardFilter(agents, lead){
 // ══════════════════════════════════════════════════════════════
 function calculateMatchScore(ag, lead){
   // [A] 成約力スコア 30点
-  const eloNorm = Math.max(0,Math.min(1,(ag.elo-800)/(2400-800)));
-  const convRate = ag.recentConversionRate || 0.5;
-  const closingPower = (eloNorm*0.4 + convRate*0.6) * 30;
+  let eloNorm = Math.max(0,Math.min(1,(ag.elo-800)/(2400-800)));
+  let convRate = ag.recentConversionRate || 0.5;
+  let closingPower = (eloNorm*0.4 + convRate*0.6) * 30;
 
   // [B] 適合スコア 25点
-  const areaScore = calcAreaScore(ag, lead);
-  const typeExp = (lead.type==='rental'&&ag.primaryType==='rental')
+  let areaScore = calcAreaScore(ag, lead);
+  let typeExp = (lead.type==='rental'&&ag.primaryType==='rental')
     || (lead.type==='hr'&&ag.primaryType==='hr')
     || (lead.type==='sale'&&ag.primaryType==='sale') ? 0.85 : 0.35;
-  const budgetFit = calcBudgetFitScore(ag, lead);
-  const fitScore = (areaScore*0.5 + typeExp*0.35 + budgetFit*0.15) * 25;
+  let budgetFit = calcBudgetFitScore(ag, lead);
+  let fitScore = (areaScore*0.5 + typeExp*0.35 + budgetFit*0.15) * 25;
 
   // [C] 信頼性スコア 20点
-  const n = ag.reviewCount || 0;
-  const CONF_N = 8; const PLAT_AVG = 4.2;
-  const bayesRating = (n*(ag.avgRating||4.0) + CONF_N*PLAT_AVG) / (n+CONF_N);
-  const complRate = ag.completionRate || 0.9;
-  const respScore = Math.max(0,1-(ag.avgResponseMin||30)/120);
-  const trustScore = (bayesRating/5*0.5 + complRate*0.35 + respScore*0.15) * 20;
+  let n = ag.reviewCount || 0;
+  let CONF_N = 8; let PLAT_AVG = 4.2;
+  let bayesRating = (n*(ag.avgRating||4.0) + CONF_N*PLAT_AVG) / (n+CONF_N);
+  let complRate = ag.completionRate || 0.9;
+  let respScore = Math.max(0,1-(ag.avgResponseMin||30)/120);
+  let trustScore = (bayesRating/5*0.5 + complRate*0.35 + respScore*0.15) * 20;
 
   // [D] 承諾確率スコア 20点
-  const acceptProb = predictAcceptProb(ag, lead);
-  const acceptanceScore = acceptProb * 20;
+  let acceptProb = predictAcceptProb(ag, lead);
+  let acceptanceScore = acceptProb * 20;
 
   // [E] 相性スコア 15点（簡易協調フィルタリング）
-  const affinity = calcAffinityScore(ag, lead);
-  const affinityScore = affinity * 15;
+  let affinity = calcAffinityScore(ag, lead);
+  let affinityScore = affinity * 15;
 
   // [F] キャパシティスコア 10点
-  const caps = {Platinum:99,Gold:12,Silver:8,Bronze:5};
-  const cap = caps[ag.rank];
-  const load = ag.activeCases / cap;
-  const capacityScore = load < 0.7
+  let caps = {Platinum:99,Gold:12,Silver:8,Bronze:5};
+  let cap = caps[ag.rank];
+  let load = ag.activeCases / cap;
+  let capacityScore = load < 0.7
     ? 10
     : 10 * Math.pow(Math.max(0,1-load),2) / 0.09;
 
-  const total = closingPower+fitScore+trustScore+acceptanceScore+affinityScore+capacityScore;
+  let total = closingPower+fitScore+trustScore+acceptanceScore+affinityScore+capacityScore;
 
   return {
     total: Math.min(120, total),
@@ -493,24 +493,24 @@ function calcBudgetFitScore(ag, lead){
   // エージェントの過去成約平均予算帯との適合（デモでは簡易計算）
   if(!lead.budget) return 0.7;
   // Platinumは高予算得意、Bronzeは低予算得意（仮定）
-  const budgetPerf = {Platinum:300000,Gold:200000,Silver:130000,Bronze:90000};
-  const agPref = budgetPerf[ag.rank]||130000;
-  const diff = Math.abs(lead.budget - agPref) / Math.max(lead.budget, agPref);
+  let budgetPerf = {Platinum:300000,Gold:200000,Silver:130000,Bronze:90000};
+  let agPref = budgetPerf[ag.rank]||130000;
+  let diff = Math.abs(lead.budget - agPref) / Math.max(lead.budget, agPref);
   return Math.max(0.3, 1 - diff);
 }
 
 function predictAcceptProb(ag, lead){
-  const typeProb = ag.acceptanceByType?.[lead.type] ?? 0.65;
-  const loadFactor = Math.max(0.4, 1 - ag.activeCases/10*0.3);
-  const areaPref = ag.areas.includes(lead.area) ? 1.1 : 0.85;
+  let typeProb = ag.acceptanceByType?.[lead.type] ?? 0.65;
+  let loadFactor = Math.max(0.4, 1 - ag.activeCases/10*0.3);
+  let areaPref = ag.areas.includes(lead.area) ? 1.1 : 0.85;
   return Math.min(0.98, typeProb * loadFactor * areaPref);
 }
 
 function calcAffinityScore(ag, lead){
   // 同PT過去取引があるほど高い（デモ: ptReputationベース）
-  const ptRep = (lead.ptReputation||4.0) / 5;
+  let ptRep = (lead.ptReputation||4.0) / 5;
   // 案件タイプ×エリアの実績補正（デモ: ELOとratingの組み合わせ）
-  const expMatch = ag.areas.includes(lead.area) && ag.primaryType===lead.type ? 1.0 : 0.6;
+  let expMatch = ag.areas.includes(lead.area) && ag.primaryType===lead.type ? 1.0 : 0.6;
   return ptRep * 0.4 + expMatch * 0.6;
 }
 
@@ -519,18 +519,18 @@ function calcAffinityScore(ag, lead){
 // ══════════════════════════════════════════════════════════════
 function sampleBeta(alpha, beta){
   // 簡易βサンプリング（Box-Muller近似）
-  const x = gammaSample(alpha);
-  const y = gammaSample(beta);
+  let x = gammaSample(alpha);
+  let y = gammaSample(beta);
   return x/(x+y);
 }
 function gammaSample(a){
   if(a<1) return gammaSample(1+a)*Math.pow(Math.random(),1/a);
-  const d=a-1/3, c=1/Math.sqrt(9*d);
+  let d=a-1/3, c=1/Math.sqrt(9*d);
   while(true){
     let x,v;
     do{ x=(Math.random()*2-1)*3.464; v=1+c*x; }while(v<=0);
     v=v*v*v;
-    const u=Math.random();
+    let u=Math.random();
     if(u<1-0.331*(x*x)*(x*x)) return d*v;
     if(Math.log(u)<0.5*x*x+d*(1-v+Math.log(v))) return d*v;
   }
@@ -538,20 +538,20 @@ function gammaSample(a){
 
 function explorationAdjustedRanking(scoredAgs){
   return scoredAgs.map(item => {
-    const ag = item.ag;
+    let ag = item.ag;
     let explorationBonus = 0;
 
     // 新人ボーナス（登録90日以内 + 成約5件未満）
-    const isNewbie = ag.daysRegistered < 90 && ag.totalCases < 5;
+    let isNewbie = ag.daysRegistered < 90 && ag.totalCases < 5;
     if(isNewbie){
-      const prob = Math.max(0, 0.3 - ag.totalCases*0.06);
+      let prob = Math.max(0, 0.3 - ag.totalCases*0.06);
       if(Math.random() < prob) explorationBonus = 12;
     }
 
     // Thompson Sampling
-    const alpha = (ag.closedCases||0) + 1;
-    const beta  = Math.max(1,(ag.totalCases||1)-(ag.closedCases||0)) + 1;
-    const thompson = sampleBeta(alpha, beta);
+    let alpha = (ag.closedCases||0) + 1;
+    let beta  = Math.max(1,(ag.totalCases||1)-(ag.closedCases||0)) + 1;
+    let thompson = sampleBeta(alpha, beta);
 
     return {
       ...item,
@@ -567,7 +567,7 @@ function explorationAdjustedRanking(scoredAgs){
 // AI Role A: Lead Analysis
 // ══════════════════════════════════════════════════════════════
 async function analyzeLeadWithAI(lead){
-  const prompt = `あなたはCORETO不動産・人材マッチングプラットフォームの案件解析AIです。
+  let prompt = `あなたはCORETO不動産・人材マッチングプラットフォームの案件解析AIです。
 パートナーが入力した案件の情報から、マッチングに必要な構造化情報を抽出してください。
 必ずJSON形式のみで返答し、前置き・後置きは一切不要です。
 
@@ -592,7 +592,7 @@ async function analyzeLeadWithAI(lead){
 }`;
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages',{
+    let res = await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
@@ -601,8 +601,8 @@ async function analyzeLeadWithAI(lead){
         messages:[{role:'user',content:prompt}]
       })
     });
-    const data = await res.json();
-    const text = data.content[0].text.replace(/```json|```/g,'').trim();
+    let data = await res.json();
+    let text = data.content[0].text.replace(/```json|```/g,'').trim();
     return JSON.parse(text);
   } catch(e){
     console.error('AI Role A error:',e);
@@ -626,7 +626,7 @@ async function analyzeLeadWithAI(lead){
 // AI Role B: Final Ranking (Top20→5名選定)
 // ══════════════════════════════════════════════════════════════
 async function aiFinalRanking(top20, lead){
-  const agProfiles = top20.slice(0,20).map(item=>({
+  let agProfiles = top20.slice(0,20).map(item=>({
     id: item.ag.id,
     name: item.ag.name,
     rank: item.ag.rank,
@@ -644,7 +644,7 @@ async function aiFinalRanking(top20, lead){
     explorationBonus: item.explorationBonus||0,
   }));
 
-  const prompt = `あなたはCORETO不動産・人材マッチングプラットフォームの最終マッチング判定AIです。
+  let prompt = `あなたはCORETO不動産・人材マッチングプラットフォームの最終マッチング判定AIです。
 
 アルゴリズムが算出したTop${agProfiles.length}候補エージェントの中から、この案件に最も適した5名を選定し根拠を示してください。
 
@@ -685,7 +685,7 @@ ${JSON.stringify(agProfiles,null,1)}
 }`;
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages',{
+    let res = await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
@@ -694,8 +694,8 @@ ${JSON.stringify(agProfiles,null,1)}
         messages:[{role:'user',content:prompt}]
       })
     });
-    const data = await res.json();
-    const text = data.content[0].text.replace(/```json|```/g,'').trim();
+    let data = await res.json();
+    let text = data.content[0].text.replace(/```json|```/g,'').trim();
     return JSON.parse(text);
   } catch(e){
     console.error('AI Role B error:',e);
@@ -731,15 +731,15 @@ function switchRole(role){
   ['hq','ag','pt'].forEach(r=>{
     document.getElementById('rbtn-'+r).classList.toggle('active', r===role);
   });
-  const badge = document.getElementById('role-badge');
-  const labels = {hq:'HQ管理者',ag:'エージェント',pt:'パートナー'};
-  const cls    = {hq:'role-hq',ag:'role-ag',pt:'role-pt'};
+  let badge = document.getElementById('role-badge');
+  let labels = {hq:'HQ管理者',ag:'エージェント',pt:'パートナー'};
+  let cls    = {hq:'role-hq',ag:'role-ag',pt:'role-pt'};
   badge.textContent = labels[role];
   badge.className = 'badge role-badge '+cls[role];
   // CNAV管理のID（sb-name / sb-role）に統一。nullセーフ。
-  const avEl = document.getElementById('sb-av');
-  const unEl = document.getElementById('sb-name');
-  const urEl = document.getElementById('sb-role');
+  let avEl = document.getElementById('sb-av');
+  let unEl = document.getElementById('sb-name');
+  let urEl = document.getElementById('sb-role');
   if(role==='hq'){
     if(avEl) avEl.textContent='HQ';
     if(unEl) unEl.textContent='HQ 管理者';
@@ -762,7 +762,7 @@ function switchRole(role){
 // MAIN RENDER ROUTER
 // ══════════════════════════════════════════════════════════════
 function renderMain(){
-  const el = document.getElementById('main-content');
+  let el = document.getElementById('main-content');
   if(currentRole==='hq')      el.innerHTML = renderHQ();
   else if(currentRole==='ag') el.innerHTML = renderAG();
   else                         el.innerHTML = renderPT();
@@ -773,11 +773,11 @@ function renderMain(){
 // HQ VIEW
 // ══════════════════════════════════════════════════════════════
 function renderHQ(){
-  const leads = getLeads();
-  const pending   = leads.filter(l=>!['matched','closed'].includes(l.status));
-  const matched   = leads.filter(l=>l.status==='matched');
+  let leads = getLeads();
+  let pending   = leads.filter(l=>!['matched','closed'].includes(l.status));
+  let matched   = leads.filter(l=>l.status==='matched');
 
-  const tabs = [
+  let tabs = [
     {k:'board',    label:'📋 案件ボード', cnt: pending.length},
     {k:'matched',  label:'✅ マッチング済み', cnt: matched.length},
     {k:'monitor',  label:'📊 AIモニター', cnt:0},
@@ -800,11 +800,11 @@ function renderHQ(){
 }
 
 function renderStatBar(leads){
-  const agents = getAgents();
-  const pending = leads.filter(l=>l.status==='pending_ai'||l.status==='unmatched').length;
-  const matched = leads.filter(l=>l.status==='matched').length;
-  const activeAg = agents.filter(a=>a.status==='active').length;
-  const avgElo = Math.round(agents.reduce((s,a)=>s+a.elo,0)/agents.length);
+  let agents = getAgents();
+  let pending = leads.filter(l=>l.status==='pending_ai'||l.status==='unmatched').length;
+  let matched = leads.filter(l=>l.status==='matched').length;
+  let activeAg = agents.filter(a=>a.status==='active').length;
+  let avgElo = Math.round(agents.reduce((s,a)=>s+a.elo,0)/agents.length);
   return `
   <div class="stat-grid">
     <div class="stat-card"><div class="stat-num" style="color:var(--rd)">${pending}</div><div class="stat-lbl">AI処理中 / 要対応</div></div>
@@ -830,9 +830,9 @@ function renderHQBoard(pending){
 }
 
 function renderLeadCard(l){
-  const urgency = l._aiAnalysis?.urgencyLevel||0;
-  const isUrgent = urgency>=8;
-  const analyzed = !!l._aiAnalysis;
+  let urgency = l._aiAnalysis?.urgencyLevel||0;
+  let isUrgent = urgency>=8;
+  let analyzed = !!l._aiAnalysis;
   return `
   <div class="lead-card ${selectedLead?.id===l.id?'selected':''} ${isUrgent?'urgent':''}"
     onclick="selectLead('${l.id}')">
@@ -875,9 +875,9 @@ function renderLeadDetailPlaceholder(){
 }
 
 function renderLeadDetail(lead){
-  const ai = lead._aiAnalysis;
-  const algo = lead._algoResult;
-  const ranking = lead._aiRanking;
+  let ai = lead._aiAnalysis;
+  let algo = lead._algoResult;
+  let ranking = lead._aiRanking;
 
   return `
   <div class="card">
@@ -933,8 +933,8 @@ function renderLeadDetail(lead){
 }
 
 function renderAIAnalysisPanel(ai){
-  const urgencyColor = ai.urgencyLevel>=8?'var(--rd)':ai.urgencyLevel>=5?'var(--am)':'var(--em)';
-  const diffColor = ai.estimatedDifficulty>=8?'var(--rd)':ai.estimatedDifficulty>=5?'var(--am)':'var(--em)';
+  let urgencyColor = ai.urgencyLevel>=8?'var(--rd)':ai.urgencyLevel>=5?'var(--am)':'var(--em)';
+  let diffColor = ai.estimatedDifficulty>=8?'var(--rd)':ai.estimatedDifficulty>=5?'var(--am)':'var(--em)';
   return `
   <div class="ai-panel" style="margin-bottom:14px">
     <div class="ai-panel-title">🤖 Role A — AI案件解析</div>
@@ -972,8 +972,8 @@ function renderAIAnalysisPanel(ai){
 }
 
 function renderAlgoResult(result, lead){
-  const top5 = result.slice(0,5);
-  const rankColors = {Platinum:'b-vt',Gold:'b-navy',Silver:'b-sk',Bronze:'b-nt'};
+  let top5 = result.slice(0,5);
+  let rankColors = {Platinum:'b-vt',Gold:'b-navy',Silver:'b-sk',Bronze:'b-nt'};
   return `
   <div style="margin-bottom:14px">
     <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:8px;
@@ -1005,9 +1005,9 @@ function renderAlgoResult(result, lead){
 }
 
 function renderAIRankingPreview(ranking, lead){
-  const agents = getAgents();
-  const conf = Math.round((ranking.matchConfidence||0)*100);
-  const confColor = conf>=80?'var(--em)':conf>=60?'var(--am)':'var(--rd)';
+  let agents = getAgents();
+  let conf = Math.round((ranking.matchConfidence||0)*100);
+  let confColor = conf>=80?'var(--em)':conf>=60?'var(--am)':'var(--rd)';
   return `
   <div class="ai-panel">
     <div class="ai-panel-title">✨ Role B — AI最終判定</div>
@@ -1023,8 +1023,8 @@ function renderAIRankingPreview(ranking, lead){
       border-radius:8px;padding:8px 10px;margin-bottom:10px;font-size:11px;color:#fca5a5">
       ⚠️ HQアラート: ${ranking.hqAlertReason}</div>`:''} 
     ${ranking.selected.slice(0,3).map((s,i)=>{
-      const ag = agents.find(a=>a.id===s.agentId)||{name:s.agentId,rank:'—'};
-      const rankColors = {Platinum:'b-vt',Gold:'b-navy',Silver:'b-sk',Bronze:'b-nt'};
+      let ag = agents.find(a=>a.id===s.agentId)||{name:s.agentId,rank:'—'};
+      let rankColors = {Platinum:'b-vt',Gold:'b-navy',Silver:'b-sk',Bronze:'b-nt'};
       return `
       <div style="background:rgba(255,255,255,.06);border-radius:9px;padding:10px 12px;margin-bottom:7px">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
@@ -1068,8 +1068,8 @@ function renderHQMatched(matched){
 }
 
 function renderMonitor(){
-  const agents = getAgents();
-  const weights = [
+  let agents = getAgents();
+  let weights = [
     {label:'成約力スコア', val:30,max:30,color:'#059669'},
     {label:'適合スコア',   val:25,max:30,color:'#0284C7'},
     {label:'信頼性スコア', val:20,max:25,color:'#7C3AED'},
@@ -1077,7 +1077,7 @@ function renderMonitor(){
     {label:'相性スコア',   val:15,max:15,color:'#DB2777'},
     {label:'キャパシティ', val:10,max:10,color:'#6B7280'},
   ];
-  const eloTop = [...agents].sort((a,b)=>b.elo-a.elo).slice(0,3);
+  let eloTop = [...agents].sort((a,b)=>b.elo-a.elo).slice(0,3);
   return `
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
     <div class="monitor-card">
@@ -1140,12 +1140,12 @@ function renderMonitor(){
 // AG VIEW
 // ══════════════════════════════════════════════════════════════
 function renderAG(){
-  const leads = getLeads();
-  const myId = 'AG-0042'; // デモ: 中村陽子
-  const board = leads.filter(l=>(l.status==='pending_ai'||l.status==='unmatched')&&l.method==='board');
-  const directed = leads.filter(l=>l.targetAgId===myId&&l.status!=='matched');
+  let leads = getLeads();
+  let myId = 'AG-0042'; // デモ: 中村陽子
+  let board = leads.filter(l=>(l.status==='pending_ai'||l.status==='unmatched')&&l.method==='board');
+  let directed = leads.filter(l=>l.targetAgId===myId&&l.status!=='matched');
 
-  const tabs=[
+  let tabs=[
     {k:'board',  label:'📋 案件ボード',cnt:board.length},
     {k:'direct', label:'🎯 指名通知',cnt:directed.length},
   ];
@@ -1173,7 +1173,7 @@ function renderAGBoard(board){
 }
 
 function renderAGLeadCard(l){
-  const ai = l._aiAnalysis;
+  let ai = l._aiAnalysis;
   return `
   <div class="card" style="margin-bottom:12px">
     <div class="card-body">
@@ -1232,9 +1232,9 @@ function renderAGDirect(directed){
 // PT VIEW
 // ══════════════════════════════════════════════════════════════
 function renderPT(){
-  const leads = getLeads();
-  const myLeads = leads.filter(l=>l.ptId==='PT-30007'); // デモ: 佐藤美咲
-  const tabs=[
+  let leads = getLeads();
+  let myLeads = leads.filter(l=>l.ptId==='PT-30007'); // デモ: 佐藤美咲
+  let tabs=[
     {k:'post',label:'✏️ 案件投稿'},
     {k:'mycase',label:'📁 マイ案件',cnt:myLeads.length},
   ];
@@ -1322,7 +1322,7 @@ function renderPTPostForm(){
 function renderPTMyCase(myLeads){
   if(!myLeads.length) return `<div style="text-align:center;padding:48px;color:var(--faint)">
     投稿中の案件はありません</div>`;
-  const statusMap = {
+  let statusMap = {
     pending_ai:'⏳ 受付完了',
     analyzing:'🤖 AI解析中',
     scoring:'⚙️ スコアリング中',
@@ -1333,7 +1333,7 @@ function renderPTMyCase(myLeads){
     matched:'✅ 自動マッチング完了',
     closed:'🏁 成約'
   };
-  const statusCls = {
+  let statusCls = {
     pending_ai:'b-nt',analyzing:'b-am',scoring:'b-am',
     ai_ranking:'b-vt',notified:'b-sk',unmatched:'b-sk',matched:'b-em',closed:'b-nt'
   };
@@ -1372,40 +1372,40 @@ function switchTab(tab){
 }
 
 function selectLead(id){
-  const leads = getLeads();
+  let leads = getLeads();
   selectedLead = leads.find(l=>l.id===id);
   renderMain();
   // パネル更新
-  const panel = document.getElementById('lead-detail-panel');
+  let panel = document.getElementById('lead-detail-panel');
   if(panel) panel.innerHTML = renderLeadDetail(selectedLead);
 }
 
 let ptMethod = 'board';
 function selectMethod(m){
   ptMethod = m;
-  const bl = document.getElementById('lbl-board');
-  const dl = document.getElementById('lbl-direct');
-  const df = document.getElementById('pt-direct-field');
+  let bl = document.getElementById('lbl-board');
+  let dl = document.getElementById('lbl-direct');
+  let df = document.getElementById('pt-direct-field');
   if(bl) bl.style.borderColor = m==='board'?'var(--navy)':'var(--bd2)';
   if(dl) dl.style.borderColor = m==='direct'?'var(--navy)':'var(--bd2)';
   if(df) df.style.display = m==='direct'?'block':'none';
 }
 
 async function submitPTLead(){
-  const type   = document.getElementById('pt-type')?.value;
-  const area   = document.getElementById('pt-area')?.value;
-  const budget = parseInt(document.getElementById('pt-budget')?.value)||0;
-  const desc   = document.getElementById('pt-desc')?.value;
-  const targetAg = document.getElementById('pt-target-ag')?.value;
+  let type   = document.getElementById('pt-type')?.value;
+  let area   = document.getElementById('pt-area')?.value;
+  let budget = parseInt(document.getElementById('pt-budget')?.value)||0;
+  let desc   = document.getElementById('pt-desc')?.value;
+  let targetAg = document.getElementById('pt-target-ag')?.value;
 
   if(!type||!area||!desc){ showToast('種別・エリア・概要は必須です','error'); return; }
 
-  const btn = document.getElementById('pt-submit-btn');
+  let btn = document.getElementById('pt-submit-btn');
   btn.disabled = true;
 
-  const leads = getLeads();
-  const newId = 'LD-2026-'+ String(leads.length+1).padStart(3,'0');
-  const newLead = {
+  let leads = getLeads();
+  let newId = 'LD-2026-'+ String(leads.length+1).padStart(3,'0');
+  let newLead = {
     id:newId, ptId:'PT-30007', ptName:'佐藤 美咲', ptReputation:4.3,
     type, area, budget,
     title:`${area} ${type==='rental'?'賃貸':type==='sale'?'売買':'人材'}`,
@@ -1433,8 +1433,8 @@ async function submitPTLead(){
 // 全自動マッチングパイプライン（PT投稿時・即時起動）
 // ══════════════════════════════════════════════════════════════
 async function autoMatchPipeline(leadId){
-  const leads = getLeads();
-  const lead = leads.find(l=>l.id===leadId);
+  let leads = getLeads();
+  let lead = leads.find(l=>l.id===leadId);
   if(!lead) return;
 
   // ── Step 1: Role A 案件解析 ──────────────────────────────
@@ -1442,7 +1442,7 @@ async function autoMatchPipeline(leadId){
   saveLeads(leads);
   refreshLeadStatusBadge(lead);
 
-  const ai = await analyzeLeadWithAI(lead);
+  let ai = await analyzeLeadWithAI(lead);
   lead._aiAnalysis = ai;
   if(ai.estimatedDifficulty>=8 && !lead.minRank) lead.minRank='Silver';
   if(ai.urgencyLevel>=8) lead._urgent=true;
@@ -1455,10 +1455,10 @@ async function autoMatchPipeline(leadId){
   refreshLeadStatusBadge(lead);
   await new Promise(r=>setTimeout(r,400)); // UI更新の余地
 
-  const agents = getAgents();
-  const filtered = hardFilter(agents, lead);
-  const scored = filtered.map(ag=>({ag, lead, score:calculateMatchScore(ag,lead)}));
-  const ranked = explorationAdjustedRanking(scored);
+  let agents = getAgents();
+  let filtered = hardFilter(agents, lead);
+  let scored = filtered.map(ag=>({ag, lead, score:calculateMatchScore(ag,lead)}));
+  let ranked = explorationAdjustedRanking(scored);
   lead._algoResult = ranked;
   saveLeads(leads);
 
@@ -1467,14 +1467,14 @@ async function autoMatchPipeline(leadId){
   saveLeads(leads);
   refreshLeadStatusBadge(lead);
 
-  const ranking = await aiFinalRanking(ranked, lead);
+  let ranking = await aiFinalRanking(ranked, lead);
   lead._aiRanking = ranking;
 
   // ── Step 4: マッチング自動確定 ──────────────────────────
   // Role Bが選定した#1位のAGに自動確定
-  const topPick = ranking.selected[0];
-  const agents = getAgents();
-  const matchedAg = agents.find(a=>a.id===topPick.agentId);
+  let topPick = ranking.selected[0];
+  let agents = getAgents();
+  let matchedAg = agents.find(a=>a.id===topPick.agentId);
 
   if(matchedAg){
     lead.status = 'matched';
@@ -1517,18 +1517,18 @@ function refreshLeadStatusBadge(lead){
 }
 
 async function runRoleA(leadId){
-  const leads = getLeads();
-  const lead = leads.find(l=>l.id===leadId);
+  let leads = getLeads();
+  let lead = leads.find(l=>l.id===leadId);
   if(!lead) return;
 
-  const panel = document.getElementById('lead-detail-panel');
+  let panel = document.getElementById('lead-detail-panel');
   if(panel) panel.innerHTML = `<div class="ai-thinking" style="height:80px">
     <div class="ai-thinking-dots"><span></span><span></span><span></span></div>
     <div style="color:rgba(255,255,255,.7);font-size:12px">🤖 Role A — 案件を解析しています...</div>
   </div>`;
 
   showToast('🤖 AI Role A 実行中...','info');
-  const ai = await analyzeLeadWithAI(lead);
+  let ai = await analyzeLeadWithAI(lead);
   lead._aiAnalysis = ai;
   if(ai.estimatedDifficulty>=8&&!lead.minRank) lead.minRank='Silver';
   saveLeads(leads);
@@ -1538,11 +1538,11 @@ async function runRoleA(leadId){
 }
 
 async function runFullMatch(leadId){
-  const leads = getLeads();
-  const lead = leads.find(l=>l.id===leadId);
+  let leads = getLeads();
+  let lead = leads.find(l=>l.id===leadId);
   if(!lead) return;
 
-  const panel = document.getElementById('lead-detail-panel');
+  let panel = document.getElementById('lead-detail-panel');
 
   // Step1: Role A（未済なら）
   if(!lead._aiAnalysis){
@@ -1560,10 +1560,10 @@ async function runFullMatch(leadId){
   showToast('⚙️ 120点スコアリング実行中...','info');
   await new Promise(r=>setTimeout(r,600));
 
-  const agents = getAgents();
-  const filtered = hardFilter(agents, lead);
-  const scored = filtered.map(ag=>({ag, lead, score:calculateMatchScore(ag,lead)}));
-  const ranked = explorationAdjustedRanking(scored);
+  let agents = getAgents();
+  let filtered = hardFilter(agents, lead);
+  let scored = filtered.map(ag=>({ag, lead, score:calculateMatchScore(ag,lead)}));
+  let ranked = explorationAdjustedRanking(scored);
   lead._algoResult = ranked;
 
   // Step3: AI Role B
@@ -1572,7 +1572,7 @@ async function runFullMatch(leadId){
     <div style="color:rgba(255,255,255,.7);font-size:12px">✨ Role B — AI最終判定中...</div></div>`;
   showToast('✨ Role B: AI最終判定中...','info');
 
-  const ranking = await aiFinalRanking(ranked, lead);
+  let ranking = await aiFinalRanking(ranked, lead);
   lead._aiRanking = ranking;
   lead.status = 'pending_confirm';
 
@@ -1583,17 +1583,17 @@ async function runFullMatch(leadId){
 }
 
 function openAiModal(leadId){
-  const leads = getLeads();
-  const lead = leads.find(l=>l.id===leadId);
+  let leads = getLeads();
+  let lead = leads.find(l=>l.id===leadId);
   if(!lead||!lead._aiRanking) return;
 
-  const agents = getAgents();
-  const ranking = lead._aiRanking;
-  const rankColors = {Platinum:'b-vt',Gold:'b-navy',Silver:'b-sk',Bronze:'b-nt'};
+  let agents = getAgents();
+  let ranking = lead._aiRanking;
+  let rankColors = {Platinum:'b-vt',Gold:'b-navy',Silver:'b-sk',Bronze:'b-nt'};
 
   document.getElementById('modal-lead-id').textContent = lead.id+' — '+lead.title;
 
-  const body = document.getElementById('ai-modal-body');
+  let body = document.getElementById('ai-modal-body');
   body.innerHTML = `
     <div style="margin-bottom:14px">
       <div class="ai-panel">
@@ -1615,8 +1615,8 @@ function openAiModal(leadId){
     </div>
     <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:8px">AI選定: 通知エージェント（${ranking.selected.length}名）</div>
     ${ranking.selected.map(s=>{
-      const ag = agents.find(a=>a.id===s.agentId)||{name:s.agentId,rank:'—',elo:0,avgRating:0,activeCases:0};
-      const algoItem = lead._algoResult?.find(r=>r.ag.id===s.agentId);
+      let ag = agents.find(a=>a.id===s.agentId)||{name:s.agentId,rank:'—',elo:0,avgRating:0,activeCases:0};
+      let algoItem = lead._algoResult?.find(r=>r.ag.id===s.agentId);
       return `
       <div style="border:1.5px solid ${s.rank===1?'var(--gold)':'var(--bd)'};
         border-radius:10px;padding:12px 14px;margin-bottom:8px;
@@ -1632,9 +1632,9 @@ function openAiModal(leadId){
             </div>
             ${algoItem?`<div class="score-breakdown">
               ${Object.entries(algoItem.score.breakdown).map(([k,v])=>{
-                const labels={closingPower:'成約力',fitScore:'適合',trustScore:'信頼性',
+                let labels={closingPower:'成約力',fitScore:'適合',trustScore:'信頼性',
                   acceptanceScore:'承諾確率',affinityScore:'相性',capacityScore:'余力'};
-                const maxes={closingPower:30,fitScore:25,trustScore:20,acceptanceScore:20,affinityScore:15,capacityScore:10};
+                let maxes={closingPower:30,fitScore:25,trustScore:20,acceptanceScore:20,affinityScore:15,capacityScore:10};
                 return `<div class="score-item">
                   <div class="score-item-label">${labels[k]||k}</div>
                   <div style="display:flex;align-items:baseline;gap:2px">
@@ -1681,10 +1681,10 @@ function closeConfirmModal(){ document.getElementById('confirm-modal').style.dis
 
 function executeMatch(){
   if(!pendingMatch) return;
-  const leads = getLeads();
-  const agents = getAgents();
-  const lead = leads.find(l=>l.id===pendingMatch.leadId);
-  const ag = agents.find(a=>a.id===pendingMatch.agId);
+  let leads = getLeads();
+  let agents = getAgents();
+  let lead = leads.find(l=>l.id===pendingMatch.leadId);
+  let ag = agents.find(a=>a.id===pendingMatch.agId);
   if(!lead||!ag) return;
 
   lead.status = 'matched';
@@ -1701,8 +1701,8 @@ function executeMatch(){
 }
 
 function agAccept(leadId){
-  const leads = getLeads();
-  const lead = leads.find(l=>l.id===leadId);
+  let leads = getLeads();
+  let lead = leads.find(l=>l.id===leadId);
   if(!lead) return;
   lead.status='matched';
   lead.assignedAgId='AG-0042';
@@ -1716,21 +1716,21 @@ function agPass(leadId){ showToast('⏭ パスしました','info'); }
 function agAcceptDirect(leadId){ agAccept(leadId); }
 function agDeclineDirect(leadId){
   showToast('辞退しました。HQに通知されます。','info');
-  const leads=getLeads();
-  const lead=leads.find(l=>l.id===leadId);
+  let leads=getLeads();
+  let lead=leads.find(l=>l.id===leadId);
   if(lead){ lead.status='unmatched'; lead.method='board'; saveLeads(leads); renderMain(); }
 }
 
 async function runWeeklyReview(){
-  const el = document.getElementById('monitor-ai-result');
+  let el = document.getElementById('monitor-ai-result');
   if(!el) return;
   el.innerHTML = `<div class="ai-thinking">
     <div class="ai-thinking-dots"><span></span><span></span><span></span></div>
     <div style="color:rgba(255,255,255,.7);font-size:12px">🤖 AIがアルゴリズムを分析中...</div>
   </div>`;
 
-  const agents = getAgents();
-  const prompt = `あなたはCORETO マッチングアルゴリズムの改善提案AIです。
+  let agents = getAgents();
+  let prompt = `あなたはCORETO マッチングアルゴリズムの改善提案AIです。
 現在のエージェントデータを分析し、アルゴリズムの改善提案を日本語で簡潔に提示してください。
 
 現在の重み配分（120点満点）:
@@ -1756,13 +1756,13 @@ ${JSON.stringify(agents.map(a=>({id:a.id,rank:a.rank,elo:a.elo,
 250文字程度で簡潔に日本語で回答してください。`;
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages',{
+    let res = await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:600,
         messages:[{role:'user',content:prompt}]})
     });
-    const data = await res.json();
-    const text = data.content[0].text;
+    let data = await res.json();
+    let text = data.content[0].text;
     el.innerHTML=`<div class="ai-panel"><div class="ai-panel-title">🤖 AI週次分析レポート</div>
       <div style="font-size:11px;color:rgba(255,255,255,.8);line-height:1.8;white-space:pre-wrap">${text}</div>
     </div>`;
@@ -1774,8 +1774,8 @@ ${JSON.stringify(agents.map(a=>({id:a.id,rank:a.rank,elo:a.elo,
 function bindEvents(){ /* イベント委譲は onclick属性で処理済み */ }
 
 function showToast(msg, type='success'){
-  const t = document.getElementById('toast');
-  const colors = {success:'#059669',error:'#DC2626',info:'#0284C7'};
+  let t = document.getElementById('toast');
+  let colors = {success:'#059669',error:'#DC2626',info:'#0284C7'};
   t.style.background = colors[type]||colors.success;
   t.style.color = '#fff';
   t.textContent = msg;
@@ -1792,7 +1792,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   renderMain();
 
   // pending_ai 状態の案件があれば自動パイプライン起動（デモ用）
-  const leads = getLeads();
+  let leads = getLeads();
   leads.filter(l=>l.status==='pending_ai'&&!l._aiAnalysis).forEach(l=>{
     setTimeout(()=>autoMatchPipeline(l.id), 800);
   });
