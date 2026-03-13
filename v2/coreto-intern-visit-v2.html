@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>訪問記録・エリアマップ — COREBLDG</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0D1A2D;--navy-m:#152238;--navy-l:#1E3252;
+  --gold:#C8A951;--gold-dim:rgba(200,169,81,.15);
+  --cream:#FFFFFF;--cream2:#F8F9FA;
+  --ink:#202124;--muted:#5F6368;--faint:#80868B;
+  --em:#059669;--em-bg:#ECFDF5;--am:#D97706;--am-bg:#FFFBEB;
+  --rd:#DC2626;--rd-bg:#FEF2F2;--sk:#0284C7;--sk-bg:#F0F9FF;
+  --bd:#E8EAED;--bd2:#DADCE0;
+  --sw:240px;--r:10px;--r-sm:7px;
+  --sh:0 1px 2px rgba(60,64,67,.1),0 1px 3px rgba(60,64,67,.06);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Outfit',sans-serif;background:var(--cream2)}
+.shell{display:flex;height:100vh}
+.sb{width:var(--sw);background:var(--navy);display:flex;flex-direction:column;flex-shrink:0;position:relative}
+.sb::after{content:'';position:absolute;top:0;right:0;width:1px;height:100%;background:linear-gradient(180deg,rgba(200,169,81,.25),rgba(200,169,81,.06) 50%,transparent)}
+.sb-head{padding:24px 20px 18px;border-bottom:1px solid rgba(255,255,255,.06)}
+.sb-logo{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;letter-spacing:5px;color:var(--gold)}
+.sb-ver{font-size:9px;letter-spacing:2px;color:rgba(200,169,81,.3);font-family:'DM Mono',monospace;margin-top:2px}
+.sb-user{margin:14px 14px 10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:9px 11px;display:flex;align-items:center;gap:9px}
+.sb-av{width:28px;height:28px;border-radius:50%;background:var(--gold-dim);border:1px solid rgba(200,169,81,.25);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--gold);flex-shrink:0}
+.sb-nav{flex:1;overflow-y:auto;padding:6px 10px}
+.sb-nav::-webkit-scrollbar{width:3px}
+.sb-nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:2px}
+.content{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:58px;background:var(--cream);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 24px;gap:14px;flex-shrink:0;box-shadow:var(--sh)}
+.tb-title{font-size:16px;font-weight:600;color:var(--ink)}
+.tb-crumb{font-size:11px;color:var(--faint);display:flex;align-items:center;gap:5px;margin-top:1px}
+.tb-crumb a{color:var(--muted);text-decoration:none}.tb-crumb a:hover{color:var(--am)}
+.tb-actions{margin-left:auto;display:flex;gap:9px}
+.btn{padding:7px 16px;border-radius:var(--r-sm);font-size:12px;font-weight:600;cursor:pointer;transition:.15s;font-family:'Outfit',sans-serif;border:none;letter-spacing:.3px}
+.btn-primary{background:var(--navy);color:var(--gold)}.btn-primary:hover{background:var(--navy-l)}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--bd)}.btn-ghost:hover{background:var(--cream);color:var(--ink)}
+.btn-em{background:var(--em-bg);color:var(--em);border:1px solid rgba(5,150,105,.2)}.btn-em:hover{background:#D1FAE5}
+.page{flex:1;overflow-y:auto;padding:20px 24px}
+.page::-webkit-scrollbar{width:5px}
+.page::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:3px}
+.card{background:var(--cream);border:1px solid var(--bd);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden;margin-bottom:16px}
+.card-head{padding:12px 18px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;background:var(--cream2)}
+.card-title{font-size:12px;font-weight:700;color:var(--ink);letter-spacing:.3px}
+.card-body{padding:18px}
+
+/* KPI */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.kpi{background:var(--cream);border:1px solid var(--bd);border-radius:var(--r);padding:14px 16px;box-shadow:var(--sh)}
+.kpi-label{font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.kpi-val{font-size:26px;font-weight:300;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1}
+.kpi-sub{font-size:10px;color:var(--faint);margin-top:4px}
+
+/* 2カラムレイアウト */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:0}
+
+/* 訪問フォーム */
+.field{margin-bottom:14px}
+.field label{display:block;font-size:11px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.field input,.field select,.field textarea{width:100%;padding:9px 12px;background:var(--cream2);border:1.5px solid var(--bd);border-radius:var(--r-sm);font-size:13px;color:var(--ink);font-family:'Outfit',sans-serif;outline:none;transition:border-color .15s}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--gold);background:var(--cream)}
+.field textarea{resize:vertical;min-height:72px;line-height:1.6}
+.result-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:14px}
+.result-btn{padding:8px;border-radius:6px;border:1.5px solid var(--bd);background:var(--cream);cursor:pointer;font-size:12px;font-weight:600;text-align:center;transition:.13s;font-family:'Outfit',sans-serif}
+.result-btn:hover{transform:scale(1.03)}
+.result-btn.sel-success{background:var(--em-bg);border-color:var(--em);color:var(--em)}
+.result-btn.sel-callback{background:var(--am-bg);border-color:var(--am);color:var(--am)}
+.result-btn.sel-ng{background:var(--rd-bg);border-color:var(--rd);color:var(--rd)}
+
+/* 訪問履歴テーブル */
+table{width:100%;border-collapse:collapse}
+thead th{padding:9px 12px;text-align:left;font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);background:var(--cream2);border-bottom:1px solid var(--bd);white-space:nowrap;font-family:'DM Mono',monospace}
+tbody tr{border-bottom:1px solid var(--bd);transition:background .1s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:rgba(200,169,81,.03)}
+tbody td{padding:10px 12px;font-size:12px;color:var(--ink);vertical-align:middle}
+.mono{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600}
+.b-em{background:var(--em-bg);color:var(--em)}.b-am{background:var(--am-bg);color:var(--am)}
+.b-rd{background:var(--rd-bg);color:var(--rd)}.b-nt{background:var(--cream2);color:var(--muted)}
+.b-sk{background:var(--sk-bg);color:var(--sk)}
+
+/* エリアマップ */
+.area-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.area-card{border:1.5px solid var(--bd);border-radius:9px;padding:14px;cursor:pointer;transition:.15s;position:relative}
+.area-card:hover{border-color:var(--gold);background:rgba(200,169,81,.03)}
+.area-card.assigned{border-color:var(--gold);background:var(--gold-dim)}
+.area-name{font-size:13px;font-weight:700;color:var(--ink);margin-bottom:4px}
+.area-sub{font-size:10px;color:var(--muted);line-height:1.6}
+.area-bar-wrap{margin-top:10px}
+.area-bar-label{font-size:9px;color:var(--muted);margin-bottom:3px;display:flex;justify-content:space-between;font-variant-numeric:tabular-nums}
+.area-bar{height:4px;background:var(--bd2);border-radius:2px;overflow:hidden}
+.area-bar-fill{height:100%;border-radius:2px;background:var(--gold);transition:width .5s}
+.area-tag{position:absolute;top:10px;right:10px;font-size:9px;padding:2px 6px;border-radius:4px;font-weight:700;background:var(--gold-dim);color:var(--gold)}
+
+/* スコアボード */
+.rank-row{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:8px;margin-bottom:4px;transition:.1s}
+.rank-row:hover{background:var(--cream2)}
+.rank-row.me{background:rgba(200,169,81,.08);border:1px solid rgba(200,169,81,.2);border-radius:8px}
+.rank-num{font-family:'DM Mono',monospace;font-size:14px;font-weight:700;color:var(--muted);width:28px;flex-shrink:0;text-align:center}
+.rank-num.top{color:var(--gold)}
+.rank-av{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;background:var(--navy-m);color:var(--gold)}
+.rank-name{flex:1;font-size:13px;font-weight:500;color:var(--ink)}
+.rank-val{font-size:14px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums;font-family:'Outfit',sans-serif}
+.rank-sub{font-size:10px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<nav class="sb">
+  <div class="sb-head">
+    <div class="sb-logo">CORE<br>BLDG</div>
+    <div class="sb-ver">v2.0 — CORETO</div>
+  </div>
+  <div class="sb-user">
+    <div class="sb-av" id="sb-av">--</div>
+    <div>
+      <div id="sb-name" style="font-size:11px;font-weight:600;color:rgba(255,255,255,.8)">...</div>
+      <div id="sb-role" style="font-size:9px;color:rgba(255,255,255,.3)">...</div>
+    </div>
+  </div>
+  <div class="sb-nav" id="sb-nav"></div>
+</nav>
+
+<div class="content">
+  <div class="topbar">
+    <div>
+      <div class="tb-title">訪問記録・エリアマップ</div>
+      <div class="tb-crumb">
+        <a href="coreto-hub-v2.html">COREBLDG</a> › <span>訪問記録</span>
+      </div>
+    </div>
+    <div class="tb-actions">
+      <button class="btn btn-ghost" onclick="exportCSV()">📤 CSV出力</button>
+    </div>
+  </div>
+
+  <div class="page">
+
+    <!-- KPI -->
+    <div class="kpi-row">
+      <div class="kpi">
+        <div class="kpi-label">本日の訪問数</div>
+        <div class="kpi-val" id="kpi-today">0</div>
+        <div class="kpi-sub">目標: 20軒</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">今週の訪問数</div>
+        <div class="kpi-val" id="kpi-week">0</div>
+        <div class="kpi-sub" id="kpi-week-sub">目標: 100軒</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">コールバック獲得</div>
+        <div class="kpi-val" id="kpi-cb" style="color:var(--am)">0</div>
+        <div class="kpi-sub">今週</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">成約貢献リード</div>
+        <div class="kpi-val" id="kpi-lead" style="color:var(--em)">0</div>
+        <div class="kpi-sub">今月累計</div>
+      </div>
+    </div>
+
+    <div class="g2">
+      <!-- 左: 訪問記録フォーム + 履歴 -->
+      <div>
+        <!-- 訪問記録フォーム -->
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title">📍 訪問を記録する</div>
+            <span style="font-size:10px;color:var(--faint);font-family:'DM Mono',monospace" id="now-time">—</span>
+          </div>
+          <div class="card-body">
+            <div class="field">
+              <label>住所・建物名</label>
+              <input type="text" id="f-address" placeholder="例: 港区三田3丁目 ○○マンション">
+            </div>
+            <div class="field">
+              <label>訪問結果</label>
+              <div class="result-grid">
+                <button class="result-btn" id="rb-success" onclick="selectResult('success')">✅ 在宅・興味あり</button>
+                <button class="result-btn" id="rb-callback" onclick="selectResult('callback')">📅 不在・CB希望</button>
+                <button class="result-btn" id="rb-later" onclick="selectResult('later')">🕐 在宅・後日</button>
+                <button class="result-btn" id="rb-ng" onclick="selectResult('ng')">❌ 断られた</button>
+                <button class="result-btn" id="rb-absent" onclick="selectResult('absent')">🚪 不在（投函）</button>
+                <button class="result-btn" id="rb-other" onclick="selectResult('other')">📝 その他</button>
+              </div>
+            </div>
+            <div class="field">
+              <label>メモ（任意）</label>
+              <textarea id="f-memo" placeholder="特記事項・コールバック日時など"></textarea>
+            </div>
+            <div class="field">
+              <label>光通信リード（興味あり = 自動チェック）</label>
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--ink)">
+                <input type="checkbox" id="f-lead" style="accent-color:var(--gold);width:15px;height:15px">
+                光通信リードとして登録する
+              </label>
+            </div>
+            <button class="btn btn-primary" style="width:100%;padding:11px" onclick="addVisit()">記録を保存する</button>
+          </div>
+        </div>
+
+        <!-- 訪問履歴 -->
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title">本日の訪問履歴</div>
+            <span class="mono" id="hist-count">0件</span>
+          </div>
+          <div style="overflow-x:auto">
+            <table>
+              <thead>
+                <tr>
+                  <th>時刻</th>
+                  <th>住所</th>
+                  <th>結果</th>
+                  <th>リード</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="hist-body">
+                <tr><td colspan="5" style="text-align:center;padding:24px;color:var(--faint);font-size:12px">まだ記録がありません</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 右: エリアマップ + ランキング -->
+      <div>
+        <!-- 担当エリア -->
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title">🗺️ 担当エリア</div>
+            <span style="font-size:10px;color:var(--muted)">本日の進捗</span>
+          </div>
+          <div class="card-body">
+            <div class="area-grid" id="area-grid">
+              <!-- JSで生成 -->
+            </div>
+          </div>
+        </div>
+
+        <!-- ランキング -->
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title">🏆 今週の訪問ランキング</div>
+          </div>
+          <div class="card-body" id="rank-body">
+            <!-- JSで生成 -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /.page -->
+</div><!-- /.content -->
+
+<script>
+(function(){
+  var _role = sessionStorage.getItem('coreto_role') || '';
+  var _allowed = ["hq", "intern"];
+  if (_allowed.length && !_allowed.includes(_role)) {
+    location.replace('coreto-hub-v2.html?unauthorized=1');
+  }
+})();
+
+// ══ 定数 ════════════════════════════════════
+const RESULT_MAP = {
+  success:  { label:'在宅・興味あり', cls:'b-em' },
+  callback: { label:'不在・CB希望',   cls:'b-am' },
+  later:    { label:'在宅・後日',     cls:'b-am' },
+  ng:       { label:'断られた',       cls:'b-rd' },
+  absent:   { label:'不在（投函）',   cls:'b-nt' },
+  other:    { label:'その他',         cls:'b-nt' },
+};
+
+const AREAS = [
+  { id:'minato-1', name:'港区 三田',     target:80, visited:47, assigned:true  },
+  { id:'minato-2', name:'港区 芝浦',     target:60, visited:23, assigned:true  },
+  { id:'minato-3', name:'港区 白金',     target:50, visited:0,  assigned:false },
+  { id:'shinjuku-1',name:'新宿区 四谷',  target:70, visited:31, assigned:true  },
+  { id:'minato-4', name:'港区 麻布',     target:60, visited:12, assigned:false },
+  { id:'shibuya-1',name:'渋谷区 恵比寿', target:50, visited:0,  assigned:false },
+];
+
+const RANKING = [
+  { name:'渡辺 大輝', av:'渡', visits:89, leads:4, me:true  },
+  { name:'林 彩花',   av:'林', visits:112,leads:7, me:false },
+  { name:'山口 翔',   av:'山', visits:97, leads:5, me:false },
+  { name:'中島 美咲', av:'中', visits:84, leads:3, me:false },
+  { name:'小川 航',   av:'小', visits:76, leads:2, me:false },
+];
+
+// ══ 状態 ════════════════════════════════════
+let visits   = [];
+let selectedResult = '';
+const STORAGE_KEY = 'intern_visits_' + new Date().toDateString();
+
+// ══ 初期化 ══════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  CNAV.init('visit');
+
+  // 時刻更新
+  updateTime();
+  setInterval(updateTime, 10000);
+
+  // 保存済み訪問を復元
+  try {
+    const saved = sessionStorage.getItem(STORAGE_KEY);
+    if (saved) visits = JSON.parse(saved);
+  } catch(e) {}
+
+  renderAll();
+  renderAreas();
+  renderRanking();
+});
+
+function updateTime() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2,'0');
+  const m = String(now.getMinutes()).padStart(2,'0');
+  const el = document.getElementById('now-time');
+  if (el) el.textContent = h + ':' + m;
+}
+
+// ══ 訪問結果選択 ════════════════════════════
+function selectResult(r) {
+  selectedResult = r;
+  // 全ボタンをリセット
+  ['success','callback','later','ng','absent','other'].forEach(k => {
+    const btn = document.getElementById('rb-'+k);
+    btn.className = 'result-btn';
+  });
+  // 選択ボタンをハイライト
+  const cls = (r==='success'||r==='later') ? 'sel-success' : r==='ng' ? 'sel-ng' : r==='callback' ? 'sel-callback' : '';
+  if (cls) document.getElementById('rb-'+r).classList.add(cls);
+  // 在宅・興味ありなら光通信リードを自動チェック
+  document.getElementById('f-lead').checked = (r === 'success');
+}
+
+// ══ 訪問記録追加 ════════════════════════════
+function addVisit() {
+  const address = document.getElementById('f-address').value.trim();
+  if (!address) { showToast('住所を入力してください', 'am'); return; }
+  if (!selectedResult) { showToast('訪問結果を選択してください', 'am'); return; }
+
+  const now = new Date();
+  const timeStr = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+
+  const v = {
+    id: Date.now(),
+    time: timeStr,
+    address,
+    result: selectedResult,
+    memo: document.getElementById('f-memo').value.trim(),
+    lead: document.getElementById('f-lead').checked,
+  };
+  visits.unshift(v);
+
+  try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(visits)); } catch(e) {}
+
+  // リセット
+  document.getElementById('f-address').value = '';
+  document.getElementById('f-memo').value = '';
+  document.getElementById('f-lead').checked = false;
+  selectedResult = '';
+  ['success','callback','later','ng','absent','other'].forEach(k => {
+    document.getElementById('rb-'+k).className = 'result-btn';
+  });
+
+  renderAll();
+  showToast('✅ 訪問を記録しました（' + address + '）', 'em');
+}
+
+// ══ レンダリング ═════════════════════════════
+function renderAll() {
+  const todayCount = visits.length;
+  const cbCount    = visits.filter(v => v.result === 'callback').length;
+  const leadCount  = visits.filter(v => v.lead).length;
+
+  document.getElementById('kpi-today').textContent = todayCount;
+  document.getElementById('kpi-week').textContent  = todayCount + 47; // デモ: 今週分加算
+  document.getElementById('kpi-cb').textContent    = cbCount + 3;
+  document.getElementById('kpi-lead').textContent  = leadCount + 4;
+  document.getElementById('hist-count').textContent = todayCount + '件';
+
+  const tbody = document.getElementById('hist-body');
+  if (visits.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--faint);font-size:12px">まだ記録がありません</td></tr>';
+    return;
+  }
+  tbody.innerHTML = visits.map(v => {
+    const rm = RESULT_MAP[v.result] || RESULT_MAP.other;
+    return `<tr>
+      <td class="mono" style="white-space:nowrap">${v.time}</td>
+      <td style="font-size:12px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${v.address}">${v.address}</td>
+      <td><span class="badge ${rm.cls}">${rm.label}</span></td>
+      <td>${v.lead ? '<span class="badge b-sk">⚡ リード</span>' : '<span style="color:var(--faint);font-size:11px">—</span>'}</td>
+      <td><button class="btn btn-ghost" style="font-size:10px;padding:3px 8px" onclick="deleteVisit(${v.id})">削除</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function deleteVisit(id) {
+  visits = visits.filter(v => v.id !== id);
+  try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(visits)); } catch(e) {}
+  renderAll();
+}
+
+function renderAreas() {
+  document.getElementById('area-grid').innerHTML = AREAS.map(a => {
+    const pct = Math.round(a.visited / a.target * 100);
+    return `<div class="area-card ${a.assigned?'assigned':''}">
+      ${a.assigned ? '<span class="area-tag">担当</span>' : ''}
+      <div class="area-name">${a.name}</div>
+      <div class="area-sub">目標 ${a.target}軒 / 済 ${a.visited}軒</div>
+      <div class="area-bar-wrap">
+        <div class="area-bar-label">
+          <span>進捗</span><span>${pct}%</span>
+        </div>
+        <div class="area-bar">
+          <div class="area-bar-fill" style="width:${pct}%"></div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderRanking() {
+  // 自分の分を今日の訪問数で更新
+  const sorted = [...RANKING].map(r => ({
+    ...r,
+    visits: r.me ? r.visits + visits.length : r.visits
+  })).sort((a,b) => b.visits - a.visits);
+
+  document.getElementById('rank-body').innerHTML = sorted.map((r,i) => {
+    const pos = i + 1;
+    return `<div class="rank-row ${r.me?'me':''}">
+      <div class="rank-num ${pos<=3?'top':''}">${pos<=3?['🥇','🥈','🥉'][pos-1]:pos}</div>
+      <div class="rank-av">${r.av}</div>
+      <div style="flex:1">
+        <div class="rank-name">${r.name}${r.me?' <span style="font-size:9px;color:var(--gold);font-weight:700">（あなた）</span>':''}</div>
+        <div class="rank-sub">リード ${r.leads}件</div>
+      </div>
+      <div style="text-align:right">
+        <div class="rank-val">${r.visits}</div>
+        <div class="rank-sub">軒</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function exportCSV() {
+  if (visits.length === 0) { showToast('記録がありません', 'am'); return; }
+  const header = '時刻,住所,結果,リード,メモ';
+  const rows = visits.map(v => {
+    const rm = RESULT_MAP[v.result]?.label || '';
+    return [v.time, '"'+v.address+'"', rm, v.lead?'はい':'いいえ', '"'+(v.memo||'')+'"'].join(',');
+  });
+  const csv = [header, ...rows].join('\n');
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '訪問記録_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+}
+
+function showToast(msg, type) {
+  const colors = { em:['#ECFDF5','#059669','rgba(5,150,105,.2)'], am:['#FFFBEB','#D97706','rgba(217,119,6,.2)'], rd:['#FEF2F2','#DC2626','rgba(220,38,38,.2)'] };
+  const [bg,cl,bc] = colors[type] || colors.em;
+  const t = document.createElement('div');
+  t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:999;padding:11px 18px;border-radius:9px;font-size:13px;font-weight:600;font-family:Outfit,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.12);transition:opacity .4s;background:'+bg+';color:'+cl+';border:1px solid '+bc;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(()=>{t.style.opacity='0';setTimeout(()=>t.remove(),400);}, 3000);
+}
+</script>
+<script src="coreto-nav-v2.js"></script>
+</body>
+</html>

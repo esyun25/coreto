@@ -195,6 +195,7 @@ const NAV = {
         { icon:'🏘️', label:'担当案件一覧',         href:'coreto-cases-v2.html',           key:'cases',          badge:'4'            },
         { icon:'👥', label:'クライアント管理',     href:'coreto-crm-v2.html',             key:'crm'             },
         { icon:'🏠', label:'内見管理',             href:'coreto-showing-v2.html',         key:'showing'         },
+        { icon:'📋', label:'書類事前チェック',     href:'coreto-screening-v2.html',       key:'screening'       },
         { icon:'🔑', label:'IT重説チェックリスト', href:'coreto-itsetsu-v2.html',         key:'itsetsu'         },
         { icon:'🏦', label:'初期費用明細チェック', href:'coreto-invoice-check-v2.html',   key:'invoice_check'   },
 
@@ -402,16 +403,9 @@ const NAV = {
     {
       section: '本日の業務',
       items: [
-        { icon:'📊', label:'当日の実績',           href:'coreto-hub-v2.html',             key:'dashboard'    },
-        { icon:'📍', label:'訪問を記録する',       href:'coreto-hub-v2.html#visit',       key:'visit'        },
-        { icon:'🗺️', label:'担当エリアマップ',     href:'coreto-hub-v2.html#map',         key:'map'          },
-      ],
-    },
-    {
-      // 光通信リード：訪問先で獲得したリードを投稿する
-      section: '光通信リード投稿',
-      items: [
-        { icon:'⚡', label:'リードを投稿する',     href:'coreto-hub-v2.html#lead_submit', key:'lead_submit'  },
+        { icon:'📊', label:'当日の実績',               href:'coreto-hub-v2.html',              key:'dashboard'    },
+        { icon:'📍', label:'訪問記録・エリアマップ',   href:'coreto-intern-visit-v2.html',     key:'visit'        },
+        { icon:'⚡', label:'光通信リードを投稿する',   href:'coreto-intern-visit-v2.html#lead',key:'lead_submit'  },
       ],
     },
     {

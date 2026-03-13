@@ -397,7 +397,7 @@ tbody td:first-child{padding-left:18px}
 <script>
 (function(){
   var _role = sessionStorage.getItem('coreto_role') || '';
-  var _allowed = ["hq"];
+  var _allowed = ["hq", "re_ag"];
   if (_allowed.length && !_allowed.includes(_role)) {
     location.replace('coreto-hub-v2.html?unauthorized=1');
   }
@@ -777,7 +777,34 @@ function showToast(msg, type) {
 window.addEventListener('DOMContentLoaded', () => {
   CNAV.init('screening');
   renderTable(allApps);
+
+  const role = sessionStorage.getItem('coreto_role') || 'hq';
+  const isAG  = role === 're_ag';
+
+  if (isAG) {
+    // AG: タイトル・クルームを変更
+    document.querySelector('.tb-title').textContent = '書類事前チェック';
+    // AG: topbarのSlack通知ボタンを非表示
+    document.querySelectorAll('.tb-actions button').forEach(b => {
+      if (b.textContent.includes('Slack')) b.style.display = 'none';
+    });
+    // AG: シートフッターを「HQに提出」ボタンのみに変更（承認・差戻しはHQ専用）
+    document.querySelector('.sheet-foot').innerHTML = `
+      <button class="btn btn-ghost" style="flex:1" onclick="saveDraft()">一時保存</button>
+      <button class="btn btn-primary" style="flex:1;gap:6px" onclick="submitToHQ()">📤 HQに書類を提出する</button>`;
+    // AG: テーブルを担当案件のみにフィルタ
+    allApps = allApps.filter(a => a.ag.includes('AG-0042'));
+    renderTable(allApps);
+  }
 });
+
+function submitToHQ() {
+  if (!currentApp) return;
+  if (!confirm(currentApp.name + ' の書類をHQに提出しますか？')) return;
+  currentApp.status = 'sent';
+  closeSheet(); applyFilters();
+  showToast('📤 HQに書類を提出しました。審査結果はLINEで通知されます。', 'em');
+}
 </script>
 <script src="coreto-nav-v2.js"></script>
 </body>
