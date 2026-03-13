@@ -98,6 +98,7 @@ const NAV = {
       section: '不動産業務',
       items: [
         { icon:'🏘️', label:'不動産案件（全体）',  href:'coreto-cases-v2.html',           key:'cases',           badge:'8'           },
+        { icon:'🏠', label:'内見管理（全体）',     href:'coreto-showing-v2.html',         key:'showing_hq'      },
         { icon:'📋', label:'書類審査チェック',     href:'coreto-screening-v2.html',       key:'screening',       badge:'5', badgeColor:'amber' },
         { icon:'🔑', label:'IT重説管理',           href:'coreto-itsetsu-v2.html',         key:'itsetsu',         badge:'2', badgeColor:'amber' },
         { icon:'🏦', label:'初期費用明細チェック', href:'coreto-invoice-check-v2.html',   key:'invoice_check'   },
