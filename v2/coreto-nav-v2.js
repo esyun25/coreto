@@ -196,8 +196,7 @@ const NAV = {
         { icon:'🏠', label:'内見管理',             href:'coreto-showing-v2.html',         key:'showing'         },
         { icon:'🔑', label:'IT重説チェックリスト', href:'coreto-itsetsu-v2.html',         key:'itsetsu'         },
         { icon:'🏦', label:'初期費用明細チェック', href:'coreto-invoice-check-v2.html',   key:'invoice_check'   },
-        { icon:'📝', label:'成約報告（賃貸）',     href:'coreto-contract-report-v2.html', key:'contract_report' },
-        { icon:'📝', label:'成約報告（売買）',     href:'coreto-sale-report-v2.html',     key:'sale_report'     },
+
       ],
     },
     {
@@ -254,12 +253,11 @@ const NAV = {
       ],
     },
     {
-      // 人材AG業務：求人受付・候補者マッチング・成約報告
+      // 人材AG業務：求人受付・候補者マッチング（成約報告は案件フロー内）
       section: '人材業務（AG権限）',
       items: [
         { icon:'👤', label:'担当案件一覧',         href:'coreto-hr-matching-v2.html',     key:'hr_matching',     badge:'3', badgeColor:'amber' },
         { icon:'👥', label:'クライアント管理',     href:'coreto-crm-v2.html',             key:'crm'             },
-        { icon:'📝', label:'成約報告',             href:'coreto-contract-report-v2.html', key:'contract_report' },
       ],
     },
     {
@@ -313,12 +311,11 @@ const NAV = {
       ],
     },
     {
-      // 光通信AG業務：案件入力・フォロー・成約報告
+      // 光通信AG業務：案件入力・フォロー（成約報告は案件フロー内）
       section: '光通信業務（AG権限）',
       items: [
         { icon:'⚡', label:'担当案件一覧',         href:'coreto-utility-v2.html',         key:'utility',         badge:'3', badgeColor:'gold' },
         { icon:'👥', label:'クライアント管理',     href:'coreto-crm-v2.html',             key:'crm'             },
-        { icon:'📝', label:'成約報告',             href:'coreto-contract-report-v2.html', key:'contract_report' },
       ],
     },
     {
