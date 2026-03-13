@@ -541,13 +541,13 @@ document.getElementById('ip-today').value = new Date().toISOString().split('T')[
 // ── 計算ユーティリティ ──
 function wh(n){if(n<=120000)return 0;const base=n-120000;const M=1e6;return n<=M?Math.floor(base*.1021):Math.floor((M-120000)*.1021+(n-M)*.2042);}
 // 源泉徴収計算式：（課税対象額 − 120,000円）× 10.21%
-// 課税対象額が12万円以下の場合は源泉徴収なし（所得税法第205条準拠）
+// 課税対象額が120,000円以下の場合は源泉徴収なし（所得税法第205条準拠）
 function incentive(fee,rate){
   const T1=5e6,T2=1e7;
   if(fee<=T1)return{r:Math.floor(fee*rate),tiers:[{l:'全額',a:fee,r:rate,v:fee*rate}]};
-  if(fee<=T2){const r1=T1*rate,r2=(fee-T1)*(rate+.05);return{r:Math.floor(r1+r2),tiers:[{l:'0〜500万円',a:T1,r:rate,v:r1},{l:'500万円〜',a:fee-T1,r:rate+.05,v:r2}]};}
+  if(fee<=T2){const r1=T1*rate,r2=(fee-T1)*(rate+.05);return{r:Math.floor(r1+r2),tiers:[{l:'0〜5,000,000円',a:T1,r:rate,v:r1},{l:'5,000,000円〜',a:fee-T1,r:rate+.05,v:r2}]};}
   const r1=T1*rate,r2=(T2-T1)*(rate+.05),r3=(fee-T2)*(rate+.10);
-  return{r:Math.floor(r1+r2+r3),tiers:[{l:'0〜500万円',a:T1,r:rate,v:r1},{l:'500万〜1000万円',a:T2-T1,r:rate+.05,v:r2},{l:'1000万円超',a:fee-T2,r:rate+.10,v:r3}]};
+  return{r:Math.floor(r1+r2+r3),tiers:[{l:'0〜5,000,000円',a:T1,r:rate,v:r1},{l:'5,000,000〜10,000,000円',a:T2-T1,r:rate+.05,v:r2},{l:'10,000,000円超',a:fee-T2,r:rate+.10,v:r3}]};
 }
 function yen(n){return'¥'+Math.round(n).toLocaleString();}
 function pct(r){return(r*100).toFixed(1)+'%';}
@@ -929,7 +929,7 @@ function schedTl(fpD,p25D){
 function taxNote(r){
   if(r<=120000)return`<div class="tax-note">源泉徴収：<strong>課税対象額 ${yen(r)} ≤ ¥120,000 → 源泉なし</strong></div>`;
   const M=1e6;
-  if(r<=M){const t=Math.floor((r-120000)*.1021);return`<div class="tax-note">源泉徴収：<strong>（${yen(r)} − ¥120,000）× 10.21% = ${yen(t)}</strong>（課税対象額12万円超）</div>`;}
+  if(r<=M){const t=Math.floor((r-120000)*.1021);return`<div class="tax-note">源泉徴収：<strong>（${yen(r)} − ¥120,000）× 10.21% = ${yen(t)}</strong>（課税対象額120,000円超）</div>`;}
   const t1=Math.floor((M-120000)*.1021),t2=Math.floor((r-M)*.2042);
   return`<div class="tax-note">源泉徴収（累進）：<strong>（¥1,000,000 − ¥120,000）× 10.21% = ${yen(t1)}</strong> ＋ <strong>超過分 ${yen(r-M)} × 20.42% = ${yen(t2)}</strong>　合計：<strong>${yen(t1+t2)}</strong></div>`;
 }
