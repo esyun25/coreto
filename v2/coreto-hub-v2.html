@@ -1703,7 +1703,7 @@ function renderHQDash() {
             <div class="section-more">すべて見る →</div>
           </div>
           <div class="card">
-            <div class="task-list">
+            <div class="task-list" id="hq-task-list">
               <div class="task-item">
                 <div class="task-prio high"></div>
                 <div class="task-main">
@@ -2704,7 +2704,7 @@ function renderHikariAgDash() {
           </div>
           <div style="font-size:10px;color:var(--faint);margin-top:6px">¥840,000 / ¥2,000,000</div>
         </div>
-        <div class="stat-row"><div class="stat-label">報酬率（光通信）</div><div class="stat-val">80%</div></div>
+        <div class="stat-row"><div class="stat-label">報酬率（光通信）</div><div class="stat-val" id="hikari-rate-util">80%</div></div>
         <div class="stat-row"><div class="stat-label">不動産紹介</div><div class="stat-val" style="color:var(--muted)">PT扱い 25%</div></div>
         <div class="stat-row"><div class="stat-label">人材紹介</div><div class="stat-val" style="color:var(--muted)">PT扱い 25%</div></div>
       </div>
@@ -2720,6 +2720,13 @@ function renderHikariAgDash() {
       </div>
     </div>
   </div>`;
+  // 残-9修正: 光通信AGダッシュの報酬率を動的表示
+  (function() {
+    const RATE_UTIL = { Bronze:80, Silver:83, Gold:87, Platinum:90 };
+    const rank = sessionStorage.getItem('coreto_rank') || 'Bronze';
+    const el = document.getElementById('hikari-rate-util');
+    if (el) el.textContent = (RATE_UTIL[rank] || 80) + '%';
+  })();
 }
 
 function renderHRAgDash() {
@@ -2827,8 +2834,8 @@ function renderHRAgDash() {
               </div>
               <div style="font-size:10px;color:var(--faint);margin-top:6px">Gold まであと4pt</div>
             </div>
-            <div class="stat-row"><div class="stat-label">報酬率（人材）</div><div class="stat-val">70%</div></div>
-            <div class="stat-row"><div class="stat-label">報酬率（光通信）</div><div class="stat-val">87%</div></div>
+            <div class="stat-row"><div class="stat-label">報酬率（人材）</div><div class="stat-val" id="hr-rate-hr">—</div></div>
+            <div class="stat-row"><div class="stat-label">報酬率（光通信）</div><div class="stat-val" id="hr-rate-util">—</div></div>
             <div class="stat-row"><div class="stat-label">不動産紹介報酬率</div><div class="stat-val" style="color:var(--muted)">PT扱い</div></div>
           </div>
         </div>
@@ -2846,6 +2853,16 @@ function renderHRAgDash() {
       </div>
     </div>
   `;
+  // 残-1修正: HR-AGダッシュの報酬率を動的表示
+  (function() {
+    const RATE_HR   = { Bronze:45, Silver:47.5, Gold:50, Platinum:55 };
+    const RATE_UTIL = { Bronze:80, Silver:83,   Gold:87, Platinum:90 };
+    const rank = sessionStorage.getItem('coreto_rank') || 'Silver';
+    const hrEl   = document.getElementById('hr-rate-hr');
+    const utilEl = document.getElementById('hr-rate-util');
+    if (hrEl)   hrEl.textContent   = (RATE_HR[rank]   || 47.5) + '%';
+    if (utilEl) utilEl.textContent = (RATE_UTIL[rank] || 83)   + '%';
+  })();
 }
 
 function renderPTDash() {
@@ -3004,7 +3021,10 @@ function closeSettingsModal() {
 }
 
 function doLogout() {
-  if (!confirm('ログアウトしますか？')) return;
+  showConfirm('ログアウト', 'COREBLDGからログアウトします。よろしいですか？', function() {
+    ['coreto_role','coreto_user_id','coreto_name','coreto_rank','coreto_balance'].forEach(function(k){sessionStorage.removeItem(k);});
+    window.location.href = 'coreto-hub-v2.html';
+  }); return;
   sessionStorage.removeItem('coreto_role');
   document.getElementById('app').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
@@ -3036,6 +3056,37 @@ window.addEventListener('DOMContentLoaded', () => {
       }, 50);
     }
   }
+
+  // 残-13: HQタスク一覧にlocalStorageの動的タスクを追加
+  setTimeout(() => {
+    const taskList = document.getElementById('hq-task-list');
+    if (!taskList) return;
+    try {
+      const tasks = JSON.parse(localStorage.getItem('CORETO_HQ_TASKS') || '[]');
+      const reminders = JSON.parse(localStorage.getItem('CORETO_HR_REMINDERS') || '[]');
+      const allDynamic = [
+        ...tasks.map(t => ({ ...t, prio:'mid', badge:'承認待ち', badgeCls:'badge sky' })),
+        ...reminders.filter(r=>r.status==='pending').map(r => ({
+          id: r.id, title: r.label + ' — ' + r.name,
+          createdAt: r.dueDate, prio:'mid', badge:'在籍確認', badgeCls:'badge violet'
+        })),
+      ].slice(0, 5); // 最大5件追加表示
+
+      allDynamic.forEach(t => {
+        const el = document.createElement('div');
+        el.className = 'task-item';
+        el.style.borderTop = '1px dashed var(--bd)';
+        el.innerHTML =
+          '<div class="task-prio ' + (t.prio||'mid') + '"></div>' +
+          '<div class="task-main">' +
+            '<div class="task-name">🔔 ' + (t.title||t.type||'—') + '</div>' +
+            '<div class="task-meta">' + (t.createdAt||'') + '</div>' +
+          '</div>' +
+          '<span class="' + (t.badgeCls||'badge sky') + '">' + (t.badge||'確認待ち') + '</span>';
+        taskList.appendChild(el);
+      });
+    } catch(e) {}
+  }, 200);
 });
 
 // ── AI月次レポート（HQダッシュボード） ────────────────

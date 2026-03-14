@@ -498,7 +498,10 @@ function closeSettings() {
 
 function logout() {
   if (!confirm('ログアウトしますか？')) return;
-  sessionStorage.removeItem('coreto_role');
+  // 全セッション情報をクリア（残-2修正）
+  ['coreto_role','coreto_user_id','coreto_name','coreto_rank','coreto_balance'].forEach(function(k) {
+    sessionStorage.removeItem(k);
+  });
   window.location.href = 'coreto-hub-v2.html';
 }
 
@@ -573,3 +576,79 @@ function session() {
 
 return { init, openSettings, closeSettings, logout, session };
 })();
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 残-6: confirm()代替 — ネイティブダイアログの排除
+// 使い方: showConfirm('タイトル', '本文', () => { 実行処理 })
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function showConfirm(title, body, onOk, opts) {
+  opts = opts || {};
+  var okLabel   = opts.okLabel   || '実行する';
+  var okStyle   = opts.danger    ? 'background:#DC2626;color:#fff;border:none' : 'background:#0D1A2D;color:#C8A951;border:none';
+  var cancelLabel = opts.cancelLabel || 'キャンセル';
+  var overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(2px)';
+  overlay.innerHTML =
+    '<div style="background:#fff;border-radius:12px;width:100%;max-width:420px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.2);font-family:Outfit,sans-serif">' +
+      '<div style="font-size:15px;font-weight:700;color:#0D1A2D;margin-bottom:10px">' + title + '</div>' +
+      '<div style="font-size:12px;color:#5F6368;line-height:1.8;margin-bottom:20px;white-space:pre-wrap">' + body + '</div>' +
+      '<div style="display:flex;gap:10px;justify-content:flex-end">' +
+        '<button id="sc-cancel" style="padding:9px 20px;background:transparent;border:1.5px solid #E8EAED;border-radius:8px;cursor:pointer;font-family:Outfit,sans-serif;font-size:13px">' + cancelLabel + '</button>' +
+        '<button id="sc-ok" style="padding:9px 22px;border-radius:8px;font-weight:700;cursor:pointer;font-family:Outfit,sans-serif;font-size:13px;' + okStyle + '">' + okLabel + '</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(overlay);
+  overlay.querySelector('#sc-cancel').onclick = function() { overlay.remove(); };
+  overlay.querySelector('#sc-ok').onclick = function() { overlay.remove(); if(onOk) onOk(); };
+  overlay.onclick = function(e) { if(e.target===overlay) overlay.remove(); };
+  setTimeout(function(){ overlay.querySelector('#sc-ok').focus(); }, 50);
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 残-6: coretoConfirm — confirm()の代替モーダル
+// 使い方: coretoConfirm({ title, message, detail, okLabel, danger, onOk })
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function coretoConfirm(opts) {
+  var existing = document.getElementById('coreto-confirm-overlay');
+  if (existing) existing.remove();
+
+  var overlay = document.createElement('div');
+  overlay.id = 'coreto-confirm-overlay';
+  overlay.innerHTML =
+    '<div id="coreto-confirm-box">' +
+      '<div id="coreto-confirm-header">' +
+        '<div id="coreto-confirm-title">' + (opts.title || '確認') + '</div>' +
+      '</div>' +
+      '<div id="coreto-confirm-body">' +
+        '<div>' + (opts.message || '実行しますか？') + '</div>' +
+        (opts.detail ? '<div id="coreto-confirm-detail">' + opts.detail + '</div>' : '') +
+      '</div>' +
+      '<div id="coreto-confirm-actions">' +
+        '<button id="coreto-confirm-cancel">キャンセル</button>' +
+        '<button id="coreto-confirm-ok' + (opts.danger ? '" class="danger"' : '"') + '>' + (opts.okLabel || '実行する') + '</button>' +
+      '</div>' +
+    '</div>';
+
+  document.body.appendChild(overlay);
+
+  overlay.addEventListener('click', function(e) {
+    if (e.target === overlay) overlay.remove();
+  });
+  document.getElementById('coreto-confirm-cancel').addEventListener('click', function() {
+    overlay.remove();
+    if (opts.onCancel) opts.onCancel();
+  });
+  document.getElementById('coreto-confirm-ok').addEventListener('click', function() {
+    overlay.remove();
+    if (opts.onOk) opts.onOk();
+  });
+
+  // フォーカス
+  setTimeout(function() {
+    var okBtn = document.getElementById('coreto-confirm-ok');
+    if (okBtn) okBtn.focus();
+  }, 50);
+}
+
+// CNAV に公開
+if (typeof CNAV !== 'undefined') CNAV.confirm = coretoConfirm;

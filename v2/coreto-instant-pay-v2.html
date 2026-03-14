@@ -860,11 +860,12 @@ function showLock() {
 
 // ══ HQ actions ═══════════════════════════════════════════════
 function processTransfer(id, agName, amount) {
-  if (!confirm(`申請ID ${id} の振込を実行しますか？\n\n対象：${agName}\n振込額：¥${Number(amount).toLocaleString()}\n\nこの操作は取り消せません。`)) return;
-  slackNotifyTransferDone({ id, agName, amount, ts:nowStr() });
-  const btn = event.target.closest('button');
-  if (btn) { btn.textContent = '✅ 振込済み'; btn.disabled = true; }
-  showToast('✅ 振込を実行しました — ' + id);
+  coretoConfirm({title:'振込実行の確認',message:'以下の内容で振込を実行します。',detail:'申請ID: '+id+'<br>対象: '+agName+'<br>振込額: ¥'+Number(amount).toLocaleString(),okLabel:'振込を実行する',danger:true,onOk:function(){
+    slackNotifyTransferDone({ id, agName, amount, ts:nowStr() });
+    const btn = event.target.closest('button');
+    if (btn) { btn.textContent = '✅ 振込済み'; btn.disabled = true; }
+    showToast('✅ 振込を実行しました — ' + id);
+  }});
 }
 function unlockAccount(id) {
   if (!confirm(`${id} の即時払いロックを解除しますか？\n本人確認が完了していることを確認してください。`)) return;
@@ -964,33 +965,33 @@ function exportZengin() {
   const targets = PENDING_TRANSFERS.filter(t => ids.includes(t.reqId));
   if (!targets.length) { showToast('出力対象の申請を選択してください。', 'em'); return; }
   const totalAmt = targets.reduce((s,t) => s + t.payoutAmt, 0);
-  if (!confirm(`【全銀ファイル出力確認】\n\n出力件数：${targets.length}件\n合計振込額：¥${totalAmt.toLocaleString()}\n\nネットバンキングにアップロードして送金を実行してください。\n\n出力しますか？`)) return;
+  coretoConfirm({title:'全銀ファイル出力確認',message:'以下の内容で全銀ファイルを出力します。',detail:'出力件数: '+targets.length+'件<br>合計振込額: ¥'+totalAmt.toLocaleString()+'<br>ネットバンキングにアップロードして送金を実行してください。',okLabel:'出力する',danger:false,onOk:function(){
+    const now = new Date();
+    const next = new Date(now); next.setDate(next.getDate()+1);
+    if (next.getDay()===0) next.setDate(next.getDate()+1);
+    if (next.getDay()===6) next.setDate(next.getDate()+2);
+    const valueDate = next.getFullYear()+'/'+(next.getMonth()+1).toString().padStart(2,'0')+'/'+next.getDate().toString().padStart(2,'0');
 
-  const now = new Date();
-  const next = new Date(now); next.setDate(next.getDate()+1);
-  if (next.getDay()===0) next.setDate(next.getDate()+1);
-  if (next.getDay()===6) next.setDate(next.getDate()+2);
-  const valueDate = next.getFullYear()+'/'+(next.getMonth()+1).toString().padStart(2,'0')+'/'+next.getDate().toString().padStart(2,'0');
+    const content = generateZenginFile(targets, valueDate);
+    const ts2 = now.getFullYear().toString().slice(2)+(now.getMonth()+1).toString().padStart(2,'0')+now.getDate().toString().padStart(2,'0')+now.getHours().toString().padStart(2,'0')+now.getMinutes().toString().padStart(2,'0');
+    const filename = 'CORETO_ZENGN_' + ts2 + '.txt';
+    const blob = new Blob([content], {type:'text/plain;charset=utf-8'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; a.click(); URL.revokeObjectURL(a.href);
 
-  const content = generateZenginFile(targets, valueDate);
-  const ts2 = now.getFullYear().toString().slice(2)+(now.getMonth()+1).toString().padStart(2,'0')+now.getDate().toString().padStart(2,'0')+now.getHours().toString().padStart(2,'0')+now.getMinutes().toString().padStart(2,'0');
-  const filename = 'CORETO_ZENGN_' + ts2 + '.txt';
-  const blob = new Blob([content], {type:'text/plain;charset=utf-8'});
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; a.click(); URL.revokeObjectURL(a.href);
-
-  const logWrap = document.getElementById('zg-log-wrap');
-  const logEl   = document.getElementById('zg-log');
-  if (logWrap) logWrap.style.display = 'block';
-  const ns = nowStr();
-  if (logEl) logEl.innerHTML += `[${ns}] ✅ 全銀ファイル出力: ${filename} / ${targets.length}件 / ¥${totalAmt.toLocaleString()}\n`;
-  const doneEl = document.getElementById('zg-done-today');
-  const lastEl = document.getElementById('zg-last-export');
-  if (doneEl) doneEl.textContent = parseInt(doneEl.textContent||'0') + targets.length;
-  if (lastEl) lastEl.textContent = ns.slice(11);
-  targets.forEach(t => { t.status = 'exported'; });
-  renderZenginPreview(); updateZenginSummary();
-  slackNotifyZenginExport({ count:targets.length, total:totalAmt, filename, valueDate, ts:ns });
-  showToast('✅ 全銀ファイルをダウンロードしました — ' + filename);
+    const logWrap = document.getElementById('zg-log-wrap');
+    const logEl   = document.getElementById('zg-log');
+    if (logWrap) logWrap.style.display = 'block';
+    const ns = nowStr();
+    if (logEl) logEl.innerHTML += `[${ns}] ✅ 全銀ファイル出力: ${filename} / ${targets.length}件 / ¥${totalAmt.toLocaleString()}\n`;
+    const doneEl = document.getElementById('zg-done-today');
+    const lastEl = document.getElementById('zg-last-export');
+    if (doneEl) doneEl.textContent = parseInt(doneEl.textContent||'0') + targets.length;
+    if (lastEl) lastEl.textContent = ns.slice(11);
+    targets.forEach(t => { t.status = 'exported'; });
+    renderZenginPreview(); updateZenginSummary();
+    slackNotifyZenginExport({ count:targets.length, total:totalAmt, filename, valueDate, ts:ns });
+    showToast('✅ 全銀ファイルをダウンロードしました — ' + filename);
+  }});
 }
 
 // ══════════════════════════════════════════════════════════════

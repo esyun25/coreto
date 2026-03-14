@@ -611,6 +611,41 @@ function onBizChange(val){
 }
 
 function submitReport(){
+  // 残-3: フォームから値を取得してlocalStorageに成約報告を保存
+  const feeInput = document.getElementById('fee-input');
+  const fee = feeInput ? (parseInt(feeInput.value.replace(/[^0-9]/g,''))||495000) : 495000;
+  const biz = document.getElementById('biz-select')?.value || 'rental';
+  const { rate, rank } = getMyRate(biz);
+  const reward = Math.round(fee * rate / 100);
+  const rptId  = 'RPT-' + new Date().getFullYear() + String(Date.now()).slice(-8);
+  const now    = new Date().toLocaleDateString('ja-JP');
+  const agName = sessionStorage.getItem('coreto_name') || '担当AG';
+
+  try {
+    const reports = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]');
+    reports.unshift({
+      id: rptId,
+      case: 'RENT-' + String(Date.now()).slice(-4),
+      client: document.getElementById('client-name')?.value || '—',
+      type: biz === 'rental' ? '賃貸' : biz === 'sale' ? '売買' : biz === 'hr' ? '人材' : '光通信',
+      fee, reward, date: now, ag: agName, status: '承認待ち',
+    });
+    localStorage.setItem('CORETO_REPORTS', JSON.stringify(reports));
+  } catch(e) {}
+
+  // 残-5: 見込み報酬を残高に加算（HQ承認後に確定するため仮計上）
+  try {
+    const cur = parseInt(sessionStorage.getItem('coreto_balance') || '726163');
+    sessionStorage.setItem('coreto_balance', String(cur + reward));
+  } catch(e) {}
+
+  // HQ用タスクを追加
+  try {
+    const tasks = JSON.parse(localStorage.getItem('CORETO_HQ_TASKS') || '[]');
+    tasks.unshift({ id: rptId, type:'contract_report', title:'成約報告承認 — ' + agName + ' / ' + rptId, createdAt: now });
+    localStorage.setItem('CORETO_HQ_TASKS', JSON.stringify(tasks));
+  } catch(e) {}
+
   document.getElementById('pg').innerHTML = `
   <div class="form-wrap">
     <div style="text-align:center;padding:60px 20px">
@@ -619,12 +654,12 @@ function submitReport(){
       <div style="font-size:13px;color:var(--muted);margin-bottom:28px">HQが確認後、報酬額が確定されます。通常1〜2営業日以内に通知されます。</div>
       <div style="background:var(--white);border:1px solid var(--bd);border-radius:var(--r);padding:20px 28px;display:inline-block;text-align:left;min-width:320px;margin-bottom:28px">
         <div style="font-size:11px;color:var(--faint);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">報告サマリー</div>
-        <div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-bottom:1px solid var(--bd)"><span style="color:var(--muted)">報告ID</span><span style="font-family:'DM Mono',monospace">RPT-20260310-001</span></div>
-        <div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-bottom:1px solid var(--bd)"><span style="color:var(--muted)">案件</span><span>RENT-0194 / 田中 優子</span></div>
-        <div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-bottom:1px solid var(--bd)"><span style="color:var(--ink)">仲介料</span><span>¥495,000</span></div>
-        <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;padding:8px 0"><span style="color:var(--ink)">想定報酬</span><span style="color:var(--ink);font-family:'Outfit','Noto Sans JP',sans-serif;font-variant-numeric:tabular-nums;font-size:20px">¥396,000</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-bottom:1px solid var(--bd)"><span style="color:var(--muted)">報告ID</span><span style="font-family:'DM Mono',monospace">${rptId}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-bottom:1px solid var(--bd)"><span style="color:var(--muted)">担当AG</span><span>${agName}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-bottom:1px solid var(--bd)"><span style="color:var(--ink)">仲介料</span><span>¥${fee.toLocaleString()}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;padding:8px 0"><span style="color:var(--ink)">想定報酬（${rank} ${rate}%）</span><span style="color:var(--ink);font-family:'Outfit','Noto Sans JP',sans-serif;font-variant-numeric:tabular-nums;font-size:20px">¥${reward.toLocaleString()}</span></div>
       </div>
-      <!-- 🟠-2: 即時払いへの導線 -->
+      <!-- 即時払いへの導線 -->
       <div style="background:var(--am-bg);border:1px solid rgba(217,119,6,.2);border-radius:var(--r);padding:14px 20px;margin-bottom:20px;font-size:12px;color:var(--am)">
         ⚡ 報酬の確定前に即時払いを申請できます（手数料15%）
       </div>
@@ -695,21 +730,22 @@ function renderHistory(){
 }
 
 function approveReport(id, client, ag, reward, btn) {
-  if (!confirm(`報告ID: ${id}\nクライアント: ${client}\n報酬額: ¥${reward.toLocaleString()}\n\nこの成約報告を承認しますか？\n承認後、報酬が確定されAGにLINEで通知されます。`)) return;
-  const cell = btn.closest('td');
-  cell.innerHTML = '<span class="badge b-em">承認済み</span>';
-  showToast(`✅ ${id} を承認しました。${ag} にLINEで通知します。`, 'em');
-  // LINE通知（設定後有効化）
-  const LINE_TOKEN = (window.LINE_CONFIG && window.LINE_CONFIG.AG_CHANNEL_TOKEN) || '';
-  const msg = `【COREBLDG】成約報告が承認されました\n報告ID: ${id}\n報酬額: ¥${reward.toLocaleString()}\n月次締めで振り込まれます。`;
-  if (LINE_TOKEN) {
-    fetch('https://api.line.me/v2/bot/message/broadcast', {
-      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+LINE_TOKEN},
-      body: JSON.stringify({ messages:[{ type:'text', text: msg }] })
-    }).catch(e => console.error(e));
-  } else {
-    console.log('[LINE通知 — 設定待ち]', msg);
-  }
+  coretoConfirm({title:'成約報告 承認',message:'以下の成約報告を承認しますか？',detail:'報告ID: '+id+'<br>クライアント: '+client+'<br>報酬額: ¥'+reward.toLocaleString()+'<br>承認後、報酬が確定されAGにLINEで通知されます。',okLabel:'承認する',onOk:function(){
+    const cell = btn.closest('td');
+    cell.innerHTML = '<span class="badge b-em">承認済み</span>';
+    showToast(`✅ ${id} を承認しました。${ag} にLINEで通知します。`, 'em');
+    // LINE通知（設定後有効化）
+    const LINE_TOKEN = (window.LINE_CONFIG && window.LINE_CONFIG.AG_CHANNEL_TOKEN) || '';
+    const msg = `【COREBLDG】成約報告が承認されました\n報告ID: ${id}\n報酬額: ¥${reward.toLocaleString()}\n月次締めで振り込まれます。`;
+    if (LINE_TOKEN) {
+      fetch('https://api.line.me/v2/bot/message/broadcast', {
+        method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+LINE_TOKEN},
+        body: JSON.stringify({ messages:[{ type:'text', text: msg }] })
+      }).catch(e => console.error(e));
+    } else {
+      console.log('[LINE通知 — 設定待ち]', msg);
+    }
+  }});
 }
 
 function requestFix(id, ag, btn) {

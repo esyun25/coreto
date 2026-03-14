@@ -290,19 +290,20 @@ body, input, select, textarea, button { font-family:'Outfit','Noto Sans JP',sans
   <div class="filter-bar">
     <div class="search-wrap">
       <span class="search-icon">🔍</span>
-      <input type="text" placeholder="クライアント名・案件番号・物件で検索…">
+      <input id="case-search" type="text" placeholder="クライアント名・案件番号・物件で検索…"
+             oninput="filterCaseRows()" style="width:100%">
     </div>
-    <select class="fsel">
-      <option>すべてのAG</option>
-      <option>AG-0042 山田</option>
-      <option>AG-0088 田中</option>
-      <option>AG-0055 井上</option>
+    <select class="fsel" id="case-ag-filter" onchange="filterCaseRows()">
+      <option value="">すべてのAG</option>
+      <option value="AG-0042">AG-0042 山田</option>
+      <option value="AG-0088">AG-0088 田中</option>
+      <option value="AG-0055">AG-0055 井上</option>
     </select>
-    <select class="fsel">
-      <option>すべてのステータス</option>
-      <option>申込中</option>
-      <option>審査中</option>
-      <option>IT重説待ち</option>
+    <select class="fsel" id="case-status-filter" onchange="filterCaseRows()">
+      <option value="">すべてのステータス</option>
+      <option value="申込中">申込中</option>
+      <option value="審査中">審査中</option>
+      <option value="IT重説待ち">IT重説待ち</option>
       <option>入金待ち</option>
       <option>成約</option>
       <option>見送り</option>
@@ -522,7 +523,42 @@ function switchTab(type, el) {
     card.closest('.kb-card') && (card.closest('.kb-card').style.display =
       type === 'all' || ctype === type ? '' : 'none');
   });
+  // 検索フィルターも再適用
+  filterCaseRows();
 }
+
+// 残-7: 検索+AGフィルター+ステータスフィルターの実装
+function filterCaseRows() {
+  const q      = (document.getElementById('case-search')?.value || '').trim().toLowerCase();
+  const ag     = (document.getElementById('case-ag-filter')?.value || '').toLowerCase();
+  const status = (document.getElementById('case-status-filter')?.value || '').toLowerCase();
+
+  // カードビュー（.case-row）を絞り込み
+  document.querySelectorAll('#list-view .case-row').forEach(row => {
+    const text    = row.textContent.toLowerCase();
+    const rowAg   = (row.getAttribute('data-ag') || '').toLowerCase();
+    const matchQ  = !q      || text.includes(q);
+    const matchAg = !ag     || rowAg.includes(ag);
+    const matchSt = !status || text.includes(status);
+    row.style.display = (matchQ && matchAg && matchSt) ? '' : 'none';
+  });
+
+  // カンバンビュー（.kanban-card）も絞り込み
+  document.querySelectorAll('#kanban-view .kanban-card').forEach(card => {
+    const text   = card.textContent.toLowerCase();
+    const cardAg = (card.getAttribute('data-ag') || '').toLowerCase();
+    const matchQ  = !q      || text.includes(q);
+    const matchAg = !ag     || cardAg.includes(ag);
+    const matchSt = !status || text.includes(status);
+    card.style.display = (matchQ && matchAg && matchSt) ? '' : 'none';
+  });
+
+  // 件数バッジを更新
+  const visible = document.querySelectorAll('#list-view .case-row:not([style*="none"])').length;
+  const badge = document.querySelector('.tab.active .tab-count');
+  if (badge && q) badge.textContent = visible + '件';
+}
+
 
 function newCase() {
   // Fix 8: 案件種別選択 → 各ページへ遷移（URLパラメータでCRM情報引き継ぎ対応）
