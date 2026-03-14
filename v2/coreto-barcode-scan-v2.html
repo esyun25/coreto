@@ -1829,29 +1829,38 @@ function printApprovalDocs(doc, trackingCode){
   }
 }
 
-// 担当AGへの返送書類確認依頼通知
+// 担当AGへの返送書類確認依頼通知（公式LINE① AG・PT向けチャンネル経由）
 function notifyAgReturnDocs(cas) {
-  const msg = {
-    text: `📬 *返送書類のクライアント連絡をお願いします*\n` +
-          `案件ID: \`${cas.caseId}\`\n` +
-          `クライアント: ${cas.caseName} 様\n` +
-          `担当: ${cas.agent.name}（${cas.agent.agId}）\n\n` +
-          `Welcome letterを発送しました。\n` +
-          `返送必要書類リストが未取得のため、*クライアントへ直接ご連絡*いただき、返送が必要な書類をご案内ください。`
-  };
-  // Slack Webhook（未設定時はコンソールログ）
-  const WEBHOOK = (window.SLACK_CONFIG && window.SLACK_CONFIG.GENERAL) || '';
-  if (WEBHOOK) {
-    fetch(WEBHOOK, {
+  const msgText =
+    `【COREBLDG】返送書類のご連絡をお願いします\n\n` +
+    `案件ID: ${cas.caseId}\n` +
+    `クライアント: ${cas.caseName} 様\n\n` +
+    `Welcome letterを発送しました。\n` +
+    `返送必要書類リストが未取得のため、クライアントへ直接ご連絡いただき、返送が必要な書類をご案内ください。`;
+
+  // LINE Messaging API — チャンネルアクセストークン設定後に有効化
+  const LINE_TOKEN = (window.LINE_CONFIG && window.LINE_CONFIG.AG_CHANNEL_TOKEN) || '';
+  const LINE_USER_ID = cas.agent.lineUserId || ''; // エージェントのLINEユーザーID
+
+  if (LINE_TOKEN && LINE_USER_ID) {
+    // LINE Push Message API
+    fetch('https://api.line.me/v2/bot/message/push', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(msg),
-      mode: 'no-cors'
-    }).catch(e => console.error('[Slack通知エラー]', e));
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + LINE_TOKEN,
+      },
+      body: JSON.stringify({
+        to: LINE_USER_ID,
+        messages: [{ type: 'text', text: msgText }]
+      })
+    }).catch(e => console.error('[LINE通知エラー]', e));
   } else {
-    console.log('[AG通知（Slack未設定）]', msg.text);
+    // 未設定時はコンソールログ（公式LINE開設後に自動で有効化される）
+    console.log('[LINE通知 — 設定待ち]', msgText);
   }
-  showToast(`📬 ${cas.agent.name} に返送書類の連絡依頼を通知しました`, 'ok');
+
+  showToast(`📲 ${cas.agent.name} にLINEで返送書類の連絡依頼を送信しました`, 'ok');
 }
 
 // ── Welcome letter（A4・通常プリンター・自動印刷）──────────
