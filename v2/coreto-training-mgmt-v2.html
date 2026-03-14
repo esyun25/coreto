@@ -765,6 +765,19 @@ function showToast(msg, type) {
 
 // ══ 初期化 ════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', () => {
+  // #14修正: CORETO_TRAINING_COMPLETEからAGの完了率を動的計算して更新
+  try {
+    const allComplete = JSON.parse(localStorage.getItem('CORETO_TRAINING_COMPLETE') || '{}');
+    Object.entries(allComplete).forEach(([uid, lessons]) => {
+      const doneCount = Object.values(lessons).filter(v => v === true).length;
+      const totalLessons = CONTENTS.filter(c => c.status === 'published').length;
+      const pct = totalLessons > 0 ? Math.round(doneCount / totalLessons * 100) : 0;
+      // HQ_AGENTSのlessonDoneを更新
+      const agent = HQ_AGENTS ? HQ_AGENTS.find(a => a.id === uid) : null;
+      if (agent) { agent.lessonDone = doneCount; }
+      // CONTENTS自体のcompletedRateはKintone連携後に更新
+    });
+  } catch(e) {}
   CNAV.init('onboard_mgmt');
   renderContents();
   // モーダル外クリックで閉じる

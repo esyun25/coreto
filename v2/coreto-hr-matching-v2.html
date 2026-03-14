@@ -1616,6 +1616,22 @@ function toast(msg,type='ok') {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
+  // #8修正: localStorageのCORETO_HR_LEADSから新規案件をCASESに追加
+  try {
+    const leads = JSON.parse(localStorage.getItem('CORETO_HR_LEADS') || '[]');
+    const existIds = new Set(CASES.map(c=>c.id));
+    leads.forEach(l => {
+      const caseId = 'HR-' + String(l.id||Date.now()).slice(-4);
+      if (existIds.has(caseId)) return;
+      CASES.push({ id:caseId, name:l.name||'—', status:'active', step:0,
+        targetJob:l.job||'—', targetSalary:l.salary||0, companies:[], timeline:[
+          { date:l.date||new Date().toLocaleDateString('ja-JP'), step:'受付', note:'PT紹介経由で登録', type:'em' }
+        ], source:'PT', ag: sessionStorage.getItem('coreto_user_id')||'AG-0088',
+        lastUpdate:l.date||new Date().toLocaleDateString('ja-JP') });
+      existIds.add(caseId);
+    });
+    if (leads.length) render();
+  } catch(e) {}
   CNAV.init('hr_matching');
   // sessionからROLEを自動設定
   const _s = CNAV.session ? CNAV.session() : null;

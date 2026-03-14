@@ -466,7 +466,23 @@ function sendReset(){
     }
   },400);
 }
-function submitNewPw(){const n=document.getElementById('rp-new')?.value,c=document.getElementById('rp-conf')?.value;if(!n||n.length<8){showToast('8文字以上で入力してください', 'warn');return;}if(n!==c){showToast('一致しません', 'em');return;}showToast('✅ パスワードを再設定しました。', 'em');pagePw();}
+function submitNewPw(){
+  const n=document.getElementById('rp-new')?.value;
+  const c=document.getElementById('rp-conf')?.value;
+  if(!n||n.length<8){showToast('8文字以上で入力してください','warn');return;}
+  if(n!==c){showToast('パスワードが一致しません','warn');return;}
+  // #11修正: localStorageにパスワード変更を保存（Kintone連携後はAPIで更新）
+  try {
+    const uid = sessionStorage.getItem('coreto_user_id') || '';
+    if (uid) {
+      const changes = JSON.parse(localStorage.getItem('CORETO_PW_CHANGES') || '{}');
+      changes[uid] = { pw: n, changedAt: new Date().toISOString() };
+      localStorage.setItem('CORETO_PW_CHANGES', JSON.stringify(changes));
+    }
+  } catch(e) {}
+  showToast('✅ パスワードを再設定しました。次回ログインから新しいパスワードが有効です。','em');
+  pagePw();
+}
 
 // ══ 2FA PAGE ══════════════════════════════════════════════════════
 function page2fa() {

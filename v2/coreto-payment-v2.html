@@ -663,6 +663,22 @@ renderTab('summary');
 <script src="coreto-nav-v2.js"></script>
 <script>
 window.addEventListener('DOMContentLoaded', function() {
+  // #6修正: CORETO_REPORTSから自分の成約報告を取得してKPIを更新
+  try {
+    const myId = sessionStorage.getItem('coreto_user_id') || '';
+    const role = sessionStorage.getItem('coreto_role') || '';
+    const reports = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]');
+    const mine = myId ? reports.filter(r => !r.agId || r.agId === myId) : reports;
+    if (mine.length) {
+      const totalReward = mine.reduce((s,r)=>s+(r.reward||0), 0);
+      const pendingReward = mine.filter(r=>r.status==='承認待ち').reduce((s,r)=>s+(r.reward||0), 0);
+      // KPI要素を更新（存在する場合）
+      var kpiTotal = document.querySelector('[data-kpi="total-reward"]');
+      if (kpiTotal) kpiTotal.textContent = '¥' + totalReward.toLocaleString();
+      var kpiPending = document.querySelector('[data-kpi="pending-reward"]');
+      if (kpiPending) kpiPending.textContent = '¥' + pendingReward.toLocaleString();
+    }
+  } catch(e) {}
   CNAV.init('payment');
 
   const sRole = sessionStorage.getItem('coreto_role') || 'hq';

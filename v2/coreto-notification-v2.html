@@ -197,6 +197,32 @@ html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:
 })();
 
 
+// #16修正: localStorageから通知を動的に取得してNOTIFSに追加
+function loadDynamicNotifs() {
+  try {
+    const tasks = JSON.parse(localStorage.getItem('CORETO_HQ_TASKS') || '[]');
+    const reminders = JSON.parse(localStorage.getItem('CORETO_HR_REMINDERS') || '[]');
+    const reports = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]');
+    const dynamic = [];
+    tasks.forEach(t => {
+      dynamic.push({ id:t.id, cat:'task', catLabel:'タスク', icon:'📋', iconBg:'var(--am-bg)',
+        title: t.title || 'タスク: '+t.type, desc:'確認が必要です', time:t.createdAt||'—', unread:true, link:'coreto-contract-report-v2.html' });
+    });
+    reports.filter(r=>r.status==='承認待ち').forEach(r => {
+      dynamic.push({ id:r.id, cat:'contract', catLabel:'成約', icon:'🏆', iconBg:'var(--em-bg)',
+        title:'成約報告 承認待ち — '+r.id, desc:r.client+'様 ¥'+r.reward.toLocaleString(), time:r.date||'—', unread:true, link:'coreto-contract-report-v2.html' });
+    });
+    reminders.filter(r=>r.status==='pending').forEach(r => {
+      dynamic.push({ id:r.id, cat:'hr', catLabel:'HR', icon:'👤', iconBg:'var(--vt-bg)',
+        title:'在籍確認: '+r.name, desc:r.label+' ('+r.dueDate+')', time:r.dueDate||'—', unread:true, link:'coreto-hr-matching-v2.html' });
+    });
+    if (dynamic.length > 0) {
+      NOTIFS.unshift(...dynamic);
+      renderNotifs();
+    }
+  } catch(e) {}
+}
+
 const NOTIFS = [
   {id:'N-001',cat:'urgent',catLabel:'緊急',icon:'🚨',iconBg:'var(--rd-bg)',title:'即時払い審査待ち — AG-0042 山田 誠',desc:'¥180,000の即時払い申請が36時間以上未処理です。承認または差戻が必要です。',time:'10分前',link:'coreto-instant-pay-v2.html',unread:true},
   {id:'N-002',cat:'kyc',catLabel:'KYC',icon:'🪪',iconBg:'var(--am-bg)',title:'KYC審査待ち — AG-0105 新規申込',desc:'エージェント入会申込が届いています。身分証・口座情報の確認が必要です。',time:'1時間前',link:'coreto-kyc-v2.html',unread:true},
@@ -259,6 +285,7 @@ function renderRules() {
 }
 function saveRules() { document.getElementById('rule-modal').classList.remove('show'); }
 
+window.addEventListener('DOMContentLoaded', function() { loadDynamicNotifs(); });
 window.addEventListener('DOMContentLoaded', () => { CNAV.init('notif'); filterTab('all'); document.getElementById('cnt-all').textContent=NOTIFS.length; document.getElementById('cnt-unread').textContent=NOTIFS.filter(n=>n.unread).length; renderRules(); });
 </script>
 </body>

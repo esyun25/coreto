@@ -675,16 +675,27 @@ function submitReport(){
 function renderHistory(){
   const role = sessionStorage.getItem('coreto_role') || '';
   const isHQ = role === 'hq';
+  const myId = sessionStorage.getItem('coreto_user_id') || '';
 
-  const reports = [
-    {id:'RPT-20260310-001', case:'RENT-0194', client:'田中 優子', type:'賃貸', fee:198000, reward:158400, date:'2026/03/10', ag:'山田 誠（AG-0042）', status:'承認待ち'},
-    {id:'RPT-20260228-003', case:'RENT-0180', client:'高橋 美咲', type:'賃貸', fee:380000, reward:304000, date:'2026/02/28', ag:'山田 誠（AG-0042）', status:'承認済み'},
-    {id:'RPT-20260215-001', case:'UTL-0071',  client:'田中 優子', type:'光通信', fee:180000, reward:144000, date:'2026/02/15', ag:'大橋 幸代（AG-0055）', status:'承認済み'},
-    {id:'RPT-20260110-002', case:'RENT-0162', client:'渡辺 誠',   type:'賃貸', fee:420000, reward:336000, date:'2026/01/10', ag:'大橋 幸代（AG-0055）', status:'承認済み'},
-    {id:'RPT-20251220-001', case:'RENT-0145', client:'伊藤 花子', type:'賃貸', fee:510000, reward:408000, date:'2025/12/20', ag:'山田 誠（AG-0042）', status:'修正依頼'},
+  // #5修正: localStorageから成約報告を読み込み（ハードコードを廃止）
+  let stored = [];
+  try { stored = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]'); } catch(e) {}
+
+  // デモデータ（localStorageが空の場合のフォールバック）
+  const demo = [
+    {id:'RPT-20260310-001', case:'RENT-0194', client:'田中 優子', type:'賃貸', fee:198000, reward:158400, date:'2026/03/10', ag:'山田 誠（AG-0042）', agId:'AG-0042', status:'承認待ち'},
+    {id:'RPT-20260228-003', case:'RENT-0180', client:'高橋 美咲', type:'賃貸', fee:380000, reward:304000, date:'2026/02/28', ag:'山田 誠（AG-0042）', agId:'AG-0042', status:'承認済み'},
+    {id:'RPT-20260215-001', case:'UTL-0071',  client:'田中 優子', type:'光通信', fee:180000, reward:144000, date:'2026/02/15', ag:'大橋 幸代（AG-0055）', agId:'AG-0055', status:'承認済み'},
+    {id:'RPT-20260110-002', case:'RENT-0162', client:'渡辺 誠',   type:'賃貸', fee:420000, reward:336000, date:'2026/01/10', ag:'大橋 幸代（AG-0055）', agId:'AG-0055', status:'承認済み'},
+    {id:'RPT-20251220-001', case:'RENT-0145', client:'伊藤 花子', type:'賃貸', fee:510000, reward:408000, date:'2025/12/20', ag:'山田 誠（AG-0042）', agId:'AG-0042', status:'修正依頼'},
   ];
+  // storedにdemoを末尾にマージ（重複除外）
+  const storedIds = new Set(stored.map(r=>r.id));
+  const reports = [...stored, ...demo.filter(r=>!storedIds.has(r.id))];
 
-  const rows = reports.map(r => {
+  // AG権限の場合は自分の成約報告のみ表示
+  const filtered = isHQ ? reports : reports.filter(r => !r.agId || r.agId === myId || !myId);
+  const rows = filtered.map(r => {
     const stCls  = r.status === '承認済み' ? 'b-em'
                  : r.status === '承認待ち' ? 'b-am'
                  : 'b-rd';

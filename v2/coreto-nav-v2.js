@@ -565,15 +565,11 @@ function init(activeKey) {
 function session() {
   const role = sessionStorage.getItem('coreto_role') || null;
   if (!role) return null;
-  const nameMap = {
-    hq:        { name:'田中 誠一（統括）',       type:'hq',        userId:'HQ-001'  },
-    re_ag:     { name:'山田 誠（RE-AG）',        type:'re_ag',     userId:'AG-0042' },
-    hr_ag:     { name:'鈴木 花子（HR-AG）',      type:'hr_ag',     userId:'AG-0088' },
-    hikari_ag: { name:'山田 光太（光通信AG）',   type:'hikari_ag', userId:'AG-0103' },
-    pt:        { name:'PT ユーザー',             type:'pt',        userId:'PT-0001' },
-    intern:    { name:'インターン',               type:'intern',    userId:'INT-001' },
-  };
-  return nameMap[role] || { name:role, type:role, userId:role };
+  // #2修正: sessionStorageから実際のログインユーザー情報を取得
+  const name   = sessionStorage.getItem('coreto_name')    || role;
+  const userId = sessionStorage.getItem('coreto_user_id') || role;
+  const rank   = sessionStorage.getItem('coreto_rank')    || null;
+  return { name, type: role, userId, rank };
 }
 
 return { init, openSettings, closeSettings, logout, session };

@@ -757,7 +757,16 @@ function openLesson(id) {
 function completeLesson() {
   if (!_currentLessonId) return;
   lessonProgress[_currentLessonId] = !lessonProgress[_currentLessonId];
-  showToast(lessonProgress[_currentLessonId] ? `✅ 「${LESSONS.find(l=>l.id===_currentLessonId)?.title}」を完了しました！` : '完了を取り消しました');
+  // #14修正: localStorageに完了状態を保存（training-mgmt-v2が参照できるよう）
+  try {
+    var uid = sessionStorage.getItem('coreto_user_id') || 'UNKNOWN';
+    var stored = JSON.parse(localStorage.getItem('CORETO_TRAINING_COMPLETE') || '{}');
+    if (!stored[uid]) stored[uid] = {};
+    stored[uid][_currentLessonId] = lessonProgress[_currentLessonId];
+    stored[uid]._updatedAt = new Date().toISOString();
+    localStorage.setItem('CORETO_TRAINING_COMPLETE', JSON.stringify(stored));
+  } catch(e) {}
+  showToast(lessonProgress[_currentLessonId] ? '✅ 「' + (LESSONS.find(function(l){return l.id===_currentLessonId;})||{}).title + '」を完了しました！' : '完了を取り消しました');
   closeDrawer();
   renderSection();
 }

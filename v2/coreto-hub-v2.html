@@ -2521,7 +2521,7 @@ function renderREAgDash() {
     <div class="kpi-grid">
       <div class="kpi-card gold">
         <div class="kpi-label">今月報酬（見込み）</div>
-        <div class="kpi-value">¥280,000</div>
+        <div class="kpi-value" id="kpi-month-reward">¥280,000</div>
         <div class="kpi-sub"><span class="kpi-delta up">↑¥42,000</span> 先月比</div>
       </div>
       <div class="kpi-card emerald">
@@ -2653,6 +2653,17 @@ function renderREAgDash() {
     const utilEl = document.getElementById('dash-rate-util');
     if (reEl)   reEl.textContent   = (RATE_RE[rank]   || 70)  + '%';
     if (utilEl) utilEl.textContent = (RATE_UTIL[rank] || 87)  + '%';
+    // #15修正: 今月報酬KPIをCORETO_REPORTSから計算して動的表示
+    try {
+      var myId = sessionStorage.getItem('coreto_user_id') || '';
+      var reports = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]');
+      var myReports = myId ? reports.filter(function(r){ return !r.agId || r.agId === myId; }) : [];
+      if (myReports.length) {
+        var monthTotal = myReports.reduce(function(s,r){ return s+(r.reward||0); }, 0);
+        var el = document.getElementById('kpi-month-reward');
+        if (el) el.textContent = '¥' + monthTotal.toLocaleString();
+      }
+    } catch(e) {}
   })();
 }
 
@@ -3044,7 +3055,14 @@ window.addEventListener('DOMContentLoaded', () => {
   // sessionStorageにroleがあれば自動ログイン（外部ページから戻った場合）
   const savedRole = sessionStorage.getItem('coreto_role');
   if (savedRole) {
-    loginAs(savedRole);
+    // #1修正: sessionStorageの全ユーザー情報を使って復元（再認証不要のセッション継続）
+    const savedUser = {
+      role:   savedRole,
+      name:   sessionStorage.getItem('coreto_name')    || '',
+      userId: sessionStorage.getItem('coreto_user_id') || '',
+      rank:   sessionStorage.getItem('coreto_rank')    || null,
+    };
+    loginAs(savedRole, savedUser);
     // ハッシュがあればそのページを開く
     const hash = window.location.hash.replace('#','');
     if (hash) {
@@ -3055,6 +3073,25 @@ window.addEventListener('DOMContentLoaded', () => {
       }, 50);
     }
   }
+
+  // #29修正: HQダッシュのKPIをlocalStorageから動的更新
+  setTimeout(function() {
+    try {
+      var reports = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]');
+      var tasks   = JSON.parse(localStorage.getItem('CORETO_HQ_TASKS') || '[]');
+      var pending = reports.filter(function(r){return r.status==='承認待ち';}).length;
+      var monthly = reports.filter(function(r){
+        var now = new Date(); var d = new Date(r.date||'');
+        return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth();
+      }).length;
+      // 承認待ち件数バッジを更新
+      var kpiEl = document.querySelector('[data-kpi="pending"]');
+      if (kpiEl && pending > 0) kpiEl.textContent = pending + '件 承認待ち';
+      // 今月成約件数を更新
+      var cntEl = document.querySelector('[data-kpi="monthly-contracts"]');
+      if (cntEl && monthly > 0) cntEl.textContent = monthly + '件';
+    } catch(e) {}
+  }, 300);
 
   // 残-13: HQタスク一覧にlocalStorageの動的タスクを追加
   setTimeout(() => {

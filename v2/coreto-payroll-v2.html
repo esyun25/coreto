@@ -373,6 +373,23 @@ function showToast(msg,type){ const t=document.getElementById('ip-toast'); t.tex
 
 // ── データ ──
 const RANKS = { bronze:{rate:.65,fee:980}, silver:{rate:.675,fee:490}, gold:{rate:.70,fee:0}, platinum:{rate:.75,fee:0} };
+// #4修正: localStorageから成約報告を読み込んでPAYOUTSに変換
+function buildPayoutsFromLS() {
+  try {
+    const reports = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]');
+    if (!reports.length) return null;
+    // AG別にグループ化
+    const byAg = {};
+    reports.forEach(r => {
+      const agId = r.agId || r.ag || 'AG-0042';
+      if (!byAg[agId]) byAg[agId] = { id:agId, name:r.ag||agId, rank:'gold', type:'RE', cases:[], instantPay:0, legal:false };
+      const sysBase = r.type==='賃貸' ? 20000 : 0;
+      byAg[agId].cases.push({ fee:r.fee||0, sys:sysBase, pt:false });
+    });
+    return Object.values(byAg);
+  } catch(e) { return null; }
+}
+
 const PAYOUTS = [
   {id:'AG-0042',name:'中村 陽子',rank:'platinum',type:'RE',cases:[{fee:900000,sys:20000,pt:false},{fee:450000,sys:20000,pt:true}],instantPay:0,legal:true},
   {id:'AG-0038',name:'田中 誠一',rank:'gold',type:'RE',cases:[{fee:335000,sys:20000,pt:false},{fee:198000,sys:10000,pt:false}],instantPay:80000,legal:true},
@@ -453,6 +470,9 @@ function exportCSV() {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
+  // #4修正: localStorageからPAYOUTSを動的上書き
+  const dynamicPayouts = buildPayoutsFromLS();
+  if (dynamicPayouts && dynamicPayouts.length) PAYOUTS.splice(0, 0, ...dynamicPayouts.filter(d => !PAYOUTS.find(p=>p.id===d.id)));
   // 🟠-13: 月次選択を現在月に自動設定
   const now = new Date();
   const thisMonth = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
