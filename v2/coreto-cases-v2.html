@@ -665,6 +665,45 @@ window.addEventListener('DOMContentLoaded', function() {
     const targetTab = document.querySelector(`.tab[onclick*="'${typeParam}'"]`);
     if (targetTab) switchTab(typeParam, targetTab);
   }
+
+  // UX-1: localStorageのパイプラインステータスをカンバンカードのバッジに反映
+  const STEP_LABELS = [
+    {label:'リード中', cls:'badge-nt'},
+    {label:'内見調整', cls:'badge-sk'},
+    {label:'申込中',   cls:'badge-sk'},
+    {label:'書類審査', cls:'badge-am'},
+    {label:'IT重説待', cls:'badge-vt'},
+    {label:'入金待ち', cls:'badge-rd'},
+    {label:'送金待ち', cls:'badge-rd'},
+    {label:'鍵渡し待', cls:'badge-am'},
+    {label:'成約済み', cls:'badge-em'},
+  ];
+  document.querySelectorAll('.kanban-card, .case-row').forEach(card => {
+    const idEl = card.querySelector('.kc-id, .case-id');
+    if (!idEl) return;
+    const caseId = idEl.textContent.trim();
+    if (!caseId.match(/^RENT-|^SALE-|^HR-/)) return;
+    try {
+      const saved = localStorage.getItem('CORETO_CASE_STATUS_' + caseId);
+      if (!saved) return;
+      const status = JSON.parse(saved);
+      const step = Math.min(status.step || 0, STEP_LABELS.length - 1);
+      const sl = STEP_LABELS[step];
+      // カンバンカードのフラグバッジを更新
+      const flag = card.querySelector('.kc-flag, .badge-am, .badge-sk, .badge-rd, .badge-vt, .badge-em');
+      if (flag) {
+        flag.className = 'kc-flag badge ' + sl.cls;
+        flag.style.fontSize = '9px';
+        flag.textContent = sl.label;
+      }
+      // リスト行のステータスバッジを更新
+      const statusBadge = card.querySelector('.badge-am, .badge-sk, .badge-rd');
+      if (statusBadge && card.classList.contains('case-row')) {
+        statusBadge.className = 'badge ' + sl.cls;
+        statusBadge.textContent = sl.label;
+      }
+    } catch(e) {}
+  });
 });
 </script>
 <div class="mob-overlay" onclick="toggleSb()"></div>

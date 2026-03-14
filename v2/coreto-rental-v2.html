@@ -736,17 +736,92 @@ function closeCase() {
 }
 
 
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// UX-1: 案件パイプライン動的管理
+// localStorage: CORETO_CASE_STATUS_{caseId}
+// ステップ定義: 0=リード 1=内見 2=申込 3=書類審査 4=IT重説
+//               5=入金確認 6=管理会社送金 7=鍵渡し 8=成約
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const PIPELINE_STEPS = [
+  { label:'リード',     badge:null },
+  { label:'内見',       badge:'内見調整中' },
+  { label:'申込',       badge:'申込中' },
+  { label:'書類審査',   badge:'書類審査中' },
+  { label:'IT重説',     badge:'IT重説待ち' },
+  { label:'入金確認',   badge:'入金待ち' },
+  { label:'管理会社\n送金', badge:'送金待ち' },
+  { label:'鍵渡し',     badge:'鍵渡し待ち' },
+  { label:'成約',       badge:'成約済み' },
+];
+
+const BADGE_CLASS = {
+  '内見調整中':'badge-sk', '申込中':'badge-sk', '書類審査中':'badge-am',
+  'IT重説待ち':'badge-vt', '入金待ち':'badge-rd', '送金待ち':'badge-rd',
+  '鍵渡し待ち':'badge-am', '成約済み':'badge-em',
+};
+
+function getCaseStatus(caseId) {
+  try {
+    const saved = localStorage.getItem('CORETO_CASE_STATUS_' + caseId);
+    if (saved) return JSON.parse(saved);
+  } catch(e) {}
+  return { step: 3, updatedAt: null }; // デフォルト: 書類審査中
+}
+
+function saveCaseStatus(caseId, step) {
+  try {
+    localStorage.setItem('CORETO_CASE_STATUS_' + caseId, JSON.stringify({
+      step,
+      updatedAt: new Date().toLocaleString('ja-JP').slice(0,-3),
+    }));
+  } catch(e) {}
+}
+
+function renderPipeline(caseId, currentStep) {
+  const stepsEl = document.querySelector('.pipeline');
+  if (!stepsEl) return;
+
+  stepsEl.innerHTML = PIPELINE_STEPS.map((s, i) => {
+    const state = i < currentStep ? 'done' : i === currentStep ? 'active' : 'todo';
+    const num   = i < currentStep ? '✓' : (i === PIPELINE_STEPS.length - 1 ? '✦' : String(i + 1));
+    return `<div class="step ${state}">
+      <div class="step-connector ${i < currentStep ? 'done' : ''}"></div>
+      <div class="step-circle ${state}">${num}</div>
+      <div class="step-label">${s.label}</div>
+    </div>`;
+  }).join('');
+
+  // パイプラインタイトルのバッジ更新
+  const titleEl = document.querySelector('.pipeline-title');
+  if (titleEl) {
+    const stepInfo = PIPELINE_STEPS[currentStep];
+    const badgeText = stepInfo ? stepInfo.badge : '進行中';
+    const badgeCls  = BADGE_CLASS[badgeText] || 'badge-am';
+    // caseIdを保持しつつバッジだけ更新
+    const caseIdSpan = `📍 ステップ進捗 — ${caseId} `;
+    titleEl.innerHTML = caseIdSpan +
+      `<span class="badge ${badgeCls}" style="margin-left:4px">${badgeText || '進行中'}</span>`;
+  }
+}
+
+// ステップを1つ進める（クイックアクションから呼び出し可能）
+function advancePipelineStep(caseId) {
+  const current = getCaseStatus(caseId);
+  const next = Math.min(current.step + 1, PIPELINE_STEPS.length - 1);
+  saveCaseStatus(caseId, next);
+  renderPipeline(caseId, next);
+  const label = PIPELINE_STEPS[next]?.label || '';
+  showToast('✅ ステップを「' + label + '」に更新しました', 'em');
+}
+
 // C-22: 鍵渡し完了処理
 function completeKeyHandover() {
   if (!confirm('鍵渡しが完了しましたか？\n\n成約報告ページに進んでください。')) return;
-  // パイプラインのステップを「鍵渡し済み」に更新
-  const step8 = document.querySelectorAll('.step')[7];
-  if (step8) {
-    step8.classList.remove('todo');
-    step8.classList.add('done');
-    const circle = step8.querySelector('.step-circle');
-    if (circle) circle.textContent = '✓';
-  }
+  // UX-1: パイプラインをステップ7（鍵渡し）に更新してlocalStorageに保存
+  const p = new URLSearchParams(location.search);
+  const caseId = p.get('caseId') || 'RENT-0194';
+  saveCaseStatus(caseId, 7);
+  renderPipeline(caseId, 7);
   // タイムラインに記録
   const timeline = document.querySelector('.side-card [style*="flex-direction:column"]');
   if (timeline) {
@@ -758,7 +833,7 @@ function completeKeyHandover() {
       '<div style="font-size:10px;color:var(--faint);font-family:Outfit,sans-serif;font-variant-numeric:tabular-nums">' + now + '</div></div>';
     timeline.insertBefore(item, timeline.firstChild);
   }
-  showToast('✅ 鍵渡し完了を記録しました。成約報告へお進みください。', 'em');
+  showToast('✅ 鍵渡し完了を記録しました（ステップ7更新）。成約報告へお進みください。', 'em');
 }
 
 function showToast(msg, type) {
@@ -778,40 +853,54 @@ function showToast(msg, type) {
 window.addEventListener('DOMContentLoaded', function() {
   CNAV.init('cases');
 
-  // Fix 9: URLパラメータから案件情報を読み込んでページを動的更新
+  // Fix 9 + UX-1: URLパラメータから案件情報を読み込んでページを動的更新
   const p = new URLSearchParams(location.search);
-  const caseId     = p.get('caseId');
+  const caseId     = p.get('caseId') || 'RENT-0194'; // デフォルトはデモ案件
   const clientName = p.get('clientName') ? decodeURIComponent(p.get('clientName')) : null;
   const isNew      = p.get('new') === '1';
 
-  if (caseId || clientName || isNew) {
-    // タイトル・パンくずを更新
-    if (caseId && document.querySelector('.tb-title')) {
-      const displayName = clientName || caseId;
+  // タイトル・パンくずを更新
+  if (caseId !== 'RENT-0194' || clientName) {
+    const displayName = clientName || caseId;
+    if (document.querySelector('.tb-title'))
       document.querySelector('.tb-title').textContent = displayName + ' 様 ― 案件詳細';
+    if (document.querySelector('.tb-crumb'))
       document.querySelector('.tb-crumb').innerHTML =
         '<a href="coreto-cases-v2.html">案件一覧</a> › ' +
-        (caseId ? '<span class="mono">' + caseId + '</span> › ' : '') +
-        '<span>賃貸案件詳細</span>';
-    }
-    if (caseId) {
-      // パイプラインのケースIDを更新
-      document.querySelectorAll('.pipeline-title').forEach(el => {
-        el.innerHTML = el.innerHTML.replace('RENT-0194', caseId);
-      });
-    }
+        '<span class="mono">' + caseId + '</span> › <span>賃貸案件詳細</span>';
     if (clientName) {
-      // クライアント名を更新
       document.querySelectorAll('.ic-val').forEach(el => {
         if (el.textContent === '田中 優子 様') el.textContent = clientName + ' 様';
       });
     }
-    // CRMから来た場合はクライアント詳細ボタンのリンクにclientIdを付与
-    const clientId = p.get('clientId');
-    if (clientId) {
-      document.querySelectorAll('[onclick*="coreto-crm-detail"]').forEach(el => {
-        el.setAttribute('onclick', `window.location.href='coreto-crm-detail-v2.html?id=${clientId}'`);
-      });
+  }
+
+  // CRMから来た場合はクライアント詳細ボタンのリンクにclientIdを付与
+  const clientId = p.get('clientId');
+  if (clientId) {
+    document.querySelectorAll('[onclick*="coreto-crm-detail"]').forEach(el => {
+      el.setAttribute('onclick', "window.location.href='coreto-crm-detail-v2.html?id=" + clientId + "'");
+    });
+  }
+
+  // UX-1: localStorageからステータスを取得してパイプラインを動的レンダリング
+  const caseStatus = getCaseStatus(caseId);
+  renderPipeline(caseId, caseStatus.step);
+
+  // ステップ進捗ボタンをクイックアクションに追加（該当ステップが未完了の場合）
+  if (caseStatus.step < PIPELINE_STEPS.length - 1) {
+    const actionList = document.querySelector('.action-list');
+    if (actionList) {
+      const nextLabel = PIPELINE_STEPS[caseStatus.step + 1]?.label || '次のステップ';
+      const advBtn = document.createElement('button');
+      advBtn.className = 'action-btn';
+      advBtn.style.cssText = 'background:var(--navy);color:var(--gold);border:none';
+      advBtn.textContent = '▶ 「' + nextLabel + '」に進む';
+      advBtn.onclick = function() { advancePipelineStep(caseId); };
+      // 成約報告ボタンの前に挿入
+      const contractBtn = actionList.querySelector('[onclick*="contract-report"]');
+      if (contractBtn) actionList.insertBefore(advBtn, contractBtn);
+      else actionList.appendChild(advBtn);
     }
   }
 });
