@@ -609,29 +609,96 @@ function submitReport(){
 }
 
 function renderHistory(){
+  const role = sessionStorage.getItem('coreto_role') || '';
+  const isHQ = role === 'hq';
+
   const reports = [
-    {id:'RPT-20260228-003', case:'RENT-0180', client:'高橋 美咲', type:'賃貸', fee:380000, reward:304000, date:'2026/02/28', status:'承認済み'},
-    {id:'RPT-20260215-001', case:'UTL-0071',  client:'田中 優子', type:'光通信', fee:180000, reward:144000, date:'2026/02/15', status:'承認済み'},
-    {id:'RPT-20260110-002', case:'RENT-0162', client:'渡辺 誠',   type:'賃貸', fee:420000, reward:336000, date:'2026/01/10', status:'承認済み'},
-    {id:'RPT-20251220-001', case:'RENT-0145', client:'伊藤 花子', type:'賃貸', fee:510000, reward:408000, date:'2025/12/20', status:'承認済み'},
+    {id:'RPT-20260310-001', case:'RENT-0194', client:'田中 優子', type:'賃貸', fee:198000, reward:158400, date:'2026/03/10', ag:'山田 誠（AG-0042）', status:'承認待ち'},
+    {id:'RPT-20260228-003', case:'RENT-0180', client:'高橋 美咲', type:'賃貸', fee:380000, reward:304000, date:'2026/02/28', ag:'山田 誠（AG-0042）', status:'承認済み'},
+    {id:'RPT-20260215-001', case:'UTL-0071',  client:'田中 優子', type:'光通信', fee:180000, reward:144000, date:'2026/02/15', ag:'大橋 幸代（AG-0055）', status:'承認済み'},
+    {id:'RPT-20260110-002', case:'RENT-0162', client:'渡辺 誠',   type:'賃貸', fee:420000, reward:336000, date:'2026/01/10', ag:'大橋 幸代（AG-0055）', status:'承認済み'},
+    {id:'RPT-20251220-001', case:'RENT-0145', client:'伊藤 花子', type:'賃貸', fee:510000, reward:408000, date:'2025/12/20', ag:'山田 誠（AG-0042）', status:'修正依頼'},
   ];
-  const rows = reports.map(r=>`
-    <tr>
+
+  const rows = reports.map(r => {
+    const stCls  = r.status === '承認済み' ? 'b-em'
+                 : r.status === '承認待ち' ? 'b-am'
+                 : 'b-rd';
+    // 🟠-6: HQのみ承認・修正依頼ボタンを表示
+    const actionCell = isHQ && r.status === '承認待ち'
+      ? `<td style="display:flex;gap:6px;padding:10px 12px">
+           <button class="btn btn-sm" style="background:var(--em-bg);color:var(--em);border:1px solid rgba(5,150,105,.2)"
+             onclick="approveReport('${r.id}','${r.client}','${r.ag}',${r.reward},this)">✅ 承認</button>
+           <button class="btn btn-sm" style="background:var(--rd-bg);color:var(--rd);border:1px solid rgba(220,38,38,.2)"
+             onclick="requestFix('${r.id}','${r.ag}',this)">✏️ 修正依頼</button>
+         </td>`
+      : `<td style="padding:10px 12px"><span class="badge ${stCls}">${r.status}</span></td>`;
+    return `<tr>
       <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--faint)">${r.id}</td>
       <td style="font-family:'DM Mono',monospace;font-size:11px">${r.case}</td>
       <td style="font-size:12px">${r.client}</td>
+      <td style="font-size:11px;color:var(--muted)">${isHQ ? r.ag : ''}</td>
       <td><span class="badge ${r.type==='賃貸'?'b-em':r.type==='光通信'?'b-sk':'b-vt'}">${r.type}</span></td>
       <td style="text-align:right;font-size:12px">¥${r.fee.toLocaleString()}</td>
       <td style="text-align:right;font-size:12px;font-weight:700;color:var(--ink)">¥${r.reward.toLocaleString()}</td>
       <td style="font-size:11px;color:var(--muted)">${r.date}</td>
-      <td><span class="badge b-em">${r.status}</span></td>
-    </tr>`).join('');
+      ${actionCell}
+    </tr>`;
+  }).join('');
+
+  const thAg    = isHQ ? '<th>担当AG</th>' : '';
+  const thAct   = isHQ ? '<th>操作</th>' : '<th>状態</th>';
+
   document.getElementById('pg').innerHTML = `
   <div class="card">
-    <div class="card-head"><div class="card-title">成約報告履歴</div></div>
-    <table class="tbl"><thead><tr><th>報告ID</th><th>案件ID</th><th>クライアント</th><th>種別</th><th style="text-align:right">仲介料</th><th style="text-align:right">報酬額</th><th>成約日</th><th>状態</th></tr></thead>
+    <div class="card-head">
+      <div class="card-title">成約報告${isHQ ? '一覧（HQ承認）' : '履歴'}</div>
+      ${isHQ ? '<span style="font-size:11px;color:var(--am)">⚠️ 「承認待ち」の報告を確認してください</span>' : ''}
+    </div>
+    <table class="tbl"><thead><tr>
+      <th>報告ID</th><th>案件ID</th><th>クライアント</th>${thAg}<th>種別</th>
+      <th style="text-align:right">仲介料</th><th style="text-align:right">報酬額</th>
+      <th>成約日</th>${thAct}
+    </tr></thead>
     <tbody>${rows}</tbody></table>
   </div>`;
+}
+
+function approveReport(id, client, ag, reward, btn) {
+  if (!confirm(`報告ID: ${id}\nクライアント: ${client}\n報酬額: ¥${reward.toLocaleString()}\n\nこの成約報告を承認しますか？\n承認後、報酬が確定されAGにLINEで通知されます。`)) return;
+  const cell = btn.closest('td');
+  cell.innerHTML = '<span class="badge b-em">承認済み</span>';
+  showToast(`✅ ${id} を承認しました。${ag} にLINEで通知します。`, 'em');
+  // LINE通知（設定後有効化）
+  const LINE_TOKEN = (window.LINE_CONFIG && window.LINE_CONFIG.AG_CHANNEL_TOKEN) || '';
+  const msg = `【COREBLDG】成約報告が承認されました\n報告ID: ${id}\n報酬額: ¥${reward.toLocaleString()}\n月次締めで振り込まれます。`;
+  if (LINE_TOKEN) {
+    fetch('https://api.line.me/v2/bot/message/broadcast', {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+LINE_TOKEN},
+      body: JSON.stringify({ messages:[{ type:'text', text: msg }] })
+    }).catch(e => console.error(e));
+  } else {
+    console.log('[LINE通知 — 設定待ち]', msg);
+  }
+}
+
+function requestFix(id, ag, btn) {
+  const reason = prompt(`報告ID: ${id}\n\n修正依頼の理由を入力してください:`);
+  if (!reason) return;
+  const cell = btn.closest('td');
+  cell.innerHTML = '<span class="badge b-rd">修正依頼</span>';
+  showToast(`✏️ ${id} に修正依頼を送信しました。${ag} にLINEで通知します。`, 'am');
+  console.log('[修正依頼 LINE通知 — 設定待ち]', `報告ID: ${id} / 理由: ${reason} / 担当: ${ag}`);
+}
+
+function showToast(msg, type) {
+  const colors = {em:['#ECFDF5','#059669','rgba(5,150,105,.2)'],am:['#FFFBEB','#D97706','rgba(217,119,6,.2)'],rd:['#FEF2F2','#DC2626','rgba(220,38,38,.2)']};
+  const [bg,cl,bc] = colors[type] || colors.em;
+  const t = document.createElement('div');
+  t.style.cssText = `position:fixed;bottom:24px;right:24px;z-index:9999;padding:11px 18px;border-radius:9px;font-size:13px;font-weight:600;font-family:'Outfit',sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.12);transition:opacity .4s;background:${bg};color:${cl};border:1px solid ${bc}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(()=>{ t.style.opacity='0'; setTimeout(()=>t.remove(),400); }, 3500);
 }
 
 window.addEventListener('DOMContentLoaded', ()=>{
