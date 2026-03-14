@@ -196,18 +196,16 @@ const NAV = {
         { icon:'🏘️', label:'担当案件一覧',         href:'coreto-cases-v2.html',           key:'cases',          badge:'4'            },
         { icon:'👥', label:'クライアント管理',     href:'coreto-crm-v2.html',             key:'crm'             },
         { icon:'🏠', label:'内見管理',             href:'coreto-showing-v2.html',         key:'showing'         },
-        { icon:'📋', label:'書類送付管理',     href:'coreto-screening-v2.html',       key:'screening'       },
-        { icon:'🔑', label:'IT重説を予約する',   href:'coreto-itsetsu-booking-v2.html', key:'itsetsu_booking' },
+        { icon:'📋', label:'書類送付管理',         href:'coreto-screening-v2.html',       key:'screening'       },
+        { icon:'🔑', label:'IT重説を予約する',     href:'coreto-itsetsu-booking-v2.html', key:'itsetsu_booking' },
         { icon:'🏦', label:'初期費用明細チェック', href:'coreto-invoice-check-v2.html',   key:'invoice_check'   },
-
+        { icon:'🏆', label:'賃貸 成約報告',        href:'coreto-contract-report-v2.html', key:'contract_report' },
+        { icon:'🏢', label:'売買・三為 成約報告',  href:'coreto-sale-report-v2.html',     key:'sale_report'     },
       ],
     },
     {
-      // 入金・支払：入金確認と即時払い申請
-      section: '成約・入金',
+      section: '入金・支払い',
       items: [
-        { icon:'🏆', label:'賃貸 成約報告',        href:'coreto-contract-report-v2.html', key:'contract_report' },
-        { icon:'🏢', label:'売買・三為 成約報告',  href:'coreto-sale-report-v2.html',     key:'sale_report'     },
         { icon:'💰', label:'入金確認',             href:'coreto-remittance-v2.html',      key:'remit'           },
         { icon:'⚡', label:'即時払い申請',          href:'coreto-instant-pay-v2.html',     key:'instant_pay'     },
       ],
@@ -263,12 +261,12 @@ const NAV = {
       items: [
         { icon:'👤', label:'担当案件一覧',         href:'coreto-hr-matching-v2.html',     key:'hr_matching',     badge:'3', badgeColor:'amber' },
         { icon:'👥', label:'クライアント管理',     href:'coreto-crm-v2.html',             key:'crm'             },
+        { icon:'🏆', label:'成約報告（人材）',      href:'coreto-contract-report-v2.html?biz=hr', key:'contract_report' },
       ],
     },
     {
-      section: '成約・入金',
+      section: '入金・支払い',
       items: [
-        { icon:'🏆', label:'成約報告（人材）',      href:'coreto-contract-report-v2.html?biz=hr', key:'contract_report' },
         { icon:'⚡', label:'即時払い申請',          href:'coreto-instant-pay-v2.html',     key:'instant_pay'     },
       ],
     },
@@ -322,12 +320,12 @@ const NAV = {
       items: [
         { icon:'⚡', label:'担当案件一覧',         href:'coreto-utility-v2.html',         key:'utility',         badge:'3', badgeColor:'gold' },
         { icon:'👥', label:'クライアント管理',     href:'coreto-crm-v2.html',             key:'crm'             },
+        { icon:'🏆', label:'成約報告（光通信）',    href:'coreto-contract-report-v2.html?biz=util', key:'contract_report' },
       ],
     },
     {
-      section: '成約・入金',
+      section: '入金・支払い',
       items: [
-        { icon:'🏆', label:'成約報告（光通信）',    href:'coreto-contract-report-v2.html?biz=util', key:'contract_report' },
         { icon:'⚡', label:'即時払い申請',          href:'coreto-instant-pay-v2.html',     key:'instant_pay'     },
       ],
     },
