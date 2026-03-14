@@ -617,7 +617,28 @@ function closeDeal(id) {
   c.status='closed'; c.step=6; c.finalSalary=Number(salary); c.feeRate=Number(rate); c.lastUpdate=today();
   const fee = (Number(salary)*10000*Number(rate)/100).toLocaleString();
   c.timeline.push({date:today(), step:'内定承諾', note:`承諾完了。入社年収 ${salary}万円。成功報酬: ¥${fee}（${rate}%）`, type:'em'});
-  closeModal('modal-detail'); render(); toast(`成約しました！ 成功報酬 ¥${fee}`);
+
+  // D-04: 在籍確認リマインダーを30日後・60日後・90日後で自動登録
+  try {
+    const reminders = JSON.parse(localStorage.getItem('CORETO_HR_REMINDERS') || '[]');
+    const joinDate = new Date();
+    [30, 60, 90].forEach(days => {
+      const due = new Date(joinDate.getTime() + days * 86400000);
+      reminders.push({
+        id: 'RMD-' + Date.now() + '-' + days,
+        caseId: c.id,
+        name: c.name,
+        type: 'retention_check',
+        label: '在籍確認（' + days + '日）',
+        dueDate: due.toLocaleDateString('ja-JP'),
+        dueDateISO: due.toISOString().slice(0, 10),
+        status: 'pending',
+      });
+    });
+    localStorage.setItem('CORETO_HR_REMINDERS', JSON.stringify(reminders));
+  } catch(e) {}
+
+  closeModal('modal-detail'); render(); toast('成約しました！ 成功報酬 ¥' + fee + '（在籍確認リマインダーを登録しました）');
 }
 
 function cancelCase(id) {

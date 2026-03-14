@@ -528,6 +528,7 @@ html, body { background:#FFFFFF !important; }
           <button class="action-btn secondary" onclick="window.location.href='coreto-screening-v2.html?caseId=RENT-0194'">📋 書類送付管理</button>
           <button class="action-btn secondary" onclick="window.location.href='coreto-crm-detail-v2.html'">👤 クライアント詳細</button>
           <button id="ai-notify-btn" class="action-btn" style="background:rgba(200,169,81,.15);color:var(--gold);border:1px solid rgba(200,169,81,.3)" onclick="generateAINotification('RENT-0194','田中優子様','港区三田3丁目','山田誠')">✨ AI通知文生成</button>
+          <button class="action-btn" style="background:var(--em-bg);color:var(--em);border:1px solid rgba(5,150,105,.2)" onclick="completeKeyHandover()">🔑 鍵渡し完了を記録</button>
           <button class="action-btn warn" onclick="window.location.href='coreto-contract-report-v2.html'">🏆 成約を報告</button>
           <!-- 🔴-3: 見送り・クローズ -->
           <button class="action-btn" style="background:var(--rd-bg);color:var(--rd);border:1px solid rgba(220,38,38,.2)" onclick="closeCase()">✕ 案件を見送り・クローズ</button>
@@ -733,6 +734,43 @@ function closeCase() {
   window.location.href = 'coreto-cases-v2.html';
 }
 
+
+// C-22: 鍵渡し完了処理
+function completeKeyHandover() {
+  if (!confirm('鍵渡しが完了しましたか？\n\n成約報告ページに進んでください。')) return;
+  // パイプラインのステップを「鍵渡し済み」に更新
+  const step8 = document.querySelectorAll('.step')[7];
+  if (step8) {
+    step8.classList.remove('todo');
+    step8.classList.add('done');
+    const circle = step8.querySelector('.step-circle');
+    if (circle) circle.textContent = '✓';
+  }
+  // タイムラインに記録
+  const timeline = document.querySelector('.side-card [style*="flex-direction:column"]');
+  if (timeline) {
+    const now = new Date().toLocaleString('ja-JP', {month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'});
+    const item = document.createElement('div');
+    item.style.cssText = 'display:flex;gap:10px;align-items:flex-start';
+    item.innerHTML = '<div style="width:7px;height:7px;border-radius:50%;background:var(--em);flex-shrink:0;margin-top:4px"></div>' +
+      '<div><div style="font-size:11px;font-weight:600;color:var(--ink)">🔑 鍵渡し完了</div>' +
+      '<div style="font-size:10px;color:var(--faint);font-family:Outfit,sans-serif;font-variant-numeric:tabular-nums">' + now + '</div></div>';
+    timeline.insertBefore(item, timeline.firstChild);
+  }
+  showToast('✅ 鍵渡し完了を記録しました。成約報告へお進みください。', 'em');
+}
+
+function showToast(msg, type) {
+  if (document.querySelector('[data-toast]')) return;
+  var colors = {em:['#ECFDF5','#059669','rgba(5,150,105,.2)'],am:['#FFFBEB','#D97706','rgba(217,119,6,.2)']};
+  var c = colors[type]||colors.em;
+  var t = document.createElement('div');
+  t.setAttribute('data-toast','1');
+  t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999;padding:11px 18px;border-radius:9px;font-size:13px;font-weight:600;font-family:Outfit,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.12);transition:opacity .4s;background:'+c[0]+';color:'+c[1]+';border:1px solid '+c[2];
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(function(){t.style.opacity='0';setTimeout(function(){t.remove();},400);},3200);
+}
 </script>
 <script src="coreto-nav-v2.js"></script>
 <script>
