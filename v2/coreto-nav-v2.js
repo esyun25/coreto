@@ -204,8 +204,10 @@ const NAV = {
     },
     {
       // 入金・支払：入金確認と即時払い申請
-      section: '入金・支払い',
+      section: '成約・入金',
       items: [
+        { icon:'🏆', label:'賃貸 成約報告',        href:'coreto-contract-report-v2.html', key:'contract_report' },
+        { icon:'🏢', label:'売買・三為 成約報告',  href:'coreto-sale-report-v2.html',     key:'sale_report'     },
         { icon:'💰', label:'入金確認',             href:'coreto-remittance-v2.html',      key:'remit'           },
         { icon:'⚡', label:'即時払い申請',          href:'coreto-instant-pay-v2.html',     key:'instant_pay'     },
       ],
@@ -264,8 +266,9 @@ const NAV = {
       ],
     },
     {
-      section: '入金・支払い',
+      section: '成約・入金',
       items: [
+        { icon:'🏆', label:'成約報告（人材）',      href:'coreto-contract-report-v2.html?biz=hr', key:'contract_report' },
         { icon:'⚡', label:'即時払い申請',          href:'coreto-instant-pay-v2.html',     key:'instant_pay'     },
       ],
     },
@@ -322,8 +325,9 @@ const NAV = {
       ],
     },
     {
-      section: '入金・支払い',
+      section: '成約・入金',
       items: [
+        { icon:'🏆', label:'成約報告（光通信）',    href:'coreto-contract-report-v2.html?biz=util', key:'contract_report' },
         { icon:'⚡', label:'即時払い申請',          href:'coreto-instant-pay-v2.html',     key:'instant_pay'     },
       ],
     },
