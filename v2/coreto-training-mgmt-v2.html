@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>研修コンテンツ管理 — COREBLDG</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0D1A2D;--navy-m:#152238;--navy-l:#1E3252;
+  --gold:#C8A951;--gold-dim:rgba(200,169,81,.15);
+  --cream:#FFFFFF;--cream2:#F8F9FA;
+  --ink:#202124;--muted:#5F6368;--faint:#80868B;
+  --em:#059669;--em-bg:#ECFDF5;--am:#D97706;--am-bg:#FFFBEB;
+  --rd:#DC2626;--rd-bg:#FEF2F2;--sk:#0284C7;--sk-bg:#F0F9FF;
+  --vt:#7C3AED;--vt-bg:#F5F3FF;
+  --bd:#E8EAED;--bd2:#DADCE0;
+  --sw:240px;--r:10px;--r-sm:7px;
+  --sh:0 1px 2px rgba(60,64,67,.1),0 1px 3px rgba(60,64,67,.06);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Outfit',sans-serif;background:var(--cream2)}
+.shell{display:flex;height:100vh}
+.sb{width:var(--sw);background:var(--navy);display:flex;flex-direction:column;flex-shrink:0;position:relative}
+.sb::after{content:'';position:absolute;top:0;right:0;width:1px;height:100%;background:linear-gradient(180deg,rgba(200,169,81,.25),rgba(200,169,81,.06) 50%,transparent)}
+.sb-head{padding:24px 20px 18px;border-bottom:1px solid rgba(255,255,255,.06)}
+.sb-logo{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;letter-spacing:5px;color:var(--gold)}
+.sb-ver{font-size:9px;letter-spacing:2px;color:rgba(200,169,81,.3);font-family:'DM Mono',monospace;margin-top:2px}
+.sb-user{margin:14px 14px 10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:9px 11px;display:flex;align-items:center;gap:9px}
+.sb-av{width:28px;height:28px;border-radius:50%;background:var(--gold-dim);border:1px solid rgba(200,169,81,.25);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--gold);flex-shrink:0}
+.sb-nav{flex:1;overflow-y:auto;padding:6px 10px}
+.sb-nav::-webkit-scrollbar{width:3px}
+.sb-nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:2px}
+.content{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:58px;background:var(--cream);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 24px;gap:14px;flex-shrink:0;box-shadow:var(--sh)}
+.tb-title{font-size:16px;font-weight:600;color:var(--ink)}
+.tb-crumb{font-size:11px;color:var(--faint);margin-top:1px}
+.tb-crumb a{color:var(--muted);text-decoration:none}.tb-crumb a:hover{color:var(--am)}
+.tb-actions{margin-left:auto;display:flex;gap:9px;align-items:center}
+.btn{padding:7px 16px;border-radius:var(--r-sm);font-size:12px;font-weight:600;cursor:pointer;transition:.15s;font-family:'Outfit',sans-serif;border:none;letter-spacing:.3px}
+.btn-primary{background:var(--navy);color:var(--gold)}.btn-primary:hover{background:var(--navy-l)}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--bd)}.btn-ghost:hover{background:var(--cream);color:var(--ink)}
+.btn-em{background:var(--em-bg);color:var(--em);border:1px solid rgba(5,150,105,.2)}.btn-em:hover{background:#D1FAE5}
+.btn-rd{background:var(--rd-bg);color:var(--rd);border:1px solid rgba(220,38,38,.2)}
+.btn-sm{padding:4px 11px;font-size:11px}
+.page{flex:1;overflow-y:auto;padding:24px}
+.page::-webkit-scrollbar{width:5px}
+.page::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:3px}
+
+/* タブ */
+.tab-bar{background:var(--cream);border-bottom:1px solid var(--bd);display:flex;padding:0 24px;flex-shrink:0}
+.tab{padding:12px 18px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:.15s;white-space:nowrap}
+.tab:hover{color:var(--ink)}.tab.active{color:var(--navy);border-bottom-color:var(--gold)}
+.tab-count{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;border-radius:9px;background:var(--bd);color:var(--muted);font-size:10px;font-weight:700;margin-left:6px;padding:0 5px}
+.tab.active .tab-count{background:var(--gold-dim);color:var(--am)}
+
+/* KPI */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+.kpi{background:var(--cream);border:1px solid var(--bd);border-radius:var(--r);padding:14px 16px;box-shadow:var(--sh)}
+.kpi-label{font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.kpi-val{font-size:26px;font-weight:300;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1}
+.kpi-sub{font-size:10px;color:var(--faint);margin-top:4px}
+
+/* フィルター */
+.filter-bar{background:var(--cream);border:1px solid var(--bd);border-radius:var(--r);padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;box-shadow:var(--sh)}
+.search-wrap{position:relative;flex:1;min-width:180px}
+.search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--faint);font-size:13px;pointer-events:none}
+.search-wrap input{width:100%;padding:8px 12px 8px 32px;background:var(--cream2);border:1.5px solid var(--bd);border-radius:var(--r-sm);font-size:13px;color:var(--ink);font-family:'Outfit',sans-serif;outline:none;transition:.15s}
+.search-wrap input:focus{border-color:var(--gold);background:var(--cream)}
+.fsel{padding:8px 12px;background:var(--cream2);border:1.5px solid var(--bd);border-radius:var(--r-sm);font-size:12px;color:var(--ink);font-family:'Outfit',sans-serif;outline:none;cursor:pointer}
+.filter-count{font-size:12px;color:var(--muted);margin-left:auto;font-variant-numeric:tabular-nums}
+
+/* コンテンツカード */
+.content-grid{display:flex;flex-direction:column;gap:10px}
+.content-card{background:var(--cream);border:1px solid var(--bd);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden;transition:.15s}
+.content-card:hover{border-color:rgba(200,169,81,.3)}
+.content-card.draft{opacity:.7;border-style:dashed}
+.cc-head{padding:14px 18px;display:flex;align-items:center;gap:14px}
+.cc-icon{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.cc-main{flex:1;min-width:0}
+.cc-title{font-size:14px;font-weight:600;color:var(--ink);margin-bottom:3px;display:flex;align-items:center;gap:8px}
+.cc-meta{font-size:11px;color:var(--muted);display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.cc-actions{display:flex;gap:7px;align-items:center;flex-shrink:0}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;white-space:nowrap}
+.b-em{background:var(--em-bg);color:var(--em)}.b-am{background:var(--am-bg);color:var(--am)}
+.b-rd{background:var(--rd-bg);color:var(--rd)}.b-nt{background:var(--cream2);color:var(--muted);border:1px solid var(--bd)}
+.b-sk{background:var(--sk-bg);color:var(--sk)}.b-vt{background:var(--vt-bg);color:var(--vt)}
+.b-gold{background:var(--gold-dim);color:var(--am)}
+.mono{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)}
+
+/* 進捗バー */
+.prog-wrap{display:flex;align-items:center;gap:8px;min-width:140px}
+.prog-bar{flex:1;height:5px;background:var(--bd2);border-radius:3px;overflow:hidden}
+.prog-fill{height:100%;border-radius:3px;background:var(--em);transition:width .4s}
+.prog-lbl{font-size:10px;font-weight:700;font-family:'DM Mono',monospace;white-space:nowrap;color:var(--muted)}
+
+/* カテゴリヘッダー */
+.cat-header{display:flex;align-items:center;gap:10px;padding:6px 2px;margin-bottom:8px;margin-top:4px}
+.cat-header:first-child{margin-top:0}
+.cat-title{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
+.cat-line{flex:1;height:1px;background:var(--bd)}
+.cat-count{font-size:10px;color:var(--faint);font-family:'DM Mono',monospace}
+
+/* 受講状況テーブル */
+.prog-table{width:100%;border-collapse:collapse}
+.prog-table th{padding:9px 14px;text-align:left;font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);background:var(--cream2);border-bottom:1px solid var(--bd);font-family:'DM Mono',monospace}
+.prog-table td{padding:10px 14px;border-bottom:1px solid var(--bd);font-size:12px;color:var(--ink);vertical-align:middle}
+.prog-table tr:last-child td{border-bottom:none}
+.prog-table tr:hover td{background:rgba(200,169,81,.03)}
+.prog-mini{height:6px;background:var(--bd2);border-radius:3px;overflow:hidden;min-width:80px}
+.prog-mini-fill{height:100%;border-radius:3px;transition:width .4s}
+
+/* モーダル */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9998;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(2px)}
+.modal-overlay.open{display:flex}
+.modal{background:var(--cream);border-radius:14px;width:100%;max-width:600px;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.22)}
+.modal-head{padding:18px 22px;border-bottom:1px solid var(--bd);background:var(--navy);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.modal-title{font-family:'Cormorant Garamond',serif;font-size:16px;font-weight:600;letter-spacing:2px;color:var(--gold)}
+.modal-close{background:rgba(255,255,255,.1);border:none;width:28px;height:28px;border-radius:50%;color:rgba(255,255,255,.7);font-size:16px;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center}
+.modal-body{padding:22px;overflow-y:auto;flex:1}
+.modal-foot{padding:14px 22px;border-top:1px solid var(--bd);display:flex;gap:8px;justify-content:flex-end;flex-shrink:0}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:11px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.field input,.field select,.field textarea{width:100%;padding:9px 12px;background:var(--cream2);border:1.5px solid var(--bd);border-radius:var(--r-sm);font-size:13px;color:var(--ink);font-family:'Outfit',sans-serif;outline:none;transition:.15s}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--gold);background:var(--cream)}
+.field textarea{resize:vertical;min-height:80px;line-height:1.6}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field-note{font-size:10px;color:var(--faint);margin-top:4px}
+
+/* チェックボックスグループ */
+.check-group{display:flex;flex-wrap:wrap;gap:8px}
+.check-chip{display:flex;align-items:center;gap:6px;padding:6px 12px;border:1.5px solid var(--bd);border-radius:20px;cursor:pointer;font-size:12px;color:var(--muted);transition:.13s;background:var(--cream);user-select:none}
+.check-chip:hover{border-color:var(--gold);color:var(--ink)}
+.check-chip.selected{border-color:var(--navy);background:var(--navy);color:var(--cream)}
+.check-chip input{display:none}
+
+/* トグルスイッチ */
+.toggle-wrap{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--cream2);border-radius:var(--r-sm);cursor:pointer}
+.toggle-label{font-size:13px;color:var(--ink);flex:1}
+.toggle{width:40px;height:22px;border-radius:11px;background:var(--bd2);position:relative;transition:.2s;flex-shrink:0;cursor:pointer}
+.toggle.on{background:var(--em)}
+.toggle::after{content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.toggle.on::after{left:21px}
+
+/* 空状態 */
+.empty{padding:48px 24px;text-align:center;color:var(--faint)}
+.empty-icon{font-size:36px;margin-bottom:10px}
+.empty-text{font-size:13px}
+</style>
+</head>
+<body>
+<script>
+(function(){
+  var _role = sessionStorage.getItem('coreto_role') || '';
+  var _allowed = ["hq"];
+  if (_allowed.length && !_allowed.includes(_role)) {
+    location.replace('coreto-hub-v2.html?unauthorized=1');
+  }
+})();
+</script>
+
+<div class="shell">
+<nav class="sb">
+  <div class="sb-head">
+    <div class="sb-logo">CORE<br>BLDG</div>
+    <div class="sb-ver">v2.0 — CORETO</div>
+  </div>
+  <div class="sb-user">
+    <div class="sb-av" id="sb-av">--</div>
+    <div>
+      <div id="sb-name" style="font-size:11px;font-weight:600;color:rgba(255,255,255,.8)">...</div>
+      <div id="sb-role" style="font-size:9px;color:rgba(255,255,255,.3)">...</div>
+    </div>
+  </div>
+  <div class="sb-nav" id="sb-nav"></div>
+</nav>
+
+<div class="content">
+  <div class="topbar">
+    <div>
+      <div class="tb-title">研修コンテンツ管理</div>
+      <div class="tb-crumb"><a href="coreto-hub-v2.html">COREBLDG</a> › <span>研修コンテンツ管理</span></div>
+    </div>
+    <div class="tb-actions">
+      <button class="btn btn-ghost" onclick="switchTab('progress')">📊 受講状況</button>
+      <button class="btn btn-primary" onclick="openAddModal()">＋ コンテンツを追加</button>
+    </div>
+  </div>
+
+  <!-- タブ -->
+  <div class="tab-bar">
+    <div class="tab active" id="tab-contents" onclick="switchTab('contents')">コンテンツ一覧<span class="tab-count" id="cnt-all">—</span></div>
+    <div class="tab" id="tab-progress" onclick="switchTab('progress')">受講状況<span class="tab-count" id="cnt-ag">—</span></div>
+  </div>
+
+  <!-- ═══ コンテンツ一覧タブ ═══ -->
+  <div class="page" id="view-contents">
+    <!-- KPI -->
+    <div class="kpi-row">
+      <div class="kpi">
+        <div class="kpi-label">公開中コンテンツ</div>
+        <div class="kpi-val" id="kpi-pub" style="color:var(--em)">—</div>
+        <div class="kpi-sub">全AG・PT閲覧可</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">必読コンテンツ</div>
+        <div class="kpi-val" id="kpi-req">—</div>
+        <div class="kpi-sub">未読者にアラート</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">下書き</div>
+        <div class="kpi-val" id="kpi-draft" style="color:var(--am)">—</div>
+        <div class="kpi-sub">未公開</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">平均完了率</div>
+        <div class="kpi-val" id="kpi-rate" style="color:var(--sk)">—</div>
+        <div class="kpi-sub">全AG対象必読のみ</div>
+      </div>
+    </div>
+
+    <!-- フィルター -->
+    <div class="filter-bar">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="search-input" placeholder="タイトル・内容で検索" oninput="renderContents()">
+      </div>
+      <select class="fsel" id="f-cat" onchange="renderContents()">
+        <option value="">すべてのカテゴリ</option>
+        <option value="common">共通</option>
+        <option value="re">不動産（RE）</option>
+        <option value="hr">人材（HR）</option>
+        <option value="util">光通信</option>
+        <option value="compliance">コンプライアンス</option>
+        <option value="system">システム操作</option>
+      </select>
+      <select class="fsel" id="f-status" onchange="renderContents()">
+        <option value="">すべての状態</option>
+        <option value="published">公開中</option>
+        <option value="draft">下書き</option>
+      </select>
+      <select class="fsel" id="f-type" onchange="renderContents()">
+        <option value="">すべての種別</option>
+        <option value="doc">📄 テキスト</option>
+        <option value="video">🎬 動画</option>
+        <option value="pdf">📋 PDF</option>
+        <option value="quiz">📝 テスト</option>
+      </select>
+      <span class="filter-count" id="filter-count">—</span>
+    </div>
+
+    <!-- コンテンツリスト -->
+    <div class="content-grid" id="content-list">
+      <div class="empty"><div class="empty-icon">📚</div><div class="empty-text">読み込み中...</div></div>
+    </div>
+  </div>
+
+  <!-- ═══ 受講状況タブ ═══ -->
+  <div class="page" id="view-progress" style="display:none">
+    <div class="filter-bar">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="ag-search" placeholder="AG名・IDで検索" oninput="renderProgress()">
+      </div>
+      <select class="fsel" id="f-role" onchange="renderProgress()">
+        <option value="">すべてのロール</option>
+        <option value="re_ag">不動産AG</option>
+        <option value="hr_ag">人材AG</option>
+        <option value="hikari_ag">光通信AG</option>
+        <option value="pt">パートナー</option>
+        <option value="intern">インターン</option>
+      </select>
+      <select class="fsel" id="f-completion" onchange="renderProgress()">
+        <option value="">すべての完了状態</option>
+        <option value="complete">完了</option>
+        <option value="incomplete">未完了</option>
+        <option value="zero">未受講</option>
+      </select>
+      <span class="filter-count" id="ag-count">—</span>
+    </div>
+    <div style="background:var(--cream);border:1px solid var(--bd);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden">
+      <table class="prog-table">
+        <thead>
+          <tr>
+            <th>名前 / ID</th>
+            <th>ロール</th>
+            <th>登録日</th>
+            <th style="min-width:160px">必読完了率</th>
+            <th style="text-align:center">完了</th>
+            <th style="text-align:center">未読</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="ag-list">
+          <tr><td colspan="7" style="text-align:center;padding:24px;color:var(--faint)">読み込み中...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div><!-- /.content -->
+</div><!-- /.shell -->
+
+<!-- ═══ コンテンツ追加/編集モーダル ═══ -->
+<div class="modal-overlay" id="add-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title" id="modal-title-text">コンテンツを追加</div>
+      <button class="modal-close" onclick="closeAddModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-id">
+      <div class="field-row">
+        <div class="field">
+          <label>種別 <span style="color:var(--rd)">*</span></label>
+          <select id="f-content-type">
+            <option value="doc">📄 テキスト</option>
+            <option value="video">🎬 動画URL</option>
+            <option value="pdf">📋 PDF</option>
+            <option value="quiz">📝 テスト</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>カテゴリ <span style="color:var(--rd)">*</span></label>
+          <select id="f-content-cat">
+            <option value="common">共通（全AG/PT必須）</option>
+            <option value="re">不動産（RE）</option>
+            <option value="hr">人材（HR）</option>
+            <option value="util">光通信</option>
+            <option value="compliance">コンプライアンス</option>
+            <option value="system">システム操作</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>タイトル <span style="color:var(--rd)">*</span></label>
+        <input type="text" id="f-content-title" placeholder="例: 賃貸仲介フロー 完全ガイド">
+      </div>
+      <div class="field">
+        <label>サブタイトル・説明</label>
+        <input type="text" id="f-content-sub" placeholder="例: 初回連絡から鍵渡しまでの全ステップ">
+      </div>
+      <div class="field" id="url-field" style="display:none">
+        <label>動画URL</label>
+        <input type="url" id="f-content-url" placeholder="https://youtube.com/...">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>読了目安（分）</label>
+          <input type="number" id="f-content-min" placeholder="10" min="1">
+        </div>
+        <div class="field">
+          <label>表示順</label>
+          <input type="number" id="f-content-order" placeholder="1" min="1">
+        </div>
+      </div>
+      <div class="field">
+        <label>対象ロール <span style="color:var(--rd)">*</span></label>
+        <div class="check-group" id="role-chips">
+          <label class="check-chip" onclick="toggleChip(this)"><input type="checkbox" value="re">🏘️ 不動産AG</label>
+          <label class="check-chip" onclick="toggleChip(this)"><input type="checkbox" value="hr">👤 人材AG</label>
+          <label class="check-chip" onclick="toggleChip(this)"><input type="checkbox" value="util">⚡ 光通信AG</label>
+          <label class="check-chip" onclick="toggleChip(this)"><input type="checkbox" value="pt">🤝 パートナー</label>
+          <label class="check-chip" onclick="toggleChip(this)"><input type="checkbox" value="intern">🎓 インターン</label>
+        </div>
+      </div>
+      <div class="field">
+        <div class="toggle-wrap" onclick="toggleSwitch('req-toggle')">
+          <div>
+            <div class="toggle-label">必読コンテンツとして設定</div>
+            <div style="font-size:10px;color:var(--faint);margin-top:2px">未読のAGに対してダッシュボードでアラートを表示します</div>
+          </div>
+          <div class="toggle" id="req-toggle"></div>
+        </div>
+      </div>
+      <div class="field">
+        <div class="toggle-wrap" onclick="toggleSwitch('pub-toggle')">
+          <div>
+            <div class="toggle-label">公開する</div>
+            <div style="font-size:10px;color:var(--faint);margin-top:2px">オフにすると下書きとして保存されます</div>
+          </div>
+          <div class="toggle on" id="pub-toggle"></div>
+        </div>
+      </div>
+      <div class="field">
+        <label>本文（テキスト / Markdown可）</label>
+        <textarea id="f-content-body" rows="6" placeholder="## 見出し&#10;本文を入力..."></textarea>
+        <div class="field-note">動画・PDFの場合は補足説明を記載してください</div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeAddModal()">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveContent()">保存する</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══ データ ═════════════════════════════════════════════
+let CONTENTS = [
+  { id:'c01', type:'doc',   cat:'common',     title:'CORETO 報酬規程とランク制度',         sub:'報酬率・ランクアップ条件・ポイント計算',           roles:['re','hr','util','pt'],    required:true,  status:'published', readMin:5,  order:1,  completedRate:82 },
+  { id:'c02', type:'doc',   cat:'common',     title:'業務委託契約書の重要事項',            sub:'禁止事項・秘密保持・違約金条項の解説',             roles:['re','hr','util'],         required:true,  status:'published', readMin:8,  order:2,  completedRate:74 },
+  { id:'c03', type:'doc',   cat:'re',         title:'賃貸仲介フロー 完全ガイド',           sub:'初回連絡から鍵渡しまでの全ステップ',               roles:['re'],                     required:true,  status:'published', readMin:15, order:3,  completedRate:91 },
+  { id:'c04', type:'doc',   cat:'re',         title:'書類審査と入居審査の突破術',          sub:'審査のしくみと対策・CORETO書類チェックリスト',     roles:['re'],                     required:false, status:'published', readMin:10, order:4,  completedRate:68 },
+  { id:'c05', type:'video', cat:'system',     title:'COREBLDGシステム操作チュートリアル', sub:'案件登録から成約報告まで一通り操作する',           roles:['re','hr','util','pt'],    required:true,  status:'published', readMin:20, order:5,  completedRate:55 },
+  { id:'c06', type:'doc',   cat:'hr',         title:'人材紹介フロー 完全ガイド',           sub:'求人受付から入社後フォローまで',                   roles:['hr'],                     required:true,  status:'published', readMin:12, order:6,  completedRate:88 },
+  { id:'c07', type:'doc',   cat:'util',       title:'光通信エージェント業務マニュアル',    sub:'開通フロー・NG物件・コミッション計算',             roles:['util','re','hr'],         required:true,  status:'published', readMin:10, order:7,  completedRate:71 },
+  { id:'c08', type:'quiz',  cat:'compliance', title:'個人情報保護・コンプライアンステスト','sub':'宅建業法・個人情報保護法の基礎知識確認',          roles:['re','hr','util'],         required:true,  status:'published', readMin:15, order:8,  completedRate:60 },
+  { id:'c09', type:'pdf',   cat:'system',     title:'COREBLDG ユーザーマニュアル v2',     sub:'全機能の詳細説明書（PDF）',                       roles:['re','hr','util','pt'],    required:false, status:'published', readMin:30, order:9,  completedRate:42 },
+  { id:'c10', type:'doc',   cat:'re',         title:'三為（さんため）取引入門',            sub:'仕組み・メリット・CORETO経由での組成方法',         roles:['re'],                     required:false, status:'draft',     readMin:8,  order:10, completedRate:0  },
+  { id:'c11', type:'video', cat:'common',     title:'新入AGのための初月ロードマップ',      sub:'入会後30日間でやるべきことを動画で解説',           roles:['re','hr','util'],         required:true,  status:'draft',     readMin:12, order:11, completedRate:0  },
+];
+
+let AG_LIST = [
+  { id:'AG-0042', name:'山田 誠',   role:'re_ag',     joined:'2025/10/01', completed:7, total:8, lastSeen:'2日前'   },
+  { id:'AG-0088', name:'鈴木 花子', role:'hr_ag',     joined:'2025/11/15', completed:5, total:6, lastSeen:'本日'     },
+  { id:'AG-0055', name:'井上 誠',   role:'re_ag',     joined:'2025/09/01', completed:8, total:8, lastSeen:'3日前'   },
+  { id:'AG-0103', name:'山田 光太', role:'hikari_ag', joined:'2026/01/10', completed:3, total:5, lastSeen:'1週間前'  },
+  { id:'AG-0112', name:'中村 梓',   role:'hr_ag',     joined:'2026/02/01', completed:2, total:6, lastSeen:'昨日'     },
+  { id:'PT-0015', name:'佐藤 健一', role:'pt',        joined:'2025/12/01', completed:3, total:4, lastSeen:'5日前'   },
+  { id:'INT-007', name:'渡辺 大輝', role:'intern',    joined:'2026/03/01', completed:1, total:3, lastSeen:'本日'     },
+];
+
+const CAT_META = {
+  common:     { label:'共通',           icon:'📜', color:'var(--am)',  bg:'var(--am-bg)' },
+  re:         { label:'不動産（RE）',   icon:'🏘️', color:'var(--sk)', bg:'var(--sk-bg)' },
+  hr:         { label:'人材（HR）',     icon:'👤', color:'var(--vt)', bg:'var(--vt-bg)' },
+  util:       { label:'光通信',         icon:'⚡', color:'var(--gold)',bg:'var(--gold-dim)' },
+  compliance: { label:'コンプライアンス',icon:'🛡️', color:'var(--rd)', bg:'var(--rd-bg)' },
+  system:     { label:'システム操作',   icon:'💻', color:'var(--em)', bg:'var(--em-bg)' },
+};
+
+const TYPE_META = {
+  doc:   { icon:'📄', label:'テキスト' },
+  video: { icon:'🎬', label:'動画'     },
+  pdf:   { icon:'📋', label:'PDF'      },
+  quiz:  { icon:'📝', label:'テスト'   },
+};
+
+const ROLE_META = {
+  re_ag:     { label:'不動産AG', cls:'b-sk'  },
+  hr_ag:     { label:'人材AG',   cls:'b-vt'  },
+  hikari_ag: { label:'光通信AG', cls:'b-gold'},
+  pt:        { label:'PT',       cls:'b-nt'  },
+  intern:    { label:'インターン',cls:'b-am'  },
+};
+
+// ══ タブ切替 ═══════════════════════════════════════════
+function switchTab(t) {
+  ['contents','progress'].forEach(id => {
+    document.getElementById('view-'+id).style.display = id===t ? '' : 'none';
+    document.getElementById('tab-'+id).classList.toggle('active', id===t);
+  });
+  if (t === 'contents') renderContents();
+  else                   renderProgress();
+}
+
+// ══ コンテンツ一覧 ═════════════════════════════════════
+function renderContents() {
+  const q   = (document.getElementById('search-input')?.value||'').toLowerCase();
+  const cat = document.getElementById('f-cat')?.value||'';
+  const st  = document.getElementById('f-status')?.value||'';
+  const tp  = document.getElementById('f-type')?.value||'';
+
+  const filtered = CONTENTS.filter(c =>
+    (!q   || c.title.toLowerCase().includes(q) || c.sub.toLowerCase().includes(q)) &&
+    (!cat || c.cat === cat) &&
+    (!st  || c.status === st) &&
+    (!tp  || c.type === tp)
+  ).sort((a,b) => a.order - b.order);
+
+  document.getElementById('filter-count').textContent = filtered.length + '件';
+
+  // KPI
+  const pub  = CONTENTS.filter(c => c.status==='published').length;
+  const req  = CONTENTS.filter(c => c.required && c.status==='published').length;
+  const drf  = CONTENTS.filter(c => c.status==='draft').length;
+  const reqPublished = CONTENTS.filter(c => c.required && c.status==='published');
+  const avgRate = reqPublished.length ? Math.round(reqPublished.reduce((s,c)=>s+c.completedRate,0)/reqPublished.length) : 0;
+  document.getElementById('kpi-pub').textContent   = pub;
+  document.getElementById('kpi-req').textContent   = req;
+  document.getElementById('kpi-draft').textContent = drf;
+  document.getElementById('kpi-rate').textContent  = avgRate + '%';
+  document.getElementById('cnt-all').textContent   = CONTENTS.length;
+
+  const el = document.getElementById('content-list');
+  if (!filtered.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">条件に合うコンテンツが見つかりません</div></div>';
+    return;
+  }
+
+  // カテゴリごとにグループ化
+  const groups = {};
+  filtered.forEach(c => {
+    if (!groups[c.cat]) groups[c.cat] = [];
+    groups[c.cat].push(c);
+  });
+
+  el.innerHTML = Object.entries(groups).map(([cat, items]) => {
+    const cm = CAT_META[cat] || {label:cat, icon:'📁'};
+    const catHtml = `
+      <div class="cat-header">
+        <span style="font-size:14px">${cm.icon}</span>
+        <div class="cat-title">${cm.label}</div>
+        <div class="cat-count">${items.length}件</div>
+        <div class="cat-line"></div>
+      </div>`;
+    const cardsHtml = items.map(c => renderCard(c)).join('');
+    return catHtml + cardsHtml;
+  }).join('');
+}
+
+function renderCard(c) {
+  const cm   = CAT_META[c.cat] || {icon:'📁', color:'var(--muted)', bg:'var(--cream2)'};
+  const tm   = TYPE_META[c.type] || {icon:'📄', label:c.type};
+  const pct  = c.completedRate;
+  const pctColor = pct>=80 ? 'var(--em)' : pct>=50 ? 'var(--am)' : 'var(--rd)';
+  const rolesHtml = c.roles.map(r => {
+    const rMap = {re:'不動産AG', hr:'人材AG', util:'光通信AG', pt:'PT', intern:'インターン'};
+    return `<span class="badge b-nt" style="font-size:9px">${rMap[r]||r}</span>`;
+  }).join('');
+
+  return `<div class="content-card${c.status==='draft'?' draft':''}">
+    <div class="cc-head">
+      <div class="cc-icon" style="background:${cm.bg};color:${cm.color};font-size:22px">${cm.icon}</div>
+      <div class="cc-main">
+        <div class="cc-title">
+          ${c.title}
+          ${c.required ? '<span class="badge b-rd" style="font-size:9px">必読</span>' : ''}
+          ${c.status==='draft' ? '<span class="badge b-am" style="font-size:9px">下書き</span>' : ''}
+        </div>
+        <div class="cc-meta">
+          <span>${tm.icon} ${tm.label}</span>
+          <span class="mono">⏱ ${c.readMin}分</span>
+          <span>${rolesHtml}</span>
+          ${c.status==='published' ? `
+          <div class="prog-wrap" style="min-width:120px">
+            <div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${pctColor}"></div></div>
+            <span class="prog-lbl" style="color:${pctColor}">${pct}%</span>
+          </div>` : ''}
+        </div>
+      </div>
+      <div class="cc-actions">
+        <button class="btn btn-ghost btn-sm" onclick="togglePublish('${c.id}')">
+          ${c.status==='published' ? '非公開にする' : '公開する'}
+        </button>
+        <button class="btn btn-ghost btn-sm" onclick="openEditModal('${c.id}')">✏️ 編集</button>
+        <button class="btn btn-rd btn-sm" onclick="deleteContent('${c.id}')">削除</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ══ 受講状況 ══════════════════════════════════════════
+function renderProgress() {
+  const q    = (document.getElementById('ag-search')?.value||'').toLowerCase();
+  const role = document.getElementById('f-role')?.value||'';
+  const comp = document.getElementById('f-completion')?.value||'';
+
+  const filtered = AG_LIST.filter(a => {
+    const matchQ    = !q    || a.name.includes(q) || a.id.toLowerCase().includes(q);
+    const matchRole = !role || a.role === role;
+    const pct       = a.total ? Math.round(a.completed/a.total*100) : 0;
+    const matchComp = !comp
+      || (comp==='complete'   && pct===100)
+      || (comp==='incomplete' && pct>0 && pct<100)
+      || (comp==='zero'       && pct===0);
+    return matchQ && matchRole && matchComp;
+  });
+
+  document.getElementById('ag-count').textContent = filtered.length + '人';
+  document.getElementById('cnt-ag').textContent   = AG_LIST.length;
+
+  const tbody = document.getElementById('ag-list');
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--faint)">該当者なし</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(a => {
+    const pct  = a.total ? Math.round(a.completed/a.total*100) : 0;
+    const pctColor = pct===100 ? 'var(--em)' : pct>=50 ? 'var(--am)' : 'var(--rd)';
+    const rm   = ROLE_META[a.role] || {label:a.role, cls:'b-nt'};
+    const unread = a.total - a.completed;
+    return `<tr>
+      <td>
+        <div style="font-weight:600;font-size:13px">${a.name}</div>
+        <div class="mono">${a.id}</div>
+      </td>
+      <td><span class="badge ${rm.cls}">${rm.label}</span></td>
+      <td style="font-size:11px;color:var(--muted)">${a.joined}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="prog-mini" style="flex:1"><div class="prog-mini-fill" style="width:${pct}%;background:${pctColor}"></div></div>
+          <span style="font-size:11px;font-weight:700;color:${pctColor};font-variant-numeric:tabular-nums;white-space:nowrap">${pct}%（${a.completed}/${a.total}）</span>
+        </div>
+      </td>
+      <td style="text-align:center;font-size:12px;font-weight:700;color:var(--em)">${a.completed}</td>
+      <td style="text-align:center;font-size:12px;font-weight:700;color:${unread>0?'var(--rd)':'var(--em)'}">${unread>0?unread:'—'}</td>
+      <td>
+        ${unread > 0
+          ? `<button class="btn btn-ghost btn-sm" onclick="sendReminder('${a.id}','${a.name}')">📲 催促</button>`
+          : '<span style="font-size:10px;color:var(--em)">✅ 完了</span>'}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ══ 操作 ══════════════════════════════════════════════
+function togglePublish(id) {
+  const c = CONTENTS.find(c => c.id === id);
+  if (!c) return;
+  c.status = c.status === 'published' ? 'draft' : 'published';
+  renderContents();
+  showToast(c.status==='published' ? `✅ 「${c.title}」を公開しました` : `📝 「${c.title}」を下書きに戻しました`, c.status==='published'?'em':'am');
+}
+
+function deleteContent(id) {
+  const c = CONTENTS.find(c => c.id === id);
+  if (!c) return;
+  if (!confirm(`「${c.title}」を削除しますか？\nこの操作は取り消せません。`)) return;
+  CONTENTS = CONTENTS.filter(c => c.id !== id);
+  renderContents();
+  showToast('🗑️ コンテンツを削除しました', 'am');
+}
+
+function sendReminder(agId, agName) {
+  if (!confirm(`${agName} さんに未読研修の受講を促すLINEを送信しますか？`)) return;
+  // LINE通知（設定後有効化）
+  const LINE_TOKEN = (window.LINE_CONFIG && window.LINE_CONFIG.AG_CHANNEL_TOKEN) || '';
+  const msg = `【COREBLDG】研修コンテンツに未読があります。\nCOREBLDGのオンボーディングページからご確認ください。`;
+  if (LINE_TOKEN) {
+    fetch('https://api.line.me/v2/bot/message/push', {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+LINE_TOKEN},
+      body: JSON.stringify({ to: agId, messages:[{type:'text',text:msg}] })
+    }).catch(e => console.error(e));
+  } else {
+    console.log('[LINE催促通知 — 設定待ち]', agId, msg);
+  }
+  showToast(`📲 ${agName} さんにLINEで催促しました`, 'em');
+}
+
+// ══ モーダル ══════════════════════════════════════════
+function openAddModal() {
+  document.getElementById('modal-title-text').textContent = 'コンテンツを追加';
+  document.getElementById('edit-id').value = '';
+  document.getElementById('f-content-type').value  = 'doc';
+  document.getElementById('f-content-cat').value   = 'common';
+  document.getElementById('f-content-title').value = '';
+  document.getElementById('f-content-sub').value   = '';
+  document.getElementById('f-content-url').value   = '';
+  document.getElementById('f-content-min').value   = '';
+  document.getElementById('f-content-order').value = CONTENTS.length + 1;
+  document.getElementById('f-content-body').value  = '';
+  document.getElementById('url-field').style.display = 'none';
+  document.getElementById('req-toggle').classList.remove('on');
+  document.getElementById('pub-toggle').classList.add('on');
+  document.querySelectorAll('.check-chip').forEach(c => c.classList.remove('selected'));
+  document.getElementById('f-content-type').onchange = () => {
+    const v = document.getElementById('f-content-type').value;
+    document.getElementById('url-field').style.display = v==='video' ? '' : 'none';
+  };
+  document.getElementById('add-modal').classList.add('open');
+}
+
+function openEditModal(id) {
+  const c = CONTENTS.find(c => c.id === id);
+  if (!c) return;
+  document.getElementById('modal-title-text').textContent = 'コンテンツを編集';
+  document.getElementById('edit-id').value = c.id;
+  document.getElementById('f-content-type').value  = c.type;
+  document.getElementById('f-content-cat').value   = c.cat;
+  document.getElementById('f-content-title').value = c.title;
+  document.getElementById('f-content-sub').value   = c.sub||'';
+  document.getElementById('f-content-min').value   = c.readMin||'';
+  document.getElementById('f-content-order').value = c.order||'';
+  document.getElementById('f-content-body').value  = c.body||'';
+  document.getElementById('url-field').style.display = c.type==='video' ? '' : 'none';
+  document.getElementById('req-toggle').classList.toggle('on', !!c.required);
+  document.getElementById('pub-toggle').classList.toggle('on', c.status==='published');
+  document.querySelectorAll('.check-chip').forEach(chip => {
+    const v = chip.querySelector('input').value;
+    chip.classList.toggle('selected', c.roles.includes(v));
+  });
+  document.getElementById('f-content-type').onchange = () => {
+    const v = document.getElementById('f-content-type').value;
+    document.getElementById('url-field').style.display = v==='video' ? '' : 'none';
+  };
+  document.getElementById('add-modal').classList.add('open');
+}
+
+function closeAddModal() {
+  document.getElementById('add-modal').classList.remove('open');
+}
+
+function saveContent() {
+  const title = document.getElementById('f-content-title').value.trim();
+  if (!title) { showToast('⚠️ タイトルを入力してください', 'am'); return; }
+  const roles = [...document.querySelectorAll('.check-chip.selected')].map(c => c.querySelector('input').value);
+  if (!roles.length) { showToast('⚠️ 対象ロールを1つ以上選択してください', 'am'); return; }
+
+  const editId = document.getElementById('edit-id').value;
+  const data = {
+    type:     document.getElementById('f-content-type').value,
+    cat:      document.getElementById('f-content-cat').value,
+    title,
+    sub:      document.getElementById('f-content-sub').value.trim(),
+    readMin:  parseInt(document.getElementById('f-content-min').value)||5,
+    order:    parseInt(document.getElementById('f-content-order').value)||99,
+    body:     document.getElementById('f-content-body').value.trim(),
+    roles,
+    required:     document.getElementById('req-toggle').classList.contains('on'),
+    status:       document.getElementById('pub-toggle').classList.contains('on') ? 'published' : 'draft',
+    completedRate: 0,
+  };
+
+  if (editId) {
+    const idx = CONTENTS.findIndex(c => c.id === editId);
+    if (idx !== -1) { CONTENTS[idx] = { ...CONTENTS[idx], ...data }; }
+  } else {
+    CONTENTS.push({ id:'c'+Date.now(), ...data });
+  }
+
+  closeAddModal();
+  renderContents();
+  showToast(`✅ 「${title}」を${editId ? '更新' : '追加'}しました`, 'em');
+}
+
+// ══ UIヘルパー ═════════════════════════════════════════
+function toggleChip(el) {
+  el.classList.toggle('selected');
+}
+
+function toggleSwitch(id) {
+  document.getElementById(id).classList.toggle('on');
+}
+
+function showToast(msg, type) {
+  const colors = {em:['#ECFDF5','#059669','rgba(5,150,105,.2)'],am:['#FFFBEB','#D97706','rgba(217,119,6,.2)'],rd:['#FEF2F2','#DC2626','rgba(220,38,38,.2)']};
+  const [bg,cl,bc] = colors[type] || colors.em;
+  const t = document.createElement('div');
+  t.style.cssText = `position:fixed;bottom:24px;right:24px;z-index:9999;padding:11px 18px;border-radius:9px;font-size:13px;font-weight:600;font-family:'Outfit',sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.12);transition:opacity .4s;background:${bg};color:${cl};border:1px solid ${bc}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(()=>{ t.style.opacity='0'; setTimeout(()=>t.remove(),400); }, 3200);
+}
+
+// ══ 初期化 ════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  CNAV.init('onboard_mgmt');
+  renderContents();
+  // モーダル外クリックで閉じる
+  document.getElementById('add-modal').addEventListener('click', e => {
+    if (e.target === document.getElementById('add-modal')) closeAddModal();
+  });
+});
+</script>
+<script src="coreto-nav-v2.js"></script>
+</body>
+</html>

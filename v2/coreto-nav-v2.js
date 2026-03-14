@@ -172,7 +172,7 @@ const NAV = {
         { icon:'🔐', label:'ID・アカウント管理',   href:'coreto-id-manager-v2.html',      key:'id_manager'      },
         { icon:'🛡️', label:'権限マトリクス',       href:'coreto-admin-rbac-v2.html',      key:'rbac'            },
         { icon:'🏛️', label:'宅建業者登録管理',    href:'coreto-takken-v2.html',          key:'takken'          },
-        { icon:'📚', label:'研修コンテンツ管理',   href:'coreto-onboarding-v2.html',      key:'onboard_mgmt'    },
+        { icon:'📚', label:'研修コンテンツ管理',   href:'coreto-training-mgmt-v2.html',   key:'onboard_mgmt'    },
       ],
     },
   ],
