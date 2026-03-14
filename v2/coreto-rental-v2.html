@@ -495,7 +495,6 @@ html, body { background:#FFFFFF !important; }
               <div class="check-meta">未対応</div>
             </div>
           </div>
-          <button class="btn btn-ghost btn-sm" style="width:100%" onclick="showToast('HQにIT重説割当依頼を送信します', 'em')">📨 HQに宅建士割当を依頼する</button>
         </div>
       </div>
 
@@ -700,29 +699,31 @@ JSONのみ（前置き不要）:
 
 // 🔴-3: 見送り・クローズ処理
 function closeCase() {
-  const reason = prompt(
-    '案件をクローズする理由を選択してください:\n' +
-    '1: 見送り（クライアント都合）\n' +
-    '2: 申込辞退\n' +
-    '3: 審査落ち\n' +
-    '4: 物件成約済み（他業者）\n' +
-    '5: その他\n\n' +
-    '番号を入力してください:'
-  );
-  if (!reason) return;
-  const reasons = {
-    '1':'見送り（クライアント都合）',
-    '2':'申込辞退',
-    '3':'審査落ち',
-    '4':'物件成約済み（他業者）',
-    '5':'その他'
-  };
-  const label = reasons[reason.trim()] || 'その他';
   const _p = new URLSearchParams(location.search);
   const _caseId = _p.get('caseId') || 'RENT-0194';
   const _clientName = _p.get('clientName') ? decodeURIComponent(_p.get('clientName')) : '田中 優子';
   const _agName = sessionStorage.getItem('coreto_name') || '担当AG';
-  if (!confirm('案件 ' + _caseId + '（' + _clientName + ' 様）を\n「' + label + '」としてクローズしますか？\n\nHQに通知が送られます。')) return;
+
+  // prompt()の代替: セレクトボックス付きモーダルで選択
+  const detailHtml =
+    '案件ID: ' + _caseId + '<br>クライアント: ' + _clientName + ' 様<br><br>' +
+    '<select id="close-reason-sel" style="width:100%;padding:8px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:12px;font-family:Outfit,sans-serif;margin-top:4px">' +
+    '<option value="見送り（クライアント都合）">見送り（クライアント都合）</option>' +
+    '<option value="申込辞退">申込辞退</option>' +
+    '<option value="審査落ち">審査落ち</option>' +
+    '<option value="物件成約済み（他業者）">物件成約済み（他業者）</option>' +
+    '<option value="その他">その他</option>' +
+    '</select>';
+
+  coretoConfirm({
+    title: '案件クローズ',
+    message: '案件をクローズする理由を選択してください。',
+    detail: detailHtml,
+    okLabel: 'クローズする',
+    danger: true,
+    onOk: function() {
+      const sel = document.getElementById('close-reason-sel');
+      const label = sel ? sel.value : 'その他';
   const msg = '【COREBLDG】案件クローズ\n案件ID: ' + _caseId + '\nクライアント: ' + _clientName + ' 様\n理由: ' + label + '\n担当: ' + _agName;
   const LINE_TOKEN = (window.LINE_CONFIG && window.LINE_CONFIG.AG_CHANNEL_TOKEN) || '';
   if (LINE_TOKEN) {
@@ -733,8 +734,15 @@ function closeCase() {
   } else {
     console.log('[LINE通知 — 設定待ち]', msg);
   }
-  showToast(`案件をクローズしました（${label}）\nHQに通知を送信しました。`, 'em');
+  showToast('案件をクローズしました（' + label + '）\nHQに通知を送信しました。', 'em');
   window.location.href = 'coreto-cases-v2.html';
+    } // onOk終わり
+  }); // coretoConfirm終わり
+  // モーダル表示後にセレクトを挿入
+  setTimeout(function() {
+    var detail = document.getElementById('coreto-confirm-detail');
+    if (detail) detail.innerHTML = detailHtml || detail.innerHTML;
+  }, 50);
 }
 
 

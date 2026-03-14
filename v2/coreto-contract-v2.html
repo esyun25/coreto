@@ -378,6 +378,17 @@ function signContract() {
   const area = document.getElementById('sig-status-area');
   const now = new Date();
   area.innerHTML = `<div class="sig-stamp" style="border-color:var(--em);color:var(--em)">署名済</div><div class="sig-date" style="color:var(--em);font-weight:700">${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 署名完了</div>`;
+  // 署名をlocalStorageに保存
+  try {
+    var uid = sessionStorage.getItem('coreto_user_id') || '';
+    var sigs = JSON.parse(localStorage.getItem('CORETO_CONTRACT_SIGNED') || '{}');
+    sigs[uid] = { signedAt: new Date().toISOString(), name: sessionStorage.getItem('coreto_name') || '' };
+    localStorage.setItem('CORETO_CONTRACT_SIGNED', JSON.stringify(sigs));
+    // HQタスクにも通知
+    var tasks = JSON.parse(localStorage.getItem('CORETO_HQ_TASKS') || '[]');
+    tasks.unshift({ id:'SIG-'+Date.now(), type:'contract_signed', title:'電子署名完了 — '+(sessionStorage.getItem('coreto_name')||uid), createdAt:new Date().toLocaleDateString('ja-JP') });
+    localStorage.setItem('CORETO_HQ_TASKS', JSON.stringify(tasks));
+  } catch(e) {}
   showToast('✅ 電子署名が完了しました。契約が締結されました。');
 }
 window.addEventListener('DOMContentLoaded', () => {

@@ -128,7 +128,7 @@ const NAV = {
       section: 'CRM・クライアント',
       items: [
         { icon:'👥', label:'クライアント管理',     href:'coreto-crm-v2.html',             key:'crm'             },
-        { icon:'⚠️', label:'早期退職アラート',     href:'coreto-early-quit-v2.html',      key:'early_quit'      },
+        { icon:'⚠️', label:'HR早期退職（返金管理）',href:'coreto-early-quit-v2.html',      key:'early_quit'      },
       ],
     },
     {
@@ -152,6 +152,7 @@ const NAV = {
         { icon:'📨', label:'AG招待・新規登録',     href:'coreto-agent-signup-v2.html',    key:'agent_invite'    },
         { icon:'📨', label:'PT招待・新規登録',     href:'coreto-partner-signup-v2.html',  key:'pt_invite'       },
         { icon:'🎓', label:'インターン管理',       href:'coreto-intern-v2.html',          key:'intern'          },
+        { icon:'📍', label:'訪問記録・エリアマップ', href:'coreto-intern-visit-v2.html',   key:'intern_visit'    },
         { icon:'📉', label:'AG離脱リスク管理',     href:'coreto-agent-retention-v2.html', key:'agent_retention' },
         { icon:'🌐', label:'紹介ネットワーク図',   href:'coreto-network-v2.html',         key:'network'         },
         { icon:'🏢', label:'ユーザー・権限管理',   href:'coreto-user-mgmt-v2.html',       key:'hq_mgmt'         },
@@ -197,6 +198,7 @@ const NAV = {
         { icon:'👥', label:'クライアント管理',     href:'coreto-crm-v2.html',             key:'crm'             },
         { icon:'🏠', label:'内見管理',             href:'coreto-showing-v2.html',         key:'showing'         },
         { icon:'📋', label:'書類送付管理',         href:'coreto-screening-v2.html',       key:'screening'       },
+        { icon:'📷', label:'書類スキャン登録',     href:'coreto-barcode-scan-v2.html',    key:'barcode_scan'    },
         { icon:'🔑', label:'IT重説を予約する',     href:'coreto-itsetsu-booking-v2.html', key:'itsetsu_booking' },
         { icon:'🏦', label:'初期費用明細チェック', href:'coreto-invoice-check-v2.html',   key:'invoice_check'   },
         { icon:'🏆', label:'賃貸 成約報告',        href:'coreto-contract-report-v2.html', key:'contract_report' },
