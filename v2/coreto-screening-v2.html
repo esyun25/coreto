@@ -308,6 +308,32 @@ function updateKPI() {
   document.getElementById('kpi-done').textContent       = done;
 }
 
+// 🟠-12/14: 全書類送付完了時に自動でHQへ通知し、案件ステータス更新を促す
+function checkAllSentAndNotify(caseId) {
+  if (isHQ) return;
+  const c = CASES.find(c => c.id === caseId);
+  if (!c || c.docs.length === 0) return;
+  const allSent = c.docs.every(d => d.sent);
+  if (!allSent || c._notifiedAllSent) return;
+  c._notifiedAllSent = true;
+
+  // トーストで案内
+  showToast('✅ ' + c.name + ' 様の書類が全件送付済みになりました。案件ステータスを次のフェーズへ進めてください。', 'em');
+
+  // HQへLINE通知（設定後有効化）
+  const msg = `【COREBLDG】書類送付完了\n案件ID: ${c.id}\nクライアント: ${c.name} 様\n管理会社: ${c.mgmt}\n全書類の送付が完了しました。次ステップへ進めてください。`;
+  const LINE_TOKEN = (window.LINE_CONFIG && window.LINE_CONFIG.AG_CHANNEL_TOKEN) || '';
+  if (LINE_TOKEN) {
+    fetch('https://api.line.me/v2/bot/message/broadcast', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + LINE_TOKEN },
+      body: JSON.stringify({ messages: [{ type: 'text', text: msg }] })
+    }).catch(e => console.error(e));
+  } else {
+    console.log('[LINE通知 — 設定待ち]', msg);
+  }
+}
+
 // ══ フィルター ════════════════════════════════════════
 function applyFilter() {
   const q  = document.getElementById('search-input').value.toLowerCase();
@@ -477,6 +503,7 @@ function toggleDoc(caseId, docId, field, val) {
   }
   refreshCard(caseId);
   updateKPI();
+  checkAllSentAndNotify(caseId);
 }
 
 function renameDoc(caseId, docId, newName) {
