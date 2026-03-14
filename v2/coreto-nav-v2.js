@@ -545,15 +545,17 @@ function init(activeKey) {
         const isActive = item.key === activeKey;
         const badgeCls = item.badgeColor === 'amber' ? 'amber'
                        : item.badgeColor === 'gold'  ? 'gold' : '';
-        return `<a href="${item.href}" class="cnav-item${isActive ? ' active' : ''}">
+        return `<a href="${item.href}" class="cnav-item${isActive ? ' active' : ''}" data-key="${item.key || ''}">
           <div class="cnav-icon">${item.icon}</div>
           <div class="cnav-label">${item.label}</div>
           ${item.note  ? `<div class="cnav-note">${item.note}</div>` : ''}
-          ${item.badge ? `<div class="cnav-badge ${badgeCls}">${item.badge}</div>` : ''}
+          <div class="cnav-badge ${badgeCls}"${item.badge ? '' : ' style="display:none"'}>${item.badge || ''}</div>
         </a>`;
       }).join('')}
     </div>`).join('');
   renderFooter();
+  // 残-10: ナビ描画後にlocalStorageからバッジを動的更新
+  setTimeout(updateNavBadges, 50);
   const legacyFooter = navEl.closest('nav')
     ? navEl.closest('nav').querySelector('[class*="footer"]:not(.cnav-footer)')
     : null;
@@ -652,3 +654,51 @@ function coretoConfirm(opts) {
 
 // CNAV に公開
 if (typeof CNAV !== 'undefined') CNAV.confirm = coretoConfirm;
+
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 残-10: ナビバッジをlocalStorageから動的計算
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function updateNavBadges() {
+  try {
+    // HQタスク（承認待ち）
+    var hqTasks = JSON.parse(localStorage.getItem('CORETO_HQ_TASKS') || '[]');
+    var pendingTasks = hqTasks.length;
+    
+    // 即時払い申請待ち
+    var pendingInstant = 0;
+    try {
+      var ikey = localStorage.getItem('CORETO_INSTANT_PAY_PENDING');
+      if (ikey) pendingInstant = 1;
+    } catch(e) {}
+    
+    // HR在籍確認リマインダー
+    var reminders = JSON.parse(localStorage.getItem('CORETO_HR_REMINDERS') || '[]');
+    var dueReminders = reminders.filter(function(r) { return r.status === 'pending'; }).length;
+    
+    // 成約報告（承認待ち）
+    var reports = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]');
+    var pendingReports = reports.filter(function(r) { return r.status === '承認待ち'; }).length;
+    
+    // ナビの各バッジ要素を更新
+    var badges = {
+      'instant_pay': pendingInstant,
+      'hr_matching': dueReminders || undefined,
+      'remit': pendingTasks || undefined,
+    };
+    
+    // ナビアイテムのbadgeを更新
+    document.querySelectorAll('.cnav-badge').forEach(function(el) {
+      var item = el.closest('[data-key]');
+      if (!item) return;
+      var key = item.dataset.key;
+      if (badges[key] !== undefined) {
+        el.textContent = badges[key];
+        el.style.display = badges[key] > 0 ? '' : 'none';
+      }
+    });
+  } catch(e) {}
+}
+
+// CNAV.init後にバッジ更新
+var _originalInit = (typeof CNAV !== 'undefined' && CNAV.init) ? CNAV.init : null;

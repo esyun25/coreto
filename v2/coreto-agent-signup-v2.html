@@ -4,9 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>エージェント入会申込 — CORETO</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="coreto-design-system.css">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Outfit:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 /* ── リセット ── */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -271,6 +269,69 @@ function checkToken() {
 // フォーム状態
 // ═══════════════════════════════════════════════════════
 let STEP = 1;
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 残-8: 途中離脱データ自動保存
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const DRAFT_KEY = 'CORETO_SIGNUP_DRAFT';
+
+// 残-11: インラインエラー表示ユーティリティ
+function showFieldError(inputId, msg) {
+  var el = document.getElementById(inputId);
+  if (!el) return;
+  el.classList.add('input-error');
+  var err = el.nextElementSibling;
+  if (!err || !err.classList.contains('field-error')) {
+    err = document.createElement('div');
+    err.className = 'field-error';
+    el.parentNode.insertBefore(err, el.nextSibling);
+  }
+  err.textContent = msg;
+  err.style.display = 'block';
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function clearFieldError(inputId) {
+  var el = document.getElementById(inputId);
+  if (!el) return;
+  el.classList.remove('input-error');
+  var err = el.nextElementSibling;
+  if (err && err.classList.contains('field-error')) err.style.display = 'none';
+}
+
+function clearAllErrors() {
+  document.querySelectorAll('.input-error').forEach(function(el) { el.classList.remove('input-error'); });
+  document.querySelectorAll('.field-error').forEach(function(el) { el.style.display = 'none'; });
+}
+
+
+
+function saveDraft() {
+  try {
+    const draft = Object.assign({}, DATA, { step: STEP, savedAt: new Date().toISOString() });
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+  } catch(e) {}
+}
+
+function loadDraft() {
+  try {
+    const saved = localStorage.getItem(DRAFT_KEY);
+    if (!saved) return false;
+    const draft = JSON.parse(saved);
+    // 24時間以内の下書きのみ復元
+    if (new Date() - new Date(draft.savedAt) > 86400000) {
+      localStorage.removeItem(DRAFT_KEY);
+      return false;
+    }
+    Object.assign(DATA, draft);
+    return draft.step || 1;
+  } catch(e) { return false; }
+}
+
+function clearDraft() {
+  localStorage.removeItem(DRAFT_KEY);
+}
+
 let DATA = {
   type: '',           // 're' | 'hr' | 'hikari'
   lastName:'', firstName:'', lastKana:'', firstKana:'',
@@ -306,6 +367,23 @@ const STEPS = [
 function initForm() {
   DATA.type = tokenInfo.type;
   renderStepBar();
+
+  // 残-8: 下書きがあれば復元してそのステップから再開
+  const savedStep = loadDraft();
+  if (savedStep && savedStep > 1) {
+    // 復元バナーを表示
+    var banner = document.createElement('div');
+    banner.style.cssText = 'background:#FFFBEB;border:1px solid rgba(217,119,6,.25);border-radius:10px;padding:12px 16px;margin:0 0 16px;font-size:12px;font-family:Outfit,sans-serif;display:flex;align-items:center;justify-content:space-between;gap:12px';
+    banner.innerHTML =
+      '<span>📝 <strong>前回の入力内容</strong>を復元しました（STEP ' + savedStep + ' から再開）</span>' +
+      '<div style="display:flex;gap:8px">' +
+        '<button onclick="this.closest(\'[style*=FFFBEB]\').remove();renderStep(' + savedStep + ')" style="padding:5px 12px;background:#D97706;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;font-family:Outfit,sans-serif">復元して再開</button>' +
+        '<button onclick="clearDraft();this.closest(\'[style*=FFFBEB]\').remove()" style="padding:5px 10px;background:transparent;border:1px solid #E8EAED;border-radius:6px;font-size:11px;cursor:pointer;color:#5F6368;font-family:Outfit,sans-serif">最初から</button>' +
+      '</div>';
+    var formEl = document.getElementById('form-area') || document.querySelector('.wrap');
+    if (formEl) formEl.insertBefore(banner, formEl.firstChild);
+  }
+
   renderStep(1);
 }
 
@@ -347,7 +425,7 @@ function renderStep(n) {
   renders[n]?.();
 }
 
-function next(n) { renderStep(n || STEP+1); }
+function next(n) { saveDraft(); renderStep(n || STEP+1); }
 function back()  { renderStep(STEP-1); }
 
 // ═══════════════════════════════════════════════════════
@@ -1413,6 +1491,8 @@ function submitForm() {
       '<a href="coreto-onboarding-v2.html" style="padding:10px 22px;background:#0D1A2D;color:#C8A951;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;font-family:Outfit,sans-serif">📚 研修を開始する →</a>';
     completeWrap.appendChild(btnGroup);
   }
+  // 残-8: 完了時に下書きをクリア
+  clearDraft();
   // プログレスバーを完了状態に
   const pf = document.querySelector('.prog-fill');
   if(pf) pf.style.width = '100%';

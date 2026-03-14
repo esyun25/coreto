@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>書類送付管理 — COREBLDG</title>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="coreto-design-system.css">
 <style>
 :root{
@@ -338,7 +337,27 @@ function checkAllSentAndNotify(caseId) {
   c._notifiedAllSent = true;
 
   // トーストで案内
-  showToast('✅ ' + c.name + ' 様の書類が全件送付済みになりました。案件ステータスを次のフェーズへ進めてください。', 'em');
+  showToast('✅ ' + c.name + ' 様の書類が全件送付済みになりました。', 'em');
+
+  // 残-15: 全書類送付完了後に「IT重説へ進む」バナーを表示
+  var existBanner = document.getElementById('screening-next-banner');
+  if (existBanner) existBanner.remove();
+  var banner = document.createElement('div');
+  banner.id = 'screening-next-banner';
+  banner.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9998;background:#0D1A2D;border-radius:12px;padding:14px 20px;display:flex;align-items:center;gap:16px;box-shadow:0 8px 32px rgba(0,0,0,.25);font-family:Outfit,sans-serif;min-width:320px';
+  banner.innerHTML =
+    '<div>' +
+      '<div style="font-size:11px;font-weight:700;letter-spacing:1px;color:rgba(200,169,81,.7);margin-bottom:3px">📋 次のステップ</div>' +
+      '<div style="font-size:13px;font-weight:600;color:#fff">' + c.name + ' 様 — 書類送付完了</div>' +
+    '</div>' +
+    '<div style="display:flex;gap:8px;flex-shrink:0">' +
+      '<a href="coreto-itsetsu-booking-v2.html" style="padding:8px 16px;background:#C8A951;color:#0D1A2D;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none">IT重説を予約 →</a>' +
+      '<button onclick="document.getElementById(\'screening-next-banner\').remove()" style="padding:8px 12px;background:rgba(255,255,255,.1);border:none;border-radius:8px;color:rgba(255,255,255,.6);cursor:pointer;font-size:18px;line-height:1">✕</button>' +
+    '</div>';
+  document.body.appendChild(banner);
+  setTimeout(function() {
+    if (banner.parentNode) { banner.style.opacity='0'; banner.style.transition='opacity .4s'; setTimeout(function(){ if(banner.parentNode) banner.remove(); }, 400); }
+  }, 8000);
 
   // HQへLINE通知（設定後有効化）
   const msg = `【COREBLDG】書類送付完了\n案件ID: ${c.id}\nクライアント: ${c.name} 様\n管理会社: ${c.mgmt}\n全書類の送付が完了しました。次ステップへ進めてください。`;
