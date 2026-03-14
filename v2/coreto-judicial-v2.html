@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>士業連携管理 — COREBLDG</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="coreto-design-system.css">
 <style>
 :root{--navy:#0D1A2D;--navy-l:#1E3252;--gold:#C8A951;--gold-dim:rgba(200,169,81,.15);--cream:#FFFFFF;--cream2:#F8F9FA;--white:#FFFFFF;--ink:#202124;--muted:#5F6368;--faint:#80868B;--em:#059669;--em-bg:#ECFDF5;--am:#D97706;--am-bg:#FFFBEB;--rd:#DC2626;--rd-bg:#FEF2F2;--sk:#0284C7;--sk-bg:#F0F9FF;--vt:#7C3AED;--vt-bg:#F5F3FF;--bd:#E8EAED;--bd2:#DADCE0;--sw:240px;--r:10px;--r-sm:7px;--sh:0 1px 2px rgba(60,64,67,.1),0 1px 3px rgba(60,64,67,.06)}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -451,7 +452,7 @@ body, input, select, textarea, button {
     </div>
     <div class="modal-foot">
       <button class="btn btn-g btn-sm" onclick="closeModal()">キャンセル</button>
-      <button class="btn btn-p btn-sm" onclick="closeModal();alert('✅ 士業者を追加しました')">追加する</button>
+      <button class="btn btn-p btn-sm" onclick="closeModal();showToast('✅ 士業者を追加しました', 'em')">追加する</button>
     </div>
   </div>
 </div>
@@ -515,7 +516,7 @@ function renderList(){
       </div>
       <div class="jd-actions">
         <span class="badge ${j.available?'b-em':'b-am'}">${j.available?'対応可':'対応中'}</span>
-        <button class="btn btn-g btn-sm" style="margin-top:4px" onclick="alert('案件割当画面に移動します')">案件割当</button>
+        <button class="btn btn-g btn-sm" style="margin-top:4px" onclick="showToast('案件割当画面に移動します', 'em')">案件割当</button>
       </div>
     </div>`).join('');
   }
@@ -555,7 +556,7 @@ function renderAssign(){
 
 function assignCase(id){
   const avail = JUDICIAL.filter(j=>j.available).map(j=>j.name).join(' / ');
-  alert(`案件 ${id} への割当\n\n対応可能：${avail}\n\n（実装時：担当者選択→通知送信）`);
+  showToast('📋 担当士業に割当通知を送信しました（対応可能: '+avail+'）', 'em');
 }
 
 function renderLicense(){
@@ -587,6 +588,24 @@ window.addEventListener('DOMContentLoaded', ()=>{
   CNAV.init('judicial');
   renderTab('list');
 });
+function showToast(msg, type) {
+  var colors = {
+    em: ['#ECFDF5','#059669','rgba(5,150,105,.2)'],
+    am: ['#FFFBEB','#D97706','rgba(217,119,6,.2)'],
+    rd: ['#FEF2F2','#DC2626','rgba(220,38,38,.2)'],
+    sk: ['#F0F9FF','#0284C7','rgba(2,132,199,.2)'],
+    ok: ['#ECFDF5','#059669','rgba(5,150,105,.2)'],
+    warn:['#FFFBEB','#D97706','rgba(217,119,6,.2)'],
+    error:['#FEF2F2','#DC2626','rgba(220,38,38,.2)'],
+  };
+  var c = colors[type] || colors.em;
+  var t = document.createElement('div');
+  t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999;padding:11px 18px;border-radius:9px;font-size:13px;font-weight:600;font-family:Outfit,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.12);transition:opacity .4s;background:'+c[0]+';color:'+c[1]+';border:1px solid '+c[2];
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(function(){ t.style.opacity='0'; setTimeout(function(){ if(t.parentNode) t.remove(); },400); }, 3200);
+}
+
 </script>
 </body>
 </html>

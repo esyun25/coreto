@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>人材案件管理 — COREBLDG</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="coreto-design-system.css">
 <style>
 :root{--navy:#0D1A2D;--navy-l:#1E3252;--gold:#C8A951;--gold-dim:rgba(200,169,81,.15);--cream2:#F8F9FA;--white:#FFFFFF;--ink:#202124;--muted:#5F6368;--faint:#80868B;--em:#059669;--em-bg:#ECFDF5;--am:#D97706;--am-bg:#FFFBEB;--rd:#DC2626;--rd-bg:#FEF2F2;--sk:#0284C7;--sk-bg:#F0F9FF;--vt:#7C3AED;--vt-bg:#F5F3FF;--bd:#E8EAED;--bd2:#DADCE0;--sw:240px;--r:10px;--r-sm:7px;--sh:0 1px 2px rgba(60,64,67,.1),0 1px 3px rgba(60,64,67,.06)}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -120,6 +121,25 @@ html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:
 .doc-item{display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--cream2);border-radius:var(--r-sm);margin-bottom:6px;border:1px solid var(--bd)}
 .doc-status{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0}
 @keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── モバイル対応 ─────────────────────────────── */
+@media (max-width: 768px) {
+  .shell, .app-shell { flex-direction: column; }
+  .content, .main, .main-content { overflow-y: auto; }
+  .topbar, .top-bar {
+    padding: 0 12px;
+    gap: 8px;
+    height: 52px;
+  }
+  .tb-title { font-size: 14px; }
+  .tb-actions, .top-actions { gap: 6px; }
+  .btn-sm { padding: 4px 9px; font-size: 10px; }
+  .page { padding: 12px; }
+  .kpi-row, .stat-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .kpi-value, .kpi-vl { font-size: 22px !important; }
+  table { font-size: 11px; }
+  th, td { padding: 7px 8px; }
+}
 </style>
 </head>
 <body>
@@ -697,7 +717,7 @@ function saveNote(id) {
   const c = CASES.find(x=>x.id===id); if(!c) return;
   const stepIdx = Number(document.getElementById('note-step').value);
   const text    = document.getElementById('note-text').value.trim();
-  if (!text) { alert('内容を入力してください'); return; }
+  if (!text) { showToast('内容を入力してください', 'warn'); return; }
   c.timeline.push({date:today(), step:HR_STEPS[stepIdx], note:text, type:'sk'});
   c.lastUpdate = today();
   closeModal('modal-step'); render(); toast('メモを保存しました');
@@ -730,7 +750,7 @@ function saveCompany(id) {
   const salary = document.getElementById('co-salary').value.trim();
   const note   = document.getElementById('co-note').value.trim();
   const result = document.getElementById('co-result').value;
-  if (!name||!pos) { alert('企業名とポジションを入力してください'); return; }
+  if (!name||!pos) { showToast('企業名とポジションを入力してください', 'warn'); return; }
   c.companies.push({name,position:pos,salary,note,result});
   c.lastUpdate = today();
   closeModal('modal-step'); render(); openDetail(id); toast(`「${name}」を追加しました`);
@@ -749,7 +769,7 @@ function addCase() {
   const exp    = document.getElementById('add-exp').value.trim();
   const pt     = document.getElementById('add-pt').value.trim();
   const note   = document.getElementById('add-note').value.trim();
-  if (!last||!email) { alert('氏名とメールは必須です'); return; }
+  if (!last||!email) { showToast('氏名とメールは必須です', 'warn'); return; }
   const id = 'HR-' + String(Math.floor(Math.random()*9000)+1000);
   CASES.unshift({
     id, name:last+' '+first, age:0,
@@ -1440,7 +1460,7 @@ function submitPTCase() {
   const skills  = document.getElementById('pt-skills').value.trim();
   const exp     = document.getElementById('pt-exp').value.trim();
   const note    = document.getElementById('pt-note').value.trim();
-  if (!name || !cj || !tj) { alert('氏名・現職・希望職種は必須です'); return; }
+  if (!name || !cj || !tj) { showToast('氏名・現職・希望職種は必須です', 'warn'); return; }
 
   const id = 'HRL-' + String(HR_LEADS.length+1).padStart(3,'0');
   const lead = {
@@ -1611,6 +1631,24 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   render();
 });
+function showToast(msg, type) {
+  var colors = {
+    em: ['#ECFDF5','#059669','rgba(5,150,105,.2)'],
+    am: ['#FFFBEB','#D97706','rgba(217,119,6,.2)'],
+    rd: ['#FEF2F2','#DC2626','rgba(220,38,38,.2)'],
+    sk: ['#F0F9FF','#0284C7','rgba(2,132,199,.2)'],
+    ok: ['#ECFDF5','#059669','rgba(5,150,105,.2)'],
+    warn:['#FFFBEB','#D97706','rgba(217,119,6,.2)'],
+    error:['#FEF2F2','#DC2626','rgba(220,38,38,.2)'],
+  };
+  var c = colors[type] || colors.em;
+  var t = document.createElement('div');
+  t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999;padding:11px 18px;border-radius:9px;font-size:13px;font-weight:600;font-family:Outfit,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.12);transition:opacity .4s;background:'+c[0]+';color:'+c[1]+';border:1px solid '+c[2];
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(function(){ t.style.opacity='0'; setTimeout(function(){ if(t.parentNode) t.remove(); },400); }, 3200);
+}
+
 </script>
 
 <!-- MODAL: PT 案件投稿 -->

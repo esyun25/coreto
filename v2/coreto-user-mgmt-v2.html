@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HQ管理パネル — COREBLDG</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="coreto-design-system.css">
 <style>
 :root{--navy:#0D1A2D;--navy-l:#1E3252;--gold:#C8A951;--gold-dim:rgba(200,169,81,.15);--cream2:#F8F9FA;--white:#FFFFFF;--ink:#202124;--muted:#5F6368;--faint:#80868B;--em:#059669;--em-bg:#ECFDF5;--am:#D97706;--am-bg:#FFFBEB;--rd:#DC2626;--rd-bg:#FEF2F2;--sk:#0284C7;--sk-bg:#F0F9FF;--vt:#7C3AED;--vt-bg:#F5F3FF;--bd:#E8EAED;--bd2:#DADCE0;--sw:240px;--r:10px;--r-sm:7px;--sh:0 1px 2px rgba(60,64,67,.1),0 1px 3px rgba(60,64,67,.06)}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -132,6 +133,25 @@ html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:
 .prog{height:5px;background:var(--bd);border-radius:3px;overflow:hidden;margin-top:5px}
 .prog-fill{height:100%;border-radius:3px;transition:.3s}
 @keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── モバイル対応 ─────────────────────────────── */
+@media (max-width: 768px) {
+  .shell, .app-shell { flex-direction: column; }
+  .content, .main, .main-content { overflow-y: auto; }
+  .topbar, .top-bar {
+    padding: 0 12px;
+    gap: 8px;
+    height: 52px;
+  }
+  .tb-title { font-size: 14px; }
+  .tb-actions, .top-actions { gap: 6px; }
+  .btn-sm { padding: 4px 9px; font-size: 10px; }
+  .page { padding: 12px; }
+  .kpi-row, .stat-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .kpi-value, .kpi-vl { font-size: 22px !important; }
+  table { font-size: 11px; }
+  th, td { padding: 7px 8px; }
+}
 </style>
 </head>
 <body>
@@ -932,7 +952,7 @@ function renderSettings() {
         <div class="set-row"><div><div class="set-label">セッション自動ログアウト</div></div><div style="display:flex;align-items:center;gap:6px"><input class="si" value="60"><span style="font-size:12px;color:var(--muted)">分</span></div></div>
       </div>
       <div style="display:flex;justify-content:flex-end">
-        <button class="btn btn-p" onclick="alert('✅ 設定を保存しました')">設定を保存</button>
+        <button class="btn btn-p" onclick="showToast('✅ 設定を保存しました', 'em')">設定を保存</button>
       </div>
     </div>`;
 }
@@ -983,8 +1003,8 @@ function exportCSV() { toast('CSVエクスポート（本番環境で実装）')
 function sendInvite() {
   const name=(document.getElementById('add-last').value+' '+document.getElementById('add-first').value).trim();
   const email=document.getElementById('add-email').value;
-  if(!name||!email){ alert('氏名とメールアドレスを入力してください'); return; }
-  alert('招待メールを送信しました\n宛先: '+email);
+  if(!name||!email){ showToast('氏名とメールアドレスを入力してください', 'warn'); return; }
+  showToast('招待メールを送信しました\n宛先: '+email, 'em');
   closeModal('modal-add');
 }
 function toast(msg, type='ok') {
@@ -1000,6 +1020,24 @@ window.addEventListener('DOMContentLoaded', () => {
   setHQRole('exec');
   switchTab('account');
 });
+function showToast(msg, type) {
+  var colors = {
+    em: ['#ECFDF5','#059669','rgba(5,150,105,.2)'],
+    am: ['#FFFBEB','#D97706','rgba(217,119,6,.2)'],
+    rd: ['#FEF2F2','#DC2626','rgba(220,38,38,.2)'],
+    sk: ['#F0F9FF','#0284C7','rgba(2,132,199,.2)'],
+    ok: ['#ECFDF5','#059669','rgba(5,150,105,.2)'],
+    warn:['#FFFBEB','#D97706','rgba(217,119,6,.2)'],
+    error:['#FEF2F2','#DC2626','rgba(220,38,38,.2)'],
+  };
+  var c = colors[type] || colors.em;
+  var t = document.createElement('div');
+  t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999;padding:11px 18px;border-radius:9px;font-size:13px;font-weight:600;font-family:Outfit,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.12);transition:opacity .4s;background:'+c[0]+';color:'+c[1]+';border:1px solid '+c[2];
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(function(){ t.style.opacity='0'; setTimeout(function(){ if(t.parentNode) t.remove(); },400); }, 3200);
+}
+
 </script>
 </body>
 </html>

@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>LINE認証管理 — COREBLDG</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="coreto-design-system.css">
 <style>
 
 :root{--navy:#0D1A2D;--navy-l:#1E3252;--gold:#C8A951;--gold-dim:rgba(200,169,81,.15);--cream:#FFFFFF;--cream2:#F8F9FA;--white:#FFFFFF;--ink:#202124;--ink2:#2D3748;--muted:#5F6368;--faint:#80868B;--em:#059669;--em-bg:#ECFDF5;--am:#D97706;--am-bg:#FFFBEB;--rd:#DC2626;--rd-bg:#FEF2F2;--sk:#0284C7;--sk-bg:#F0F9FF;--vt:#7C3AED;--vt-bg:#F5F3FF;--line:#06C755;--line-bg:rgba(6,199,85,.1);--bd:#E8EAED;--bd2:#DADCE0;--sw:240px;--r:10px;--r-sm:7px;--sh:0 1px 2px rgba(60,64,67,.1),0 1px 3px rgba(60,64,67,.06)}
@@ -173,6 +174,25 @@ html, body { background:#FFFFFF !important; }
 }
 .kpi-value { font-size:32px !important; }
 .kpi-vl    { font-size:28px !important; }
+
+/* ── モバイル対応 ─────────────────────────────── */
+@media (max-width: 768px) {
+  .shell, .app-shell { flex-direction: column; }
+  .content, .main, .main-content { overflow-y: auto; }
+  .topbar, .top-bar {
+    padding: 0 12px;
+    gap: 8px;
+    height: 52px;
+  }
+  .tb-title { font-size: 14px; }
+  .tb-actions, .top-actions { gap: 6px; }
+  .btn-sm { padding: 4px 9px; font-size: 10px; }
+  .page { padding: 12px; }
+  .kpi-row, .stat-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .kpi-value, .kpi-vl { font-size: 22px !important; }
+  table { font-size: 11px; }
+  th, td { padding: 7px 8px; }
+}
 </style>
 </head>
 <body>
@@ -288,7 +308,7 @@ html, body { background:#FFFFFF !important; }
 
         <!-- 通知ログ -->
         <div class="card">
-          <div class="card-head"><div class="card-title">📋 通知ログ（最新）</div><button class="btn btn-g btn-sm" onclick="alert('全件表示')">全件表示</button></div>
+          <div class="card-head"><div class="card-title">📋 通知ログ（最新）</div><button class="btn btn-g btn-sm" onclick="showToast('全件表示', 'em')">全件表示</button></div>
           <div style="padding:16px 20px">
             ${[
               {c:'ln', txt:'<strong>RENT-0194 審査通過</strong> — AG-0042 山田 誠へ送信（開封済み）', t:'2h前'},
@@ -456,17 +476,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function copyWorksId() {
   navigator.clipboard.writeText('@coreto-works').catch(() => {});
-  alert('LINE WORKS IDをコピーしました：@coreto-works\n\nLINEアプリでID検索し友達追加してください。');
+  showToast('LINE WORKS IDをコピーしました：@coreto-works\n\nLINEアプリでID検索し友達追加してください。', 'em');
 }
 
 function openWorksManual() {
-  alert('【LINE WORKS 友達追加手順】\n\n① LINEアプリを開く\n② 友達追加 → ID検索\n③「@coreto-works」を入力して検索\n④「追加」をタップ\n\n追加完了後、本部から確認メッセージが届きます。\n（本番運用時に正式WORKSアカウントのIDに更新されます）');
+  showToast('【LINE WORKS 友達追加手順】\n\n① LINEアプリを開く\n② 友達追加 → ID検索\n③「@coreto-works」を入力して検索\n④「追加」をタップ\n\n追加完了後、本部から確認メッセージが届きます。\n（本番運用時に正式WORKSアカウントのIDに更新されます）', 'em');
 }
 
 
 function issueCode() {
   const target = document.getElementById('code-target').value;
-  if (!target) { alert('対象者を選択してください'); return; }
+  if (!target) { showToast('対象者を選択してください', 'em'); return; }
   const [id, name, role] = target.split('|');
   const exp = document.getElementById('code-exp').value;
   const line = document.getElementById('code-line').value;
@@ -485,11 +505,11 @@ function issueCode() {
 }
 
 function copyCode() {
-  navigator.clipboard?.writeText(lastCode).then(()=>alert(`コード「${lastCode}」をクリップボードにコピーしました`));
+  navigator.clipboard?.writeText(lastCode).then(()=>showToast(`コード「${lastCode}」をクリップボードにコピーしました`, 'em'));
 }
 
 function sendCodeLine() {
-  alert(`LINE①でコード「${lastCode}」を送信します（実装時：LINE Messaging API）`);
+  showToast('📲 認証コード「'+lastCode+'」をLINEで送信します（LINE Messaging API設定後に有効）', 'sk');
 }
 
 function reissueCode(id, name) {
@@ -499,21 +519,21 @@ function reissueCode(id, name) {
 }
 
 function sendReminder() {
-  alert('未認証の3名にリマインドLINEを送信しました（実装時：Messaging API一斉送信）');
+  showToast('📲 未認証ユーザーへのリマインドLINEを送信しました（LINE Messaging API設定後に有効）', 'sk');
 }
 
 function sendReminder1(id, name) {
-  alert(`${name}（${id}）にリマインドLINEを送信しました`);
+  showToast(`${name}（${id}）にリマインドLINEを送信しました`, 'em');
 }
 
 function unlinkLine(id, name) {
   if (confirm(`${name}（${id}）のLINE連携を解除しますか？\n解除すると通知が届かなくなります。`)) {
-    alert('LINE連携を解除しました。再連携が必要な場合は認証コードを再発行してください。');
+    showToast('LINE連携を解除しました。再連携が必要な場合は認証コードを再発行してください。', 'em');
   }
 }
 
 function testBroadcast() {
-  alert('テストメッセージをLINE①認証済み全員（44名）に送信します\n\n「【CORETO】これはテストメッセージです。問題なく受信できていれば操作は不要です。」');
+  showToast('テストメッセージをLINE①認証済み全員（44名）に送信します\n\n「【CORETO】これはテストメッセージです。問題なく受信できていれば操作は不要です。」', 'em');
 }
 
 function toggleNotif(cb, label) {
@@ -534,6 +554,24 @@ function openIssueForm() {
 window.addEventListener('DOMContentLoaded', function() {
   CNAV.init('line_auth');
 });
+function showToast(msg, type) {
+  var colors = {
+    em: ['#ECFDF5','#059669','rgba(5,150,105,.2)'],
+    am: ['#FFFBEB','#D97706','rgba(217,119,6,.2)'],
+    rd: ['#FEF2F2','#DC2626','rgba(220,38,38,.2)'],
+    sk: ['#F0F9FF','#0284C7','rgba(2,132,199,.2)'],
+    ok: ['#ECFDF5','#059669','rgba(5,150,105,.2)'],
+    warn:['#FFFBEB','#D97706','rgba(217,119,6,.2)'],
+    error:['#FEF2F2','#DC2626','rgba(220,38,38,.2)'],
+  };
+  var c = colors[type] || colors.em;
+  var t = document.createElement('div');
+  t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999;padding:11px 18px;border-radius:9px;font-size:13px;font-weight:600;font-family:Outfit,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.12);transition:opacity .4s;background:'+c[0]+';color:'+c[1]+';border:1px solid '+c[2];
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(function(){ t.style.opacity='0'; setTimeout(function(){ if(t.parentNode) t.remove(); },400); }, 3200);
+}
+
 </script>
 </body>
 </html>

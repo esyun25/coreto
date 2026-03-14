@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>本人確認・口座登録 — COREBLDG</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="coreto-design-system.css">
 <style>
 
 :root{
@@ -617,7 +618,7 @@ function selDoc(n){
 function trigUp(id){document.getElementById(id)?.click();}
 function handleUp(input,side){
   if(!input.files[0])return;const file=input.files[0];
-  if(file.size>20*1024*1024){alert('ファイルが20MBを超えています');return;}
+  if(file.size>20*1024*1024){showToast('ファイルが20MBを超えています', 'em');return;}
   const reader=new FileReader();
   reader.onload=e=>{
     const zone=document.getElementById('uz-'+side);const prev=document.getElementById('uzp-'+side);const icon=document.getElementById('uzi-'+side);const title=document.getElementById('uzt-'+side);
@@ -651,7 +652,7 @@ function submitKyc(){
     document.getElementById('s1').className='step done';document.getElementById('s1').querySelector('.sdot').textContent='✓';
     document.getElementById('s2').className='step rev';document.getElementById('s2').querySelector('.sdot').textContent='⏳';
     document.getElementById('kyc-status-badge').textContent='審査中';document.getElementById('kyc-status-badge').className='badge b-sk';
-    alert('✅ 本人確認書類を提出しました。\nAIが解析後、本部が最終確認します。\n結果はSlackでお知らせします。');
+    showToast('✅ 本人確認書類を提出しました。\nAIが解析後、本部が最終確認します。\n結果はSlackでお知らせします。', 'em');
   },1200);
 }
 
@@ -665,14 +666,14 @@ function approve(id,name){
   if(!confirm(`${name} の本人確認を承認しますか？\nAI解析結果と全項目の確認完了後のみ承認可能です。`))return;
   const card=document.getElementById('rc-'+id);if(card){card.style.opacity='.45';card.style.pointerEvents='none';card.querySelector('.rch').insertAdjacentHTML('beforeend','<span class="badge b-em" style="margin-left:8px">✓ 承認済み</span>');}
   const cnt=document.getElementById('pending-cnt');if(cnt)cnt.textContent='審査待ち 1件';
-  alert(`✅ ${name}（${id}）を承認しました。\nSlackで本人に通知。報酬受取が可能になります。`);
+  showToast(`✅ ${name}（${id}）を承認しました。\nSlackで本人に通知。報酬受取が可能になります。`, 'em');
 }
 let rejId='';
 function openRej(id,name){rejId=id;const el=document.getElementById('rej-name-disp');if(el)el.textContent=name+'（'+id+'）の否認';document.querySelectorAll('input[name=rr]').forEach(c=>c.checked=false);document.getElementById('rej-note').value='';document.getElementById('rej-modal').classList.add('show');}
 function closeRej(){document.getElementById('rej-modal').classList.remove('show');}
 function submitRej(){
   const reasons=Array.from(document.querySelectorAll('input[name=rr]:checked')).map(c=>c.parentElement.textContent.trim()).join('、');
-  if(!reasons){alert('否認理由を1つ以上選択してください');return;}
+  if(!reasons){showToast('否認理由を1つ以上選択してください', 'em');return;}
   // A-08: 追加コメントを入力できる
   // 追加コメントはprompt→事前入力の理由テキストを使用
   const extraEl = document.getElementById('rej-comment');
@@ -680,16 +681,16 @@ function submitRej(){
   const fullReason = reasons + (extra ? '\n補足: ' + extra : '');
   closeRej();
   const card=document.getElementById('rc-'+rejId);if(card){card.style.opacity='.45';card.style.pointerEvents='none';card.querySelector('.rch').insertAdjacentHTML('beforeend','<span class="badge b-rd" style="margin-left:8px">✗ 否認</span>');}
-  alert('否認通知をSlackで送信しました。\n理由：'+fullReason);
+  showToast('否認通知をSlackで送信しました。\n理由：'+fullReason, 'em');
 }
 function openAccModal(){document.getElementById('acc-modal').classList.add('show');}
 function closeAcc(){document.getElementById('acc-modal').classList.remove('show');}
 function submitAcc(){
   const bank=document.getElementById('ab-bank').value,holder=document.getElementById('ab-holder').value,reason=document.getElementById('ab-reason').value;
-  if(!bank||!holder||!reason){alert('必須項目を入力してください');return;}
-  closeAcc();alert(`✅ 口座変更申請を送信しました。\n口座名義「${holder}」を本部が登録名と照合後（1〜3営業日）、承認されます。`);
+  if(!bank||!holder||!reason){showToast('必須項目を入力してください', 'warn');return;}
+  closeAcc();showToast(`✅ 口座変更申請を送信しました。\n口座名義「${holder}」を本部が登録名と照合後（1〜3営業日）、承認されます。`, 'em');
 }
-function viewDoc(label){alert('【デモ】'+label+'の画像を表示します。\n（実装時はKintoneの書類ビューワーに接続）');}
+function viewDoc(label){ showToast('📄 「'+label+'」はKintone連携後にビューワーで閲覧可能になります', 'sk'); }
 
 // ══════════════════════════════════════════════════════════════
 // KYC AI本人確認解析
@@ -867,6 +868,24 @@ function kycNormDate(s){
   return String(s).replace(/[年月日\/\-]/g,'/').replace(/\s/g,'')
     .replace(/(\d{4})\/(\d{1,2})\/(\d{1,2})/,
       (_,y,m,d)=>`${y}/${m.padStart(2,'0')}/${d.padStart(2,'0')}`);
+}
+
+function showToast(msg, type) {
+  var colors = {
+    em: ['#ECFDF5','#059669','rgba(5,150,105,.2)'],
+    am: ['#FFFBEB','#D97706','rgba(217,119,6,.2)'],
+    rd: ['#FEF2F2','#DC2626','rgba(220,38,38,.2)'],
+    sk: ['#F0F9FF','#0284C7','rgba(2,132,199,.2)'],
+    ok: ['#ECFDF5','#059669','rgba(5,150,105,.2)'],
+    warn:['#FFFBEB','#D97706','rgba(217,119,6,.2)'],
+    error:['#FEF2F2','#DC2626','rgba(220,38,38,.2)'],
+  };
+  var c = colors[type] || colors.em;
+  var t = document.createElement('div');
+  t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999;padding:11px 18px;border-radius:9px;font-size:13px;font-weight:600;font-family:Outfit,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.12);transition:opacity .4s;background:'+c[0]+';color:'+c[1]+';border:1px solid '+c[2];
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(function(){ t.style.opacity='0'; setTimeout(function(){ if(t.parentNode) t.remove(); },400); }, 3200);
 }
 
 </script>

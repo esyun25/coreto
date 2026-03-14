@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>COREBLDG — Hub</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="coreto-design-system.css">
 <style>
 
 /* ═══════════════════════════════════════════
@@ -886,6 +887,25 @@ html, body { background:#FFFFFF !important; }
 }
 .kpi-value { font-size:32px !important; }
 .kpi-vl    { font-size:28px !important; }
+
+/* ── モバイル対応 ─────────────────────────────── */
+@media (max-width: 768px) {
+  .shell, .app-shell { flex-direction: column; }
+  .content, .main, .main-content { overflow-y: auto; }
+  .topbar, .top-bar {
+    padding: 0 12px;
+    gap: 8px;
+    height: 52px;
+  }
+  .tb-title { font-size: 14px; }
+  .tb-actions, .top-actions { gap: 6px; }
+  .btn-sm { padding: 4px 9px; font-size: 10px; }
+  .page { padding: 12px; }
+  .kpi-row, .stat-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .kpi-value, .kpi-vl { font-size: 22px !important; }
+  table { font-size: 11px; }
+  th, td { padding: 7px 8px; }
+}
 </style>
 </head>
 <body>
@@ -1758,7 +1778,7 @@ function renderHQDash() {
                 <div class="remit-meta">三田不動産管理（株）/ 口座確認済み</div>
               </div>
               <div class="remit-amount">¥348,000</div>
-              <button class="remit-btn" onclick="alert('送金実行画面へ')">送金実行</button>
+              <button class="remit-btn" onclick="showToast('送金実行画面へ', 'em')">送金実行</button>
             </div>
             <div class="remit-item">
               <div class="remit-deadline soon">3日後</div>
@@ -2116,9 +2136,9 @@ function renderLineRelink() {
 
 function startRelink(type) {
   if (type === 'works') {
-    alert('LINE WORKSを友達追加します（実装時：LINE Add Friend URL）\n\nLINEアプリが起動します。\nWORKS ID: coreto_hq を検索して友達追加してください。');
+    showToast('📱 LINEアプリで「@coreto_hq」を検索して友達追加してください（LINE開設後に自動連携）', 'sk');
   } else {
-    alert('LINE再連携フローを開始します（実装時：LINE Login OAuth）\n\nLINEアプリが起動します。');
+    showToast('🔗 LINE再連携機能はLINE開設後に有効になります', 'am');
   }
 }
 
@@ -2132,7 +2152,7 @@ function requestReissue(type) {
 // ═══════════════════════════════════════════
 function renderPTMgmt() {
   document.getElementById('topbar-actions').innerHTML = `
-    <button class="topbar-btn primary" onclick="alert('新規PT招待フォームを開きます')">＋ PT招待</button>`;
+    <button class="topbar-btn primary" onclick="showToast('新規PT招待フォームを開きます', 'em')">＋ PT招待</button>`;
 
   const pts = [
     {id:'PT-0015',name:'佐藤 健一',since:'2025/10',ref_re:8,ref_hr:2,ref_util:12,reward:'¥280,000',line:true,st:'em',sl:'有効'},
@@ -2185,8 +2205,8 @@ function renderPTMgmt() {
               <td><span class="badge ${p.st}">${p.sl}</span></td>
               <td>
                 <div style="display:flex;gap:5px">
-                  <button class="topbar-btn ghost" style="font-size:10px;padding:4px 8px" onclick="alert('${p.name}の詳細')">詳細</button>
-                  ${!p.line?`<button class="topbar-btn primary" style="font-size:10px;padding:4px 8px" onclick="alert('LINE認証コードを再発行します')">LINE発行</button>`:''}
+                  <button class="topbar-btn ghost" style="font-size:10px;padding:4px 8px" onclick="showToast('${p.name}の詳細', 'em')">詳細</button>
+                  ${!p.line?`<button class="topbar-btn primary" style="font-size:10px;padding:4px 8px" onclick="showToast('LINE認証コードを再発行します', 'em')">LINE発行</button>`:''}
                 </div>
               </td>
             </tr>`).join('')}
@@ -2279,7 +2299,7 @@ function selectResult(id) {
 
 function submitVisit() {
   const checked = document.querySelector('[name="v-result"]:checked');
-  if(!checked){ alert('訪問結果を選択してください'); return; }
+  if(!checked){ showToast('訪問結果を選択してください', 'em'); return; }
   const rewardMap = {'vr-home-lead':'¥3,500','vr-home-ok':'¥950','vr-home-no':'¥950','vr-absent':'¥80'};
   const reward = rewardMap[checked.value] || '¥80';
   document.getElementById('page-content').innerHTML = `
@@ -2467,8 +2487,8 @@ function submitUtilCase() {
   const name = document.getElementById('uf-name').value;
   const tel  = document.getElementById('uf-tel').value;
   const svcs = ['sv-elec','sv-gas','sv-net'].filter(id => document.getElementById(id).checked);
-  if (!name || !tel) { alert('お客様名と電話番号は必須です'); return; }
-  if (svcs.length === 0) { alert('切り替え希望サービスを1つ以上選択してください'); return; }
+  if (!name || !tel) { showToast('お客様名と電話番号は必須です', 'warn'); return; }
+  if (svcs.length === 0) { showToast('切り替え希望サービスを1つ以上選択してください', 'em'); return; }
   const svcNames = {
     'sv-elec':'電力', 'sv-gas':'ガス', 'sv-net':'光回線'
   };
@@ -2915,7 +2935,7 @@ function renderInternDash() {
       <div class="task-item"><div class="task-prio low"></div><div class="task-main"><div class="task-name">港区三田4丁目 ― 10:45</div><div class="task-meta">不在</div></div><span class="badge muted">+¥80</span></div>
     </div></div>
     <div style="text-align:center;margin-top:24px">
-      <button onclick="alert('訪問記録入力')" style="padding:14px 40px;background:var(--navy);color:var(--gold);border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif;letter-spacing:1px">＋ 訪問を記録</button>
+      <button onclick="showToast('訪問記録入力', 'em')" style="padding:14px 40px;background:var(--navy);color:var(--gold);border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif;letter-spacing:1px">＋ 訪問を記録</button>
     </div>`;
 }
 
@@ -3053,7 +3073,7 @@ JSONのみ（前置き不要）:
     </div>`;
     document.body.appendChild(el);
     el.onclick = e => { if (e.target === el) el.remove(); };
-  } catch(e) { alert('AI生成失敗: ' + e.message); }
+  } catch(e) { showToast('AI生成失敗: ' + e.message, 'rd'); }
   finally { if (btn) { btn.disabled = false; btn.innerHTML = '✨ AI月次レポート'; } }
 }
 </script>

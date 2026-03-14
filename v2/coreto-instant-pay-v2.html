@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>即時払い — COREBLDG</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="coreto-design-system.css">
 <style>
 :root{
   --navy:#0D1A2D;--navy-l:#1E3252;--gold:#C8A951;--gold-dim:rgba(200,169,81,.15);
@@ -304,7 +305,7 @@ html,body{background:#FFFFFF !important}
   </div>
   <div style="display:flex;gap:10px;margin-top:16px">
     <button class="btn btn-g" onclick="history.back()">← 戻る</button>
-    <button class="btn btn-rd" onclick="alert('HQにSlackで連絡を送りました。')">HQに連絡する</button>
+    <button class="btn btn-rd" onclick="showToast('HQにSlackで連絡を送りました。', 'em')">HQに連絡する</button>
   </div>
 </div>
 
@@ -652,11 +653,11 @@ function applyCampaign() {
   var until    = document.getElementById('camp-until').value;
   var target   = (document.getElementById('camp-target').value || '').trim();
 
-  if (!label)    { alert('キャンペーン名を入力してください'); return; }
+  if (!label)    { showToast('キャンペーン名を入力してください', 'warn'); return; }
   if (!discount || discount < 1 || discount > 14) {
-    alert('割引率は1%〜14%で設定してください'); return;
+    showToast('割引率は1%〜14%で設定してください', 'em'); return;
   }
-  if (!until) { alert('期限を設定してください'); return; }
+  if (!until) { showToast('期限を設定してください', 'em'); return; }
 
   var camp = {
     label:        label,
@@ -867,7 +868,7 @@ function processTransfer(id, agName, amount) {
 }
 function unlockAccount(id) {
   if (!confirm(`${id} の即時払いロックを解除しますか？\n本人確認が完了していることを確認してください。`)) return;
-  alert(`🔓 ${id} のロックを解除しました。エージェントにSlackで通知されます。`);
+  showToast(`🔓 ${id} のロックを解除しました。エージェントにSlackで通知されます。`, 'em');
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -961,7 +962,7 @@ function exportZengin() {
   const checked = Array.from(document.querySelectorAll('.zg-chk:checked'));
   const ids = checked.map(c => c.dataset.id);
   const targets = PENDING_TRANSFERS.filter(t => ids.includes(t.reqId));
-  if (!targets.length) { alert('出力対象の申請を選択してください。'); return; }
+  if (!targets.length) { showToast('出力対象の申請を選択してください。', 'em'); return; }
   const totalAmt = targets.reduce((s,t) => s + t.payoutAmt, 0);
   if (!confirm(`【全銀ファイル出力確認】\n\n出力件数：${targets.length}件\n合計振込額：¥${totalAmt.toLocaleString()}\n\nネットバンキングにアップロードして送金を実行してください。\n\n出力しますか？`)) return;
 

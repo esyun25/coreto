@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>アカウント設定 — COREBLDG</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="coreto-design-system.css">
 <style>
 
 :root{
@@ -439,10 +440,10 @@ function checkPw() {
 }
 function doChangePw() {
   const cur=document.getElementById('pw-cur')?.value;const nw=document.getElementById('pw-new')?.value;const conf=document.getElementById('pw-conf')?.value;
-  if(!cur||!nw||!conf){alert('全項目を入力してください');return;}
-  if(nw!==conf){alert('パスワードが一致しません');return;}
-  if(nw.length<8){alert('8文字以上で設定してください');return;}
-  openOtp('pw-change','パスワード変更 本人確認',()=>{closeOtp();alert('✅ パスワードを変更しました。\nLINEおよびメールに通知されます。');pagePw();});
+  if(!cur||!nw||!conf){showToast('全項目を入力してください', 'warn');return;}
+  if(nw!==conf){showToast('パスワードが一致しません', 'em');return;}
+  if(nw.length<8){showToast('8文字以上で設定してください', 'em');return;}
+  openOtp('pw-change','パスワード変更 本人確認',()=>{closeOtp();showToast('✅ パスワードを変更しました。\nLINEおよびメールに通知されます。', 'em');pagePw();});
 }
 let resetMethod='line';
 function openReset(){document.getElementById('reset-modal').classList.add('show');}
@@ -466,7 +467,7 @@ function sendReset(){
     }
   },400);
 }
-function submitNewPw(){const n=document.getElementById('rp-new')?.value,c=document.getElementById('rp-conf')?.value;if(!n||n.length<8){alert('8文字以上で入力してください');return;}if(n!==c){alert('一致しません');return;}alert('✅ パスワードを再設定しました。');pagePw();}
+function submitNewPw(){const n=document.getElementById('rp-new')?.value,c=document.getElementById('rp-conf')?.value;if(!n||n.length<8){showToast('8文字以上で入力してください', 'warn');return;}if(n!==c){showToast('一致しません', 'em');return;}showToast('✅ パスワードを再設定しました。', 'em');pagePw();}
 
 // ══ 2FA PAGE ══════════════════════════════════════════════════════
 function page2fa() {
@@ -538,7 +539,7 @@ function pageContact() {
       </div>
     </div>`;
 }
-function saveContact(){ME.phone=document.getElementById('ct-phone').value;ME.email=document.getElementById('ct-email').value;alert('✅ 連絡先情報を更新しました。');pageContact();}
+function saveContact(){ME.phone=document.getElementById('ct-phone').value;ME.email=document.getElementById('ct-email').value;showToast('✅ 連絡先情報を更新しました。', 'em');pageContact();}
 
 // ══ LINE PAGE ════════════════════════════════════════════════════
 function pageLine() {
@@ -621,9 +622,9 @@ function pageLine() {
       </div>
     </div>`;
 }
-function saveLineId(){const v=document.getElementById('new-line')?.value.trim();if(!v){alert('新しいLINE IDを入力してください');return;}if(!v.startsWith('@')){alert('LINE IDは「@」から始まる形式で入力してください');return;}if(!confirm(`LINE IDを「${v}」に変更しますか？`))return;ME.lineId=v;alert('✅ LINE IDを変更しました。');pageLine();}
-function copyWorksId(){navigator.clipboard?.writeText('@coreto-works').catch(()=>{});alert('WORKS ID「@coreto-works」をコピーしました。');}
-function confirmWorksConnect(){if(confirm('LINE WORKSを友達追加済みとしてマークしますか？\n（実際の友達追加が完了している場合のみ押してください）')){ME.lineWorks='連携済み';alert('✅ LINE WORKS連携済みとして登録しました。\n本部に確認通知が送信されます。');pageLine();}}
+function saveLineId(){const v=document.getElementById('new-line')?.value.trim();if(!v){showToast('新しいLINE IDを入力してください', 'warn');return;}if(!v.startsWith('@')){showToast('LINE IDは「@」から始まる形式で入力してください', 'warn');return;}if(!confirm(`LINE IDを「${v}」に変更しますか？`))return;ME.lineId=v;showToast('✅ LINE IDを変更しました。', 'em');pageLine();}
+function copyWorksId(){navigator.clipboard?.writeText('@coreto-works').catch(()=>{});showToast('WORKS ID「@coreto-works」をコピーしました。', 'em');}
+function confirmWorksConnect(){if(confirm('LINE WORKSを友達追加済みとしてマークしますか？\n（実際の友達追加が完了している場合のみ押してください）')){ME.lineWorks='連携済み';showToast('✅ LINE WORKS連携済みとして登録しました。\n本部に確認通知が送信されます。', 'em');pageLine();}}
 
 // ══ NAME PAGE ════════════════════════════════════════════════════
 function pageName(){
@@ -695,8 +696,8 @@ function pageName(){
     </div>`;
 }
 function updateCardPreview(){const old=document.getElementById('old-name')?.value||'';const show=document.getElementById('show-old')?.checked;const n=show&&old?`${ME.name.split(' ')[0]}（旧姓：${old}）${ME.name.split(' ')[1]||''}`:ME.name;const k=show&&document.getElementById('old-kana')?.value?`${ME.nameKana}（旧姓：${document.getElementById('old-kana').value}）`:ME.nameKana;document.getElementById('card-name').textContent=n;document.getElementById('card-kana').textContent=k;}
-function saveOldName(){ME.nameOld=document.getElementById('old-name').value;ME.nameOldKana=document.getElementById('old-kana').value;ME.showOld=document.getElementById('show-old').checked;alert('✅ 旧姓設定を保存しました。');}
-function hqChangeName(){const n=document.getElementById('hq-name-new')?.value.trim();const k=document.getElementById('hq-name-kana')?.value.trim();const r=document.getElementById('hq-name-reason')?.value;if(!n||!k||!r){alert('全項目を入力してください');return;}if(!confirm(`氏名を「${n}（${k}）」に変更しますか？理由：${r}\n\nこの操作は取り消せません。`))return;alert(`✅ 氏名を「${n}」に変更しました。エージェントにSlackで通知されます。`);pageName();}
+function saveOldName(){ME.nameOld=document.getElementById('old-name').value;ME.nameOldKana=document.getElementById('old-kana').value;ME.showOld=document.getElementById('show-old').checked;showToast('✅ 旧姓設定を保存しました。', 'em');}
+function hqChangeName(){const n=document.getElementById('hq-name-new')?.value.trim();const k=document.getElementById('hq-name-kana')?.value.trim();const r=document.getElementById('hq-name-reason')?.value;if(!n||!k||!r){showToast('全項目を入力してください', 'warn');return;}if(!confirm(`氏名を「${n}（${k}）」に変更しますか？理由：${r}\n\nこの操作は取り消せません。`))return;showToast(`✅ 氏名を「${n}」に変更しました。エージェントにSlackで通知されます。`, 'em');pageName();}
 
 // ══ BANK PAGE ════════════════════════════════════════════════
 function pageBank(){
@@ -771,13 +772,13 @@ function saveBank(){
   const ano   = document.getElementById('account-no')?.value.trim();
   const aname = document.getElementById('account-name')?.value.trim();
   if (!code||!name||!bcode||!bname||!ano||!aname) {
-    alert('⚠️ すべての必須項目を入力してください'); return;
+    showToast('⚠️ すべての必須項目を入力してください', 'warn'); return;
   }
-  if (!/^\d{4}$/.test(code)) { alert('銀行コードは4桁の数字です'); return; }
-  if (!/^\d{3}$/.test(bcode)) { alert('支店コードは3桁の数字です'); return; }
-  if (!/^\d{7}$/.test(ano))   { alert('口座番号は7桁の数字です'); return; }
+  if (!/^\d{4}$/.test(code)) { showToast('銀行コードは4桁の数字です', 'em'); return; }
+  if (!/^\d{3}$/.test(bcode)) { showToast('支店コードは3桁の数字です', 'em'); return; }
+  if (!/^\d{7}$/.test(ano))   { showToast('口座番号は7桁の数字です', 'em'); return; }
   ME.bankInfo = {bankCode:code,bankName:name,branchCode:bcode,branchName:bname,accountType:atype,accountNo:ano,accountName:aname};
-  alert('✅ 銀行口座「'+name+' '+ano+'」を保存しました。\nHQに通知されます。');
+  showToast('✅ 銀行口座「'+name+' '+ano+'」を保存しました。\nHQに通知されます。', 'em');
   pageBank();
 }
 // ══ OTP汎用 ════════════════════════════════════════════════════════
@@ -801,6 +802,24 @@ function checkOtp(){const entered=Array.from({length:6},(_,i)=>document.getEleme
 
 // ── Init ──
 showPage('pw');
+function showToast(msg, type) {
+  var colors = {
+    em: ['#ECFDF5','#059669','rgba(5,150,105,.2)'],
+    am: ['#FFFBEB','#D97706','rgba(217,119,6,.2)'],
+    rd: ['#FEF2F2','#DC2626','rgba(220,38,38,.2)'],
+    sk: ['#F0F9FF','#0284C7','rgba(2,132,199,.2)'],
+    ok: ['#ECFDF5','#059669','rgba(5,150,105,.2)'],
+    warn:['#FFFBEB','#D97706','rgba(217,119,6,.2)'],
+    error:['#FEF2F2','#DC2626','rgba(220,38,38,.2)'],
+  };
+  var c = colors[type] || colors.em;
+  var t = document.createElement('div');
+  t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999;padding:11px 18px;border-radius:9px;font-size:13px;font-weight:600;font-family:Outfit,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.12);transition:opacity .4s;background:'+c[0]+';color:'+c[1]+';border:1px solid '+c[2];
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(function(){ t.style.opacity='0'; setTimeout(function(){ if(t.parentNode) t.remove(); },400); }, 3200);
+}
+
 </script>
 <div class="mob-overlay" onclick="toggleSb()"></div>
 </body>
