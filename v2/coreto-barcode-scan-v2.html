@@ -1822,6 +1822,36 @@ function printApprovalDocs(doc, trackingCode){
   setTimeout(() => {
     try { wLetter && wLetter.print(); } catch(e) {}
   }, 1200);
+
+  // returnDocsが未取得の場合は担当AGに返送書類の連絡を依頼する通知を送る
+  if (!doc.returnDocs || doc.returnDocs.length === 0) {
+    notifyAgReturnDocs(cas);
+  }
+}
+
+// 担当AGへの返送書類確認依頼通知
+function notifyAgReturnDocs(cas) {
+  const msg = {
+    text: `📬 *返送書類のクライアント連絡をお願いします*\n` +
+          `案件ID: \`${cas.caseId}\`\n` +
+          `クライアント: ${cas.caseName} 様\n` +
+          `担当: ${cas.agent.name}（${cas.agent.agId}）\n\n` +
+          `Welcome letterを発送しました。\n` +
+          `返送必要書類リストが未取得のため、*クライアントへ直接ご連絡*いただき、返送が必要な書類をご案内ください。`
+  };
+  // Slack Webhook（未設定時はコンソールログ）
+  const WEBHOOK = (window.SLACK_CONFIG && window.SLACK_CONFIG.GENERAL) || '';
+  if (WEBHOOK) {
+    fetch(WEBHOOK, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(msg),
+      mode: 'no-cors'
+    }).catch(e => console.error('[Slack通知エラー]', e));
+  } else {
+    console.log('[AG通知（Slack未設定）]', msg.text);
+  }
+  showToast(`📬 ${cas.agent.name} に返送書類の連絡依頼を通知しました`, 'ok');
 }
 
 // ── Welcome letter（A4・通常プリンター・自動印刷）──────────
@@ -1848,10 +1878,9 @@ function printWelcomeLetter(cas, trackingCode, returnDocs){
          　 ご不明な点は担当エージェントまでお問い合わせください。
        </div>`
     : `<div class="sec">ご返送いただく書類</div>
-       <div style="font-size:11px;padding:14px 16px;background:#FFF7ED;border:1px solid #FED7AA;
-           border-radius:8px;margin-bottom:14px;line-height:1.8;color:#92400E">
-         📋 同封の<strong>「返送必要書類一覧」</strong>に記載された書類に、それぞれご署名・ご捺印のうえご返送ください。<br>
-         ご不明な点は担当エージェントまでお問い合わせください。
+       <div style="font-size:11px;padding:14px 16px;background:#F8F9FA;border:1px solid #E8EAED;
+           border-radius:8px;margin-bottom:14px;line-height:1.8;color:#202124">
+         担当より返送書類についてご連絡させていただきます。
        </div>`;
 
   const w = window.open('','_blank','width=860,height=1100');
