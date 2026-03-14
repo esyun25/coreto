@@ -365,6 +365,28 @@ function addVisit() {
 
   try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(visits)); } catch(e) {}
 
+  // Fix 5: 光通信リードならutility-v2と共有するlocalStorageに登録
+  if (v.lead) {
+    try {
+      const leads = JSON.parse(localStorage.getItem('CORETO_UTILITY_LEADS') || '[]');
+      const session = CNAV.session();
+      leads.unshift({
+        id: 'UTL-LEAD-' + String(v.id).slice(-6),
+        address: v.address,
+        memo: v.memo || '',
+        source: 'intern',
+        sourceId: session ? session.userId : 'INT',
+        sourceName: session ? session.name : 'インターン',
+        status: 'new',
+        createdAt: new Date().toLocaleString('ja-JP').slice(0,-3),
+      });
+      localStorage.setItem('CORETO_UTILITY_LEADS', JSON.stringify(leads));
+    } catch(e) {}
+    showToast('✅ 訪問を記録 + ⚡ 光通信リードをSFAに登録しました', 'em');
+  } else {
+    showToast('✅ 訪問を記録しました（' + address + '）', 'em');
+  }
+
   // リセット
   document.getElementById('f-address').value = '';
   document.getElementById('f-memo').value = '';
@@ -373,9 +395,7 @@ function addVisit() {
   ['success','callback','later','ng','absent','other'].forEach(k => {
     document.getElementById('rb-'+k).className = 'result-btn';
   });
-
   renderAll();
-  showToast('✅ 訪問を記録しました（' + address + '）', 'em');
 }
 
 // ══ レンダリング ═════════════════════════════

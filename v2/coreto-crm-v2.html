@@ -446,7 +446,7 @@ function toggleSb(){
   document.querySelector('.mob-overlay').classList.toggle('show');
 }
 
-const CLIENTS = [
+let CLIENTS = [
   {id:'CLI-0001',name:'田中 優子',kana:'タナカユウコ',av:'田',status:'active',statusLabel:'商談中',ag:'AG-0042',agName:'山田',type:'rental',typeLabel:'賃貸',util:['elec','net'],score:82,source:'PT紹介',lastContact:'2h前'},
   {id:'CLI-0002',name:'鈴木 健太',kana:'スズキケンタ',av:'鈴',status:'active',statusLabel:'商談中',ag:'AG-0088',agName:'田中',type:'rental',typeLabel:'賃貸',util:['elec'],score:71,source:'自己開拓',lastContact:'昨日'},
   {id:'CLI-0003',name:'高橋 美咲',kana:'タカハシミサキ',av:'高',status:'won',statusLabel:'成約済み',ag:'AG-0042',agName:'山田',type:'rental',typeLabel:'賃貸',util:['elec','gas','net'],score:95,source:'WEB',lastContact:'3日前'},
@@ -526,9 +526,58 @@ function filterTable(){
 function sortTable(col){ renderTable([...currentData]); } // simplified
 
 function openDetail(id){ window.location.href=`coreto-crm-detail-v2.html?id=${id}`; }
-function openModal(){ document.getElementById('modal').classList.add('open'); }
+function openModal(prefill) {
+  // prefill: CRM詳細や案件登録から呼ばれた時のデータ
+  if (prefill) {
+    document.querySelector('#modal input[placeholder="田中 優子"]').value = prefill.name || '';
+    document.querySelector('#modal input[placeholder="タナカ ユウコ"]').value = prefill.kana || '';
+    document.querySelector('#modal input[placeholder="090-0000-0000"]').value = prefill.phone || '';
+    document.querySelector('#modal input[placeholder="email@example.com"]').value = prefill.email || '';
+    document.querySelector('#modal input[placeholder="初回ヒアリング内容・希望条件など"]').value = prefill.memo || '';
+    if (prefill.source) {
+      const sel = document.querySelectorAll('#modal select')[1];
+      [...sel.options].forEach(o => { if (o.textContent.includes(prefill.source)) o.selected = true; });
+    }
+  }
+  document.getElementById('modal').classList.add('open');
+}
 function closeModal(){ document.getElementById('modal').classList.remove('open'); }
-function saveClient(){ closeModal(); }
+
+function saveClient(){
+  const inputs = document.querySelectorAll('#modal .form-input');
+  const selects = document.querySelectorAll('#modal .form-select');
+  const name  = inputs[0].value.trim();
+  const kana  = inputs[1].value.trim();
+  const phone = inputs[2].value.trim();
+  const email = inputs[3].value.trim();
+  const memo  = inputs[4]?.value?.trim() || '';
+  const type  = selects[0]?.value === '賃貸' ? 'rental' : selects[0]?.value === '売買' ? 'sale' : 'rental';
+  const source = selects[1]?.value || '自己開拓';
+  const agText = selects[2]?.value || '';
+  const ag    = agText.split(' ')[0] || 'AG-0042';
+
+  if (!name) { showToast('氏名を入力してください', 'warn'); return; }
+
+  const av = name.charAt(0);
+  const newId = 'CLI-' + String(Date.now()).slice(-4);
+  const newClient = {
+    id: newId, name, kana: kana||name, av,
+    status:'active', statusLabel:'商談中',
+    ag, agName: agText.split(' ').slice(1).join('') || ag,
+    type, typeLabel: type==='rental'?'賃貸':'売買',
+    util:[], score:50, source,
+    lastContact:'たった今',
+    phone, email, memo,
+  };
+  CLIENTS.unshift(newClient);
+  currentData = [...CLIENTS];
+
+  // フォームリセット
+  inputs.forEach(i => i.value = '');
+  closeModal();
+  renderTable(currentData);
+  showToast(`✅ ${name} 様をCRMに登録しました`, 'em');
+}
 function exportCSV(){ alert('CSVエクスポート（実装時：Kintone APIからダウンロード）'); }
 
 document.getElementById('modal').addEventListener('click', function(e){
@@ -541,25 +590,30 @@ renderTable(CLIENTS);
 
 <script src="coreto-nav-v2.js"></script>
 <script>
+function showToast(msg, type) {
+  const colors = {em:['#ECFDF5','#059669','rgba(5,150,105,.2)'],am:['#FFFBEB','#D97706','rgba(217,119,6,.2)'],warn:['#FFFBEB','#D97706','rgba(217,119,6,.2)']};
+  const [bg,cl,bc] = colors[type]||colors.em;
+  const t = document.createElement('div');
+  t.style.cssText = `position:fixed;bottom:24px;right:24px;z-index:9999;padding:11px 18px;border-radius:9px;font-size:13px;font-weight:600;font-family:'Outfit',sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.12);transition:opacity .4s;background:${bg};color:${cl};border:1px solid ${bc}`;
+  t.textContent = msg; document.body.appendChild(t);
+  setTimeout(()=>{t.style.opacity='0';setTimeout(()=>t.remove(),400);},3000);
+}
+
 window.addEventListener('DOMContentLoaded', function() {
   CNAV.init('crm');
+  document.getElementById('modal').addEventListener('click', e => { if(e.target===document.getElementById('modal')) closeModal(); });
   // ── ロール別クライアントフィルタ ──
   const _s = CNAV.session ? CNAV.session() : null;
   const _role = (_s && _s.type) || sessionStorage.getItem('coreto_role') || 'hq';
   if (_role !== 'hq') {
-    // HQ以外: 自分の担当クライアントのみ表示
     const _myId = _s ? _s.userId : null;
-    if (_myId) {
-      CLIENTS = CLIENTS.filter(c => c.ag === _myId);
-    }
-    // 担当AGフィルタセレクトを非表示
+    if (_myId) { CLIENTS = CLIENTS.filter(c => c.ag === _myId); }
     const agSel = document.getElementById('f-ag');
     if (agSel) agSel.closest('.filter-item, .filter-group, div').style.display = 'none';
-    // ページタイトルを「担当クライアント」に変更
     const title = document.querySelector('.top-bar .tb-title, .tb-title');
     if (title) title.textContent = '担当クライアント管理';
   }
-  renderTable();
+  renderTable(CLIENTS);
   filterTable();
 });
 </script>

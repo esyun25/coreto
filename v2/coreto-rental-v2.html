@@ -738,6 +738,43 @@ function closeCase() {
 <script>
 window.addEventListener('DOMContentLoaded', function() {
   CNAV.init('cases');
+
+  // Fix 9: URLパラメータから案件情報を読み込んでページを動的更新
+  const p = new URLSearchParams(location.search);
+  const caseId     = p.get('caseId');
+  const clientName = p.get('clientName') ? decodeURIComponent(p.get('clientName')) : null;
+  const isNew      = p.get('new') === '1';
+
+  if (caseId || clientName || isNew) {
+    // タイトル・パンくずを更新
+    if (caseId && document.querySelector('.tb-title')) {
+      const displayName = clientName || caseId;
+      document.querySelector('.tb-title').textContent = displayName + ' 様 ― 案件詳細';
+      document.querySelector('.tb-crumb').innerHTML =
+        '<a href="coreto-cases-v2.html">案件一覧</a> › ' +
+        (caseId ? '<span class="mono">' + caseId + '</span> › ' : '') +
+        '<span>賃貸案件詳細</span>';
+    }
+    if (caseId) {
+      // パイプラインのケースIDを更新
+      document.querySelectorAll('.pipeline-title').forEach(el => {
+        el.innerHTML = el.innerHTML.replace('RENT-0194', caseId);
+      });
+    }
+    if (clientName) {
+      // クライアント名を更新
+      document.querySelectorAll('.ic-val').forEach(el => {
+        if (el.textContent === '田中 優子 様') el.textContent = clientName + ' 様';
+      });
+    }
+    // CRMから来た場合はクライアント詳細ボタンのリンクにclientIdを付与
+    const clientId = p.get('clientId');
+    if (clientId) {
+      document.querySelectorAll('[onclick*="coreto-crm-detail"]').forEach(el => {
+        el.setAttribute('onclick', `window.location.href='coreto-crm-detail-v2.html?id=${clientId}'`);
+      });
+    }
+  }
 });
 </script>
 <div class="mob-overlay" onclick="toggleSb()"></div>

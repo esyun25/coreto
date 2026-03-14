@@ -434,10 +434,51 @@ function statsPage(){return`
   </div>`;}
 
 function registerCase(){
-  if(confirm('案件を登録しますか？\n\n担当AGにLINE通知が送信されます。')){
-    switchTab('pipeline',document.querySelectorAll('.tab')[0]);
-    setTimeout(()=>alert('✅ 案件を登録しました。\n担当AGにLINE通知を送信しました。'),200);
-  }
+  const inputs  = document.querySelectorAll('#content-area input[type="text"],#content-area input[type="tel"]');
+  const selects = document.querySelectorAll('#content-area select');
+  const name    = inputs[0]?.value.trim();
+  const phone   = inputs[1]?.value.trim();
+  if (!name || !phone) { showToast('⚠️ お客様名と電話番号は必須です', 'am'); return; }
+  if (!confirm('案件を登録しますか？\n担当AGにLINE通知が送信されます。')) return;
+
+  const caseId = 'UTL-' + String(Date.now()).slice(-4);
+  const services = [...document.querySelectorAll('#content-area input[type="checkbox"]')]
+    .map((cb,i) => cb.checked ? ['電力','ガス','光回線'][i] : null).filter(Boolean);
+
+  // Fix 7: localStorage保存でutility案件を永続化
+  try {
+    const cases = JSON.parse(localStorage.getItem('CORETO_UTILITY_CASES') || '[]');
+    const session = CNAV.session ? CNAV.session() : null;
+    cases.unshift({
+      id: caseId, name, phone,
+      ag: selects[0]?.value || '', source: selects[1]?.value || 'AG直接',
+      address: inputs[2]?.value?.trim() || '',
+      services, status: 'new', createdAt: new Date().toLocaleString('ja-JP').slice(0,-3),
+    });
+    localStorage.setItem('CORETO_UTILITY_CASES', JSON.stringify(cases));
+  } catch(e) {}
+
+  // LINE通知（設定後有効化）
+  const LINE_TOKEN = (window.LINE_CONFIG && window.LINE_CONFIG.AG_CHANNEL_TOKEN) || '';
+  const msg = `【COREBLDG】光通信新規案件\n案件ID: ${caseId}\nお客様: ${name}\nサービス: ${services.join('・') || '未選択'}`;
+  if (LINE_TOKEN) {
+    fetch('https://api.line.me/v2/bot/message/broadcast', {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+LINE_TOKEN},
+      body: JSON.stringify({ messages:[{type:'text',text:msg}] })
+    }).catch(e => console.error(e));
+  } else { console.log('[LINE通知 — 設定待ち]', msg); }
+
+  switchTab('pipeline', document.querySelectorAll('.tab')[0]);
+  showToast('✅ 案件 ' + caseId + ' を登録しました。担当AGにLINEで通知します。', 'em');
+}
+
+function showToast(msg, type) {
+  const colors = {em:['#ECFDF5','#059669','rgba(5,150,105,.2)'],am:['#FFFBEB','#D97706','rgba(217,119,6,.2)']};
+  const [bg,cl,bc] = colors[type]||colors.em;
+  const t = document.createElement('div');
+  t.style.cssText = `position:fixed;bottom:24px;right:24px;z-index:9999;padding:11px 18px;border-radius:9px;font-size:13px;font-weight:600;font-family:'Outfit',sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.12);transition:opacity .4s;background:${bg};color:${cl};border:1px solid ${bc}`;
+  t.textContent = msg; document.body.appendChild(t);
+  setTimeout(()=>{t.style.opacity='0';setTimeout(()=>t.remove(),400);}, 3000);
 }
 
 renderTab('pipeline');

@@ -730,8 +730,29 @@ let currentReqId = '', currentNetAmount = 0;
 function startRequest() {
   const req = parseFloat(document.getElementById('req-amount').value) || 0;
   if (req < 10000) return;
+
+  // Fix 11: 報酬残高上限チェック
+  const BALANCE = 726163; // 実運用ではAPIから取得
+  if (req > BALANCE) {
+    showToast(`⚠️ 申請額（¥${req.toLocaleString()}）が報酬残高（¥${BALANCE.toLocaleString()}）を超えています。¥${BALANCE.toLocaleString()} 以下で再入力してください。`, 'am');
+    const input = document.getElementById('req-amount');
+    input.style.borderColor = 'var(--rd)';
+    input.style.boxShadow = '0 0 0 3px rgba(220,38,38,.12)';
+    setTimeout(() => { input.style.borderColor = ''; input.style.boxShadow = ''; }, 3000);
+    return;
+  }
+
+  // Fix 12: 即時払い後の差額調整説明を画面に表示（HQが後から修正できることを明示）
   currentNetAmount = req;
   currentReqId = 'IPY-' + new Date().getFullYear() + '-' + randomId(4);
+
+  // 差額調整フラグをsessionStorageに記録（HQ承認時に照合）
+  try {
+    const pending = JSON.parse(sessionStorage.getItem('CORETO_INSTANT_PAY_PENDING') || '[]');
+    pending.push({ id: currentReqId, req, requestedAt: new Date().toISOString(), status: 'pending' });
+    sessionStorage.setItem('CORETO_INSTANT_PAY_PENDING', JSON.stringify(pending));
+  } catch(e) {}
+
   tfaOtp = String(Math.floor(100000 + Math.random() * 900000));
   tfaAttempts = 0;
   openTfa();

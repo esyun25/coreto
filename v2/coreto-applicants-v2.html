@@ -650,6 +650,15 @@ function copyApplyUrl() {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
+  // Fix 2: apply-v2から保存された応募データをlocalStorageから読み込み
+  try {
+    const saved = JSON.parse(localStorage.getItem('CORETO_APPLICANTS') || '[]');
+    if (saved.length > 0) {
+      // 既存デモデータのIDと重複しないものだけ追加
+      const existingIds = new Set(APPLICANTS.map(a => a.id));
+      saved.forEach(a => { if (!existingIds.has(a.id)) APPLICANTS.unshift(a); });
+    }
+  } catch(e) {}
   updateKPI();
   renderList();
   CNAV.init('applicants');

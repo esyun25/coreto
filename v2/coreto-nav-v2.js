@@ -196,7 +196,7 @@ const NAV = {
         { icon:'👥', label:'クライアント管理',     href:'coreto-crm-v2.html',             key:'crm'             },
         { icon:'🏠', label:'内見管理',             href:'coreto-showing-v2.html',         key:'showing'         },
         { icon:'📋', label:'書類送付管理',     href:'coreto-screening-v2.html',       key:'screening'       },
-        { icon:'🔑', label:'IT重説チェックリスト', href:'coreto-itsetsu-v2.html',         key:'itsetsu'         },
+        { icon:'🔑', label:'IT重説を予約する',   href:'coreto-itsetsu-booking-v2.html', key:'itsetsu'         },
         { icon:'🏦', label:'初期費用明細チェック', href:'coreto-invoice-check-v2.html',   key:'invoice_check'   },
 
       ],

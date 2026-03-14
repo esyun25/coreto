@@ -360,7 +360,7 @@ html, body { background:#FFFFFF !important; }
       <div class="sec-card">
         <div class="sec-head">
           <div class="sec-title"><span class="sec-title-icon">📁</span>担当案件</div>
-          <button class="btn btn-ghost btn-sm" onclick="window.location.href='coreto-cases-v2.html'">＋ 案件追加</button>
+          <button class="btn btn-ghost btn-sm" onclick="openNewCaseFromCRM()">＋ 案件追加</button>
         </div>
         <div class="sec-body">
           <div class="cases-grid">
@@ -741,6 +741,54 @@ ${tlItems}
   }
   btn.textContent = '✨ 生成';
   btn.disabled = false;
+}
+
+// Fix 6: CRM詳細→案件登録時にクライアント情報をURLパラメータで引き継ぐ
+function openNewCaseFromCRM() {
+  const name     = document.querySelector('.ph-name')?.textContent?.trim() || '';
+  const clientId = document.querySelector('.ph-id')?.textContent?.trim()   || '';
+
+  const choices = [
+    { dest:'coreto-rental-v2.html?new=1',        icon:'🏠', label:'賃貸仲介', color:'#0284C7', bg:'#F0F9FF', border:'rgba(2,132,199,.2)' },
+    { dest:'coreto-sale-report-v2.html?new=1',   icon:'🏢', label:'売買仲介', color:'#7C3AED', bg:'#F5F3FF', border:'rgba(124,58,237,.2)' },
+    { dest:'coreto-hr-matching-v2.html?new=1',   icon:'👤', label:'人材紹介', color:'#059669', bg:'#ECFDF5', border:'rgba(5,150,105,.2)'  },
+    { dest:'coreto-utility-v2.html?tab=new',     icon:'⚡', label:'光通信',   color:'#D97706', bg:'rgba(200,169,81,.12)', border:'rgba(200,169,81,.25)' },
+  ];
+
+  const modal = document.createElement('div');
+  modal.id = 'new-case-from-crm';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(2px)';
+
+  const btnsHtml = choices.map(c =>
+    '<button data-dest="' + c.dest + '&clientId=' + encodeURIComponent(clientId) + '&clientName=' + encodeURIComponent(name) + '"' +
+    ' style="padding:12px 16px;background:' + c.bg + ';border:1.5px solid ' + c.border + ';border-radius:9px;cursor:pointer;text-align:left;font-family:Outfit,sans-serif;width:100%">' +
+    '<div style="font-weight:700;font-size:13px;color:' + c.color + '">' + c.icon + ' ' + c.label + '</div>' +
+    '</button>'
+  ).join('');
+
+  modal.innerHTML =
+    '<div style="background:#fff;border-radius:14px;width:100%;max-width:440px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.22);font-family:Outfit,sans-serif">' +
+      '<div style="background:#0D1A2D;padding:16px 20px;display:flex;align-items:center;justify-content:space-between">' +
+        '<div style="font-family:Cormorant Garamond,serif;font-size:15px;font-weight:600;letter-spacing:2px;color:#C8A951">新規案件登録</div>' +
+        '<button id="crm-modal-close" style="background:rgba(255,255,255,.1);border:none;width:26px;height:26px;border-radius:50%;color:rgba(255,255,255,.7);cursor:pointer;font-size:16px">✕</button>' +
+      '</div>' +
+      '<div style="padding:18px 20px">' +
+        '<div style="background:#F8F9FA;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#5F6368">' +
+          '👤 ' + (name || '—') + ' 様（' + (clientId || '—') + '）の案件を登録します' +
+        '</div>' +
+        '<div style="display:flex;flex-direction:column;gap:9px">' + btnsHtml + '</div>' +
+      '</div>' +
+    '</div>';
+
+  // イベントデリゲーション（onclickをHTML属性に入れない）
+  modal.addEventListener('click', function(e) {
+    if (e.target === modal) { modal.remove(); return; }
+    var btn = e.target.closest('[data-dest]');
+    if (btn) { modal.remove(); location.href = btn.dataset.dest; return; }
+    if (e.target.id === 'crm-modal-close') { modal.remove(); }
+  });
+
+  document.body.appendChild(modal);
 }
 </script>
 <div class="mob-overlay" onclick="toggleSb()"></div>

@@ -623,19 +623,37 @@ function submitForm(type) {
 
   caseCounter[type]++;
   const prefix = type === 're' ? 'RENT' : type === 'hr' ? 'HR' : 'UTL';
-  const caseId = `${prefix}-${String(caseCounter[type]).padStart(4,'0')}`;
+  const caseId = `${prefix}-${String(Date.now()).slice(-4)}`;
   document.getElementById(type+'-case-id').textContent = caseId;
+
+  const session = CNAV.session ? CNAV.session() : null;
+  const ptName  = session ? session.name : 'PTユーザー';
+  const ptId    = session ? session.userId : 'PT';
+  const now     = new Date().toLocaleDateString('ja-JP');
 
   document.getElementById(type+'-form-wrap').style.display = 'none';
   document.getElementById(type+'-success').classList.add('show');
 
-  // 進捗データに追加
+  // 進捗データに追加（表示用）
   PROGRESS_DATA.unshift({
     id: caseId, type, typeLabel: type==='re'?'不動産':type==='hr'?'人材':'光通信',
     client: name, detail: '新規紹介', status:'active', statusLabel:'受付済み',
-    prog: 5, reward: 0, ag:'調整中', date: new Date().toLocaleDateString('ja-JP')
+    prog: 5, reward: 0, ag:'調整中', date: now
   });
   document.getElementById('prog-badge').textContent = PROGRESS_DATA.filter(d=>d.status==='active').length;
+
+  // Fix 13: HR案件→hr-matching-v2 / RE案件→matching-v2 / 光通信→utility-v2 にlocalStorage経由で流入
+  try {
+    const lsKey = type === 'hr' ? 'CORETO_HR_LEADS' : type === 're' ? 'CORETO_RE_LEADS' : 'CORETO_UTILITY_LEADS';
+    const leads = JSON.parse(localStorage.getItem(lsKey) || '[]');
+    leads.unshift({
+      id: caseId, name, tel, source: 'pt',
+      sourcePt: ptId, sourcePtName: ptName,
+      status: 'new', createdAt: now,
+      detail: document.getElementById(type+'-detail')?.value?.trim() || '',
+    });
+    localStorage.setItem(lsKey, JSON.stringify(leads));
+  } catch(e) {}
 }
 
 function resetSuccess(type) {

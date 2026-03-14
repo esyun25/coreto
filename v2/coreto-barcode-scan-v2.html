@@ -657,9 +657,10 @@ const FLOW_DEFS = {
 };
 
 // ══════════════════════════════════════════════════════════
-// デモデータ
+// デモデータ & Fix 14: localStorage永続化
 // ══════════════════════════════════════════════════════════
-let DOCS = [
+const LS_DOCS_KEY = 'CORETO_BARCODE_DOCS';
+const DOCS_DEMO = [
   {
     id:'DOC-001', caseId:'RC-10042', caseName:'田中 様 ／ 渋谷区代々木アパート',
     flow:'A', stepIdx:3,
@@ -701,6 +702,20 @@ let DOCS = [
     hankoOk:false, extraStamp:true,
   },
 ];
+
+// localStorage から読み込み、なければデモデータを使用
+function loadDocs() {
+  try {
+    const saved = localStorage.getItem(LS_DOCS_KEY);
+    if (saved) return JSON.parse(saved);
+  } catch(e) {}
+  return JSON.parse(JSON.stringify(DOCS_DEMO)); // deep copy
+}
+function saveDocs() {
+  try { localStorage.setItem(LS_DOCS_KEY, JSON.stringify(DOCS)); } catch(e) {}
+}
+
+let DOCS = loadDocs();
 
 // ══════════════════════════════════════════════════════════
 // ユーティリティ
@@ -1146,6 +1161,7 @@ function advance(docId){
   } else {
     showToast('✅ ステップを更新しました', 'ok');
   }
+  saveDocs();
   refreshCurrentTab();
 }
 
@@ -1326,11 +1342,11 @@ function approveAi(docId){
     const bc = doc.caseId.replace('-','') + Date.now().toString().slice(-6);
     doc.outboundTracking = bc;
     showToast(`✅ 承認: ${doc.caseId} — 書類を保存・印刷を開始します`, 'ok');
-    renderStats(); refreshCurrentTab();
+    saveDocs(); renderStats(); refreshCurrentTab();
     setTimeout(()=>{ printApprovalDocs(doc, bc); }, 400);
   } else {
     showToast(`✅ 承認しました: ${doc.caseId}`, 'ok');
-    renderStats(); refreshCurrentTab();
+    saveDocs(); renderStats(); refreshCurrentTab();
   }
 }
 
@@ -1511,6 +1527,7 @@ function hankoNg(docId){
   DOCS.push(newDoc);
   // Bフローの当該書類を削除
   DOCS = DOCS.filter(d=>d.id!==docId);
+  saveDocs();
   showToast('⚠️ 追加捺印フロー（D）に移行しました', 'warn');
   renderStats(); refreshCurrentTab();
 }
@@ -2333,6 +2350,7 @@ function submitNewUpload(){
     hankoOk:false, extraStamp:false,
   };
   DOCS.unshift(newDoc);
+  saveDocs();
 
   // localStorage に pending として保存
   const pendingData = {

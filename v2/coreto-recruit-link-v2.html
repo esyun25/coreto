@@ -368,6 +368,30 @@ function clearHistory() {
 
 function updateStats() {
   document.getElementById('stat-links').textContent = HISTORY.length;
+  // Fix 3: apply-v2が書き込んだ応募数をlocalStorageから読み込んで表示
+  try {
+    const stats = JSON.parse(localStorage.getItem('CORETO_RECRUIT_STATS') || '{}');
+    // 自分のリクルートリンク経由の応募数を集計
+    let myApplies = 0;
+    HISTORY.forEach(h => {
+      const refCode = h.refCode || SESSION.userId;
+      myApplies += stats[refCode] || 0;
+    });
+    const applyEl  = document.getElementById('stat-applies');
+    const passedEl = document.getElementById('stat-passed');
+    if (applyEl) {
+      applyEl.textContent = myApplies > 0 ? myApplies : '0';
+      applyEl.style.color = 'var(--em)';
+      applyEl.closest('.stat-card').querySelector('.stat-sub').textContent = 'apply-v2経由累計';
+    }
+    // 合格数はapplicants-v2のlocalStorageから
+    const applicants = JSON.parse(localStorage.getItem('CORETO_APPLICANTS') || '[]');
+    const myPassed = applicants.filter(a => a.referral && HISTORY.some(h => h.refCode === a.referral) && a.status === 'passed').length;
+    if (passedEl) {
+      passedEl.textContent = myPassed > 0 ? myPassed : '0';
+      passedEl.closest('.stat-card').querySelector('.stat-sub').textContent = 'ステータス：合格';
+    }
+  } catch(e) {}
 }
 
 // ── 初期化 ────────────────────────────────────────────────

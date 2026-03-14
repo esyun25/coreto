@@ -533,31 +533,57 @@ function submitApply() {
   const btn = document.querySelector('.btn-em');
   if (btn) { btn.disabled=true; btn.textContent='送信中...'; }
 
-  // Slack通知（実運用ではAPIエンドポイントへPOST）
   const roleLabel = {'ag-re':'不動産AG','ag-hr':'人材AG','pt':'PT'}[D.role]||D.role;
-  const slackMsg = {
-    text: `🆕 新規応募が届きました`,
-    blocks:[{
-      type:'section',
-      text:{ type:'mrkdwn',
-        text:`*🆕 CORETO 新規応募*\n` +
-          `種別: *${roleLabel}*\n` +
-          `氏名: ${D.lastName} ${D.firstName}（${D.lastKana} ${D.firstKana}）\n` +
-          `電話: ${D.phone}  /  Mail: ${D.email}\n` +
-          `居住: ${D.pref}　経験（不動産）: ${D.expRe}\n` +
-          `宅建: ${D.takken==='yes'?'あり':'なし'}　状況: ${D.status}\n` +
-          `紹介コード: ${D.referral||'なし'}`
-      }
-    }]
-  };
-  console.log('[CORETO Apply] Slack payload:', JSON.stringify(slackMsg));
-  // 実運用: fetch(SLACK_WEBHOOK_URL, { method:'POST', body: JSON.stringify(slackMsg) })
+  const aplId = 'APL-' + Date.now().toString().slice(-8);
 
-  setTimeout(() => renderComplete(), 600);
+  // Fix 1: applicants-v2と共有するlocalStorageキーに応募データを保存
+  try {
+    const existing = JSON.parse(localStorage.getItem('CORETO_APPLICANTS') || '[]');
+    existing.unshift({
+      id: aplId,
+      date: new Date().toISOString().slice(0,10),
+      lastName: D.lastName, firstName: D.firstName,
+      lastKana: D.lastKana, firstKana: D.firstKana,
+      phone: D.phone, email: D.email,
+      pref: D.pref, area: D.area || '',
+      role: D.role, takken: D.takken || 'no',
+      expRe: D.expRe || '未経験', expHr: D.expHr || '未経験',
+      expSales: D.expSales || '未経験',
+      status: 'new',
+      motivation: D.motivation || '',
+      referral: D.referral || '',
+      mentor: '', inviteSent: false,
+      source: 'apply-form',
+    });
+    localStorage.setItem('CORETO_APPLICANTS', JSON.stringify(existing));
+  } catch(e) { console.error('応募データ保存失敗', e); }
+
+  // Fix 3: リクルートリンク経由の場合、応募数カウントを更新
+  if (D.referral) {
+    try {
+      const stats = JSON.parse(localStorage.getItem('CORETO_RECRUIT_STATS') || '{}');
+      stats[D.referral] = (stats[D.referral] || 0) + 1;
+      localStorage.setItem('CORETO_RECRUIT_STATS', JSON.stringify(stats));
+    } catch(e) {}
+  }
+
+  // LINE/Slack通知（設定後有効化）
+  const LINE_TOKEN = (window.LINE_CONFIG && window.LINE_CONFIG.AG_CHANNEL_TOKEN) || '';
+  const notifyMsg = `【COREBLDG】新規応募\n種別: ${roleLabel}\n氏名: ${D.lastName} ${D.firstName}\n受付ID: ${aplId}`;
+  if (LINE_TOKEN) {
+    fetch('https://api.line.me/v2/bot/message/broadcast', {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+LINE_TOKEN},
+      body: JSON.stringify({ messages:[{ type:'text', text: notifyMsg }] })
+    }).catch(e => console.error(e));
+  } else {
+    console.log('[CORETO Apply] 新規応募:', notifyMsg);
+  }
+
+  setTimeout(() => renderComplete(aplId), 600);
 }
 
 // ── 完了 ─────────────────────────────────────────────────
-function renderComplete() {
+function renderComplete(aplId) {
   document.getElementById('step-bar').style.display = 'none';
   document.getElementById('main-card').innerHTML = `
     <div class="complete-wrap">
@@ -580,7 +606,7 @@ function renderComplete() {
         </div>
       </div>
       <div style="font-size:11px;color:var(--faint)">
-        応募受付番号: <span style="font-family:'DM Mono',monospace">APL-${Date.now().toString().slice(-8)}</span>
+        応募受付番号: <span style="font-family:'DM Mono',monospace">${aplId || 'APL-'+Date.now().toString().slice(-8)}</span>
       </div>
     </div>`;
 }
