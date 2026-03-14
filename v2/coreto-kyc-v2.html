@@ -674,7 +674,9 @@ function submitRej(){
   const reasons=Array.from(document.querySelectorAll('input[name=rr]:checked')).map(c=>c.parentElement.textContent.trim()).join('、');
   if(!reasons){alert('否認理由を1つ以上選択してください');return;}
   // A-08: 追加コメントを入力できる
-  const extra = prompt('追加コメント（任意）:', '');
+  // 追加コメントはprompt→事前入力の理由テキストを使用
+  const extraEl = document.getElementById('rej-comment');
+  const extra = extraEl ? extraEl.value.trim() : '';
   const fullReason = reasons + (extra ? '\n補足: ' + extra : '');
   closeRej();
   const card=document.getElementById('rc-'+rejId);if(card){card.style.opacity='.45';card.style.pointerEvents='none';card.querySelector('.rch').insertAdjacentHTML('beforeend','<span class="badge b-rd" style="margin-left:8px">✗ 否認</span>');}
@@ -739,7 +741,7 @@ async function kycAIAnalyze(file, b64, mime) {
     const resp = await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
-        model:'claude-sonnet-4-20250514', max_tokens:800,
+        model:'claude-sonnet-4-6', max_tokens:800,
         system:`あなたは日本の本人確認書類の読み取り専門AIです。以下のJSONのみで返答してください（前置き・後置き不要）。`,
         messages:[{ role:'user', content:[
           { type:'image', source:{ type:'base64', media_type:mime, data:b64 }},

@@ -451,21 +451,18 @@ const COMMISSION_RATE = {
   re_ag:     { Bronze:65,  Silver:67.5, Gold:70,  Platinum:75  },
   hr_ag:     { Bronze:45,  Silver:47.5, Gold:50,  Platinum:55  },
   hikari_ag: { Bronze:80,  Silver:83,   Gold:87,  Platinum:90  },
-  hq:        { Bronze:75,  Silver:75,   Gold:75,  Platinum:75  }, // HQ確認用
+  hq:        { Bronze:75,  Silver:75,   Gold:75,  Platinum:75  },
 };
-
-// 仮のランクマップ（実運用時はセッションから取得）
-const RANK_MAP = { 'AG-0042':'Gold', 'AG-0088':'Silver', 'AG-0103':'Bronze', 'HQ-001':'Platinum' };
 
 function getMyRate(bizType) {
   const role = sessionStorage.getItem('coreto_role') || 're_ag';
-  // bizType が hr なら hr_ag レートを、util なら hikari_ag レートを使う
   const rateKey = bizType === 'hr' ? 'hr_ag' : bizType === 'util' ? 'hikari_ag' : (role === 'hq' ? 'hq' : role);
   const rates = COMMISSION_RATE[rateKey] || COMMISSION_RATE.re_ag;
-  // ランク取得（デモ: セッションのuserIdから）
-  const userId = sessionStorage.getItem('coreto_role') === 'hq' ? 'HQ-001' : 'AG-0042';
-  const rank = RANK_MAP[userId] || 'Gold';
-  return { rate: rates[rank] || 70, rank };
+  // 🔴-4修正: sessionStorageから実際のランクを取得（RANK_MAPの固定IDを廃止）
+  const rank = sessionStorage.getItem('coreto_rank') || 'Gold';
+  const validRanks = ['Bronze','Silver','Gold','Platinum'];
+  const safeRank = validRanks.includes(rank) ? rank : 'Gold';
+  return { rate: rates[safeRank] || 70, rank: safeRank };
 }
 
 function calcReward(){

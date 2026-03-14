@@ -611,12 +611,40 @@ function setOffer(id) {
 }
 
 function closeDeal(id) {
-  const salary = prompt('入社年収を入力（万円）:'); if (!salary) return;
-  const rate   = prompt('成功報酬率を入力（%）:', '30'); if (!rate) return;
+  // 🟡-12: prompt()をインラインモーダルに置き換え
+  const existing = document.getElementById('close-deal-modal');
+  if (existing) existing.remove();
+  const m = document.createElement('div');
+  m.id = 'close-deal-modal';
+  m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(2px)';
+  m.innerHTML = '<div style="background:#fff;border-radius:12px;width:100%;max-width:380px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.22);font-family:Outfit,sans-serif">' +
+    '<div style="font-size:15px;font-weight:700;color:#0D1A2D;margin-bottom:16px">🎉 内定承諾・成約</div>' +
+    '<div style="margin-bottom:14px"><label style="font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:#5F6368;display:block;margin-bottom:6px">入社年収（万円）</label>' +
+    '<input id="cd-salary" type="number" placeholder="例: 600" style="width:100%;padding:9px 12px;border:1.5px solid #E8EAED;border-radius:8px;font-size:13px;font-family:Outfit,sans-serif;outline:none" onfocus="this.style.borderColor=\'#C8A951\'" onblur="this.style.borderColor=\'#E8EAED\'"></div>' +
+    '<div style="margin-bottom:20px"><label style="font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:#5F6368;display:block;margin-bottom:6px">成功報酬率（%）</label>' +
+    '<input id="cd-rate" type="number" placeholder="30" value="30" style="width:100%;padding:9px 12px;border:1.5px solid #E8EAED;border-radius:8px;font-size:13px;font-family:Outfit,sans-serif;outline:none" onfocus="this.style.borderColor=\'#C8A951\'" onblur="this.style.borderColor=\'#E8EAED\'"></div>' +
+    '<div style="display:flex;gap:10px">' +
+    '<button onclick="document.getElementById(\'close-deal-modal\').remove()" style="flex:1;padding:10px;border:1.5px solid #E8EAED;border-radius:8px;background:transparent;cursor:pointer;font-family:Outfit,sans-serif">キャンセル</button>' +
+    '<button onclick="closeDealConfirm(\'' + id + '\')" style="flex:2;padding:10px;background:#0D1A2D;color:#C8A951;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-family:Outfit,sans-serif">成約を確定する</button>' +
+    '</div></div>';
+  m.addEventListener('click', function(e){ if(e.target===m) m.remove(); });
+  document.body.appendChild(m);
+  setTimeout(function(){ document.getElementById('cd-salary').focus(); }, 100);
+}
+
+function closeDealConfirm(id) {
+  const salaryEl = document.getElementById('cd-salary');
+  const rateEl   = document.getElementById('cd-rate');
+  const salary   = salaryEl ? salaryEl.value : '';
+  const rate     = rateEl   ? rateEl.value   : '30';
+  const modal    = document.getElementById('close-deal-modal');
+  if (!salary) { if(salaryEl) salaryEl.style.borderColor='#DC2626'; return; }
+  if (modal) modal.remove();
+  const _closeDeal = id; // alias to avoid collision
   const c = CASES.find(x=>x.id===id); if(!c) return;
   c.status='closed'; c.step=6; c.finalSalary=Number(salary); c.feeRate=Number(rate); c.lastUpdate=today();
   const fee = (Number(salary)*10000*Number(rate)/100).toLocaleString();
-  c.timeline.push({date:today(), step:'内定承諾', note:`承諾完了。入社年収 ${salary}万円。成功報酬: ¥${fee}（${rate}%）`, type:'em'});
+  c.timeline.push({date:today(), step:'内定承諾', note:'承諾完了。入社年収 '+salary+'万円。成功報酬: ¥'+fee+'（'+rate+'%）', type:'em'});
 
   // D-04: 在籍確認リマインダーを30日後・60日後・90日後で自動登録
   try {
@@ -759,7 +787,7 @@ JSON形式のみ（前置き不要）:
   try {
     const resp = await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,messages:[{role:'user',content:prompt}]})
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:800,messages:[{role:'user',content:prompt}]})
     });
     const data = await resp.json();
     const fb = JSON.parse((data.content?.find(b=>b.type==='text')?.text||'{}').replace(/```json|```/g,'').trim());
@@ -794,7 +822,7 @@ async function runAI() {
   const active = CASES.filter(c=>c.status==='active'||c.status==='offer');
   const prompt = `COREBLDGの人材AG全体サマリー。進行中案件: ${active.map(c=>`${c.name}(${HR_STEPS[c.step]})`).join('、')}。優先対応が必要な案件と理由をJSONで: {"priority":[{"name":"案件名","reason":"理由","action":"アクション"}],"summary":"全体コメント（1文）"}`;
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:600,messages:[{role:'user',content:prompt}]})});
+    const resp = await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:600,messages:[{role:'user',content:prompt}]})});
     const data = await resp.json();
     const fb = JSON.parse((data.content?.find(b=>b.type==='text')?.text||'{}').replace(/```json|```/g,'').trim());
     const box = document.createElement('div');
@@ -871,7 +899,7 @@ async function processDoc(file, caseId) {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
-        model:'claude-sonnet-4-20250514', max_tokens:1200,
+        model:'claude-sonnet-4-6', max_tokens:1200,
         messages:[{role:'user', content:[contentBlock, {type:'text', text:HR_DOC_PROMPT}]}]
       })
     });
@@ -946,7 +974,7 @@ async function showStagnationAdvice(id) {
   try {
     const resp = await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:600,messages:[{role:'user',content:
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:600,messages:[{role:'user',content:
         `人材紹介AG「鈴木 花子」の担当案件「${c.name}」が${days}日間進捗なし。
 現在ステップ: ${HR_STEPS[c.step]}、希望: ${c.targetJob} / ${c.targetSalary}万円〜
 停滞打開のアドバイスをJSONのみで:
@@ -981,7 +1009,7 @@ async function generateClosedNotification(id) {
     const fee = c.finalSalary && c.feeRate ? Math.round(c.finalSalary*10000*c.feeRate/100) : 0;
     const resp = await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:600,messages:[{role:'user',content:
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:600,messages:[{role:'user',content:
         `人材紹介の成約通知文を生成してください。
 担当AG: 鈴木 花子 / 成約者: ${c.name} / 入社先: ${c.companies.find(x=>x.result==='承諾')?.name||'—'}
 ポジション: ${c.targetJob} / 入社年収: ${c.finalSalary||'—'}万円 / 成功報酬: ¥${fee.toLocaleString()}
@@ -1145,7 +1173,7 @@ JSON:
   try {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({model:'claude-sonnet-4-20250514', max_tokens:600,
+      body: JSON.stringify({model:'claude-sonnet-4-6', max_tokens:600,
         messages:[{role:'user',content:prompt}]})
     });
     const data = await resp.json();
@@ -1259,7 +1287,7 @@ JSONのみ:
   try {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({model:'claude-sonnet-4-20250514', max_tokens:400,
+      body: JSON.stringify({model:'claude-sonnet-4-6', max_tokens:400,
         messages:[{role:'user',content:prompt}]})
     });
     const data = await resp.json();

@@ -1025,36 +1025,81 @@ const ROLES = {
   intern:    { label:'インターン', av:'IN', nav: internNav,    page: renderInternDash },
 };
 
+// ═══ 簡易ユーザー認証（デモ用。本番はサーバー認証APIに置換）═══
+// IDとパスワードのマッピング。本番ではこのオブジェクトをサーバーサイドに移動すること
+const USER_CREDENTIALS = {
+  // HQ
+  'HQ-0001': { pw: 'Coreto2026!', role: 'hq',        name: '田中 誠一（統括）',  userId: 'HQ-0001', rank: null },
+  // RE-AG
+  'AG-0042':  { pw: 'agent2026',  role: 're_ag',      name: '山田 誠',            userId: 'AG-0042',  rank: 'Gold' },
+  'AG-0088':  { pw: 'agent2026',  role: 're_ag',      name: '鈴木 花子',          userId: 'AG-0088',  rank: 'Silver' },
+  'AG-0055':  { pw: 'agent2026',  role: 're_ag',      name: '井上 誠',            userId: 'AG-0055',  rank: 'Gold' },
+  // HR-AG
+  'AG-0103':  { pw: 'agent2026',  role: 'hr_ag',      name: '山田 光太',          userId: 'AG-0103',  rank: 'Bronze' },
+  'AG-0112':  { pw: 'agent2026',  role: 'hr_ag',      name: '中村 梓',            userId: 'AG-0112',  rank: 'Bronze' },
+  // 光通信AG
+  'AG-0071':  { pw: 'agent2026',  role: 'hikari_ag',  name: '中村 陽子',          userId: 'AG-0071',  rank: 'Silver' },
+  // PT
+  'PT-0015':  { pw: 'partner26',  role: 'pt',         name: '佐藤 健一',          userId: 'PT-0015',  rank: null },
+  'PT-0022':  { pw: 'partner26',  role: 'pt',         name: '高橋 美咲',          userId: 'PT-0022',  rank: null },
+  // インターン
+  'INT-007':  { pw: 'intern26',   role: 'intern',     name: '渡辺 大輝',          userId: 'INT-007',  rank: null },
+};
+
 function doLogin() {
   const id = document.getElementById('login-id').value.trim();
   const pw = document.getElementById('login-pw').value;
+  const errEl = document.getElementById('login-err');
   if (!id || !pw) {
-    document.getElementById('login-err').textContent = 'ログインIDとパスワードを入力してください';
+    errEl.textContent = 'ログインIDとパスワードを入力してください';
     return;
   }
-  loginAs('hq');
+  const user = USER_CREDENTIALS[id];
+  if (!user || user.pw !== pw) {
+    errEl.textContent = 'IDまたはパスワードが正しくありません';
+    // ブルートフォース対策（デモ: 3回失敗でボタン3秒ロック）
+    const btn = document.getElementById('login-btn');
+    if (btn) {
+      const fails = parseInt(btn.dataset.fails || '0') + 1;
+      btn.dataset.fails = fails;
+      if (fails >= 3) {
+        btn.disabled = true;
+        btn.textContent = '3秒後に再試行できます';
+        setTimeout(() => { btn.disabled = false; btn.textContent = 'ログイン'; btn.dataset.fails = '0'; }, 3000);
+      }
+    }
+    return;
+  }
+  // 認証成功: sessionStorageにロール・ユーザー情報を保存
+  sessionStorage.setItem('coreto_role',    user.role);
+  sessionStorage.setItem('coreto_user_id', user.userId);
+  sessionStorage.setItem('coreto_name',    user.name);
+  if (user.rank) sessionStorage.setItem('coreto_rank', user.rank);
+  loginAs(user.role, user);
 }
 
-function loginAs(role) {
+function loginAs(role, user) {
+  // userが渡されない場合（デモ切替ボタン）はCREDENTIALSから検索
+  if (!user) {
+    const uid = Object.keys(USER_CREDENTIALS).find(k => USER_CREDENTIALS[k].role === role);
+    user = uid ? USER_CREDENTIALS[uid] : { role, name: role, userId: role, rank: null };
+    sessionStorage.setItem('coreto_role',    user.role);
+    sessionStorage.setItem('coreto_user_id', user.userId);
+    sessionStorage.setItem('coreto_name',    user.name);
+    if (user.rank) sessionStorage.setItem('coreto_rank', user.rank);
+  }
   currentRole = role;
-  // 外部ページ遷移後もロールを保持するためsessionStorageへ保存
-  sessionStorage.setItem('coreto_role', role);
 
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
 
   const r = ROLES[role];
   document.getElementById('sb-av').textContent = r.av;
-  document.getElementById('sb-name').textContent =
-    role === 'hq' ? '田中 誠一（統括）' :
-    role === 're_ag' ? '山田 誠（RE-AG）' :
-    role === 'hr_ag' ? '鈴木 花子（HR-AG）' :
-    role === 'pt' ? '佐藤 健一（PT）' : '渡辺 大輝（インターン）';
-  document.getElementById('sb-role').textContent =
-    role === 'hq' ? 'CORETO / exec' :
-    role === 're_ag' ? 'AG-0042 / Gold' :
-    role === 'hr_ag' ? 'AG-0088 / Silver' :
-    role === 'pt' ? 'PT-0015 / active' : 'INT-0007 / active';
+  // sessionStorageから実際のユーザー名を表示
+  document.getElementById('sb-name').textContent = user.name || sessionStorage.getItem('coreto_name') || r.label;
+  const uid   = user.userId || sessionStorage.getItem('coreto_user_id') || '';
+  const rank  = user.rank   || sessionStorage.getItem('coreto_rank')    || '';
+  document.getElementById('sb-role').textContent = uid + (rank ? ' / ' + rank : '') || r.label;
 
   renderNav(r.nav());
   r.page();
@@ -1667,7 +1712,7 @@ function renderHQDash() {
                 <div class="task-prio high"></div>
                 <div class="task-main">
                   <div class="task-name">IT重説 宅建士割当 ― 佐藤様・渡辺様（2件同日）</div>
-                  <div class="task-meta">2026/4/12（日）14:00 / 16:00</div>
+                  <div class="task-meta">今後7日以内に予定あり</div>
                 </div>
                 <span class="badge amber">割当待ち</span>
               </div>
@@ -2972,7 +3017,7 @@ async function aiGenerateMonthlyReport() {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514', max_tokens: 1000,
+        model: 'claude-sonnet-4-6', max_tokens: 1000,
         messages: [{ role: 'user', content:
           `不動産・人材紹介プラットフォームCOREBLDGの経営者向け月次AIレポートを生成してください。
 KPI: 売上¥${kpi.sales.toLocaleString()} / 成約${kpi.contracts}件 / 稼働AG${kpi.agents}名 / 対応待ち${kpi.pending}件
