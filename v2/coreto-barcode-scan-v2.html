@@ -1828,22 +1828,31 @@ function printApprovalDocs(doc, trackingCode){
 function printWelcomeLetter(cas, trackingCode, returnDocs){
   const today = new Date().toLocaleDateString('ja-JP',{year:'numeric',month:'long',day:'numeric'});
 
-  // 返送書類テーブル行の生成
-  // returnDocs が null/未添付の場合はデフォルト2行
+  // 返送書類テーブル：AIが読み取った場合のみテーブルを生成
+  // 未添付の場合はテーブルを出さず、同封の書類リストを参照するよう案内
   const docRows = returnDocs && returnDocs.length > 0
     ? returnDocs.map(d =>
-        `<tr><td>${d.name}</td><td>${d.note || '各署名欄にご署名・ご捺印ください'}</td></tr>`
+        `<tr><td>${d.name}</td><td>${d.note || 'ご署名・ご捺印ください'}</td></tr>`
       ).join('')
-    : `<tr><td>賃貸借契約書</td><td>各ページの署名欄にご署名・ご捺印ください</td></tr>
-       <tr><td>重要事項説明書</td><td>内容をご確認のうえ、署名欄にご署名ください</td></tr>`;
-
-  const returnListNote = returnDocs && returnDocs.length > 0
-    ? `<div style="font-size:10px;color:#1D4ED8;margin-top:8px;padding:6px 10px;
-        background:rgba(29,78,216,.06);border-radius:6px;line-height:1.6">
-        ※ 上記書類リストは同封の返送必要書類一覧をもとに作成しています。<br>
-        　 ご不明な点は担当エージェントまでお問い合わせください。
-       </div>`
     : '';
+
+  const returnDocsSection = returnDocs && returnDocs.length > 0
+    ? `<div class="sec">ご返送いただく書類</div>
+       <table>
+         <tr><th style="width:45%">書類名</th><th>ご確認事項</th></tr>
+         ${docRows}
+       </table>
+       <div style="font-size:10px;color:#1D4ED8;margin-bottom:14px;padding:6px 10px;
+           background:rgba(29,78,216,.06);border-radius:6px;line-height:1.6">
+         ※ 上記書類リストは同封の返送必要書類一覧をもとに作成しています。<br>
+         　 ご不明な点は担当エージェントまでお問い合わせください。
+       </div>`
+    : `<div class="sec">ご返送いただく書類</div>
+       <div style="font-size:11px;padding:14px 16px;background:#FFF7ED;border:1px solid #FED7AA;
+           border-radius:8px;margin-bottom:14px;line-height:1.8;color:#92400E">
+         📋 同封の<strong>「返送必要書類一覧」</strong>に記載された書類に、それぞれご署名・ご捺印のうえご返送ください。<br>
+         ご不明な点は担当エージェントまでお問い合わせください。
+       </div>`;
 
   const w = window.open('','_blank','width=860,height=1100');
   w.document.write(`<!DOCTYPE html><html lang="ja"><head>
@@ -1888,13 +1897,8 @@ function printWelcomeLetter(cas, trackingCode, returnDocs){
     <div class="cb-sub" style="margin-top:4px">物件：${cas.propertyName} ／ 担当：${cas.agent.name}（${cas.agent.agId}）</div>
   </div>
   <div class="sec">書類送付のご案内</div>
-  <p style="font-size:11px;margin-bottom:10px">このたびは契約書類をお送りいたします。下記の書類にご署名・ご捺印のうえ、<strong>同封の返送用レターパックプラス</strong>にてご返送いただきますようお願い申し上げます。</p>
-  <div class="sec">ご返送いただく書類</div>
-  <table>
-    <tr><th style="width:45%">書類名</th><th>ご確認事項</th></tr>
-    ${docRows}
-  </table>
-  ${returnListNote}
+  <p style="font-size:11px;margin-bottom:10px">このたびは契約書類をお送りいたします。同封の書類にご署名・ご捺印のうえ、<strong>同封の返送用レターパックプラス</strong>にてご返送いただきますようお願い申し上げます。</p>
+  ${returnDocsSection}
   <div class="ret-box">
     <h3>📦 書類の返送方法</h3>
     <ol>
