@@ -602,7 +602,7 @@ body, input, select, textarea, button {
 <script>
 (function(){
   var _role = sessionStorage.getItem('coreto_role') || '';
-  var _allowed = ["hq"];
+  var _allowed = ["hq", "re_ag"];
   if (_allowed.length && !_allowed.includes(_role)) {
     location.replace('coreto-hub-v2.html?unauthorized=1');
   }
@@ -2499,6 +2499,28 @@ function refreshCurrentTab(){
 // ══════════════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', ()=>{
   CNAV.init('barcode_scan');
+
+  // 🔴-4: AGアクセス時は発送スキャン（BフローBC登録）のみ表示
+  const role = sessionStorage.getItem('coreto_role') || 'hq';
+  if (role === 're_ag') {
+    document.querySelector('.tb-title').textContent = '発送スキャン登録';
+    // AGには承認が必要なフロー（A/C/D）タブを非表示
+    ['tab-flowA','tab-flowC','tab-flowD'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
+    // BフロータブをデフォルトにとAGへの案内バナー挿入
+    setTimeout(() => {
+      const tabB = document.getElementById('tab-flowB');
+      if (tabB) tabB.click();
+    }, 100);
+    const banner = document.createElement('div');
+    banner.style.cssText = 'margin:10px 24px 0;padding:10px 16px;background:var(--sk-bg);border:1px solid rgba(2,132,199,.2);border-radius:8px;font-size:12px;color:var(--sk)';
+    banner.innerHTML = '📬 クライアントから返送が届いたら、ラベルをスキャンして案件を特定してください。契約書の受付・発送はHQが行います。';
+    const page = document.querySelector('.page');
+    if (page) page.insertBefore(banner, page.firstChild);
+  }
+
   renderStats();
   renderDashboard();
 });

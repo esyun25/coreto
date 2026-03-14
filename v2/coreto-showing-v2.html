@@ -365,12 +365,53 @@ function renderReport(){
 }
 
 function submitReport(){
-  alert('✅ 内見後報告を提出しました。案件ステータスを更新します。');
-  switchTab('list', document.getElementById('tab-list'));
+  // 内見結果を取得
+  const resultEl = document.querySelector('.field select');
+  const result = resultEl ? resultEl.value : '';
+
+  // 申込意向ありの場合は書類送付管理へ誘導
+  const caseId = new URLSearchParams(window.location.search).get('caseId') || '';
+  const isInterested = result === '申込書を送付する';
+
+  if (isInterested && caseId) {
+    if (confirm(`✅ 内見後報告を提出しました。\n\n「申込書を送付する」が選択されています。\n書類送付管理へ移動しますか？`)) {
+      window.location.href = 'coreto-screening-v2.html?caseId=' + caseId;
+      return;
+    }
+  } else {
+    alert('✅ 内見後報告を提出しました。案件ステータスを更新します。');
+  }
+
+  // 元の案件詳細に戻るか一覧に戻る
+  if (caseId) {
+    window.location.href = 'coreto-rental-v2.html?caseId=' + caseId;
+  } else {
+    switchTab('list', document.getElementById('tab-list'));
+  }
 }
 
 window.addEventListener('DOMContentLoaded', ()=>{
   CNAV.init('showing');
+
+  // 🔴-1: URLパラメータから案件IDを受け取り、新規登録フォームを自動開く
+  const params = new URLSearchParams(window.location.search);
+  const caseId = params.get('caseId');
+  const client = params.get('client');
+  const isNew  = params.get('new') === '1';
+
+  if (isNew && caseId) {
+    // 新規登録タブを自動で開く
+    setTimeout(() => {
+      const newTab = document.getElementById('tab-new');
+      if (newTab) switchTab('new', newTab);
+      // 案件IDとクライアント名をフォームに自動セット
+      const caseInput = document.querySelector('input[placeholder*="RENT"]');
+      if (caseInput) caseInput.value = caseId;
+      const clientInput = document.querySelector('input[placeholder*="クライアント"]');
+      if (clientInput && client) clientInput.value = decodeURIComponent(client);
+    }, 100);
+  }
+
   renderList();
 });
 </script>

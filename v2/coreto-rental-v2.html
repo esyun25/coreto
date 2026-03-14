@@ -309,6 +309,9 @@ html, body { background:#FFFFFF !important; }
     <!-- MAIN -->
     <div class="detail-main">
 
+      <!-- 🔴-5 急ぎフラグ: 入居予定日カウントダウン -->
+      <div id="urgency-banner" style="display:none;margin-bottom:10px;padding:10px 16px;border-radius:8px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:10px"></div>
+
       <!-- Step Pipeline -->
       <div class="pipeline-wrap">
         <div class="pipeline-title">📍 ステップ進捗 — RENT-0194 <span class="badge badge-am" style="margin-left:4px">書類審査中</span></div>
@@ -518,12 +521,16 @@ html, body { background:#FFFFFF !important; }
       <div class="side-card">
         <div class="side-card-head">クイックアクション</div>
         <div class="action-list">
-          <button class="action-btn primary" onclick="document.getElementById('remit-section').scrollIntoView({behavior:'smooth'})">💰 送金情報を入力</button>
+          <!-- 🔴-1: 案件IDをURLパラメータで引き継いで内見管理へ -->
+          <button class="action-btn primary" onclick="window.location.href='coreto-showing-v2.html?caseId=RENT-0194&client=田中優子&new=1'">📅 内見を登録する</button>
+          <button class="action-btn secondary" onclick="document.getElementById('remit-section').scrollIntoView({behavior:'smooth'})">💰 送金情報を入力</button>
           <button class="action-btn secondary" onclick="alert('HQにIT重説割当依頼を送信')">📨 IT重説を依頼</button>
+          <button class="action-btn secondary" onclick="window.location.href='coreto-screening-v2.html?caseId=RENT-0194'">📋 書類送付管理</button>
           <button class="action-btn secondary" onclick="window.location.href='coreto-crm-detail-v2.html'">👤 クライアント詳細</button>
-          <button class="action-btn secondary">📋 書類を確認</button>
           <button id="ai-notify-btn" class="action-btn" style="background:rgba(200,169,81,.15);color:var(--gold);border:1px solid rgba(200,169,81,.3)" onclick="generateAINotification('RENT-0194','田中優子様','港区三田3丁目','山田誠')">✨ AI通知文生成</button>
           <button class="action-btn warn" onclick="window.location.href='coreto-contract-report-v2.html'">🏆 成約を報告</button>
+          <!-- 🔴-3: 見送り・クローズ -->
+          <button class="action-btn" style="background:var(--rd-bg);color:var(--rd);border:1px solid rgba(220,38,38,.2)" onclick="closeCase()">✕ 案件を見送り・クローズ</button>
         </div>
       </div>
 
@@ -670,10 +677,63 @@ JSONのみ（前置き不要）:
     if (btn) { btn.disabled=false; btn.innerHTML='✨ AI通知文生成'; }
   }
 }
+// 🔴-5: 入居予定日カウントダウン
+(function() {
+  const moveInDate = new Date('2026-05-01');
+  const today = new Date();
+  const diffDays = Math.ceil((moveInDate - today) / (1000*60*60*24));
+  const banner = document.getElementById('urgency-banner');
+  if (!banner) return;
+  if (diffDays <= 7) {
+    banner.style.cssText = 'margin-bottom:10px;padding:10px 16px;border-radius:8px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:10px;background:#FEF2F2;border:1px solid rgba(220,38,38,.3);color:#DC2626';
+    banner.innerHTML = `🚨 入居まであと <strong>${diffDays}日</strong>（5/01入居予定）― 優先対応が必要です`;
+  } else if (diffDays <= 14) {
+    banner.style.cssText = 'margin-bottom:10px;padding:10px 16px;border-radius:8px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:10px;background:#FFFBEB;border:1px solid rgba(217,119,6,.3);color:#D97706';
+    banner.innerHTML = `⚠️ 入居まであと <strong>${diffDays}日</strong>（5/01入居予定）― 書類・送金を急いでください`;
+  } else {
+    banner.style.cssText = 'margin-bottom:10px;padding:10px 16px;border-radius:8px;font-size:12px;font-weight:400;display:flex;align-items:center;gap:10px;background:var(--cream2);border:1px solid var(--bd);color:var(--muted)';
+    banner.innerHTML = `📅 入居予定日まであと <strong style="color:var(--ink)">${diffDays}日</strong>（2026/05/01）`;
+  }
+  banner.style.display = 'flex';
+})();
+
+// 🔴-3: 見送り・クローズ処理
+function closeCase() {
+  const reason = prompt(
+    '案件をクローズする理由を選択してください:\n' +
+    '1: 見送り（クライアント都合）\n' +
+    '2: 申込辞退\n' +
+    '3: 審査落ち\n' +
+    '4: 物件成約済み（他業者）\n' +
+    '5: その他\n\n' +
+    '番号を入力してください:'
+  );
+  if (!reason) return;
+  const reasons = {
+    '1':'見送り（クライアント都合）',
+    '2':'申込辞退',
+    '3':'審査落ち',
+    '4':'物件成約済み（他業者）',
+    '5':'その他'
+  };
+  const label = reasons[reason.trim()] || 'その他';
+  if (!confirm(`案件 RENT-0194（田中 優子 様）を\n「${label}」としてクローズしますか？\n\nHQに通知が送られます。`)) return;
+  // HQ通知（LINE — 設定後有効化）
+  const msg = `【COREBLDG】案件クローズ\n案件ID: RENT-0194\nクライアント: 田中 優子 様\n理由: ${label}\n担当: 山田 誠（AG-0042）`;
+  const LINE_TOKEN = (window.LINE_CONFIG && window.LINE_CONFIG.AG_CHANNEL_TOKEN) || '';
+  if (LINE_TOKEN) {
+    fetch('https://api.line.me/v2/bot/message/broadcast', {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+LINE_TOKEN},
+      body: JSON.stringify({ messages:[{ type:'text', text: msg }] })
+    }).catch(e => console.error(e));
+  } else {
+    console.log('[LINE通知 — 設定待ち]', msg);
+  }
+  alert(`案件をクローズしました（${label}）\nHQに通知を送信しました。`);
+  window.location.href = 'coreto-cases-v2.html';
+}
 
 </script>
-
-
 <script src="coreto-nav-v2.js"></script>
 <script>
 window.addEventListener('DOMContentLoaded', function() {
