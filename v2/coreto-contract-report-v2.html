@@ -745,7 +745,17 @@ function approveReport(id, client, ag, reward, btn) {
   coretoConfirm({title:'成約報告 承認',message:'以下の成約報告を承認しますか？',detail:'報告ID: '+id+'<br>クライアント: '+client+'<br>報酬額: ¥'+reward.toLocaleString()+'<br>承認後、報酬が確定されAGにLINEで通知されます。',okLabel:'承認する',onOk:function(){
     const cell = btn.closest('td');
     cell.innerHTML = '<span class="badge b-em">承認済み</span>';
-    showToast(`✅ ${id} を承認しました。${ag} にLINEで通知します。`, 'em');
+    // CORETO_REPORTSのstatusを「承認済み」に更新
+    try {
+      const reps = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]');
+      const idx = reps.findIndex(r => r.id === id);
+      if (idx >= 0) { reps[idx].status = '承認済み'; reps[idx].approvedAt = new Date().toISOString(); }
+      localStorage.setItem('CORETO_REPORTS', JSON.stringify(reps));
+      // HQタスクから削除
+      const tasks = JSON.parse(localStorage.getItem('CORETO_HQ_TASKS') || '[]');
+      localStorage.setItem('CORETO_HQ_TASKS', JSON.stringify(tasks.filter(t => t.id !== id)));
+    } catch(e) {}
+    showToast('✅ ' + id + ' を承認しました。' + ag + ' にLINEで通知します。', 'em');
     // LINE通知（設定後有効化）
     const LINE_TOKEN = (window.LINE_CONFIG && window.LINE_CONFIG.AG_CHANNEL_TOKEN) || '';
     const msg = `【COREBLDG】成約報告が承認されました\n報告ID: ${id}\n報酬額: ¥${reward.toLocaleString()}\n月次締めで振り込まれます。`;
@@ -761,12 +771,36 @@ function approveReport(id, client, ag, reward, btn) {
 }
 
 function requestFix(id, ag, btn) {
-  const reason = prompt(`報告ID: ${id}\n\n修正依頼の理由を入力してください:`);
-  if (!reason) return;
-  const cell = btn.closest('td');
-  cell.innerHTML = '<span class="badge b-rd">修正依頼</span>';
-  showToast(`✏️ ${id} に修正依頼を送信しました。${ag} にLINEで通知します。`, 'am');
-  console.log('[修正依頼 LINE通知 — 設定待ち]', `報告ID: ${id} / 理由: ${reason} / 担当: ${ag}`);
+  const reasonInput = document.createElement('div');
+  reasonInput.style.cssText = 'padding:12px 0 4px';
+  reasonInput.innerHTML = '<textarea id="fix-reason" placeholder="修正依頼の理由を入力してください..." style="width:100%;height:80px;padding:8px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:12px;font-family:Outfit,sans-serif;resize:none;outline:none"></textarea>';
+  coretoConfirm({
+    title:'修正依頼',
+    message:'修正依頼の理由を入力してください。',
+    detail: '報告ID: ' + id + '<br>担当AG: ' + ag,
+    okLabel:'修正依頼を送信',
+    danger: false,
+    onOk: function() {
+      const reason = document.getElementById('fix-reason')?.value || '（理由未入力）';
+      const cell = btn.closest('td');
+      cell.innerHTML = '<span class="badge b-rd">修正依頼</span>';
+      // CORETO_REPORTSのstatusを更新
+      try {
+        const reps = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]');
+        const idx = reps.findIndex(r => r.id === id);
+        if (idx >= 0) { reps[idx].status = '修正依頼'; reps[idx].fixReason = reason; }
+        localStorage.setItem('CORETO_REPORTS', JSON.stringify(reps));
+      } catch(e) {}
+      showToast('✏️ ' + id + ' に修正依頼を送信しました。' + ag + ' にLINEで通知します。', 'am');
+    }
+  });
+  // モーダルが開いた後にtextareaを挿入
+  setTimeout(function() {
+    const body = document.getElementById('coreto-confirm-body');
+    if (body) body.appendChild(reasonInput);
+    const ta = document.getElementById('fix-reason');
+    if (ta) ta.focus();
+  }, 50);
 }
 
 

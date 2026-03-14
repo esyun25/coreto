@@ -522,15 +522,14 @@ html, body { background:#FFFFFF !important; }
         <div class="side-card-head">クイックアクション</div>
         <div class="action-list">
           <!-- 🔴-1: 案件IDをURLパラメータで引き継いで内見管理へ -->
-          <button class="action-btn primary" onclick="window.location.href='coreto-showing-v2.html?caseId=RENT-0194&client=田中優子&new=1'">📅 内見を登録する</button>
+          <button class="action-btn primary" onclick="(function(){ var p=new URLSearchParams(location.search); var cid=p.get('caseId')||'RENT-0194'; var cn=p.get('clientName')||'田中優子'; window.location.href='coreto-showing-v2.html?caseId='+cid+'&client='+cn+'&new=1'; })()">📅 内見を登録する</button>
           <button class="action-btn secondary" onclick="document.getElementById('remit-section').scrollIntoView({behavior:'smooth'})">💰 送金情報を入力</button>
           <button class="action-btn secondary" onclick="showToast('HQにIT重説割当依頼を送信', 'em')">📨 IT重説を依頼</button>
-          <button class="action-btn warn" onclick="window.location.href='coreto-contract-report-v2.html?caseId=RENT-0194&clientName=%E7%94%B0%E4%B8%AD+%E5%84%AA%E5%AD%90'">🏆 成約を報告する</button>
-          <button class="action-btn secondary" onclick="window.location.href='coreto-screening-v2.html?caseId=RENT-0194'">📋 書類送付管理</button>
+          <button class="action-btn warn" onclick="(function(){ var p=new URLSearchParams(location.search); var cid=p.get('caseId')||'RENT-0194'; var cn=p.get('clientName')||''; window.location.href='coreto-contract-report-v2.html?caseId='+cid+(cn?'&clientName='+cn:''); })()">🏆 成約を報告する</button>
+          <button class="action-btn secondary" onclick="(function(){ var p=new URLSearchParams(location.search); var cid=p.get('caseId')||'RENT-0194'; window.location.href='coreto-screening-v2.html?caseId='+cid; })()">📋 書類送付管理</button>
           <button class="action-btn secondary" onclick="window.location.href='coreto-crm-detail-v2.html'">👤 クライアント詳細</button>
           <button id="ai-notify-btn" class="action-btn" style="background:rgba(200,169,81,.15);color:var(--gold);border:1px solid rgba(200,169,81,.3)" onclick="generateAINotification('RENT-0194','田中優子様','港区三田3丁目','山田誠')">✨ AI通知文生成</button>
           <button class="action-btn" style="background:var(--em-bg);color:var(--em);border:1px solid rgba(5,150,105,.2)" onclick="completeKeyHandover()">🔑 鍵渡し完了を記録</button>
-          <button class="action-btn warn" onclick="window.location.href='coreto-contract-report-v2.html'">🏆 成約を報告</button>
           <!-- 🔴-3: 見送り・クローズ -->
           <button class="action-btn" style="background:var(--rd-bg);color:var(--rd);border:1px solid rgba(220,38,38,.2)" onclick="closeCase()">✕ 案件を見送り・クローズ</button>
         </div>
@@ -719,9 +718,12 @@ function closeCase() {
     '5':'その他'
   };
   const label = reasons[reason.trim()] || 'その他';
-  if (!confirm(`案件 RENT-0194（田中 優子 様）を\n「${label}」としてクローズしますか？\n\nHQに通知が送られます。`)) return;
-  // HQ通知（LINE — 設定後有効化）
-  const msg = `【COREBLDG】案件クローズ\n案件ID: RENT-0194\nクライアント: 田中 優子 様\n理由: ${label}\n担当: 山田 誠（AG-0042）`;
+  const _p = new URLSearchParams(location.search);
+  const _caseId = _p.get('caseId') || 'RENT-0194';
+  const _clientName = _p.get('clientName') ? decodeURIComponent(_p.get('clientName')) : '田中 優子';
+  const _agName = sessionStorage.getItem('coreto_name') || '担当AG';
+  if (!confirm('案件 ' + _caseId + '（' + _clientName + ' 様）を\n「' + label + '」としてクローズしますか？\n\nHQに通知が送られます。')) return;
+  const msg = '【COREBLDG】案件クローズ\n案件ID: ' + _caseId + '\nクライアント: ' + _clientName + ' 様\n理由: ' + label + '\n担当: ' + _agName;
   const LINE_TOKEN = (window.LINE_CONFIG && window.LINE_CONFIG.AG_CHANNEL_TOKEN) || '';
   if (LINE_TOKEN) {
     fetch('https://api.line.me/v2/bot/message/broadcast', {

@@ -2564,10 +2564,12 @@ function renderREAgDash() {
         <div class="section">
           <div class="section-header">
             <div class="section-title">不動産担当案件</div>
+            <!-- #動的案件: CORETO_CASE_STATUSから追加 -->
+            <div id="ag-dynamic-cases"></div>
             <div class="section-more" onclick="window.location.href='coreto-cases-v2.html'">すべて見る →</div>
           </div>
           <div class="card">
-            <div class="task-item" style="cursor:pointer" onclick="location.href='coreto-rental-v2.html'">
+            <div class="task-item" style="cursor:pointer" onclick="location.href='coreto-rental-v2.html?caseId=RENT-0194&clientName=%E7%94%B0%E4%B8%AD+%E5%84%AA%E5%AD%90'">
               <div class="task-prio high"></div>
               <div class="task-main">
                 <div class="task-name">田中 優子 様 ― 港区三田3丁目（賃貸）</div>
@@ -2575,7 +2577,7 @@ function renderREAgDash() {
               </div>
               <span class="badge amber">要対応</span>
             </div>
-            <div class="task-item" style="cursor:pointer" onclick="location.href='coreto-itsetsu-v2.html'">
+            <div class="task-item" style="cursor:pointer" onclick="location.href='coreto-rental-v2.html?caseId=RENT-0192&clientName=%E4%BD%90%E8%97%A4+%E5%81%A5'">
               <div class="task-prio mid"></div>
               <div class="task-main">
                 <div class="task-name">佐藤 健 様 ― 渋谷区神宮前（賃貸）</div>
@@ -2583,7 +2585,7 @@ function renderREAgDash() {
               </div>
               <span class="badge sky">IT重説待ち</span>
             </div>
-            <div class="task-item" style="cursor:pointer" onclick="location.href='coreto-showing-v2.html'">
+            <div class="task-item" style="cursor:pointer" onclick="location.href='coreto-rental-v2.html?caseId=RENT-0188&clientName=%E9%AB%98%E6%A9%8B+%E5%A4%A7%E8%BC%94'">
               <div class="task-prio low"></div>
               <div class="task-main">
                 <div class="task-name">高橋 大輔 様 ― 目黒区中目黒（賃貸）</div>
@@ -3103,6 +3105,34 @@ window.addEventListener('DOMContentLoaded', () => {
       if (cntEl && monthly > 0) cntEl.textContent = monthly + '件';
     } catch(e) {}
   }, 300);
+
+  // 動的案件タスク: CORETO_REPORTSから自分の進行中案件を表示
+  setTimeout(function() {
+    var dynEl = document.getElementById('ag-dynamic-cases');
+    if (!dynEl) return;
+    try {
+      var myId = sessionStorage.getItem('coreto_user_id') || '';
+      var reports = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]');
+      var myActive = reports.filter(function(r){
+        return (!r.agId || r.agId === myId) && r.status !== '承認済み';
+      });
+      if (myActive.length === 0) return;
+      myActive.slice(0,3).forEach(function(r) {
+        var el = document.createElement('div');
+        el.className = 'task-item';
+        el.style.cursor = 'pointer';
+        el.setAttribute('onclick', "location.href='coreto-contract-report-v2.html'");
+        el.innerHTML =
+          '<div class="task-prio mid"></div>' +
+          '<div class="task-main">' +
+            '<div class="task-name">' + (r.client||'—') + ' 様</div>' +
+            '<div class="task-meta">' + (r.case||'—') + ' ／ ' + (r.type||'—') + ' ／ ' + r.status + '</div>' +
+          '</div>' +
+          '<span class="badge ' + (r.status==='承認待ち'?'badge-am':'badge-sk') + '">' + r.status + '</span>';
+        dynEl.appendChild(el);
+      });
+    } catch(e) {}
+  }, 250);
 
   // 残-13: HQタスク一覧にlocalStorageの動的タスクを追加
   setTimeout(() => {

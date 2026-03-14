@@ -191,11 +191,11 @@ body, input, select, textarea, button { font-family:'Outfit','Noto Sans JP',sans
 function toggleSb(){document.querySelector('.sb').classList.toggle('open');document.querySelector('.mob-overlay').classList.toggle('show');}
 
 const SHOWINGS = [
-  {id:'SHW-0021', case:'RENT-0194', client:'田中 優子', prop:'パークタワー三田 302', addr:'港区三田3丁目', date:'3/12', dateNum:12, time:'14:00', ag:'山田 誠', status:'確定', result:null},
-  {id:'SHW-0022', case:'RENT-0201', client:'鈴木 健太', prop:'白金ハウス 201',     addr:'港区白金1丁目', date:'3/13', dateNum:13, time:'11:00', ag:'山田 誠', status:'確定', result:null},
-  {id:'SHW-0020', case:'RENT-0188', client:'渡辺 誠',   prop:'品川フラッツ 501',   addr:'品川区大崎2丁目', date:'3/08', dateNum:8, time:'15:30', ag:'山田 誠', status:'完了', result:'申込意向あり'},
-  {id:'SHW-0019', case:'RENT-0182', client:'伊藤 花子', prop:'目黒レジデンス 103',  addr:'目黒区目黒3丁目', date:'3/05', dateNum:5, time:'10:00', ag:'山田 誠', status:'完了', result:'検討中'},
-  {id:'SHW-0018', case:'RENT-0175', client:'高橋 美咲', prop:'恵比寿ガーデン 401',  addr:'渋谷区恵比寿1丁目', date:'2/28', dateNum:28, time:'13:00', ag:'山田 誠', status:'完了', result:'見送り'},
+  {id:'SHW-0021', case:'RENT-0194', client:'田中 優子', prop:'パークタワー三田 302', addr:'港区三田3丁目', date:'3/12', dateNum:12, time:'14:00', ag:(sessionStorage.getItem('coreto_name')||'山田 誠'), status:'確定', result:null},
+  {id:'SHW-0022', case:'RENT-0201', client:'鈴木 健太', prop:'白金ハウス 201',     addr:'港区白金1丁目', date:'3/13', dateNum:13, time:'11:00', ag:(sessionStorage.getItem('coreto_name')||'山田 誠'), status:'確定', result:null},
+  {id:'SHW-0020', case:'RENT-0188', client:'渡辺 誠',   prop:'品川フラッツ 501',   addr:'品川区大崎2丁目', date:'3/08', dateNum:8, time:'15:30', ag:(sessionStorage.getItem('coreto_name')||'山田 誠'), status:'完了', result:'申込意向あり'},
+  {id:'SHW-0019', case:'RENT-0182', client:'伊藤 花子', prop:'目黒レジデンス 103',  addr:'目黒区目黒3丁目', date:'3/05', dateNum:5, time:'10:00', ag:(sessionStorage.getItem('coreto_name')||'山田 誠'), status:'完了', result:'検討中'},
+  {id:'SHW-0018', case:'RENT-0175', client:'高橋 美咲', prop:'恵比寿ガーデン 401',  addr:'渋谷区恵比寿1丁目', date:'2/28', dateNum:28, time:'13:00', ag:(sessionStorage.getItem('coreto_name')||'山田 誠'), status:'完了', result:'見送り'},
 ];
 
 let selectedResult = '';
@@ -412,7 +412,14 @@ window.addEventListener('DOMContentLoaded', ()=>{
     }, 100);
   }
 
-  renderList();
+  // URLパラメータにcaseIdがある場合は該当案件の内見のみ表示
+  if (caseId && !isNew) {
+    // ページタイトルを更新
+    const titleEl = document.querySelector('.tb-title');
+    if (titleEl) titleEl.textContent = (client ? decodeURIComponent(client) + ' 様 ― ' : '') + '内見管理';
+  }
+
+  renderList(caseId || null);
 });
 function showToast(msg, type) {
   var colors = {

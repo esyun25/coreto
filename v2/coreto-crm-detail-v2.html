@@ -610,6 +610,24 @@ function toggleSb(){
 }
 window.addEventListener('DOMContentLoaded', function() {
   CNAV.init('crm');
+  // URLパラメータのidでクライアント情報を取得してタイトルを更新
+  const clientId = new URLSearchParams(location.search).get('id') || '';
+  if (clientId) {
+    // パンくずにIDを反映
+    const crumb = document.querySelector('[id*="crumb"], .tb-crumb span:last-child, .crumb-cur');
+    if (crumb) crumb.textContent = clientId;
+    // CORETO_CLIENTSからクライアント情報を取得
+    try {
+      const clients = JSON.parse(localStorage.getItem('CORETO_CLIENTS') || '[]');
+      const client = clients.find(c => c.id === clientId);
+      if (client) {
+        const nameEl = document.querySelector('.ph-name');
+        if (nameEl && client.name) nameEl.textContent = client.name;
+        const idEl = document.getElementById('detail-ag-id') || document.querySelector('.ph-id');
+        if (idEl && client.agId) idEl.textContent = client.agId;
+      }
+    } catch(e) {}
+  }
   // ── ロール別アクセス制御: 担当外クライアント詳細を閲覧させない ──
   const _s = CNAV.session ? CNAV.session() : null;
   const _role = (_s && _s.type) || sessionStorage.getItem('coreto_role') || 'hq';
