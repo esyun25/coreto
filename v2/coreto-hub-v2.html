@@ -1711,8 +1711,8 @@ function renderHQDash() {
         <!-- Tasks -->
         <div class="section">
           <div class="section-header">
-            <div class="section-title">対応待ちタスク</div>
-            <div class="section-more">すべて見る →</div>
+            <div class="section-title">対応待ちタスク <span id="hq-task-count" class="badge badge-rd" style="margin-left:6px;display:none"></span></div>
+            <div class="section-more" onclick="window.location.href='coreto-notification-v2.html'" style="cursor:pointer">すべて見る →</div>
           </div>
           <div class="card">
             <div class="task-list" id="hq-task-list">
@@ -3140,30 +3140,63 @@ window.addEventListener('DOMContentLoaded', () => {
   setTimeout(() => {
     const taskList = document.getElementById('hq-task-list');
     if (!taskList) return;
+
+    // タスクtypeからリンク先・ラベルへのマップ
+    const TASK_META = {
+      contract_report: { href: 'coreto-contract-report-v2.html?tab=history', label: '成約報告', badge: '承認待ち', cls: 'badge-am', action: '承認する' },
+      contract_signed: { href: 'coreto-kyc-v2.html',                         label: '電子署名', badge: '確認待ち', cls: 'badge-sk', action: '確認する' },
+      kyc:             { href: 'coreto-kyc-v2.html',                         label: 'KYC審査', badge: '審査待ち', cls: 'badge-am', action: '審査する' },
+      hr_needs_hq:     { href: 'coreto-hr-matching-v2.html',                 label: 'HR案件',  badge: 'HQ対応',  cls: 'badge-vt', action: '対応する' },
+      itsetsu_hq:      { href: 'coreto-itsetsu-hq-v2.html',                 label: 'IT重説',  badge: '割当待ち', cls: 'badge-am', action: '割当する' },
+      line_hq_response:{ href: 'coreto-line-ai-v2.html',                    label: 'LINE',    badge: '要返答',  cls: 'badge-rd', action: '返答する' },
+      training_remind: { href: 'coreto-training-mgmt-v2.html',              label: '研修',    badge: 'リマインド', cls: 'badge-sk', action: '確認する' },
+    };
+
     try {
       const tasks = JSON.parse(localStorage.getItem('CORETO_HQ_TASKS') || '[]');
       const reminders = JSON.parse(localStorage.getItem('CORETO_HR_REMINDERS') || '[]');
       const allDynamic = [
-        ...tasks.map(t => ({ ...t, prio:'mid', badge:'承認待ち', badgeCls:'badge sky' })),
+        ...tasks.map(t => ({ ...t })),
         ...reminders.filter(r=>r.status==='pending').map(r => ({
-          id: r.id, title: r.label + ' — ' + r.name,
-          createdAt: r.dueDate, prio:'mid', badge:'在籍確認', badgeCls:'badge violet'
+          id: r.id, type:'hr_needs_hq',
+          title: '在籍確認: ' + r.name + ' — ' + r.label,
+          createdAt: r.dueDate,
         })),
-      ].slice(0, 5); // 最大5件追加表示
+      ].slice(0, 8);
 
       allDynamic.forEach(t => {
+        const meta = TASK_META[t.type] || { href: 'coreto-hub-v2.html', label: 'タスク', badge: '確認待ち', cls: 'badge-sk', action: '確認する' };
         const el = document.createElement('div');
         el.className = 'task-item';
-        el.style.borderTop = '1px dashed var(--bd)';
+        el.style.cssText = 'border-top:1px dashed var(--bd);cursor:pointer;border-left:3px solid var(--gold)';
         el.innerHTML =
-          '<div class="task-prio ' + (t.prio||'mid') + '"></div>' +
-          '<div class="task-main">' +
-            '<div class="task-name">🔔 ' + (t.title||t.type||'—') + '</div>' +
-            '<div class="task-meta">' + (t.createdAt||'') + '</div>' +
+          '<div class="task-prio mid"></div>' +
+          '<div class="task-main" style="flex:1">' +
+            '<div class="task-name" style="display:flex;align-items:center;gap:6px">' +
+              '<span class="badge ' + meta.cls + '" style="font-size:9px;padding:2px 6px">' + meta.label + '</span>' +
+              (t.title || t.type || '—') +
+            '</div>' +
+            '<div class="task-meta">' + (t.createdAt || '—') + '</div>' +
           '</div>' +
-          '<span class="' + (t.badgeCls||'badge sky') + '">' + (t.badge||'確認待ち') + '</span>';
+          '<a href="' + meta.href + '" ' +
+            'style="flex-shrink:0;padding:6px 12px;background:var(--navy);color:var(--gold);border-radius:7px;' +
+            'font-size:11px;font-weight:700;text-decoration:none;font-family:Outfit,sans-serif;white-space:nowrap" ' +
+            'onclick="event.stopPropagation()">' +
+            meta.action +
+          '</a>';
+        // 行全体クリックでも同じページへ
+        el.addEventListener('click', function() { window.location.href = meta.href; });
         taskList.appendChild(el);
       });
+
+      // タスク件数バッジを更新
+      const countBadge = document.getElementById('hq-task-count');
+      if (countBadge && allDynamic.length > 0) {
+        countBadge.textContent = allDynamic.length + '件';
+        countBadge.style.display = '';
+      }
+      const badge = document.querySelector('[data-kpi="pending"]');
+      if (badge && allDynamic.length > 0) badge.textContent = allDynamic.length + '件 承認待ち';
     } catch(e) {}
   }, 200);
 });
