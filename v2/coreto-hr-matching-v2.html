@@ -614,7 +614,7 @@ function openDetail(id) {
 function advanceStep(id) {
   const c = CASES.find(x=>x.id===id); if(!c) return;
   const next = HR_STEPS[c.step+1];
-  if (!confirm(`「${c.name}」さんを「${next}」に進めますか？`)) return;
+  var _c=c,_next=next; coretoConfirm({title:'ステータス更新',message:`「${_c.name}」さんを「${_next}」に進めますか？`,okLabel:'進める',danger:false,onOk:function(){advanceStep(_c,_next);}});return;
   c.step = Math.min(c.step+1, HR_STEPS.length-1);
   c.lastUpdate = today();
   c.timeline.push({date:today(), step:next, note:`${next}に移行。`, type:'em'});
@@ -700,7 +700,7 @@ function closeDealConfirm(id) {
 
 function cancelCase(id) {
   const c = CASES.find(x=>x.id===id); if(!c) return;
-  if (!confirm(`「${c.name}」をキャンセルしますか？`)) return;
+  var _cc=c; coretoConfirm({title:'案件キャンセル',message:`「${_cc.name}」の案件をキャンセルしますか？`,okLabel:'キャンセルする',danger:true,onOk:function(){cancelCase(_cc);}});return;
   c.status='cancel'; c.lastUpdate=today();
   closeModal('modal-detail'); render(); toast('キャンセルに更新しました', 'warn');
 }
@@ -1382,12 +1382,24 @@ async function autoMatchPipeline(leadId) {
     lead.status = 'waiting_ag'; // 掲示板掲載中・AG応答待ち
   } else {
     lead.status = 'needs_hq';
+    // HQタスクに追加
+    try {
+      const tasks = JSON.parse(localStorage.getItem('CORETO_HQ_TASKS')||'[]');
+      const exists = tasks.find(t=>t.id==='HR-HQ-'+leadId);
+      if (!exists) {
+        tasks.unshift({ id:'HR-HQ-'+leadId, type:'hr_needs_hq',
+          title:'HR案件 HQ対応が必要 — '+lead.name+' 様',
+          desc:'担当AGが見つかりませんでした。HQが直接対応してください。',
+          createdAt:new Date().toLocaleDateString('ja-JP') });
+        localStorage.setItem('CORETO_HQ_TASKS', JSON.stringify(tasks));
+      }
+    } catch(e) {}
   }
 
   renderLeadStatusBadge(leadId);
   render();
   const names = lead._notifiedAgNames?.join('・') || '—';
-  toast(`📢 ${lead.name}さんの案件を ${names} に通知しました。先着受付待ち中。`);
+  toast('📢 '+lead.name+'さんの案件を '+names+' に通知しました。先着受付待ち中。');
 }
 
 // ═══════════════════════════════════════════

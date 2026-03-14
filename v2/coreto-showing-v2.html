@@ -260,7 +260,7 @@ function renderList(){
   </div>`).join('')}`;
 }
 
-function cancelShowing(id){ if(confirm(`内見 ${id} をキャンセルしますか？`)) showToast('キャンセルしました。クライアントへ通知します。', 'em'); }
+function cancelShowing(id){ coretoConfirm({title:'内見キャンセル',message:`内見 ${id} をキャンセルしますか？`,detail:'クライアントへ通知が送られます',okLabel:'キャンセルする',danger:true,onOk:function(){showToast('キャンセルしました。クライアントへ通知します。','em');}}); }
 
 function renderNew(){
   document.getElementById('pg').innerHTML = `
@@ -374,11 +374,12 @@ function submitReport(){
   const isInterested = result === '申込書を送付する';
 
   if (isInterested && caseId) {
-    if (confirm(`✅ 内見後報告を提出しました。\n\n「申込書を送付する」が選択されています。\n書類送付管理へ移動しますか？`)) {
+    coretoConfirm({title:'内見報告完了',message:'内見後報告を提出しました。',detail:'「申込書を送付する」が選択されています。<br>書類送付管理へ移動しますか？',okLabel:'書類送付管理へ',danger:false,onOk:function(){
       window.location.href = 'coreto-screening-v2.html?caseId=' + caseId;
-      return;
-    }
-  } else {
+    }});
+    return; // coretoConfirmのコールバック内で遷移するため以降は実行しない
+  }
+  if (!isInterested) {
     showToast('✅ 内見後報告を提出しました。案件ステータスを更新します。', 'em');
   }
 

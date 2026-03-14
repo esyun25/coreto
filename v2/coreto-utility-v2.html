@@ -458,7 +458,7 @@ function registerCase(){
   const name    = inputs[0]?.value.trim();
   const phone   = inputs[1]?.value.trim();
   if (!name || !phone) { showToast('⚠️ お客様名と電話番号は必須です', 'am'); return; }
-  if (!confirm('案件を登録しますか？\n担当AGにLINE通知が送信されます。')) return;
+  coretoConfirm({title:'案件登録',message:'案件を登録しますか？',detail:'担当AGにLINE通知が送信されます',okLabel:'登録する',danger:false,onOk:function(){_doRegisterCase();}});return;
 
   const caseId = 'UTL-' + String(Date.now()).slice(-4);
   const services = [...document.querySelectorAll('#content-area input[type="checkbox"]')]
@@ -485,12 +485,13 @@ function registerCase(){
       method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+LINE_TOKEN},
       body: JSON.stringify({ messages:[{type:'text',text:msg}] })
     }).catch(e => console.error(e));
-  } else { console.log('[LINE通知 — 設定待ち]', msg); }
+  } // else { console.log('[LINE通知 — 設定待ち]', msg); }
 
   switchTab('pipeline', document.querySelectorAll('.tab')[0]);
   showToast('✅ 案件 ' + caseId + ' を登録しました。担当AGにLINEで通知します。', 'em');
 }
 
+function _doRegisterCase() { registerCase(); }
 function showToast(msg, type) {
   const colors = {em:['#ECFDF5','#059669','rgba(5,150,105,.2)'],am:['#FFFBEB','#D97706','rgba(217,119,6,.2)']};
   const [bg,cl,bc] = colors[type]||colors.em;

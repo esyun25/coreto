@@ -451,7 +451,7 @@ function sendReset(){
   closeReset();
   const dest=resetMethod==='line'?'LINE（@yamada_makoto）':'メール（yamada***@gmail.com）';
   setTimeout(()=>{
-    if(confirm(`✅ 再設定リンクを${dest}に送信しました。\n\n【デモ】リンクをクリックして認証コード確認を行いますか？`)){
+    if(true){ // デモ: 本番ではメール/SMS送信後に認証コード確認フローへ
       openOtp('pw-reset','パスワード再設定 本人確認',()=>{
         closeOtp();
         const area=document.createElement('div');area.className='card';area.style.cssText='max-width:600px;border-color:rgba(5,150,105,.3)';
@@ -637,9 +637,9 @@ function pageLine() {
       </div>
     </div>`;
 }
-function saveLineId(){const v=document.getElementById('new-line')?.value.trim();if(!v){showToast('新しいLINE IDを入力してください', 'warn');return;}if(!v.startsWith('@')){showToast('LINE IDは「@」から始まる形式で入力してください', 'warn');return;}if(!confirm(`LINE IDを「${v}」に変更しますか？`))return;ME.lineId=v;showToast('✅ LINE IDを変更しました。', 'em');pageLine();}
+function saveLineId(){const v=document.getElementById('new-line')?.value.trim();if(!v){showToast('新しいLINE IDを入力してください', 'warn');return;}if(!v.startsWith('@')){showToast('LINE IDは「@」から始まる形式で入力してください', 'warn');return;}coretoConfirm({title:'LINE ID変更',message:`LINE IDを「${v}」に変更しますか？`,okLabel:'変更する',danger:false,onOk:function(){ME.lineId=v;showToast('✅ LINE IDを変更しました。','em');pageLine();}});}
 function copyWorksId(){navigator.clipboard?.writeText('@coreto-works').catch(()=>{});showToast('WORKS ID「@coreto-works」をコピーしました。', 'em');}
-function confirmWorksConnect(){if(confirm('LINE WORKSを友達追加済みとしてマークしますか？\n（実際の友達追加が完了している場合のみ押してください）')){ME.lineWorks='連携済み';showToast('✅ LINE WORKS連携済みとして登録しました。\n本部に確認通知が送信されます。', 'em');pageLine();}}
+function confirmWorksConnect(){coretoConfirm({title:'LINE WORKS連携確認',message:'LINE WORKSを友達追加済みとしてマークしますか？',detail:'実際の友達追加が完了している場合のみ押してください',okLabel:'連携済みにする',danger:false,onOk:function(){ME.lineWorks='連携済み';showToast('✅ LINE WORKS連携済みとして登録しました。本部に確認通知が送信されます。','em');pageLine();}});}
 
 // ══ NAME PAGE ════════════════════════════════════════════════════
 function pageName(){
@@ -712,7 +712,7 @@ function pageName(){
 }
 function updateCardPreview(){const old=document.getElementById('old-name')?.value||'';const show=document.getElementById('show-old')?.checked;const n=show&&old?`${ME.name.split(' ')[0]}（旧姓：${old}）${ME.name.split(' ')[1]||''}`:ME.name;const k=show&&document.getElementById('old-kana')?.value?`${ME.nameKana}（旧姓：${document.getElementById('old-kana').value}）`:ME.nameKana;document.getElementById('card-name').textContent=n;document.getElementById('card-kana').textContent=k;}
 function saveOldName(){ME.nameOld=document.getElementById('old-name').value;ME.nameOldKana=document.getElementById('old-kana').value;ME.showOld=document.getElementById('show-old').checked;showToast('✅ 旧姓設定を保存しました。', 'em');}
-function hqChangeName(){const n=document.getElementById('hq-name-new')?.value.trim();const k=document.getElementById('hq-name-kana')?.value.trim();const r=document.getElementById('hq-name-reason')?.value;if(!n||!k||!r){showToast('全項目を入力してください', 'warn');return;}if(!confirm(`氏名を「${n}（${k}）」に変更しますか？理由：${r}\n\nこの操作は取り消せません。`))return;showToast(`✅ 氏名を「${n}」に変更しました。エージェントにSlackで通知されます。`, 'em');pageName();}
+function hqChangeName(){const n=document.getElementById('hq-name-new')?.value.trim();const k=document.getElementById('hq-name-kana')?.value.trim();const r=document.getElementById('hq-name-reason')?.value;if(!n||!k||!r){showToast('全項目を入力してください', 'warn');return;}coretoConfirm({title:'氏名変更確認',message:`氏名を「${n}（${k}）」に変更しますか？`,detail:`理由：${r}<br>この操作は取り消せません。`,okLabel:'変更する',danger:true,onOk:function(){showToast(`✅ 氏名を「${n}」に変更しました。エージェントにSlackで通知されます。`,'em');pageName();}});}
 
 // ══ BANK PAGE ════════════════════════════════════════════════
 function pageBank(){

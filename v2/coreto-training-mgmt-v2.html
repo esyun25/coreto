@@ -636,14 +636,14 @@ function togglePublish(id) {
 function deleteContent(id) {
   const c = CONTENTS.find(c => c.id === id);
   if (!c) return;
-  if (!confirm(`「${c.title}」を削除しますか？\nこの操作は取り消せません。`)) return;
+  var _ct=c; coretoConfirm({title:'コンテンツ削除',message:`「${_ct.title}」を削除しますか？`,detail:'この操作は取り消せません',okLabel:'削除する',danger:true,onOk:function(){_doDeleteContent(_ct);}});return;
   CONTENTS = CONTENTS.filter(c => c.id !== id);
   renderContents();
   showToast('🗑️ コンテンツを削除しました', 'am');
 }
 
 function sendReminder(agId, agName) {
-  if (!confirm(`${agName} さんに未読研修の受講を促すLINEを送信しますか？`)) return;
+  var _an=agName,_ai=agId; coretoConfirm({title:'研修リマインド送信',message:`${_an} さんに未読研修の受講を促すLINEを送信しますか？`,okLabel:'送信する',danger:false,onOk:function(){_doSendReminder(_an,_ai);}});return;
   // LINE通知（設定後有効化）
   const LINE_TOKEN = (window.LINE_CONFIG && window.LINE_CONFIG.AG_CHANNEL_TOKEN) || '';
   const msg = `【COREBLDG】研修コンテンツに未読があります。\nCOREBLDGのオンボーディングページからご確認ください。`;
@@ -653,7 +653,7 @@ function sendReminder(agId, agName) {
       body: JSON.stringify({ to: agId, messages:[{type:'text',text:msg}] })
     }).catch(e => console.error(e));
   } else {
-    console.log('[LINE催促通知 — 設定待ち]', agId, msg);
+    // console.log('[LINE催促通知 — 設定待ち]', agId, msg);
   }
   showToast(`📲 ${agName} さんにLINEで催促しました`, 'em');
 }

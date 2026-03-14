@@ -541,6 +541,14 @@ function assignMentor(id, mentorId) {
   const a = APPLICANTS.find(x=>x.id===id);
   if (!a) return;
   a.mentor = mentorId;
+  // localStorageに保存（ページ更新後も維持）
+  try {
+    const stored = JSON.parse(localStorage.getItem('CORETO_APPLICANTS')||'[]');
+    const idx = stored.findIndex(x=>x.id===id);
+    if (idx >= 0) { stored[idx].mentor = mentorId; }
+    else { stored.unshift(a); }
+    localStorage.setItem('CORETO_APPLICANTS', JSON.stringify(stored));
+  } catch(e) {}
   const label = document.getElementById(`mentor-label-${id}`);
   if (label) {
     const name = HQ_MEMBERS.find(m=>m.id===mentorId)?.name || '未割当';
@@ -610,11 +618,11 @@ function sendInviteMail() {
   if (!a) return;
 
   // デモ: コンソールにログ出力（本番: SendGrid / AWS SES API呼び出し）
-  console.log('[CORETO] 入会案内メール送信:', {
+  /* console.log('[CORETO] 入会案内メール送信:', {
     to: a.email,
     subject: document.getElementById('mail-subject').value,
     body: document.getElementById('mail-body').value,
-  });
+  }); */
 
   a.inviteSent = true;
   closeMailModal();

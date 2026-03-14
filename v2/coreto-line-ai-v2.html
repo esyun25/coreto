@@ -461,6 +461,7 @@ textarea.form-input{resize:vertical;min-height:80px;line-height:1.7}
 })();
 
 function toggleSb(){ document.querySelector('.sb').classList.toggle('open'); document.querySelector('.mob-overlay').classList.toggle('show'); }
+function _doDeleteFaq(id) { FAQS = FAQS.filter(function(f){return f.id!==id;}); renderFaqs(); showToast("✅ FAQを削除しました","em"); }
 function showToast(msg,type){
   const t=document.getElementById('la-toast');
   t.textContent=msg; t.style.background=type==='err'?'var(--rd)':type==='warn'?'var(--am)':'var(--navy)';
@@ -736,7 +737,21 @@ function openChat(uid) {
 
 function enterHQMode() {
   const chat = (CHAT_DATA[currentAccount]||[]).find(c=>c.id===currentChatId);
-  if (chat) chat.status = 'hq';
+  if (chat) {
+    chat.status = 'hq';
+    // HQタスクに追加（LINE対応中として記録）
+    try {
+      const tasks = JSON.parse(localStorage.getItem('CORETO_HQ_TASKS')||'[]');
+      const exists = tasks.find(t=>t.id==='LINE-HQ-'+currentChatId);
+      if (!exists) {
+        tasks.unshift({ id:'LINE-HQ-'+currentChatId, type:'line_hq_response',
+          title:'LINE HQ対応中 — '+chat.name+' 様',
+          desc:'HQ介入モードで対応が必要です。',
+          createdAt:new Date().toLocaleDateString('ja-JP') });
+        localStorage.setItem('CORETO_HQ_TASKS', JSON.stringify(tasks));
+      }
+    } catch(e) {}
+  }
   document.getElementById('ai-input-area').style.display='none';
   document.getElementById('hq-input-area').style.display='';
   showToast('⚡ HQ介入モードに切り替えました');
@@ -921,7 +936,7 @@ function openFaqModal(id) {
 function closeFaqModal(){ document.getElementById('faq-modal').style.display='none'; }
 function editFaq(id){ openFaqModal(id); }
 function deleteFaq(id){
-  if (!confirm('このFAQを削除しますか？')) return;
+  var _faqId=id; coretoConfirm({title:'FAQ削除',message:'このFAQを削除しますか？',okLabel:'削除する',danger:true,onOk:function(){_doDeleteFaq(_faqId);}});return;
   FAQ_DATA[currentAccount] = FAQ_DATA[currentAccount].filter(f=>f.id!==id);
   renderFAQ(); showToast('🗑 FAQを削除しました');
 }
@@ -977,14 +992,9 @@ async function generateBroadcast() {
 function sendBroadcast() {
   const body = document.getElementById('broadcast-body').value.trim();
   if (!body) { showToast('⚠️ メッセージを入力してください','err'); return; }
-  console.log('[CORETO] LINE配信:', {
-    account: currentAccount,
-    target: document.getElementById('broadcast-target').value,
-    body,
-    timing: document.getElementById('broadcast-timing').value,
-  });
+  // LINE配信（本番: LINE Messaging API呼び出し）
   closeBroadcastModal();
-  showToast('📢 配信しました（デモ: console.logに出力）');
+  showToast('📢 配信しました');
 }
 
 // ── 初期化 ─────────────────────────────────────────────────

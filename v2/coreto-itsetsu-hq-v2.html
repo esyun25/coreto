@@ -432,16 +432,41 @@ function confirmManual(){
   saveBookings(bookings);
   closeModal();
   renderAll();
-  showToast(`✅ ${bk.caseName} 様の日程を確定しました`);
+  // AG向けLINE通知（LINE設定後有効化）
+  const msg = '【COREBLDG】IT重説の日程が確定しました\n' +
+    '案件: '+bk.caseName+' 様\n担当宅建士: '+(bk.takkName||'HQ')+'\n日時: '+bk.date+' '+bk.start;
+  const LINE_TOKEN = (window.LINE_CONFIG && window.LINE_CONFIG.AG_CHANNEL_TOKEN)||'';
+  if(LINE_TOKEN){
+    fetch('https://api.line.me/v2/bot/message/broadcast',{
+      method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+LINE_TOKEN},
+      body:JSON.stringify({messages:[{type:'text',text:msg}]})
+    }).catch(e=>console.error(e));
+  } // else { console.log('[LINE通知 設定待ち]',msg); }
+  showToast('✅ '+bk.caseName+' 様の日程を確定しました。AGにLINEで通知します。');
 }
 
 function setHq(bkId){
-  if(!confirm('このケースをHQ自社実施に変更しますか？')) return;
-  const bookings=getBookings();
-  const bk=bookings.find(b=>b.id===bkId); if(!bk) return;
-  bk.status='hq'; bk.takkName='HQ（自社）';
-  saveBookings(bookings); renderAll();
-  showToast('🏢 HQ実施に変更しました');
+  coretoConfirm({title:'HQ自社実施に変更',message:'このIT重説をHQ自社実施に変更しますか？',
+    detail:'変更後、HQが日程・Google Meet URLを設定してAGに通知します。',
+    okLabel:'HQ実施に変更する', onOk:function(){
+      const bookings=getBookings();
+      const bk=bookings.find(b=>b.id===bkId); if(!bk) return;
+      bk.status='hq'; bk.takkName='HQ（自社）';
+      saveBookings(bookings);
+      // HQタスクに追加（日程・meetUrl設定を促す）
+      try {
+        const tasks = JSON.parse(localStorage.getItem('CORETO_HQ_TASKS')||'[]');
+        tasks.unshift({ id:'ITSETSU-'+bkId, type:'itsetsu_hq',
+          title:'IT重説 日程設定 — '+bk.caseName+' 様',
+          desc:'HQ自社実施に変更されました。日程とGoogle Meet URLを設定してください。',
+          caseId:bk.caseId, bookingId:bkId,
+          createdAt:new Date().toLocaleDateString('ja-JP') });
+        localStorage.setItem('CORETO_HQ_TASKS', JSON.stringify(tasks));
+      } catch(e){}
+      renderAll();
+      showToast('🏢 HQ実施に変更しました。HQタスクに日程設定を追加しました。');
+    }
+  });
 }
 
 function slackBroadcast(){

@@ -674,13 +674,14 @@ function applyCampaign() {
 }
 
 function clearCampaign() {
-  if (!confirm('キャンペーンを終了してよろしいですか？\n手数料が15%に戻ります。')) return;
-  setCampaign(null);
-  var cur = document.getElementById('camp-current');
-  if (cur) cur.innerHTML = '現在：キャンペーンなし（手数料 15%）';
-  var badge = document.getElementById('camp-status-badge');
-  if (badge) badge.innerHTML = '';
-  showToast('キャンペーンを終了しました');
+  coretoConfirm({title:'キャンペーン終了',message:'即時払いキャンペーンを終了しますか？',detail:'手数料が15%に戻ります',okLabel:'終了する',danger:true,onOk:function(){
+    setCampaign(null);
+    var cur = document.getElementById('camp-current');
+    if (cur) cur.innerHTML = '現在：キャンペーンなし（手数料 15%）';
+    var badge = document.getElementById('camp-status-badge');
+    if (badge) badge.innerHTML = '';
+    showToast('キャンペーンを終了しました');
+  }});
 }
 
 function updateCampDisplay() {
@@ -867,7 +868,7 @@ function processTransfer(id, agName, amount) {
   }});
 }
 function unlockAccount(id) {
-  if (!confirm(`${id} の即時払いロックを解除しますか？\n本人確認が完了していることを確認してください。`)) return;
+  var _lid=id; coretoConfirm({title:'ロック解除',message:`${_lid} の即時払いロックを解除しますか？`,detail:'本人確認が完了していることを確認してください',okLabel:'解除する',danger:false,onOk:function(){_doUnlock(_lid);}});return;
   showToast(`🔓 ${id} のロックを解除しました。エージェントにSlackで通知されます。`, 'em');
 }
 
@@ -998,7 +999,7 @@ function exportZengin() {
 // ══════════════════════════════════════════════════════════════
 const SLACK_WEBHOOK = (window.SLACK_CONFIG ? window.SLACK_CONFIG.GENERAL : '') || 'YOUR_SLACK_WEBHOOK_URL';
 function slackPost(payload) {
-  if (!SLACK_WEBHOOK || SLACK_WEBHOOK === 'YOUR_SLACK_WEBHOOK_URL') { console.log('[Slack]', payload); return; }
+  if (!SLACK_WEBHOOK || SLACK_WEBHOOK === 'YOUR_SLACK_WEBHOOK_URL') { /* console.log('[Slack]', payload); */ return; }
   fetch(SLACK_WEBHOOK, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload), mode:'no-cors' }).catch(e => console.error(e));
 }
 const fmt = v => '¥' + Number(v).toLocaleString();
