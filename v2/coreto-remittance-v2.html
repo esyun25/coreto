@@ -561,20 +561,20 @@ function confirmIncome(idx) {
   status.textContent = '入金確認済み';
   row.querySelector('.rr-status-dot').className = 'rr-status-dot em';
   row.style.opacity = '.7';
-  // アクションボタンを非表示
   row.querySelectorAll('.action-btn').forEach(b => b.style.display = 'none');
-  // バッジを更新
   const badge = document.getElementById('badge-income');
   const cur = parseInt(badge.textContent) - 1;
   badge.textContent = cur;
   if (cur === 0) { badge.className = 'tab-badge em'; }
-  alert('入金確認を記録しました。\n送金管理タブから管理会社への送金を実行してください。');
+  showToast('✅ 入金確認を記録しました。送金管理タブから管理会社への送金を実行してください。', 'em');
+  // 送金管理タブへ自動切替
+  setTimeout(() => switchTab('remit'), 1800);
 }
 
 function sendReminder(idx) {
   const clients = ['伊藤 花子', '田中 優子', '鈴木 健太'];
   if (!confirm(`${clients[idx]} 様にLINEで督促メッセージを送信しますか？`)) return;
-  alert(`督促メッセージを送信しました。\n（実装時: LINE Messaging APIで自動送信）`);
+  showToast(`📲 ${clients[idx]} 様に督促メッセージを送信しました`, 'em');
 }
 
 // ═══ 送金実行（タブ2）═══════════════════════
@@ -593,12 +593,29 @@ function executeRemit(idx) {
   const cur = parseInt(badge.textContent) - 1;
   badge.textContent = Math.max(0, cur);
   if (cur <= 1) badge.className = 'tab-badge em';
-  alert('送金完了を記録しました。\n担当AGの公式LINEに自動通知が送信されます。');
+  showToast('✅ 送金完了を記録しました。担当AGに公式LINEで通知されます。', 'em');
 }
 
-function exportZengin(ids) { alert(`全銀ファイルを出力します（${ids.length}件）\n\n実装時: 全銀協規格CSVをダウンロード`); }
-function exportZenginAll() { alert('全銀ファイルを出力します（2件 / 合計 ¥563,000）\n\n実装時: インターネットバンキングに取り込んでください'); }
-function exportCSV() { alert('入金履歴CSVをダウンロードします（実装時: Kintone APIからエクスポート）'); }
+function exportZengin(ids) { showToast(`📥 全銀ファイルを出力します（${ids.length}件）`, 'em'); }
+function exportZenginAll() { showToast('📥 全銀ファイルを出力します（2件 / 合計 ¥563,000）', 'em'); }
+function exportCSV() { showToast('📥 入金履歴CSVをダウンロードします', 'em'); }
+
+function showToast(msg, type) {
+  const colors = {
+    em: ['#ECFDF5','#059669','rgba(5,150,105,.2)'],
+    am: ['#FFFBEB','#D97706','rgba(217,119,6,.2)'],
+    rd: ['#FEF2F2','#DC2626','rgba(220,38,38,.2)'],
+  };
+  const [bg, cl, bc] = colors[type] || colors.em;
+  const t = document.createElement('div');
+  t.style.cssText = `position:fixed;bottom:24px;right:24px;z-index:9999;padding:12px 18px;
+    border-radius:9px;font-size:13px;font-weight:600;font-family:'Outfit',sans-serif;
+    box-shadow:0 6px 20px rgba(0,0,0,.12);transition:opacity .4s;
+    background:${bg};color:${cl};border:1px solid ${bc};max-width:360px;line-height:1.5`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 400); }, 3500);
+}
 </script>
 
 <script src="coreto-nav-v2.js"></script>

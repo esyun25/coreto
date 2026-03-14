@@ -339,13 +339,24 @@ body, input, select, textarea, button { font-family:'Outfit','Noto Sans JP',sans
   <!-- フィルターバー -->
   <div class="plm-header">
     <div style="font-size:12px;color:var(--muted)">全案件の進捗状況を監視します。ステップ操作は各案件詳細ページで行ってください。</div>
-    <div class="plm-filters" id="type-filters">
-      <span class="filter-chip active" data-type="all" onclick="setFilter('all',this)">すべて</span>
-      <span class="filter-chip" data-type="rental" onclick="setFilter('rental',this)">🏠 賃貸</span>
-      <span class="filter-chip" data-type="sale" onclick="setFilter('sale',this)">🏢 売買</span>
-      <span class="filter-chip" data-type="sannai" onclick="setFilter('sannai',this)">🔄 三為</span>
-      <span class="filter-chip" data-type="hr" onclick="setFilter('hr',this)">👤 HR</span>
-      <span class="filter-chip" style="border-color:var(--am);color:var(--am)" data-type="stagnant" onclick="setFilter('stagnant',this)">⚠️ 停滞のみ</span>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <div class="plm-filters" id="type-filters">
+        <span class="filter-chip active" data-type="all" onclick="setFilter('all',this)">すべて</span>
+        <span class="filter-chip" data-type="rental" onclick="setFilter('rental',this)">🏠 賃貸</span>
+        <span class="filter-chip" data-type="sale" onclick="setFilter('sale',this)">🏢 売買</span>
+        <span class="filter-chip" data-type="sannai" onclick="setFilter('sannai',this)">🔄 三為</span>
+        <span class="filter-chip" data-type="hr" onclick="setFilter('hr',this)">👤 HR</span>
+        <span class="filter-chip" style="border-color:var(--am);color:var(--am)" data-type="stagnant" onclick="setFilter('stagnant',this)">⚠️ 停滞のみ</span>
+      </div>
+      <!-- 🟠-5: AG別フィルター -->
+      <select onchange="setAgFilter(this.value)"
+        style="padding:5px 10px;border-radius:6px;border:1px solid var(--bd);font-size:11px;
+               font-family:'Outfit',sans-serif;background:#fff;color:var(--ink);cursor:pointer">
+        <option value="">担当AG：すべて</option>
+        <option value="木下">AG-0021 木下</option>
+        <option value="大橋">AG-0034 大橋</option>
+        <option value="田村">AG-0056 田村</option>
+      </select>
     </div>
   </div>
 
@@ -433,12 +444,18 @@ const CASES = [
 ];
 
 let currentFilter = 'all';
+let currentAgFilter = '';
 let openAdvice = {};  // caseId → true/false
 
 function setFilter(type, el) {
   currentFilter = type;
-  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('#type-filters .filter-chip').forEach(c => c.classList.remove('active'));
   el.classList.add('active');
+  renderAll();
+}
+
+function setAgFilter(val) {
+  currentAgFilter = val;
   renderAll();
 }
 
@@ -521,6 +538,10 @@ function renderAll() {
     filtered = CASES.filter(c => c.daysOld >= 14);
   } else if (currentFilter !== 'all') {
     filtered = CASES.filter(c => c.type === currentFilter);
+  }
+  // 🟠-5: AGフィルター
+  if (currentAgFilter) {
+    filtered = filtered.filter(c => c.ag.includes(currentAgFilter));
   }
 
   // グルーピング

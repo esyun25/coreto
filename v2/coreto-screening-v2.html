@@ -383,10 +383,11 @@ function renderCase(c) {
     <table class="doc-table">
       <thead>
         <tr>
-          <th style="width:40%">書類名</th>
-          <th style="width:18%;text-align:center">申込者から受領</th>
-          <th style="width:18%;text-align:center">管理会社へ送付</th>
-          <th style="width:14%;text-align:center">状態</th>
+          <th style="width:36%">書類名</th>
+          <th style="width:14%;text-align:center">申込者から受領</th>
+          <th style="width:14%;text-align:center">管理会社へ送付</th>
+          <th style="width:12%;text-align:center">状態</th>
+          <th style="width:14%;font-size:9px">更新日時</th>
           ${isAG ? '<th style="width:10%"></th>' : ''}
         </tr>
       </thead>
@@ -418,6 +419,12 @@ function renderDocRow(caseId, d) {
     ? `<button class="btn btn-ghost btn-icon" title="削除" onclick="deleteDoc('${caseId}','${d.id}')">🗑</button>`
     : '<td></td>';
 
+  const ts = d.sentAt
+    ? `<span style="color:var(--em);font-size:9px">${d.sentAt}</span>`
+    : d.receivedAt
+      ? `<span style="color:var(--am);font-size:9px">${d.receivedAt}</span>`
+      : '<span style="color:var(--faint);font-size:9px">—</span>';
+
   return `<tr${doneClass}>
     <td>
       <div class="doc-name-cell">
@@ -440,6 +447,7 @@ function renderDocRow(caseId, d) {
       </div>
     </td>
     <td style="text-align:center">${statusBadgeHtml}</td>
+    <td>${ts}</td>
     ${isAG ? `<td style="text-align:center">${delBtn}</td>` : ''}
   </tr>`;
 }
@@ -455,12 +463,18 @@ function toggleDoc(caseId, docId, field, val) {
   if (!c || isHQ) return;
   const d = c.docs.find(d => d.id === docId);
   if (!d) return;
-  // 「送付済み」にしたら「受領済み」も自動セット
   if (field === 'sent' && val) d.received = true;
-  // 「受領済み」を外したら「送付済み」も外す
   if (field === 'received' && !val) d.sent = false;
   d[field] = val;
-  // 対象行だけ再描画
+  // 🟠-7: タイムスタンプ記録
+  const now = new Date().toLocaleString('ja-JP', {month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  if (val) {
+    if (field === 'received') d.receivedAt = now;
+    if (field === 'sent')     d.sentAt     = now;
+  } else {
+    if (field === 'received') d.receivedAt = null;
+    if (field === 'sent')     d.sentAt     = null;
+  }
   refreshCard(caseId);
   updateKPI();
 }
