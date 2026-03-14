@@ -470,6 +470,7 @@ function calcReward(){
   const preview = document.getElementById('reward-preview');
   if(!preview) return;
   const biz = document.getElementById('biz-select')?.value || 'rental';
+  const closedAt = document.getElementById('closed-at')?.value || new Date().toLocaleDateString('ja-JP');
   const { rate, rank } = getMyRate(biz);
   const reward = Math.round(fee * rate / 100);
   preview.innerHTML = `
@@ -512,22 +513,22 @@ function renderNew(){
       <div class="form-head"><div class="form-head-icon">🏘️</div><div class="form-head-title">案件情報</div></div>
       <div class="form-body">
         <div class="field-row">
-          <div class="field"><label class="required">案件ID</label><input id="case-id" placeholder="RENT-0000" value="RENT-0194"></div>
-          <div class="field"><label class="required">成約日</label><input type="date" value="2026-03-10"></div>
+          <div class="field"><label class="required">案件ID</label><input id="case-id" placeholder="RENT-0000"></div>
+          <div class="field"><label class="required">成約日</label><input id="closed-at" type="date"></div>
         </div>
         <div class="field-row">
-          <div class="field"><label class="required">クライアント名</label><input placeholder="田中 優子" value="田中 優子"></div>
-          <div class="field"><label>クライアントID</label><input placeholder="CLI-0001" value="CLI-0001"></div>
+          <div class="field"><label class="required">クライアント名</label><input id="client-name" placeholder="田中 優子"></div>
+          <div class="field"><label>クライアントID</label><input id="client-id" placeholder="CLI-0001"></div>
         </div>
         <div id="biz-fields">
           <!-- 賃貸フィールド（デフォルト） -->
           <div class="field-row">
-            <div class="field"><label class="required">物件住所</label><input placeholder="港区三田3丁目XX-XX" value="港区三田3丁目XX-XX"></div>
-            <div class="field"><label>物件名</label><input placeholder="パークタワー三田" value="パークタワー三田"></div>
+            <div class="field"><label class="required">物件住所</label><input id="prop-addr" placeholder="港区三田3丁目XX-XX"></div>
+            <div class="field"><label>物件名</label><input id="prop-name" placeholder="パークタワー三田"></div>
           </div>
           <div class="field-row">
-            <div class="field"><label class="required">月額家賃</label><input placeholder="165,000" value="165,000"></div>
-            <div class="field"><label>管理会社</label><input placeholder="東京不動産管理" value="東京不動産管理"></div>
+            <div class="field"><label class="required">月額家賃</label><input id="monthly-rent" placeholder="165,000"></div>
+            <div class="field"><label>管理会社</label><input id="mgmt-company" placeholder="東京不動産管理"></div>
           </div>
         </div>
       </div>
@@ -540,7 +541,7 @@ function renderNew(){
         <div class="field-row">
           <div class="field">
             <label class="required">仲介料（税抜）</label>
-            <input id="fee-input" placeholder="495,000" value="495,000" oninput="calcReward()">
+            <input id="fee-input" placeholder="495,000" oninput="calcReward()">
           </div>
           <div class="field">
             <label>PT紹介の有無</label>
@@ -614,6 +615,7 @@ function submitReport(){
   const feeInput = document.getElementById('fee-input');
   const fee = feeInput ? (parseInt(feeInput.value.replace(/[^0-9]/g,''))||495000) : 495000;
   const biz = document.getElementById('biz-select')?.value || 'rental';
+  const closedAt = document.getElementById('closed-at')?.value || new Date().toLocaleDateString('ja-JP');
   const { rate, rank } = getMyRate(biz);
   const reward = Math.round(fee * rate / 100);
   const rptId  = 'RPT-' + new Date().getFullYear() + String(Date.now()).slice(-8);
@@ -627,7 +629,7 @@ function submitReport(){
       case: 'RENT-' + String(Date.now()).slice(-4),
       client: document.getElementById('client-name')?.value || '—',
       type: biz === 'rental' ? '賃貸' : biz === 'sale' ? '売買' : biz === 'hr' ? '人材' : '光通信',
-      fee, reward, date: now, ag: agName, status: '承認待ち',
+      fee, reward, date: closedAt || now, ag: agName, status: '承認待ち',
     });
     localStorage.setItem('CORETO_REPORTS', JSON.stringify(reports));
   } catch(e) {}
@@ -808,6 +810,21 @@ function showToast(msg, type) {
 
 window.addEventListener('DOMContentLoaded', ()=>{
   CNAV.init('contract_report');
+  // URLパラメータから案件情報を自動入力（cases-v2・rental-v2からの遷移対応）
+  const p = new URLSearchParams(location.search);
+  if (p.get('caseId')) {
+    const el = document.getElementById('case-id');
+    if (el) el.value = decodeURIComponent(p.get('caseId'));
+  }
+  if (p.get('clientName')) {
+    const el = document.getElementById('client-name');
+    if (el) el.value = decodeURIComponent(p.get('clientName'));
+  }
+  // 成約日を今日に自動設定
+  const dateEl = document.getElementById('closed-at');
+  if (dateEl && !dateEl.value) {
+    dateEl.value = new Date().toISOString().slice(0, 10);
+  }
   renderNew();
 });
 </script>
