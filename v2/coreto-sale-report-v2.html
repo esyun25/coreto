@@ -178,7 +178,7 @@ function showToast(msg, type){
 const AGENT = { id:'AG-0042', name:'山田 誠', rank:'gold' };
 // 売買・三為 ランク別報酬率
 // ※ Silver と Gold が同一値のバグを修正。三為スプレッドの規程値に準拠。
-const RANK_RATE_SALE = { bronze: .80, silver: .825, gold: .85, platinum: .90 }; // 🔴修正: Silver=67.5%→82.5%, Gold=70%→85%（売買三為ボーナス係数）
+const RANK_RATE_SALE = { bronze: .65, silver: .675, gold: .70, platinum: .75 }; // 賃貸と同一レート
 
 let dealType = 'brokerage'; // brokerage | sannai
 
@@ -200,7 +200,7 @@ function calcSpread() {
   if (!buy || !sell) { renderSpread(0,0,0,0); return; }
   const spread   = sell - buy;
   const feeLimit = calcBrokerageFee(sell);
-  const rate     = RANK_RATE_SALE[AGENT.rank] || 0.85;
+  const rate     = RANK_RATE_SALE[AGENT.rank] || 0.70;
   const reward   = Math.round(spread * rate);
   renderSpread(buy, sell, spread, reward, feeLimit);
 }
@@ -209,7 +209,7 @@ function renderSpread(buy, sell, spread, reward, feeLimit) {
   const el = document.getElementById('spread-preview');
   if (!el) return;
   const fmt = v => v ? '¥' + v.toLocaleString() : '—';
-  const rate = RANK_RATE_SALE[AGENT.rank] || 0.85;
+  const rate = RANK_RATE_SALE[AGENT.rank] || 0.70;
   el.innerHTML = `
     <div class="spread-row"><span class="spread-label">仕入金額（A→B）</span><span class="spread-val">${fmt(buy)}</span></div>
     <div class="spread-row"><span class="spread-label">売出金額（B→C）</span><span class="spread-val">${fmt(sell)}</span></div>
@@ -235,7 +235,7 @@ function calcBrokerageReward() {
   const side     = sideEl?.value || 'both';
   const sideRate = side==='both' ? 1 : 0.5; // 両手 or 片手
   const adjFee   = Math.round(fee * sideRate);
-  const rate     = RANK_RATE_SALE[AGENT.rank] || 0.85;
+  const rate     = RANK_RATE_SALE[AGENT.rank] || 0.70;
   const reward   = Math.round(adjFee * rate);
 
   // 上限額を自動セット
@@ -247,7 +247,7 @@ function renderBrokerageReward(price, fee, reward, side, feeLimit) {
   const el = document.getElementById('reward-preview');
   if (!el) return;
   const fmt = v => v ? '¥' + v.toLocaleString() : '—';
-  const rate = RANK_RATE_SALE[AGENT.rank] || 0.85;
+  const rate = RANK_RATE_SALE[AGENT.rank] || 0.70;
   el.innerHTML = `
     <div class="reward-row">
       <span class="reward-label">売買価格</span>
@@ -364,7 +364,7 @@ function renderComplete() {
   const isDeal   = dealType === 'sannai';
   const price    = isDeal ? parseMoney('sannai-sell') : parseMoney('sale-price');
   const fee      = isDeal ? (parseMoney('sannai-sell') - parseMoney('sannai-buy')) : parseMoney('brokerage-fee');
-  const rate     = RANK_RATE_SALE[AGENT.rank] || 0.85;
+  const rate     = RANK_RATE_SALE[AGENT.rank] || 0.70;
   const reward   = Math.round(fee * rate);
   const rptId    = 'RPT-' + Date.now().toString().slice(-8);
   const caseId   = document.getElementById('case-id')?.value.trim() || 'SALE-0000';
