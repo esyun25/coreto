@@ -1817,19 +1817,34 @@ function printApprovalDocs(doc, trackingCode){
     agent:{name:'担当AG', agId:'—'},
     mgmt:{name:'管理会社', postal:'—', address:'—'},
   };
-  // 両ウィンドウを先に開き、その後 letter を印刷
-  // （先に print() するとダイアログがブロックしてラベルウィンドウが開けないため）
-  const wLabel = printLabels(cas, trackingCode);   // ラベルを先に開く（自動印刷なし）
-  const wLetter = printWelcomeLetter(cas, trackingCode); // Letterを後に開く（自動印刷なし）
-  // 両ウィンドウが描画された後、Letterのみ自動印刷
+  const wLabel  = printLabels(cas, trackingCode);
+  const wLetter = printWelcomeLetter(cas, trackingCode, doc.returnDocs || null);
   setTimeout(() => {
     try { wLetter && wLetter.print(); } catch(e) {}
   }, 1200);
 }
 
 // ── Welcome letter（A4・通常プリンター・自動印刷）──────────
-function printWelcomeLetter(cas, trackingCode){
+function printWelcomeLetter(cas, trackingCode, returnDocs){
   const today = new Date().toLocaleDateString('ja-JP',{year:'numeric',month:'long',day:'numeric'});
+
+  // 返送書類テーブル行の生成
+  // returnDocs が null/未添付の場合はデフォルト2行
+  const docRows = returnDocs && returnDocs.length > 0
+    ? returnDocs.map(d =>
+        `<tr><td>${d.name}</td><td>${d.note || '各署名欄にご署名・ご捺印ください'}</td></tr>`
+      ).join('')
+    : `<tr><td>賃貸借契約書</td><td>各ページの署名欄にご署名・ご捺印ください</td></tr>
+       <tr><td>重要事項説明書</td><td>内容をご確認のうえ、署名欄にご署名ください</td></tr>`;
+
+  const returnListNote = returnDocs && returnDocs.length > 0
+    ? `<div style="font-size:10px;color:#1D4ED8;margin-top:8px;padding:6px 10px;
+        background:rgba(29,78,216,.06);border-radius:6px;line-height:1.6">
+        ※ 上記書類リストは同封の返送必要書類一覧をもとに作成しています。<br>
+        　 ご不明な点は担当エージェントまでお問い合わせください。
+       </div>`
+    : '';
+
   const w = window.open('','_blank','width=860,height=1100');
   w.document.write(`<!DOCTYPE html><html lang="ja"><head>
 <meta charset="UTF-8">
@@ -1849,9 +1864,10 @@ function printWelcomeLetter(cas, trackingCode){
   .cb-name{font-size:20px;font-weight:700;color:#0D1A2D}
   .cb-sub{font-size:11px;color:#5F6368;margin-top:3px}
   .sec{font-size:11px;font-weight:700;letter-spacing:.8px;color:#0D1A2D;border-left:3px solid #C8A951;padding-left:10px;margin:16px 0 8px}
-  table{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:14px}
+  table{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:8px}
   th{background:#0D1A2D;color:#fff;padding:7px 10px;text-align:left;font-size:10px;font-weight:600}
   td{padding:6px 10px;border:1px solid #E8EAED}
+  tr:nth-child(even) td{background:#FAFAFA}
   .ret-box{background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:14px 18px;margin:14px 0}
   .ret-box h3{font-size:12px;color:#1D4ED8;margin-bottom:8px}
   .ret-box ol{padding-left:18px;font-size:11px;line-height:2.2}
@@ -1872,17 +1888,18 @@ function printWelcomeLetter(cas, trackingCode){
     <div class="cb-sub" style="margin-top:4px">物件：${cas.propertyName} ／ 担当：${cas.agent.name}（${cas.agent.agId}）</div>
   </div>
   <div class="sec">書類送付のご案内</div>
-  <p style="font-size:11px;margin-bottom:10px">このたびは契約書類をお送りいたします。下記のとおりご署名・ご捺印のうえ、<strong>同封の返送用レターパックプラス</strong>にてご返送いただきますようお願い申し上げます。</p>
+  <p style="font-size:11px;margin-bottom:10px">このたびは契約書類をお送りいたします。下記の書類にご署名・ご捺印のうえ、<strong>同封の返送用レターパックプラス</strong>にてご返送いただきますようお願い申し上げます。</p>
+  <div class="sec">ご返送いただく書類</div>
   <table>
-    <tr><th style="width:160px">書類種別</th><th>確認事項</th></tr>
-    <tr><td>賃貸借契約書</td><td>各ページの署名欄にご署名・ご捺印ください</td></tr>
-    <tr><td>重要事項説明書</td><td>内容をご確認のうえ、署名欄にご署名ください</td></tr>
+    <tr><th style="width:45%">書類名</th><th>ご確認事項</th></tr>
+    ${docRows}
   </table>
+  ${returnListNote}
   <div class="ret-box">
     <h3>📦 書類の返送方法</h3>
     <ol>
       <li>同封の<strong>返送用レターパックプラス（紫色）</strong>をご使用ください</li>
-      <li>署名・捺印済みの書類一式をすべて封入してください</li>
+      <li>上記の書類一式をすべて封入してください</li>
       <li>ラベルの差出人欄（ご自身のお名前・ご住所）をご記入ください</li>
       <li>ポストまたは郵便局窓口より発送してください</li>
       <li>発送後、追跡番号をご連絡いただく必要はありません</li>
@@ -1905,7 +1922,6 @@ function printWelcomeLetter(cas, trackingCode){
 <script>
 window.addEventListener('load',function(){
   try{JsBarcode('#bc-wl','${cas.caseId}',{format:'CODE128',width:2,height:52,displayValue:false,margin:4,lineColor:'#0D1A2D',background:'#ffffff'});}catch(e){}
-  // 自動印刷はprintApprovalDocsから制御
 });
 <\/script></body></html>`);
   w.document.close();
@@ -2146,10 +2162,10 @@ function startNewFlow(){
   document.getElementById('scan-modal-body').innerHTML = `
     <div style="font-size:11px;color:var(--muted);margin-bottom:14px;line-height:1.8">
       コピー機でスキャンしたPDFを種別ごとにアップロードしてください。<br>
-      AIが内容から案件を自動判定します。IT重説時に宅建士が参照します。
+      AIが内容から案件を自動判定し、返送必要書類もWelcome letterに自動反映します。
     </div>
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
       <!-- 契約書 -->
       <div>
         <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:6px;letter-spacing:.4px">
@@ -2188,6 +2204,30 @@ function startNewFlow(){
       </div>
     </div>
 
+    <!-- 返送必要書類リスト（任意） -->
+    <div style="margin-bottom:14px">
+      <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:6px;letter-spacing:.4px;display:flex;align-items:center;gap:6px">
+        📬 同封の返送必要書類リスト
+        <span style="font-size:9px;font-weight:400;color:var(--faint);background:var(--cream2);border:1px solid var(--bd);border-radius:4px;padding:1px 7px">任意</span>
+      </div>
+      <div style="font-size:10px;color:var(--faint);margin-bottom:6px;line-height:1.6">
+        管理会社が同封した「返送必要書類一覧」シートをスキャンしてアップロードしてください。<br>
+        AIが書類名を読み取り、<strong style="color:var(--ink)">Welcome letterの返送書類リストに自動反映</strong>します。
+      </div>
+      <label id="upload-label-returnlist"
+        style="display:block;border:2px dashed var(--bd2);border-radius:10px;
+        padding:14px;text-align:center;cursor:pointer;transition:.2s;background:#F8F9FA;min-height:70px"
+        onmouseenter="this.style.borderColor='var(--am)'"
+        onmouseleave="if(!_uploadFiles.returnlist)this.style.borderColor='var(--bd2)'">
+        <input type="file" accept="application/pdf,image/*" style="display:none"
+          onchange="handleFileSelect(event,'returnlist')">
+        <div id="upload-status-returnlist" style="font-size:11px;color:var(--muted)">
+          <div style="font-size:18px;margin-bottom:3px">📬</div>
+          クリックして選択（PDF または 画像）
+        </div>
+      </label>
+    </div>
+
     <div style="font-size:10px;color:var(--faint);margin-bottom:10px;text-align:center">
       ⚠️ PDFサイズの合計は10MB以内を推奨。本番ではGoogle Driveに保存されます。
     </div>
@@ -2205,8 +2245,8 @@ function startNewFlow(){
 }
 
 // ── ファイルアップロード管理 ────────────────────────────
-let _uploadFiles = {contract: null, jusetsu: null};
-let _uploadDataUrls = {contract: null, jusetsu: null};
+let _uploadFiles = {contract: null, jusetsu: null, returnlist: null};
+let _uploadDataUrls = {contract: null, jusetsu: null, returnlist: null};
 
 function handleFileSelect(event, type){
   const file = event.target.files[0];
@@ -2221,13 +2261,13 @@ function handleFileSelect(event, type){
      <div style="font-size:9px;color:var(--faint)">${(file.size/1024).toFixed(0)}KB</div>`;
   if (labelEl) labelEl.style.borderColor = 'var(--em)';
 
-  // 両方揃ったらボタン有効化
+  // 契約書・重説の両方が揃ったらボタン有効化（returnlistは任意）
   const btnEl = document.getElementById('new-upload-submit');
   if (_uploadFiles.contract && _uploadFiles.jusetsu){
     if (btnEl){ btnEl.disabled=false; btnEl.style.opacity='1'; }
   }
 
-  // base64変換（localStorage保存用）
+  // base64変換（localStorage保存用 / AI送信用）
   const reader = new FileReader();
   reader.onload = e => { _uploadDataUrls[type] = e.target.result; };
   reader.readAsDataURL(file);
@@ -2244,6 +2284,7 @@ function submitNewUpload(){
     caseId:'', caseName:'',
     flow:'A', stepIdx:0,
     aiResult:null,
+    returnDocs: null,   // 返送必要書類リスト（AI抽出後にセット）
     outboundTracking:'', returnTracking:'',
     arrivedAt:new Date().toLocaleString('ja-JP').slice(5,-3),
     lastUpdated:new Date().toLocaleString('ja-JP').slice(5,-3),
@@ -2271,12 +2312,71 @@ function submitNewUpload(){
     localStorage.setItem('CORETO_SCAN_PENDING_'+newDoc.id, JSON.stringify(pendingData));
   } catch(e){ showToast('⚠️ ローカルストレージ保存失敗（容量不足の可能性）','warn'); }
 
+  // 返送必要書類リストが添付されていればAIで読み取る
+  const returnlistDataUrl = _uploadDataUrls.returnlist;
+  const returnlistFile    = _uploadFiles.returnlist;
+
   renderStats();
-  showToast('📦 受付登録完了 — AI判定を開始します');
-  _uploadFiles = {contract:null, jusetsu:null};
-  _uploadDataUrls = {contract:null, jusetsu:null};
+  _uploadFiles    = {contract:null, jusetsu:null, returnlist:null};
+  _uploadDataUrls = {contract:null, jusetsu:null, returnlist:null};
   refreshCurrentTab();
-  setTimeout(()=>{ runAiScanById(newDoc.id); }, 1500);
+
+  if (returnlistDataUrl) {
+    showToast('📬 返送必要書類リストをAIで読み取り中...');
+    runReturnListAi(newDoc.id, returnlistDataUrl, returnlistFile)
+      .then(() => {
+        showToast('📦 受付登録完了 — AI案件判定を開始します');
+        setTimeout(() => runAiScanById(newDoc.id), 800);
+      });
+  } else {
+    showToast('📦 受付登録完了 — AI判定を開始します');
+    setTimeout(() => runAiScanById(newDoc.id), 1500);
+  }
+}
+
+// ── 返送必要書類リストのAI読み取り ─────────────────────────
+async function runReturnListAi(docId, dataUrl, file) {
+  const doc = DOCS.find(d => d.id === docId);
+  if (!doc) return;
+
+  // base64部分のみ取り出す
+  const base64 = dataUrl.split(',')[1];
+  const isPdf  = file && file.type === 'application/pdf';
+  const mediaType = isPdf ? 'application/pdf' : (file ? file.type : 'image/jpeg');
+
+  const contentBlock = isPdf
+    ? { type:'document', source:{ type:'base64', media_type:'application/pdf', data: base64 } }
+    : { type:'image',    source:{ type:'base64', media_type: mediaType,         data: base64 } };
+
+  const prompt = `この書類は不動産管理会社が作成した「返送必要書類一覧」です。
+書類に記載されている返送が必要な書類の名前を全て抽出し、以下のJSON形式のみで返答してください（前置き・説明不要）:
+
+{"docs":[{"name":"書類名1","note":"備考（押印必要など）"},{"name":"書類名2","note":""}]}
+
+備考が書かれていない場合は note を空文字にしてください。
+書類が読み取れない場合は {"docs":[]} を返してください。`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 800,
+        messages: [{ role: 'user', content: [contentBlock, { type:'text', text: prompt }] }]
+      })
+    });
+    const data = await resp.json();
+    const text = data.content?.find(b => b.type === 'text')?.text || '{"docs":[]}';
+    const res  = JSON.parse(text.replace(/```json|```/g, '').trim());
+    doc.returnDocs = res.docs && res.docs.length > 0 ? res.docs : null;
+    if (doc.returnDocs) {
+      showToast(`✅ 返送書類 ${doc.returnDocs.length}件 を読み取りました`, 'ok');
+    }
+  } catch(e) {
+    doc.returnDocs = null;
+    console.warn('返送書類AI読み取りエラー:', e.message);
+  }
 }
 
 // ══════════════════════════════════════════════════════════
