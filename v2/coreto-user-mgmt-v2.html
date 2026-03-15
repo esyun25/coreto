@@ -1021,12 +1021,132 @@ function renderLogs() {
 function openModal(id)  { document.getElementById(id).classList.add('show'); }
 function closeModal(id) { document.getElementById(id).classList.remove('show'); }
 function exportCSV() { toast('CSVエクスポート（本番環境で実装）'); }
+
+// HQ ID採番定義
+var HQ_ID_RANGES = {
+  hq_exec:    { min:1,     max:199,   label:'HQ経営者' },
+  hq_manager: { min:200,   max:999,   label:'HQマネージャー' },
+  hq_staff:   { min:1000,  max:4999,  label:'HQスタッフ' },
+  hq_part:    { min:5000,  max:9899,  label:'HQパート' },
+};
+
+function getNextHQId(role) {
+  var range = HQ_ID_RANGES[role] || HQ_ID_RANGES.hq_staff;
+  // 既存のCORETO_HQ_ACCOUNTS + HQ_USERS_RAWからIDを収集
+  var used = new Set();
+  HQ_USERS_RAW.forEach(function(u) {
+    var m = String(u.id).match(/^HQ-0*(\d+)$/);
+    if (m) used.add(parseInt(m[1], 10));
+  });
+  try {
+    var accounts = JSON.parse(localStorage.getItem('CORETO_HQ_ACCOUNTS') || '{}');
+    Object.keys(accounts).forEach(function(id) {
+      var m = String(id).match(/^HQ-0*(\d+)$/);
+      if (m) used.add(parseInt(m[1], 10));
+    });
+    var pending = JSON.parse(localStorage.getItem('CORETO_HQ_PENDING') || '{}');
+    Object.keys(pending).forEach(function(id) {
+      var m = String(id).match(/^HQ-0*(\d+)$/);
+      if (m) used.add(parseInt(m[1], 10));
+    });
+  } catch(e) {}
+  for (var n = range.min; n <= range.max; n++) {
+    if (!used.has(n)) {
+      return 'HQ-' + String(n).padStart(5, '0');
+    }
+  }
+  return null; // 採番上限
+}
+
+function generateTempPw() {
+  var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  return 'HQ-' + Array.from({length:4}, function(){ return chars[Math.floor(Math.random()*chars.length)]; }).join('') +
+         '-' + Array.from({length:4}, function(){ return chars[Math.floor(Math.random()*chars.length)]; }).join('');
+}
+
 function sendInvite() {
-  const name=(document.getElementById('add-last').value+' '+document.getElementById('add-first').value).trim();
-  const email=document.getElementById('add-email').value;
-  if(!name||!email){ showToast('氏名とメールアドレスを入力してください', 'warn'); return; }
-  showToast('招待メールを送信しました\n宛先: '+email, 'em');
-  closeModal('modal-add');
+  var last  = document.getElementById('add-last').value.trim();
+  var first = document.getElementById('add-first').value.trim();
+  var email = document.getElementById('add-email').value.trim();
+  var role  = document.getElementById('add-role').value;
+
+  if (!last || !first || !email) {
+    showToast('氏名とメールアドレスを入力してください', 'warn'); return;
+  }
+
+  // HQロール以外（AG/PT/intern）は従来の招待
+  if (!role.startsWith('hq')) {
+    showToast('📨 招待メールを送信しました（' + email + '）', 'em');
+    closeModal('modal-add');
+    return;
+  }
+
+  // HQメンバー招待: ID採番 → 仮PW生成 → CORETO_HQ_PENDINGに保存 → 招待URL表示
+  var newId = getNextHQId(role);
+  if (!newId) {
+    showToast('⚠️ ' + (HQ_ID_RANGES[role]||{label:'このロール'}).label + 'のIDが上限に達しています', 'warn'); return;
+  }
+  var tempPw  = generateTempPw();
+  var inviter = sessionStorage.getItem('coreto_name') || 'HQ';
+  var now     = new Date().toLocaleDateString('ja-JP');
+  var inviteUrl = location.origin + location.pathname.replace('coreto-user-mgmt-v2.html','') +
+                  'coreto-hq-onboarding-v2.html?token=' + encodeURIComponent(newId);
+
+  try {
+    var pending = JSON.parse(localStorage.getItem('CORETO_HQ_PENDING') || '{}');
+    pending[newId] = {
+      id:         newId,
+      tempPw:     tempPw,
+      name:       last + ' ' + first,
+      email:      email,
+      hqRole:     role.replace('hq_',''),
+      invitedBy:  inviter,
+      invitedAt:  now,
+      used:       false,
+    };
+    localStorage.setItem('CORETO_HQ_PENDING', JSON.stringify(pending));
+  } catch(e) {
+    showToast('⚠️ 保存に失敗しました', 'warn'); return;
+  }
+
+  // 招待URLをモーダルに表示
+  document.getElementById('modal-add').innerHTML = `
+    <div style="background:#fff;border-radius:14px;width:100%;max-width:520px;font-family:'Outfit','Noto Sans JP',sans-serif">
+      <div style="padding:18px 24px;border-bottom:1px solid #e8eaed;font-size:15px;font-weight:700;color:#202124">
+        ✅ HQ招待情報が発行されました
+      </div>
+      <div style="padding:20px 24px">
+        <div style="background:#0D1A2D;border-radius:10px;padding:16px 20px;margin-bottom:16px">
+          <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.1)">
+            <span style="font-size:11px;color:rgba(255,255,255,.5)">発行ID</span>
+            <span style="font-size:13px;font-weight:700;color:#C8A951;font-family:'DM Mono',monospace">${newId}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.1)">
+            <span style="font-size:11px;color:rgba(255,255,255,.5)">氏名</span>
+            <span style="font-size:13px;font-weight:700;color:#fff">${last + ' ' + first}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:6px 0">
+            <span style="font-size:11px;color:rgba(255,255,255,.5)">仮パスワード</span>
+            <span style="font-size:13px;font-weight:700;color:#fff;font-family:'DM Mono',monospace">${tempPw}</span>
+          </div>
+        </div>
+        <div style="font-size:11px;font-weight:700;color:#5F6368;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">招待URL</div>
+        <div style="background:#F8F9FA;border:1.5px solid #E8EAED;border-radius:8px;padding:10px 12px;font-size:11px;font-family:'DM Mono',monospace;word-break:break-all;margin-bottom:16px;color:#202124">${inviteUrl}</div>
+        <div style="background:#FFFBEB;border:1px solid rgba(217,119,6,.2);border-radius:8px;padding:10px 14px;font-size:11px;color:#D97706;line-height:1.7;margin-bottom:16px">
+          ⚠️ 上記のHQ IDと仮パスワードをこの画面でメモしてください。<br>招待URLを${last + ' ' + first}さんに別途共有してください。
+        </div>
+        <div style="display:flex;gap:10px">
+          <button onclick="navigator.clipboard&&navigator.clipboard.writeText('${inviteUrl}');showToast('URLをコピーしました','em')"
+            style="flex:1;padding:10px;background:#0D1A2D;color:#C8A951;border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif">
+            📋 URLをコピー
+          </button>
+          <button onclick="this.closest('.modal-bg').classList.remove('show')"
+            style="flex:1;padding:10px;background:transparent;color:#5F6368;border:1.5px solid #E8EAED;border-radius:9px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Outfit',sans-serif">
+            閉じる
+          </button>
+        </div>
+      </div>
+    </div>`;
 }
 function toast(msg, type='ok') {
   let t=document.getElementById('_toast');

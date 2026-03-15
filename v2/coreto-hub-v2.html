@@ -3227,6 +3227,25 @@ function renderHQDynamicTasks() {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
+  // ── CORETO_HQ_ACCOUNTSをUSER_CREDENTIALSにマージ（HQオンボーディング登録済みアカウント）
+  (function() {
+    try {
+      var accounts = JSON.parse(localStorage.getItem('CORETO_HQ_ACCOUNTS') || '{}');
+      Object.keys(accounts).forEach(function(id) {
+        var a = accounts[id];
+        if (!USER_CREDENTIALS[id] && a.pw && a.status === 'active') {
+          USER_CREDENTIALS[id] = {
+            pw:     a.pw,
+            role:   'hq',
+            name:   a.name,
+            userId: id,
+            rank:   null,
+          };
+        }
+      });
+    } catch(e) {}
+  })();
+
   // 権限不足でリダイレクトされた場合の通知
   if (new URLSearchParams(location.search).get('unauthorized') === '1') {
     const errBanner = document.createElement('div');

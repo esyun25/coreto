@@ -158,6 +158,7 @@ const NAV = {
         { icon:'🏅', label:'AGランクダッシュボード',  href:'coreto-rank-dashboard-v2.html',  key:'rank_dashboard'  },
         { icon:'🌐', label:'紹介ネットワーク図',   href:'coreto-network-v2.html',         key:'network'         },
         { icon:'🏢', label:'ユーザー・権限管理',   href:'coreto-user-mgmt-v2.html',       key:'hq_mgmt'         },
+        { icon:'🆕', label:'HQメンバー招待・登録',  href:'coreto-hq-onboarding-v2.html',   key:'hq_onboarding'   },
       ],
     },
     {

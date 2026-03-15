@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HQメンバー 初回登録 — COREBLDG</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#0D1A2D;--navy-l:#1E3252;--gold:#C8A951;--gold-dim:rgba(200,169,81,.15);
+  --cream:#FFFFFF;--ink:#202124;--muted:#5F6368;--faint:#80868B;
+  --em:#059669;--em-bg:#ECFDF5;--rd:#DC2626;--rd-bg:#FEF2F2;
+  --am:#D97706;--am-bg:#FFFBEB;--sk:#0284C7;--sk-bg:#F0F9FF;
+  --bd:#E8EAED;--bd2:#DADCE0;
+}
+html,body{min-height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:linear-gradient(135deg,#0D1A2D 0%,#1E3252 50%,#0D1A2D 100%);display:flex;align-items:center;justify-content:center;padding:24px 16px}
+
+/* カード */
+.card{background:#fff;border-radius:20px;width:100%;max-width:540px;box-shadow:0 32px 80px rgba(0,0,0,.35),0 0 0 1px rgba(255,255,255,.06)}
+.card-header{padding:32px 40px 24px;text-align:center;border-bottom:1px solid var(--bd)}
+.logo{font-family:'Outfit',sans-serif;font-size:22px;font-weight:800;letter-spacing:6px;color:var(--navy);margin-bottom:4px}
+.logo span{color:var(--gold)}
+.card-title{font-size:20px;font-weight:700;color:var(--ink);margin-top:16px}
+.card-sub{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.6}
+
+/* ステップバー */
+.steps{display:flex;align-items:center;padding:20px 40px;gap:0}
+.step-item{display:flex;flex-direction:column;align-items:center;flex:1;position:relative}
+.step-item:not(:last-child)::after{content:'';position:absolute;top:14px;left:calc(50% + 14px);right:calc(-50% + 14px);height:2px;background:var(--bd)}
+.step-item.done:not(:last-child)::after{background:var(--em)}
+.step-circle{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;border:2px solid var(--bd);color:var(--muted);background:#fff;z-index:1;transition:.2s}
+.step-item.active .step-circle{border-color:var(--navy);background:var(--navy);color:var(--gold)}
+.step-item.done .step-circle{border-color:var(--em);background:var(--em);color:#fff}
+.step-label{font-size:10px;font-weight:600;color:var(--muted);margin-top:5px;text-align:center}
+.step-item.active .step-label{color:var(--navy);font-weight:700}
+.step-item.done .step-label{color:var(--em)}
+
+/* フォームエリア */
+.card-body{padding:28px 40px}
+.section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:14px}
+.field{margin-bottom:18px}
+.field label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bottom:6px;letter-spacing:.3px}
+.field input,.field select{width:100%;padding:11px 14px;border:1.5px solid var(--bd);border-radius:10px;font-size:14px;font-family:'Outfit','Noto Sans JP',sans-serif;outline:none;transition:.15s;background:#fff;color:var(--ink)}
+.field input:focus,.field select:focus{border-color:var(--navy);box-shadow:0 0 0 3px rgba(13,26,45,.08)}
+.field input.err,.field select.err{border-color:var(--rd);box-shadow:0 0 0 3px rgba(220,38,38,.08)}
+.field .err-msg{font-size:10px;color:var(--rd);margin-top:4px;display:none}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+
+/* パスワード強度 */
+.pw-strength{margin-top:6px;display:flex;gap:4px}
+.pw-bar{flex:1;height:3px;border-radius:2px;background:var(--bd);transition:.2s}
+.pw-label{font-size:10px;color:var(--muted);margin-top:4px}
+
+/* アカウント情報ボックス */
+.info-box{background:var(--navy);border-radius:12px;padding:18px 20px;margin-bottom:20px}
+.info-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.08)}
+.info-row:last-child{border-bottom:none}
+.info-label{font-size:11px;color:rgba(255,255,255,.5);font-weight:600}
+.info-val{font-size:13px;font-weight:700;color:#fff;font-family:'DM Mono',monospace}
+.info-val.gold{color:var(--gold)}
+.info-val.role{font-family:'Outfit',sans-serif;font-size:12px}
+
+/* 同意チェック */
+.agree-row{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border:1.5px solid var(--bd);border-radius:10px;cursor:pointer;transition:.13s}
+.agree-row:hover{border-color:var(--bd2);background:#fafafa}
+.agree-row.checked{border-color:var(--navy);background:rgba(13,26,45,.03)}
+.agree-row input[type=checkbox]{width:16px;height:16px;flex-shrink:0;margin-top:1px;accent-color:var(--navy)}
+.agree-text{font-size:12px;color:var(--ink);line-height:1.6}
+.agree-text a{color:var(--sk);text-decoration:none}
+
+/* ボタン */
+.btn-primary{width:100%;padding:14px;background:var(--navy);color:var(--gold);border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif;transition:.15s;letter-spacing:.5px}
+.btn-primary:hover{background:var(--navy-l)}
+.btn-primary:disabled{opacity:.45;cursor:not-allowed}
+.btn-ghost{width:100%;padding:12px;background:transparent;color:var(--muted);border:1.5px solid var(--bd);border-radius:12px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Outfit',sans-serif;transition:.15s;margin-top:10px}
+.btn-ghost:hover{border-color:var(--bd2);background:#f8f8f8}
+
+/* 完了画面 */
+.complete-icon{font-size:60px;text-align:center;margin-bottom:16px}
+.complete-title{font-size:22px;font-weight:800;color:var(--ink);text-align:center;margin-bottom:8px}
+.complete-sub{font-size:13px;color:var(--muted);text-align:center;line-height:1.7;margin-bottom:24px}
+.credential-box{background:var(--navy);border-radius:12px;padding:16px 20px;margin-bottom:20px}
+.cred-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0}
+.cred-label{font-size:11px;color:rgba(255,255,255,.5)}
+.cred-val{font-size:13px;font-weight:700;color:#fff;font-family:'DM Mono',monospace}
+
+/* エラー画面 */
+.error-card{text-align:center;padding:40px 20px}
+.error-icon{font-size:48px;margin-bottom:16px}
+
+@media(max-width:540px){.card-header,.card-body{padding:24px 24px}.steps{padding:16px 24px}.field-row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="card-header">
+    <div class="logo">CORE<span>TO</span></div>
+    <div style="font-size:10px;letter-spacing:2px;color:var(--muted);margin-top:2px;font-family:'DM Mono',monospace">COREBLDG SYSTEM</div>
+    <div class="card-title" id="card-title">HQメンバー 初回登録</div>
+    <div class="card-sub" id="card-sub">招待URLからアクセスしました。以下の手順でアカウントを設定してください。</div>
+  </div>
+
+  <!-- ステップバー -->
+  <div class="steps" id="step-bar">
+    <div class="step-item active" id="step1">
+      <div class="step-circle">1</div>
+      <div class="step-label">本人確認</div>
+    </div>
+    <div class="step-item" id="step2">
+      <div class="step-circle">2</div>
+      <div class="step-label">基本情報</div>
+    </div>
+    <div class="step-item" id="step3">
+      <div class="step-circle">3</div>
+      <div class="step-label">パスワード</div>
+    </div>
+    <div class="step-item" id="step4">
+      <div class="step-circle">4</div>
+      <div class="step-label">確認・完了</div>
+    </div>
+  </div>
+
+  <div class="card-body" id="card-body">
+    <!-- Step 1: 本人確認 -->
+    <div id="pane-1">
+      <div class="section-title">発行されたHQ IDを確認</div>
+      <div class="info-box" id="pending-info-box">
+        <div class="info-row"><span class="info-label">HQ ID</span><span class="info-val gold" id="pi-id">—</span></div>
+        <div class="info-row"><span class="info-label">役職（自動判定）</span><span class="info-val role" id="pi-role">—</span></div>
+        <div class="info-row"><span class="info-label">招待者</span><span class="info-val" id="pi-inviter">—</span></div>
+        <div class="info-row"><span class="info-label">招待日時</span><span class="info-val" id="pi-date">—</span></div>
+      </div>
+      <div class="field">
+        <label>招待コード（仮パスワード）</label>
+        <input type="text" id="temp-pw" placeholder="招待メールに記載の仮コードを入力" style="font-family:'DM Mono',monospace;letter-spacing:1px">
+        <div class="err-msg" id="temp-pw-err">仮コードが正しくありません</div>
+      </div>
+      <button class="btn-primary" onclick="verifyTempPw()">確認する →</button>
+    </div>
+
+    <!-- Step 2: 基本情報 -->
+    <div id="pane-2" style="display:none">
+      <div class="section-title">基本情報の入力</div>
+      <div class="field-row">
+        <div class="field">
+          <label>姓（漢字）</label>
+          <input type="text" id="f-last" placeholder="田中">
+        </div>
+        <div class="field">
+          <label>名（漢字）</label>
+          <input type="text" id="f-first" placeholder="誠一">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>姓（フリガナ）</label>
+          <input type="text" id="f-last-kana" placeholder="タナカ">
+        </div>
+        <div class="field">
+          <label>名（フリガナ）</label>
+          <input type="text" id="f-first-kana" placeholder="セイイチ">
+        </div>
+      </div>
+      <div class="field">
+        <label>メールアドレス（業務用）</label>
+        <input type="email" id="f-email" placeholder="name@coreto.jp">
+      </div>
+      <div class="field">
+        <label>電話番号</label>
+        <input type="tel" id="f-tel" placeholder="090-0000-0000">
+      </div>
+      <button class="btn-primary" onclick="submitBasicInfo()">次へ →</button>
+      <button class="btn-ghost" onclick="goStep(1)">← 戻る</button>
+    </div>
+
+    <!-- Step 3: パスワード設定 -->
+    <div id="pane-3" style="display:none">
+      <div class="section-title">パスワードの設定</div>
+      <div class="field">
+        <label>新しいパスワード</label>
+        <input type="password" id="f-pw1" placeholder="8文字以上・英数字記号を含む" oninput="checkPwStrength()">
+        <div class="pw-strength">
+          <div class="pw-bar" id="pw-bar1"></div>
+          <div class="pw-bar" id="pw-bar2"></div>
+          <div class="pw-bar" id="pw-bar3"></div>
+          <div class="pw-bar" id="pw-bar4"></div>
+        </div>
+        <div class="pw-label" id="pw-strength-label">パスワードを入力してください</div>
+      </div>
+      <div class="field">
+        <label>パスワード（確認）</label>
+        <input type="password" id="f-pw2" placeholder="もう一度入力">
+        <div class="err-msg" id="pw-match-err">パスワードが一致しません</div>
+      </div>
+      <div style="background:var(--am-bg);border:1px solid rgba(217,119,6,.2);border-radius:10px;padding:12px 14px;font-size:11px;color:var(--am);line-height:1.7;margin-bottom:20px">
+        ⚠️ パスワードは<strong>8文字以上</strong>で設定してください。<br>
+        英字・数字・記号（!@#$等）を組み合わせることを推奨します。<br>
+        第三者に知らせないでください。
+      </div>
+      <button class="btn-primary" onclick="submitPassword()">次へ →</button>
+      <button class="btn-ghost" onclick="goStep(2)">← 戻る</button>
+    </div>
+
+    <!-- Step 4: 確認・完了 -->
+    <div id="pane-4" style="display:none">
+      <div class="section-title">登録内容の確認</div>
+      <div class="info-box" id="confirm-box">
+        <div class="info-row"><span class="info-label">HQ ID</span><span class="info-val gold" id="cf-id">—</span></div>
+        <div class="info-row"><span class="info-label">役職</span><span class="info-val role" id="cf-role">—</span></div>
+        <div class="info-row"><span class="info-label">氏名</span><span class="info-val" id="cf-name">—</span></div>
+        <div class="info-row"><span class="info-label">メール</span><span class="info-val" id="cf-email">—</span></div>
+        <div class="info-row"><span class="info-label">電話</span><span class="info-val" id="cf-tel">—</span></div>
+      </div>
+      <div class="agree-row" id="agree-terms" onclick="toggleAgree('agree-terms','ck-terms')">
+        <input type="checkbox" id="ck-terms">
+        <div class="agree-text">
+          <a href="coreto-onboarding-v2.html" target="_blank">業務委託契約書</a>および
+          <a href="coreto-onboarding-v2.html" target="_blank">個人情報取り扱い同意書</a>の内容に同意します
+        </div>
+      </div>
+      <div style="margin-top:10px"></div>
+      <div class="agree-row" id="agree-rules" onclick="toggleAgree('agree-rules','ck-rules')">
+        <input type="checkbox" id="ck-rules">
+        <div class="agree-text">
+          COREBLDGシステム利用規約・HQ業務マニュアルを確認し、
+          守秘義務・競業避止義務を遵守することに同意します
+        </div>
+      </div>
+      <button class="btn-primary" id="btn-complete" onclick="completeRegistration()" style="margin-top:20px" disabled>
+        ✅ 登録を完了する
+      </button>
+      <button class="btn-ghost" onclick="goStep(3)">← 戻る</button>
+    </div>
+
+    <!-- 完了画面 -->
+    <div id="pane-done" style="display:none">
+      <div class="complete-icon">🎉</div>
+      <div class="complete-title">登録完了！</div>
+      <div class="complete-sub">
+        COREBLDGシステムへようこそ。<br>
+        以下の情報でログインしてください。
+      </div>
+      <div class="credential-box">
+        <div class="cred-row"><span class="cred-label">HQ ID</span><span class="cred-val" id="done-id">—</span></div>
+        <div class="cred-row"><span class="cred-label">パスワード</span><span class="cred-val">設定済み（非表示）</span></div>
+        <div class="cred-row"><span class="cred-label">役職</span><span class="cred-val" id="done-role">—</span></div>
+      </div>
+      <div style="background:var(--em-bg);border:1px solid rgba(5,150,105,.2);border-radius:10px;padding:12px 14px;font-size:11px;color:var(--em);line-height:1.7;margin-bottom:20px">
+        ✅ アカウントが有効化されました。<br>
+        ログインIDとパスワードは安全な場所に保管してください。
+      </div>
+      <button class="btn-primary" onclick="window.location.href='coreto-hub-v2.html'">
+        COREBLDGシステムへログイン →
+      </button>
+    </div>
+
+    <!-- エラー画面（無効トークン）-->
+    <div id="pane-error" style="display:none">
+      <div class="error-card">
+        <div class="error-icon">🔒</div>
+        <div style="font-size:18px;font-weight:700;color:var(--ink);margin-bottom:8px">招待URLが無効です</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:24px">
+          このURLは期限切れ・使用済み、または無効です。<br>
+          招待した担当HQに再発行を依頼してください。
+        </div>
+        <button class="btn-primary" onclick="window.location.href='coreto-hub-v2.html'" style="max-width:280px;margin:0 auto;display:block">
+          ログインページへ
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+// HQオンボーディング
+// CORETO_HQ_PENDING: { [hqId]: { id, tempPw, name, email, hqRole, invitedBy, invitedAt, used } }
+// CORETO_HQ_ACCOUNTS: { [hqId]: { id, name, kana, email, tel, pw, hqRole, joinedAt } }
+// ══════════════════════════════════════════
+
+var _hqId      = null;
+var _pending   = null;
+var _formData  = {};
+var _currentStep = 1;
+
+const HQ_ROLE_LABEL = {
+  exec:     '👑 経営者 (exec)',
+  manager:  '🔑 マネージャー (manager)',
+  staff:    '👤 社員 (staff)',
+  part:     '⏰ パート (part)',
+  reserved: '予備',
+};
+
+function getHQRoleFromId(userId) {
+  var m = String(userId).match(/^HQ-0*(\d+)$/);
+  if (!m) return 'staff';
+  var n = parseInt(m[1], 10);
+  if (n <= 199)  return 'exec';
+  if (n <= 999)  return 'manager';
+  if (n <= 4999) return 'staff';
+  if (n <= 9899) return 'part';
+  return 'reserved';
+}
+
+// ── 初期化 ──────────────────────────────────
+window.addEventListener('DOMContentLoaded', function() {
+  var p = new URLSearchParams(location.search);
+  _hqId = p.get('token') || p.get('id');
+
+  if (!_hqId) {
+    showPane('error');
+    return;
+  }
+
+  // CORETO_HQ_PENDINGからトークン情報を取得
+  try {
+    var pending = JSON.parse(localStorage.getItem('CORETO_HQ_PENDING') || '{}');
+    var entry = pending[_hqId];
+    if (!entry || entry.used) {
+      showPane('error');
+      return;
+    }
+    _pending = entry;
+    var role = getHQRoleFromId(_hqId);
+    document.getElementById('pi-id').textContent      = _hqId;
+    document.getElementById('pi-role').textContent    = HQ_ROLE_LABEL[role] || role;
+    document.getElementById('pi-inviter').textContent = entry.invitedBy || '—';
+    document.getElementById('pi-date').textContent    = entry.invitedAt || '—';
+  } catch(e) {
+    showPane('error');
+    return;
+  }
+});
+
+// ── ステップ管理 ────────────────────────────
+function showPane(name) {
+  ['1','2','3','4','done','error'].forEach(function(n) {
+    document.getElementById('pane-' + n).style.display = 'none';
+  });
+  document.getElementById('pane-' + name).style.display = '';
+  if (name === 'error') {
+    document.getElementById('step-bar').style.display = 'none';
+    document.getElementById('card-title').textContent = 'アクセスエラー';
+    document.getElementById('card-sub').textContent   = '';
+  }
+}
+
+function goStep(n) {
+  _currentStep = n;
+  ['step1','step2','step3','step4'].forEach(function(id, i) {
+    var el = document.getElementById(id);
+    el.className = 'step-item' + (i+1 < n ? ' done' : i+1 === n ? ' active' : '');
+    el.querySelector('.step-circle').textContent = i+1 < n ? '✓' : String(i+1);
+  });
+  showPane(String(n));
+}
+
+// ── Step 1: 仮パスワード確認 ────────────────
+function verifyTempPw() {
+  var val = document.getElementById('temp-pw').value.trim();
+  var errEl = document.getElementById('temp-pw-err');
+  if (!_pending || val !== _pending.tempPw) {
+    errEl.style.display = 'block';
+    document.getElementById('temp-pw').classList.add('err');
+    return;
+  }
+  errEl.style.display = 'none';
+  document.getElementById('temp-pw').classList.remove('err');
+  // 招待メールの氏名があれば入力欄に反映
+  if (_pending.name) {
+    var parts = _pending.name.split(/\s+/);
+    if (parts[0]) document.getElementById('f-last').value  = parts[0];
+    if (parts[1]) document.getElementById('f-first').value = parts[1];
+  }
+  if (_pending.email) document.getElementById('f-email').value = _pending.email;
+  goStep(2);
+}
+
+// ── Step 2: 基本情報確認 ────────────────────
+function submitBasicInfo() {
+  var last      = document.getElementById('f-last').value.trim();
+  var first     = document.getElementById('f-first').value.trim();
+  var lastKana  = document.getElementById('f-last-kana').value.trim();
+  var firstKana = document.getElementById('f-first-kana').value.trim();
+  var email     = document.getElementById('f-email').value.trim();
+  var tel       = document.getElementById('f-tel').value.trim();
+
+  if (!last || !first || !email) {
+    showFieldErr('f-last',  !last);
+    showFieldErr('f-first', !first);
+    showFieldErr('f-email', !email);
+    return;
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    showFieldErr('f-email', true);
+    return;
+  }
+
+  _formData.last      = last;
+  _formData.first     = first;
+  _formData.lastKana  = lastKana;
+  _formData.firstKana = firstKana;
+  _formData.name      = last + ' ' + first;
+  _formData.kana      = lastKana + ' ' + firstKana;
+  _formData.email     = email;
+  _formData.tel       = tel;
+  goStep(3);
+}
+
+function showFieldErr(id, show) {
+  var el = document.getElementById(id);
+  if (show) el.classList.add('err');
+  else el.classList.remove('err');
+}
+
+// ── Step 3: パスワード強度チェック ──────────
+function checkPwStrength() {
+  var pw = document.getElementById('f-pw1').value;
+  var score = 0;
+  if (pw.length >= 8)  score++;
+  if (/[A-Z]/.test(pw)) score++;
+  if (/[0-9]/.test(pw)) score++;
+  if (/[^A-Za-z0-9]/.test(pw)) score++;
+
+  var colors = ['var(--rd)','var(--am)','var(--am)','var(--em)'];
+  var labels = ['弱い','普通','まあまあ','強い'];
+  for (var i = 1; i <= 4; i++) {
+    var bar = document.getElementById('pw-bar' + i);
+    bar.style.background = i <= score ? colors[score-1] : 'var(--bd)';
+    bar.style.opacity = i <= score ? '1' : '.4';
+  }
+  document.getElementById('pw-strength-label').textContent =
+    pw.length === 0 ? 'パスワードを入力してください' : 'パスワード強度: ' + (labels[score-1] || '弱い');
+  document.getElementById('pw-strength-label').style.color =
+    score >= 3 ? 'var(--em)' : score >= 2 ? 'var(--am)' : 'var(--rd)';
+}
+
+function submitPassword() {
+  var pw1 = document.getElementById('f-pw1').value;
+  var pw2 = document.getElementById('f-pw2').value;
+  var errEl = document.getElementById('pw-match-err');
+
+  if (pw1.length < 8) {
+    document.getElementById('f-pw1').classList.add('err');
+    return;
+  }
+  if (pw1 !== pw2) {
+    errEl.style.display = 'block';
+    document.getElementById('f-pw2').classList.add('err');
+    return;
+  }
+  errEl.style.display = 'none';
+  document.getElementById('f-pw1').classList.remove('err');
+  document.getElementById('f-pw2').classList.remove('err');
+  _formData.pw = pw1;
+
+  // 確認画面へ
+  var role = getHQRoleFromId(_hqId);
+  document.getElementById('cf-id').textContent    = _hqId;
+  document.getElementById('cf-role').textContent  = HQ_ROLE_LABEL[role] || role;
+  document.getElementById('cf-name').textContent  = _formData.name;
+  document.getElementById('cf-email').textContent = _formData.email;
+  document.getElementById('cf-tel').textContent   = _formData.tel || '—';
+  goStep(4);
+}
+
+// ── 同意チェックボックス ─────────────────────
+function toggleAgree(rowId, ckId) {
+  var ck = document.getElementById(ckId);
+  ck.checked = !ck.checked;
+  document.getElementById(rowId).classList.toggle('checked', ck.checked);
+  // 両方チェックで登録ボタン有効化
+  var btn = document.getElementById('btn-complete');
+  btn.disabled = !(document.getElementById('ck-terms').checked &&
+                   document.getElementById('ck-rules').checked);
+}
+
+// ── Step 4: 登録完了 ─────────────────────────
+function completeRegistration() {
+  var role = getHQRoleFromId(_hqId);
+  var now  = new Date().toLocaleDateString('ja-JP');
+
+  // CORETO_HQ_ACCOUNTSに保存
+  try {
+    var accounts = JSON.parse(localStorage.getItem('CORETO_HQ_ACCOUNTS') || '{}');
+    accounts[_hqId] = {
+      id:       _hqId,
+      name:     _formData.name,
+      kana:     _formData.kana || '',
+      email:    _formData.email,
+      tel:      _formData.tel || '',
+      pw:       _formData.pw,
+      hqRole:   role,
+      joinedAt: now,
+      status:   'active',
+    };
+    localStorage.setItem('CORETO_HQ_ACCOUNTS', JSON.stringify(accounts));
+
+    // CORETO_HQ_PENDINGのused=trueに更新
+    var pending = JSON.parse(localStorage.getItem('CORETO_HQ_PENDING') || '{}');
+    if (pending[_hqId]) { pending[_hqId].used = true; }
+    localStorage.setItem('CORETO_HQ_PENDING', JSON.stringify(pending));
+
+    // HQ_USERS（user-mgmt-v2用）にも追加
+    var hqUsers = JSON.parse(localStorage.getItem('CORETO_HQ_USERS_DYNAMIC') || '[]');
+    var exists = hqUsers.find(function(u){ return u.id === _hqId; });
+    if (!exists) {
+      hqUsers.push({
+        id:      _hqId,
+        name:    _formData.name,
+        email:   _formData.email,
+        tel:     _formData.tel || '',
+        hqRole:  role,
+        status:  'active',
+        reg:     now,
+        last:    '本日',
+      });
+      localStorage.setItem('CORETO_HQ_USERS_DYNAMIC', JSON.stringify(hqUsers));
+    }
+  } catch(e) {}
+
+  // 完了画面
+  document.getElementById('done-id').textContent   = _hqId;
+  document.getElementById('done-role').textContent = HQ_ROLE_LABEL[role] || role;
+  document.getElementById('step-bar').style.display = 'none';
+  showPane('done');
+  document.getElementById('card-title').textContent = '登録完了';
+  document.getElementById('card-sub').textContent   = 'COREBLDGシステムへようこそ！';
+}
+</script>
+</body>
+</html>
