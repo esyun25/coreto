@@ -1196,6 +1196,7 @@ function hqNav() { return [
     { icon:'🎓', label:'インターン管理',            page:'intern' },
     { icon:'📨', label:'AG招待・新規登録',          page:'agent_invite' },
     { icon:'📨', label:'PT招待・新規登録',          page:'pt_invite' },
+    { icon:'🆕', label:'HQメンバー招待',             page:'hq_invite' },
   ]},
   { section: '財務 / 報酬', items: [
     { icon:'💴', label:'月次報酬確定・振込',       page:'payroll' },
@@ -1432,6 +1433,7 @@ function routePage(page) {
     applicants:      'coreto-applicants-v2.html',
     agent_invite:    'coreto-agent-signup-v2.html',
     pt_invite:       'coreto-partner-signup-v2.html',
+    hq_invite:       'coreto-user-mgmt-v2.html',
     batch_close:     'coreto-batch-close-v2.html',
     agent_retention: 'coreto-agent-retention-v2.html',
     agent_retention: 'coreto-agent-retention-v2.html',
@@ -1453,6 +1455,7 @@ function routePage(page) {
     onboard_mgmt: '研修コンテンツ管理',
     agent_invite: 'AG招待・新規登録',
     pt_invite:    'PT招待・新規登録',
+    hq_invite:    'HQメンバー招待',
     // AG共通
     rank:         'ランク・報酬明細',
     onboard:      'マニュアル・研修',
@@ -1503,6 +1506,7 @@ function routePage(page) {
 
   // ── HQ専用ページ：AG/PT招待 ──────────────────────
   if (page === 'agent_invite' || page === 'pt_invite') { renderInvitePanel(page); return; }
+  if (page === 'hq_invite') { renderHQInvitePanel(); return; }
 
   // ── 汎用プレースホルダー ─────────────────────────
   document.getElementById('page-content').innerHTML = `
@@ -1511,6 +1515,292 @@ function routePage(page) {
       <div style="font-size:18px;font-weight:600;color:var(--ink);font-family:'Outfit','Noto Sans JP',sans-serif;font-variant-numeric:tabular-nums">${titles[page]||page}</div>
       <div style="font-size:13px;color:var(--muted)">このページは個別ファイルで実装予定です</div>
     </div>`;
+}
+
+
+// ═══════════════════════════════════════════
+// HQ メンバー招待パネル
+// ═══════════════════════════════════════════
+function renderHQInvitePanel() {
+  // ID採番ロジック（user-mgmt-v2と共通）
+  var HQ_ID_RANGES_HUB = {
+    exec:    { min:1,    max:199,  label:'経営者 (exec)',       hint:'00001〜00199' },
+    manager: { min:200,  max:999,  label:'マネージャー (manager)', hint:'00200〜00999' },
+    staff:   { min:1000, max:4999, label:'社員 (staff)',         hint:'01000〜04999' },
+    part:    { min:5000, max:9899, label:'パート (part)',         hint:'05000〜09899' },
+  };
+
+  function _getUsedNums() {
+    var used = new Set([1,100,500,5000]); // 既存デモID
+    try {
+      var accounts = JSON.parse(localStorage.getItem('CORETO_HQ_ACCOUNTS') || '{}');
+      Object.keys(accounts).forEach(function(id) {
+        var m = String(id).match(/^HQ-0*(\d+)$/);
+        if (m) used.add(parseInt(m[1], 10));
+      });
+      var pending = JSON.parse(localStorage.getItem('CORETO_HQ_PENDING') || '{}');
+      Object.keys(pending).forEach(function(id) {
+        var m = String(id).match(/^HQ-0*(\d+)$/);
+        if (m) used.add(parseInt(m[1], 10));
+      });
+    } catch(e) {}
+    return used;
+  }
+
+  function _nextId(role) {
+    var r = HQ_ID_RANGES_HUB[role];
+    if (!r) return null;
+    var used = _getUsedNums();
+    for (var n = r.min; n <= r.max; n++) {
+      if (!used.has(n)) return 'HQ-' + String(n).padStart(5,'0');
+    }
+    return null;
+  }
+
+  function _genTempPw() {
+    var c = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    var seg = function() {
+      return Array.from({length:4}, function(){ return c[Math.floor(Math.random()*c.length)]; }).join('');
+    };
+    return 'HQ-' + seg() + '-' + seg();
+  }
+
+  document.getElementById('topbar-actions').innerHTML = `<button class="topbar-btn ghost" onclick="location.href='coreto-user-mgmt-v2.html'">&#x1F465; ユーザー管理へ</button>`;
+
+  document.getElementById('page-content').innerHTML = `
+    <div style="max-width:640px">
+
+      <!-- ヘッダー -->
+      <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:18px 22px;margin-bottom:16px;display:flex;align-items:flex-start;gap:14px">
+        <div style="font-size:28px;flex-shrink:0">🆕</div>
+        <div>
+          <div style="font-size:14px;font-weight:700;color:var(--ink);margin-bottom:4px">HQメンバー招待フロー</div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.8">
+            役職を選択してHQ IDと仮パスワードを発行 → 招待URLを招待者に共有。<br>
+            招待者が初回登録フォームを完了するとログイン可能になります。
+          </div>
+        </div>
+      </div>
+
+      <!-- 発行フォーム -->
+      <div style="background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:16px">
+        <div style="padding:12px 20px;border-bottom:1px solid var(--border);background:var(--cream2);font-size:11px;font-weight:700;color:var(--ink);text-transform:uppercase;letter-spacing:.5px">
+          🎫 招待情報の発行
+        </div>
+        <div style="padding:20px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+            <div>
+              <label style="font-size:11px;font-weight:700;color:var(--muted);display:block;margin-bottom:5px">姓</label>
+              <input id="hi-last" type="text" placeholder="田中"
+                style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Outfit','Noto Sans JP',sans-serif;outline:none">
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:700;color:var(--muted);display:block;margin-bottom:5px">名</label>
+              <input id="hi-first" type="text" placeholder="誠一"
+                style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Outfit','Noto Sans JP',sans-serif;outline:none">
+            </div>
+          </div>
+          <div style="margin-bottom:14px">
+            <label style="font-size:11px;font-weight:700;color:var(--muted);display:block;margin-bottom:5px">メールアドレス</label>
+            <input id="hi-email" type="email" placeholder="name@coreto.jp"
+              style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Outfit','Noto Sans JP',sans-serif;outline:none">
+          </div>
+          <div style="margin-bottom:18px">
+            <label style="font-size:11px;font-weight:700;color:var(--muted);display:block;margin-bottom:5px">役職（HQ内ロール）</label>
+            <select id="hi-role"
+              style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Outfit','Noto Sans JP',sans-serif;background:#fff;outline:none">
+              <option value="staff">👤 社員 (staff) — HQ-01000〜04999</option>
+              <option value="manager">🔑 マネージャー (manager) — HQ-00200〜00999</option>
+              <option value="part">⏰ パート (part) — HQ-05000〜09899</option>
+              <option value="exec">👑 経営者 (exec) — HQ-00001〜00199</option>
+            </select>
+          </div>
+          <button onclick="issueHQInvite()"
+            style="width:100%;padding:12px;background:var(--navy);color:var(--gold);border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif;letter-spacing:.3px">
+            🆕 HQ IDと招待URLを発行する
+          </button>
+        </div>
+      </div>
+
+      <!-- 発行結果 -->
+      <div id="hi-result" style="display:none;background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden">
+        <div style="padding:12px 20px;border-bottom:1px solid var(--border);background:var(--cream2);font-size:11px;font-weight:700;color:var(--em);text-transform:uppercase;letter-spacing:.5px">
+          ✅ 発行完了
+        </div>
+        <div style="padding:20px">
+          <div id="hi-result-box" style="background:#0D1A2D;border-radius:10px;padding:16px 20px;margin-bottom:14px"></div>
+          <div id="hi-url-box" style="margin-bottom:14px"></div>
+          <div style="background:var(--am-bg);border:1px solid rgba(217,119,6,.2);border-radius:8px;padding:10px 14px;font-size:11px;color:var(--am);line-height:1.7;margin-bottom:14px">
+            ⚠️ HQ IDと仮パスワードは<strong>この画面でメモ</strong>してください。<br>
+            招待URLを招待者に別途送付してください（再表示できません）。
+          </div>
+          <button onclick="resetHQInvite()"
+            style="width:100%;padding:10px;background:transparent;color:var(--muted);border:1.5px solid var(--border);border-radius:9px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Outfit',sans-serif">
+            続けて別の招待を発行する
+          </button>
+        </div>
+      </div>
+
+      <!-- 招待済み一覧 -->
+      <div id="hi-pending-section"></div>
+    </div>`;
+
+  renderHQPendingList();
+}
+
+function issueHQInvite() {
+  var last  = document.getElementById('hi-last').value.trim();
+  var first = document.getElementById('hi-first').value.trim();
+  var email = document.getElementById('hi-email').value.trim();
+  var role  = document.getElementById('hi-role').value;
+  if (!last || !first || !email) { alert('氏名とメールアドレスを入力してください'); return; }
+
+  var HQ_RANGES = { exec:{min:1,max:199}, manager:{min:200,max:999}, staff:{min:1000,max:4999}, part:{min:5000,max:9899} };
+  var used = new Set([1,100,500,5000]);
+  try {
+    var a = JSON.parse(localStorage.getItem('CORETO_HQ_ACCOUNTS') || '{}');
+    var p = JSON.parse(localStorage.getItem('CORETO_HQ_PENDING')  || '{}');
+    [a,p].forEach(function(obj) {
+      Object.keys(obj).forEach(function(id) {
+        var m = String(id).match(/^HQ-0*(\d+)$/);
+        if (m) used.add(parseInt(m[1], 10));
+      });
+    });
+  } catch(e) {}
+
+  var range = HQ_RANGES[role];
+  var newId = null;
+  for (var n = range.min; n <= range.max; n++) {
+    if (!used.has(n)) { newId = 'HQ-' + String(n).padStart(5,'0'); break; }
+  }
+  if (!newId) { alert('このロールのIDが上限です。別のロールを選択してください。'); return; }
+
+  var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  var seg = function() { return Array.from({length:4},function(){ return chars[Math.floor(Math.random()*chars.length)]; }).join(''); };
+  var tempPw    = 'HQ-' + seg() + '-' + seg();
+  var inviter   = sessionStorage.getItem('coreto_name') || 'HQ';
+  var now       = new Date().toLocaleDateString('ja-JP');
+  var base_url  = location.origin + location.pathname.replace('coreto-hub-v2.html','');
+  var inviteUrl = base_url + 'coreto-hq-onboarding-v2.html?token=' + encodeURIComponent(newId);
+  var roleLabel = {exec:'👑 経営者',manager:'🔑 マネージャー',staff:'👤 社員',part:'⏰ パート'}[role] || role;
+
+  try {
+    var pending = JSON.parse(localStorage.getItem('CORETO_HQ_PENDING') || '{}');
+    pending[newId] = { id:newId, tempPw:tempPw, name:last+' '+first, email:email, hqRole:role, invitedBy:inviter, invitedAt:now, used:false };
+    localStorage.setItem('CORETO_HQ_PENDING', JSON.stringify(pending));
+  } catch(e) { alert('保存に失敗しました'); return; }
+
+  // 結果ボックスをDOMで構築
+  var box = document.getElementById('hi-result-box');
+  var rows = [
+    ['HQ ID',  newId,          'gold'],
+    ['氏名',   last+' '+first, 'white'],
+    ['役職',   roleLabel,      'white'],
+    ['仮PW',   tempPw,         'white'],
+  ];
+  box.innerHTML = '';
+  rows.forEach(function(r) {
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.1)';
+    var lbl = document.createElement('span');
+    lbl.style.cssText = 'font-size:11px;color:rgba(255,255,255,.5)';
+    lbl.textContent = r[0];
+    var val = document.createElement('span');
+    val.style.cssText = 'font-size:13px;font-weight:700;font-family:monospace;color:' + (r[2]==='gold' ? '#C8A951' : '#fff');
+    val.textContent = r[1];
+    row.appendChild(lbl);
+    row.appendChild(val);
+    box.appendChild(row);
+  });
+
+  renderHQPendingList();
+}
+
+function resetHQInvite() {
+  document.getElementById('hi-last').value = '';
+  document.getElementById('hi-first').value = '';
+  document.getElementById('hi-email').value = '';
+  document.getElementById('hi-role').value = 'staff';
+  document.getElementById('hi-result').style.display = 'none';
+}
+
+function renderHQPendingList() {
+  var sec = document.getElementById('hi-pending-section');
+  if (!sec) return;
+  var pending = {};
+  try { pending = JSON.parse(localStorage.getItem('CORETO_HQ_PENDING') || '{}'); } catch(e) {}
+  var list = Object.values(pending).filter(function(p){ return !p.used; });
+  if (!list.length) { sec.innerHTML = ''; return; }
+
+  var roleLabel = {exec:'👑 経営者',manager:'🔑 マネージャー',staff:'👤 社員',part:'⏰ パート'};
+
+  var wrap = document.createElement('div');
+  wrap.style.cssText = 'background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-top:16px';
+
+  var head = document.createElement('div');
+  head.style.cssText = 'padding:12px 20px;border-bottom:1px solid var(--border);background:var(--cream2);font-size:11px;font-weight:700;color:var(--ink);text-transform:uppercase;letter-spacing:.5px';
+  head.textContent = '📋 招待済み（未登録）— ' + list.length + '件';
+  wrap.appendChild(head);
+
+  var tableWrap = document.createElement('div');
+  tableWrap.style.cssText = 'overflow-x:auto';
+  var tbl = document.createElement('table');
+  tbl.style.cssText = 'width:100%;border-collapse:collapse;font-size:12px';
+
+  var thead = document.createElement('thead');
+  var hrow = document.createElement('tr');
+  hrow.style.background = 'var(--cream2)';
+  ['HQ ID','氏名','役職','招待日','操作'].forEach(function(h) {
+    var th = document.createElement('th');
+    th.style.cssText = 'padding:9px 14px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);border-bottom:1px solid var(--border)';
+    th.textContent = h;
+    hrow.appendChild(th);
+  });
+  thead.appendChild(hrow);
+  tbl.appendChild(thead);
+
+  var tbody = document.createElement('tbody');
+  list.forEach(function(p) {
+    var baseUrl = location.origin + location.pathname.replace('coreto-hub-v2.html','');
+    var inviteUrl = baseUrl + 'coreto-hq-onboarding-v2.html?token=' + encodeURIComponent(p.id);
+    var tr = document.createElement('tr');
+    tr.style.borderBottom = '1px solid var(--border)';
+
+    var tdId = document.createElement('td');
+    tdId.style.cssText = 'padding:10px 14px;font-weight:700;color:#C8A951;background:#0D1A2D;font-family:monospace';
+    tdId.textContent = p.id;
+
+    var tdName = document.createElement('td');
+    tdName.style.cssText = 'padding:10px 14px;font-weight:600';
+    tdName.textContent = p.name || '—';
+
+    var tdRole = document.createElement('td');
+    tdRole.style.cssText = 'padding:10px 14px';
+    tdRole.textContent = roleLabel[p.hqRole] || p.hqRole || '—';
+
+    var tdDate = document.createElement('td');
+    tdDate.style.cssText = 'padding:10px 14px;color:var(--muted)';
+    tdDate.textContent = p.invitedAt || '—';
+
+    var tdAct = document.createElement('td');
+    tdAct.style.cssText = 'padding:10px 14px';
+    var copyBtn = document.createElement('button');
+    copyBtn.style.cssText = 'padding:4px 10px;background:var(--navy);color:var(--gold);border:none;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;font-family:Outfit,sans-serif';
+    copyBtn.textContent = '📋 URL再コピー';
+    (function(url) {
+      copyBtn.onclick = function() { if (navigator.clipboard) navigator.clipboard.writeText(url); };
+    })(inviteUrl);
+    tdAct.appendChild(copyBtn);
+
+    [tdId,tdName,tdRole,tdDate,tdAct].forEach(function(td){ tr.appendChild(td); });
+    tbody.appendChild(tr);
+  });
+  tbl.appendChild(tbody);
+  tableWrap.appendChild(tbl);
+  wrap.appendChild(tableWrap);
+
+  sec.innerHTML = '';
+  sec.appendChild(wrap);
 }
 
 // ═══════════════════════════════════════════
