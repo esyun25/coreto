@@ -1052,7 +1052,7 @@ const ROLES = {
 // IDとパスワードのマッピング。本番ではこのオブジェクトをサーバーサイドに移動すること
 const USER_CREDENTIALS = {
   // HQ
-  // HQ ID体系: 00001-00099=経営者 / 00100-00499=マネージャー / 00500-04999=社員 / 05000-09899=パート / 09900-09999=予備
+  // HQ ID体系（V1準拠）: 00001-00199=経営者 / 00200-00999=マネージャー / 01000-04999=社員 / 05000-09899=パート / 09900-09999=予備
   // hqRoleはloginAs()内でgetHQRoleFromId()により自動決定
   'HQ-00001': { pw: 'Coreto2026!', role: 'hq', name: '田中 誠一（統括）',    userId: 'HQ-00001', rank: null },
   'HQ-00100': { pw: 'Coreto2026!', role: 'hq', name: '山本 マネージャー',    userId: 'HQ-00100', rank: null },
@@ -3080,20 +3080,27 @@ function doLogout() {
 // HQタスク管理: グローバル関数（DOMContentLoaded外で定義）
 // ══════════════════════════════════════════════════════
 // ════════════════════════════════════════════
-// HQ ID体系: 番号範囲からhqRoleを自動判定
-// HQ-00001〜HQ-00099 : exec    （経営者）
-// HQ-00100〜HQ-00499 : manager （マネージャー）
-// HQ-00500〜HQ-04999 : staff   （社員）
-// HQ-05000〜HQ-09899 : part    （パート）
-// HQ-09900〜HQ-09999 : reserved（予備）
+// CORETO ID体系（V1準拠・V2拡張）
+// ════════════════════════════════════════════
+// 【会員ID: 5桁数字】
+// HQ exec:     00001〜00199  （経営者・手動指定）
+// HQ manager:  00200〜00999  （マネージャー）
+// HQ staff:    01000〜04999  （社員）
+// HQ part:     05000〜09899  （パート）
+// HQ reserved: 09900〜09999  （予備）
+// 不動産AG:    10001〜19999
+// 人材AG:      20001〜29999
+// PT:          30001〜39999
+// 光通信AG:    40001〜49999
+// インターン:  50001〜59999
 // ════════════════════════════════════════════
 function getHQRoleFromId(userId) {
   var m = String(userId).match(/^HQ-0*(\d+)$/);
   if (!m) return 'staff';
   var n = parseInt(m[1], 10);
-  if (n >= 1    && n <= 99)   return 'exec';
-  if (n >= 100  && n <= 499)  return 'manager';
-  if (n >= 500  && n <= 4999) return 'staff';
+  if (n >= 1    && n <= 199)  return 'exec';
+  if (n >= 200  && n <= 999)  return 'manager';
+  if (n >= 1000 && n <= 4999) return 'staff';
   if (n >= 5000 && n <= 9899) return 'part';
   if (n >= 9900 && n <= 9999) return 'reserved';
   return 'staff';

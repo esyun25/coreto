@@ -1023,6 +1023,94 @@ function filterIssued(q){
 // ════════════════════════════════════════════════════
 // 初期化
 // ════════════════════════════════════════════════════
+
+// ════════════════════════════════════════════════════════════
+// CORETO ID採番システム（V1準拠・V2拡張）
+// ════════════════════════════════════════════════════════════
+
+// 会員ID範囲定義（V1準拠）
+const ID_RANGES = {
+  hq_exec:    { min:1,     max:199,   label:'HQ 経営者',   prefix:'HQ-', color:'var(--gold)',   manual:true  },
+  hq_manager: { min:200,   max:999,   label:'HQ マネージャー', prefix:'HQ-', color:'var(--gold)', manual:false },
+  hq_staff:   { min:1000,  max:4999,  label:'HQ 社員',     prefix:'HQ-', color:'var(--gold)',   manual:false },
+  hq_part:    { min:5000,  max:9899,  label:'HQ パート',   prefix:'HQ-', color:'var(--gold)',   manual:false },
+  re_ag:      { min:10001, max:19999, label:'不動産AG',    prefix:'AG-', color:'var(--sky)',    manual:false },
+  hr_ag:      { min:20001, max:29999, label:'人材AG',      prefix:'AG-', color:'var(--em)',     manual:false },
+  pt:         { min:30001, max:39999, label:'パートナー',  prefix:'PT-', color:'var(--vt)',     manual:false },
+  hikari_ag:  { min:40001, max:49999, label:'光通信AG',    prefix:'AG-', color:'var(--am)',     manual:false },
+  intern:     { min:50001, max:59999, label:'インターン',  prefix:'INT-',color:'var(--muted)',  manual:false },
+};
+
+// 発行済みID管理（本番ではKintoneから取得）
+const issuedMemberNums = new Set([1, 100, 500, 5000, 10042, 10088, 10055, 20103, 20112, 30015, 30022, 40071, 50007]);
+
+// IDの数値からhqRoleを判定（HQのみ）
+function getHQRoleFromId(userId) {
+  var m = String(userId).match(/^HQ-0*(\d+)$/);
+  if (!m) return 'staff';
+  var n = parseInt(m[1], 10);
+  if (n >= 1    && n <= 199)  return 'exec';
+  if (n >= 200  && n <= 999)  return 'manager';
+  if (n >= 1000 && n <= 4999) return 'staff';
+  if (n >= 5000 && n <= 9899) return 'part';
+  return 'reserved';
+}
+
+// 会員ID採番（ランダム・衝突検知付き）
+function generateMemberId(rangeKey) {
+  const range = ID_RANGES[rangeKey];
+  if (!range) return null;
+  let num, attempts = 0;
+  do {
+    num = Math.floor(Math.random() * (range.max - range.min + 1)) + range.min;
+    attempts++;
+  } while (issuedMemberNums.has(num) && attempts < 200);
+  issuedMemberNums.add(num);
+  const formatted = num.toString().padStart(5, '0');
+  return { id: range.prefix + formatted, num, formatted, label: range.label, color: range.color };
+}
+
+// 案件ID採番（英数字6文字ランダム・V1準拠）
+const CASE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // I/O/0/1除く
+const issuedCaseNums = new Map();   // prefix → Set<数字suffix>
+const issuedCaseAlpha = new Map();  // prefix → Set<英数字suffix>
+
+const CASE_PREFIXES = {
+  rent:  { prefix:'R', label:'賃貸仲介',  color:'var(--sky)'   },
+  sale:  { prefix:'S', label:'売買・三為', color:'var(--gold)'  },
+  hr:    { prefix:'H', label:'人材紹介',  color:'var(--em)'    },
+  util:  { prefix:'U', label:'光通信',    color:'var(--am)'    },
+  kyc:   { prefix:'K', label:'KYC',       color:'var(--vt)'    },
+};
+
+function generateCaseId(typeKey) {
+  const def = CASE_PREFIXES[typeKey];
+  if (!def) return null;
+  const prefix = def.prefix;
+  const nums = issuedCaseNums.get(prefix) || new Set();
+  let suffix, attempts = 0;
+  const numExhausted = nums.size >= 1000000;
+  if (!numExhausted) {
+    do {
+      suffix = String(Math.floor(Math.random() * 1000000)).padStart(6, '0');
+      attempts++;
+    } while (nums.has(suffix) && attempts < 2000);
+    if (!nums.has(suffix)) {
+      nums.add(suffix);
+      issuedCaseNums.set(prefix, nums);
+      return { id: prefix + suffix, mode:'数字6桁', label: def.label, color: def.color };
+    }
+  }
+  // 段階2: 英数字（I/O/0/1除く）
+  const alphas = issuedCaseAlpha.get(prefix) || new Set();
+  do {
+    suffix = Array.from({length:6}, () => CASE_CHARS[Math.floor(Math.random() * CASE_CHARS.length)]).join('');
+    attempts++;
+  } while (alphas.has(suffix) && attempts < 5000);
+  alphas.add(suffix);
+  issuedCaseAlpha.set(prefix, alphas);
+  return { id: prefix + suffix, mode:'英数字6桁（数字枯渇後）', label: def.label, color: def.color };
+}
 window.addEventListener('DOMContentLoaded', ()=>{
   CNAV.init('id_manager');
   renderStats();
