@@ -654,6 +654,25 @@ function showToast(msg, type) {
 // CORETO_REPORTSから入金データを補完
 function loadReportIncomes() {
   try {
+    // AGの初期費用明細チェック完了案件を読み込む
+    var invoiceChecks = JSON.parse(localStorage.getItem('CORETO_INVOICE_CHECK') || '{}');
+    var checkedCases = Object.keys(invoiceChecks).filter(function(k){ return invoiceChecks[k].status === 'ok'; });
+    if (checkedCases.length > 0) {
+      var el = document.querySelector('[data-invoice-checked]');
+      if (el) el.textContent = checkedCases.length + '件のAGチェック完了案件あり';
+      // 通知バナーを表示
+      var banner = document.getElementById('invoice-check-banner');
+      if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'invoice-check-banner';
+        banner.style.cssText = 'background:var(--em-bg);border:1px solid rgba(5,150,105,.2);border-radius:8px;padding:10px 14px;font-size:11px;color:var(--em);margin-bottom:16px';
+        banner.innerHTML = '✅ <strong>AGチェック完了案件: ' + checkedCases.length + '件</strong> — ' + checkedCases.slice(0,3).join(', ') + (checkedCases.length>3?'...':'') + ' — 送金処理を行ってください';
+        var page = document.querySelector('.page');
+        if (page) page.insertBefore(banner, page.firstChild);
+      }
+    }
+  } catch(e2) {}
+  try {
     var reports = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]');
     if (!reports.length) return;
     var totalFee = reports.reduce(function(s,r){ return s+(r.fee||0); },0);

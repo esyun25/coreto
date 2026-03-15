@@ -349,6 +349,7 @@ html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:
 (function(){
   var _role = sessionStorage.getItem('coreto_role') || '';
   var _allowed = ["hq", "re_ag"];
+  var IS_HQ_INVOICE = _role === 'hq';
   if (_allowed.length && !_allowed.includes(_role)) {
     location.replace('coreto-hub-v2.html?unauthorized=1');
   }
@@ -775,7 +776,7 @@ function renderResult(agInput, result){
       : `<button class="btn btn-sm" style="background:var(--em-bg);color:var(--em);
           border:1px solid rgba(5,150,105,.2)" onclick="showOkMemo()">
           ✅ 確認完了メモを作成</button>
-         <button class="btn btn-sm" style="background:var(--navy);color:var(--gold);border:none" onclick="proceedToPayment()">
+         <button class="btn btn-sm" style="background:var(--navy);color:var(--gold);border:none" onclick="proceedToPayment()" id="proceed-btn">
           💴 送金申請へ進む</button>`}
     <button class="btn btn-ghost btn-sm" onclick="printResult()">🖨️ 印刷</button>
     <button class="btn btn-ghost btn-sm" id="log-toggle" onclick="toggleLog()">AIログ 表示</button>
@@ -784,6 +785,18 @@ function renderResult(agInput, result){
 
   panel.innerHTML = bannerHtml + scanInfoHtml + headerHtml +
     `<div class="result-grid">${rowsHtml}</div>` + confHtml + actionHtml;
+
+  // ロール別にボタンラベルを変更
+  var proceedBtn = document.getElementById('proceed-btn');
+  if (proceedBtn) {
+    if (IS_HQ_INVOICE) {
+      proceedBtn.textContent = '💴 送金申請へ進む';
+      proceedBtn.style.background = 'var(--navy)';
+    } else {
+      proceedBtn.textContent = '✅ チェック完了をHQに送信';
+      proceedBtn.style.background = 'var(--em)';
+    }
+  }
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -812,8 +825,24 @@ function showOkMemo(){
 // 追加機能（invoice-verify-v2より移植）
 // ══════════════════════════════════════════════════════════════
 function proceedToPayment(){
-  showToast('送金申請ページへ遷移します...','success');
-  setTimeout(()=>{ window.location.href='coreto-remittance-v2.html'; },1200);
+  if (IS_HQ_INVOICE) {
+    showToast('送金申請ページへ遷移します...','success');
+    setTimeout(()=>{ window.location.href='coreto-remittance-v2.html'; },1200);
+  } else {
+    // AGは送金申請に直接アクセスできない → HQへの確認依頼を送信
+    var caseNo = document.getElementById('in-case').value || '—';
+    var amount = document.getElementById('in-amount').value || '0';
+    var now    = new Date().toLocaleString('ja-JP');
+    var msg    = '【初期費用明細チェック完了】\n案件: ' + caseNo + '\n金額: ¥' + Number(amount).toLocaleString() + '\nAI照合: 全項目一致 ✅\n確認日時: ' + now;
+    // CORETO_INVOICE_CHECKに結果を保存（HQがremittance-v2で参照）
+    try {
+      var checks = JSON.parse(localStorage.getItem('CORETO_INVOICE_CHECK') || '{}');
+      checks[caseNo] = { amount: amount, checkedAt: now, status: 'ok', agId: sessionStorage.getItem('coreto_user_id') || '—' };
+      localStorage.setItem('CORETO_INVOICE_CHECK', JSON.stringify(checks));
+    } catch(e) {}
+    if (navigator.clipboard) navigator.clipboard.writeText(msg);
+    showToast('✅ チェック完了をHQに送信しました。HQが送金処理を行います。', 'em');
+  }
 }
 function printResult(){ window.print(); }
 function toggleLog(){
@@ -869,6 +898,16 @@ document.addEventListener('DOMContentLoaded',()=>{
     document.getElementById(id)?.addEventListener('input', updateCheckBtn);
   });
   if (typeof CNAV !== 'undefined') CNAV.init('invoice_check');
+
+  // ロール別ガイダンス表示
+  var roleNote = document.getElementById('role-note');
+  if (roleNote) {
+    if (IS_HQ_INVOICE) {
+      roleNote.innerHTML = ' <span style="font-size:10px;background:var(--vt-bg);color:var(--vt);padding:2px 8px;border-radius:4px;font-weight:700">HQ：照合確認後に送金申請へ進めます</span>';
+    } else {
+      roleNote.innerHTML = ' <span style="font-size:10px;background:var(--em-bg);color:var(--em);padding:2px 8px;border-radius:4px;font-weight:700">AG：照合完了後にHQへ送信してください</span>';
+    }
+  }
 });
 </script>
 <script src="coreto-nav-v2.js"></script>
