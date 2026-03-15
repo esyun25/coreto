@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AGランクダッシュボード — COREBLDG</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="coreto-design-system.css">
+<script src="coreto-nav-v2.js"></script>
+<style>
+:root{--navy:#0D1A2D;--navy-l:#1E3252;--gold:#C8A951;--gold-dim:rgba(200,169,81,.15);--cream:#FFFFFF;--cream2:#F8F9FA;--white:#FFFFFF;--ink:#202124;--muted:#5F6368;--faint:#80868B;--em:#059669;--em-bg:#ECFDF5;--am:#D97706;--am-bg:#FFFBEB;--rd:#DC2626;--rd-bg:#FEF2F2;--sk:#0284C7;--sk-bg:#F0F9FF;--vt:#7C3AED;--vt-bg:#F5F3FF;--bd:#E8EAED;--bd2:#DADCE0;--sw:240px;--r:10px;--r-sm:7px;--sh:0 1px 2px rgba(60,64,67,.1),0 1px 3px rgba(60,64,67,.06)}
+html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:var(--cream)}
+.sb{width:var(--sw);background:var(--navy);display:flex;flex-direction:column;flex-shrink:0;position:relative}
+.topbar{display:flex;align-items:center;gap:12px;padding:0 24px;height:56px;border-bottom:1px solid var(--bd);background:#fff;flex-shrink:0}
+.page{flex:1;overflow-y:auto;padding:24px;background:var(--cream2)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Outfit','Noto Sans JP',sans-serif;transition:.15s;border:none}
+.btn-primary{background:var(--navy);color:#fff}.btn-ghost{background:transparent;color:var(--ink);border:1.5px solid var(--bd)}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;font-family:'Outfit',sans-serif}
+.b-rd{background:var(--rd-bg);color:var(--rd)}.b-am{background:var(--am-bg);color:var(--am)}.b-em{background:var(--em-bg);color:var(--em)}.b-sk{background:var(--sk-bg);color:var(--sk)}.b-vt{background:var(--vt-bg);color:var(--vt)}.b-muted{background:var(--cream2);color:var(--muted);border:1px solid var(--bd)}
+.card{background:#fff;border:1px solid var(--bd);border-radius:var(--r);box-shadow:var(--sh)}
+.card-head{padding:14px 18px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;background:var(--cream2)}
+
+/* KPIグリッド */
+.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:24px}
+.kpi-card{background:#fff;border:1px solid var(--bd);border-radius:var(--r);padding:16px 18px;box-shadow:var(--sh)}
+.kpi-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:6px}
+.kpi-value{font-size:26px;font-weight:800;font-family:'Outfit',sans-serif;font-variant-numeric:tabular-nums;color:var(--navy)}
+.kpi-sub{font-size:10px;color:var(--muted);margin-top:2px}
+
+/* ランク別カラム */
+.rank-cols{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+.rank-col{background:#fff;border:1px solid var(--bd);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh)}
+.rank-col-head{padding:12px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--bd)}
+.rank-col-body{padding:8px}
+.ag-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;transition:.13s}
+.ag-row:hover{background:var(--cream2)}
+.ag-av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0}
+.ag-info{flex:1;min-width:0}
+.ag-name{font-size:12px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ag-meta{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace}
+.pts-bar-wrap{height:4px;background:var(--cream2);border-radius:2px;margin-top:4px;overflow:hidden}
+.pts-bar-fill{height:100%;border-radius:2px;transition:.3s}
+
+/* テーブル */
+.tbl{width:100%;border-collapse:collapse;font-size:12px}
+.tbl th{padding:9px 12px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);background:var(--cream2);border-bottom:1px solid var(--bd)}
+.tbl td{padding:10px 12px;border-bottom:1px solid var(--bd);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:rgba(13,26,45,.02)}
+
+/* 昇格進捗バー */
+.prog-wrap{display:flex;align-items:center;gap:8px}
+.prog-bar{flex:1;height:6px;background:var(--cream2);border-radius:3px;overflow:hidden}
+.prog-fill{height:100%;border-radius:3px;transition:.3s}
+.prog-lbl{font-size:10px;font-weight:700;font-variant-numeric:tabular-nums;min-width:28px;text-align:right}
+
+/* フィルター */
+.filter-row{display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.filter-btn{padding:5px 14px;border-radius:20px;border:1.5px solid var(--bd);background:transparent;font-size:11px;font-weight:600;cursor:pointer;font-family:'Outfit',sans-serif;color:var(--muted);transition:.13s}
+.filter-btn.on{border-color:var(--navy);background:var(--navy);color:#fff}
+
+/* アラートバナー */
+.alert-banner{background:var(--am-bg);border:1px solid rgba(217,119,6,.2);border-radius:8px;padding:10px 14px;font-size:11px;color:var(--am);display:flex;align-items:center;gap:8px;margin-bottom:16px}
+
+@media(max-width:900px){.kpi-grid{grid-template-columns:repeat(3,1fr)}.rank-cols{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:600px){.kpi-grid{grid-template-columns:repeat(2,1fr)}.rank-cols{grid-template-columns:1fr}}
+</style>
+</head>
+<body style="display:flex;height:100%;overflow:hidden">
+
+<div class="sb" id="sidebar"></div>
+
+<div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+  <div class="topbar">
+    <button class="mob-ham" onclick="toggleSb()" style="display:none;flex-direction:column;justify-content:center;width:36px;height:36px;cursor:pointer;background:transparent;border:none;gap:4px">
+      <span style="display:block;width:18px;height:2px;background:var(--ink);border-radius:1px"></span>
+      <span style="display:block;width:18px;height:2px;background:var(--ink);border-radius:1px"></span>
+      <span style="display:block;width:18px;height:2px;background:var(--ink);border-radius:1px"></span>
+    </button>
+    <div id="tb-title" class="tb-title">AGランクダッシュボード</div>
+    <div style="margin-left:auto;display:flex;gap:8px">
+      <button class="btn btn-ghost" onclick="renderAll()" style="font-size:11px">🔄 更新</button>
+    </div>
+  </div>
+
+  <div class="page" id="main-page">
+    <!-- KPI -->
+    <div class="kpi-grid" id="kpi-grid"></div>
+
+    <!-- アラート -->
+    <div id="alert-section"></div>
+
+    <!-- ランク別カラム -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div style="font-size:13px;font-weight:700;color:var(--ink)">ランク別AG一覧</div>
+      <div style="display:flex;gap:8px">
+        <select id="filter-type" onchange="renderAll()" style="padding:5px 10px;border:1.5px solid var(--bd);border-radius:7px;font-size:11px;font-family:'Outfit',sans-serif;background:#fff">
+          <option value="all">全種別</option>
+          <option value="re">不動産AG</option>
+          <option value="hr">人材AG</option>
+          <option value="hikari">光通信AG</option>
+        </select>
+      </div>
+    </div>
+    <div class="rank-cols" id="rank-cols"></div>
+
+    <!-- 昇格・降格リスク一覧 -->
+    <div class="card" style="margin-bottom:24px">
+      <div class="card-head">
+        <div style="font-size:13px;font-weight:700;color:var(--ink)">📊 昇格・降格リスク一覧</div>
+        <div class="filter-row" style="margin:0">
+          <button class="filter-btn on" onclick="setPromoFilter('all',this)">すべて</button>
+          <button class="filter-btn" onclick="setPromoFilter('promo',this)">🟢 昇格圏内</button>
+          <button class="filter-btn" onclick="setPromoFilter('risk',this)">🔴 降格リスク</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="tbl">
+          <thead><tr>
+            <th>AG</th><th>種別</th><th>現在ランク</th>
+            <th>今月ポイント</th><th>昇格まで</th><th>昇格進捗</th><th>状態</th><th>アクション</th>
+          </tr></thead>
+          <tbody id="promo-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="mob-overlay" onclick="toggleSb()"></div>
+<div id="rd-toast" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--navy);color:#fff;padding:10px 20px;border-radius:10px;font-size:12px;font-weight:600;opacity:0;transition:.3s;z-index:9999;pointer-events:none;font-family:'Outfit',sans-serif"></div>
+
+<script>
+(function(){
+  var _role = sessionStorage.getItem('coreto_role') || '';
+  var _allowed = ['hq'];
+  if (_allowed.length && !_allowed.includes(_role)) {
+    location.replace('coreto-hub-v2.html?unauthorized=1');
+  }
+})();
+
+function toggleSb(){document.querySelector('.sb').classList.toggle('o');document.querySelector('.mob-overlay').classList.toggle('show');}
+
+// ══════════════════════════════════════
+// データ定義（本番: Kintoneから取得）
+// ══════════════════════════════════════
+const RANKS = {
+  bronze:  { label:'BRONZE',   icon:'🥉', c:'#9C6E3C', bg:'#FDF6EE', ptsMin:0,  ptsMax:9  },
+  silver:  { label:'SILVER',   icon:'🥈', c:'#5F6368', bg:'#F1F3F4', ptsMin:10, ptsMax:19 },
+  gold:    { label:'GOLD',     icon:'🥇', c:'#C8A951', bg:'#FFFBEB', ptsMin:20, ptsMax:29 },
+  platinum:{ label:'PLATINUM', icon:'💎', c:'#7C3AED', bg:'#F5F3FF', ptsMin:30, ptsMax:999},
+};
+const RANK_ORDER = ['bronze','silver','gold','platinum'];
+const TYPE_LABEL = { re:'不動産', hr:'人材', hikari:'光通信' };
+const TYPE_COLOR = { re:'var(--sk)', hr:'var(--em)', hikari:'var(--am)' };
+
+function rankFromPts(pts) {
+  return pts>=30?'platinum':pts>=20?'gold':pts>=10?'silver':'bronze';
+}
+function progressToNext(pts, rank) {
+  if (rank === 'platinum') return { pct:100, diff:0, next:null };
+  const order = RANK_ORDER;
+  const idx = order.indexOf(rank);
+  const nextRank = order[idx+1];
+  const min = RANKS[rank].ptsMin;
+  const max = RANKS[rank].ptsMax + 1; // = nextRank.ptsMin
+  const pct = Math.min(100, Math.round((pts - min) / (max - min) * 100));
+  return { pct, diff: max - pts, next: nextRank };
+}
+function riskToDrop(pts, rank) {
+  if (rank === 'bronze') return null;
+  const min = RANKS[rank].ptsMin;
+  const diff = pts - min;
+  return diff <= 2 ? diff : null; // 2pt以内なら降格リスク
+}
+
+// ══ デモ全AGデータ ══════════════════════════════════
+const ALL_AGs = [
+  { id:'AG-10042', name:'山田 誠',   type:'re',     rank:'gold',     pts:22, trend:+2, lastActive:'本日',    joined:'2024/10' },
+  { id:'AG-10088', name:'鈴木 花子', type:'re',     rank:'silver',   pts:18, trend:+3, lastActive:'昨日',    joined:'2025/01' },
+  { id:'AG-10055', name:'井上 誠',   type:'re',     rank:'gold',     pts:20, trend:0,  lastActive:'本日',    joined:'2024/12' },
+  { id:'AG-10023', name:'中村 拓海', type:'re',     rank:'bronze',   pts:7,  trend:+1, lastActive:'3日前',   joined:'2025/05' },
+  { id:'AG-10071', name:'大橋 幸代', type:'re',     rank:'platinum', pts:35, trend:+1, lastActive:'本日',    joined:'2024/06' },
+  { id:'AG-10034', name:'木下 さくら',type:'re',    rank:'silver',   pts:10, trend:-1, lastActive:'5日前',   joined:'2025/03' },
+  { id:'AG-10019', name:'高橋 義彦', type:'re',     rank:'gold',     pts:21, trend:+1, lastActive:'2日前',   joined:'2024/09' },
+  { id:'AG-10101', name:'田中 光',   type:'re',     rank:'bronze',   pts:3,  trend:0,  lastActive:'10日前',  joined:'2025/06' },
+  { id:'AG-20103', name:'山田 光太', type:'hr',     rank:'bronze',   pts:8,  trend:+2, lastActive:'昨日',    joined:'2025/04' },
+  { id:'AG-20112', name:'中村 梓',   type:'hr',     rank:'silver',   pts:15, trend:+4, lastActive:'本日',    joined:'2025/02' },
+  { id:'AG-20087', name:'渡辺 浩',   type:'hr',     rank:'gold',     pts:24, trend:+2, lastActive:'本日',    joined:'2024/11' },
+  { id:'AG-20044', name:'伊藤 奈々', type:'hr',     rank:'silver',   pts:19, trend:+5, lastActive:'昨日',    joined:'2025/01' },
+  { id:'AG-40071', name:'松本 康介', type:'hikari', rank:'silver',   pts:13, trend:+2, lastActive:'本日',    joined:'2025/03' },
+  { id:'AG-40055', name:'加藤 美穂', type:'hikari', rank:'bronze',   pts:9,  trend:+1, lastActive:'2日前',   joined:'2025/05' },
+  { id:'AG-40030', name:'小林 正雄', type:'hikari', rank:'gold',     pts:28, trend:+3, lastActive:'本日',    joined:'2024/08' },
+];
+
+var _promoFilter = 'all';
+function setPromoFilter(f, btn) {
+  _promoFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(function(b){ b.classList.remove('on'); });
+  btn.classList.add('on');
+  renderPromoTable();
+}
+
+// ══════════════════════════════════════
+// メイン描画
+// ══════════════════════════════════════
+function renderAll() {
+  var typeFilter = document.getElementById('filter-type').value;
+  var filtered = typeFilter === 'all' ? ALL_AGs : ALL_AGs.filter(function(a){ return a.type === typeFilter; });
+
+  renderKPI(filtered);
+  renderAlerts(filtered);
+  renderRankCols(filtered);
+  renderPromoTable(filtered);
+}
+
+function renderKPI(ags) {
+  var byRank = { bronze:0, silver:0, gold:0, platinum:0 };
+  ags.forEach(function(a){ byRank[a.rank] = (byRank[a.rank]||0)+1; });
+  var avgPts = ags.length ? Math.round(ags.reduce(function(s,a){return s+a.pts;},0)/ags.length) : 0;
+  var promoReady = ags.filter(function(a){
+    if (a.rank==='platinum') return false;
+    return progressToNext(a.pts, a.rank).diff <= 3;
+  }).length;
+  var dropRisk = ags.filter(function(a){
+    return riskToDrop(a.pts, a.rank) !== null;
+  }).length;
+
+  document.getElementById('kpi-grid').innerHTML = [
+    { label:'在籍AG数', val: ags.length + '名', sub:'全種別', color:'var(--navy)' },
+    { label:'🥉 Bronze', val: byRank.bronze + '名', sub:'0〜9pt', color:'#9C6E3C' },
+    { label:'🥈 Silver', val: byRank.silver + '名', sub:'10〜19pt', color:'#5F6368' },
+    { label:'🥇 Gold',   val: byRank.gold   + '名', sub:'20〜29pt', color:'#C8A951' },
+    { label:'💎 Platinum',val:byRank.platinum+'名', sub:'30pt〜', color:'#7C3AED' },
+  ].map(function(k) {
+    return '<div class="kpi-card"><div class="kpi-label">' + k.label + '</div>' +
+      '<div class="kpi-value" style="color:' + k.color + '">' + k.val + '</div>' +
+      '<div class="kpi-sub">' + k.sub + '</div></div>';
+  }).join('') +
+  '<div class="kpi-card"><div class="kpi-label">平均ポイント</div>' +
+    '<div class="kpi-value" style="color:var(--sk)">' + avgPts + 'pt</div>' +
+    '<div class="kpi-sub">全AG平均</div></div>' +
+  '<div class="kpi-card"><div class="kpi-label">昇格圏内</div>' +
+    '<div class="kpi-value" style="color:var(--em)">' + promoReady + '名</div>' +
+    '<div class="kpi-sub">あと3pt以内</div></div>' +
+  '<div class="kpi-card"><div class="kpi-label">降格リスク</div>' +
+    '<div class="kpi-value" style="color:var(--rd)">' + dropRisk + '名</div>' +
+    '<div class="kpi-sub">ランク最低点まで2pt以内</div></div>';
+}
+
+function renderAlerts(ags) {
+  var alerts = [];
+  ags.forEach(function(a) {
+    var drop = riskToDrop(a.pts, a.rank);
+    if (drop !== null && drop <= 1) {
+      alerts.push('⚠️ <strong>' + a.name + '</strong>（' + a.id + '）が ' + RANKS[a.rank].label + ' から降格まであと <strong>' + drop + 'pt</strong>');
+    }
+  });
+  var sec = document.getElementById('alert-section');
+  sec.innerHTML = alerts.length
+    ? alerts.map(function(msg) {
+        return '<div class="alert-banner">ℹ️ <span>' + msg + '</span></div>';
+      }).join('')
+    : '';
+}
+
+function renderRankCols(ags) {
+  var cols = document.getElementById('rank-cols');
+  cols.innerHTML = RANK_ORDER.map(function(rk) {
+    var r = RANKS[rk];
+    var members = ags.filter(function(a){ return a.rank === rk; });
+    var rows = members.length === 0
+      ? '<div style="padding:12px;text-align:center;font-size:11px;color:var(--faint)">該当なし</div>'
+      : members.map(function(a) {
+          var prog = progressToNext(a.pts, rk);
+          var trendColor = a.trend > 0 ? 'var(--em)' : a.trend < 0 ? 'var(--rd)' : 'var(--muted)';
+          var trendIcon  = a.trend > 0 ? '▲' : a.trend < 0 ? '▼' : '－';
+          return '<div class="ag-row" onclick="showToast(\'AG詳細: ' + a.name + ' / ' + a.pts + 'pt\', \'em\')">' +
+            '<div class="ag-av" style="background:' + (TYPE_COLOR[a.type]||'var(--sk)') + '">' +
+              (a.type==='re'?'🏠':a.type==='hr'?'👤':'⚡') +
+            '</div>' +
+            '<div class="ag-info">' +
+              '<div class="ag-name">' + a.name + '</div>' +
+              '<div class="ag-meta">' + a.pts + 'pt <span style="color:' + trendColor + ';font-size:9px">' + trendIcon + (a.trend!==0?Math.abs(a.trend):'') + '</span></div>' +
+              (rk !== 'platinum' ? '<div class="pts-bar-wrap"><div class="pts-bar-fill" style="width:' + prog.pct + '%;background:' + r.c + '"></div></div>' : '') +
+            '</div>' +
+          '</div>';
+        }).join('');
+    return '<div class="rank-col">' +
+      '<div class="rank-col-head" style="background:' + r.bg + '">' +
+        '<div style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:' + r.c + '">' +
+          r.icon + ' ' + r.label +
+        '</div>' +
+        '<span class="badge" style="background:' + r.bg + ';color:' + r.c + ';border:1px solid ' + r.c + '40">' + members.length + '名</span>' +
+      '</div>' +
+      '<div class="rank-col-body">' + rows + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function renderPromoTable(ags) {
+  ags = ags || (document.getElementById('filter-type') ? 
+    (document.getElementById('filter-type').value === 'all' ? ALL_AGs : ALL_AGs.filter(function(a){return a.type===document.getElementById('filter-type').value;})) 
+    : ALL_AGs);
+  
+  var filtered = ags;
+  if (_promoFilter === 'promo') {
+    filtered = ags.filter(function(a){
+      if (a.rank==='platinum') return false;
+      return progressToNext(a.pts, a.rank).diff <= 5;
+    });
+  } else if (_promoFilter === 'risk') {
+    filtered = ags.filter(function(a){
+      return riskToDrop(a.pts, a.rank) !== null;
+    });
+  }
+
+  // ポイント降順ソート
+  filtered = filtered.slice().sort(function(a,b){ return b.pts - a.pts; });
+
+  var tbody = document.getElementById('promo-tbody');
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--muted);font-size:12px">該当するAGがいません</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(function(a) {
+    var rk = RANKS[a.rank];
+    var prog = progressToNext(a.pts, a.rank);
+    var drop = riskToDrop(a.pts, a.rank);
+    var isPromo = a.rank !== 'platinum' && prog.diff <= 3;
+    var isDrop  = drop !== null;
+
+    var statusBadge = '';
+    if (a.rank === 'platinum') statusBadge = '<span class="badge b-vt">MAX</span>';
+    else if (isPromo)          statusBadge = '<span class="badge b-em">🟢 昇格圏内 あと' + prog.diff + 'pt</span>';
+    else if (isDrop)           statusBadge = '<span class="badge b-rd">🔴 降格リスク 残' + drop + 'pt</span>';
+    else                       statusBadge = '<span class="badge b-muted">安定</span>';
+
+    var trendColor = a.trend > 0 ? 'var(--em)' : a.trend < 0 ? 'var(--rd)' : 'var(--muted)';
+    var trendText  = a.trend > 0 ? '▲+' + a.trend : a.trend < 0 ? '▼' + a.trend : '－';
+
+    var nextLabel = prog.next ? RANKS[prog.next].label : '—';
+    var progBar   = a.rank !== 'platinum'
+      ? '<div class="prog-wrap" style="min-width:120px">' +
+          '<div class="prog-bar"><div class="prog-fill" style="width:' + prog.pct + '%;background:' + rk.c + '"></div></div>' +
+          '<span class="prog-lbl" style="color:' + rk.c + '">' + prog.pct + '%</span>' +
+        '</div>'
+      : '<span style="color:var(--vt);font-size:11px;font-weight:700">MAX 🎉</span>';
+
+    return '<tr>' +
+      '<td><div style="font-size:12px;font-weight:600;color:var(--ink)">' + a.name + '</div>' +
+        '<div style="font-size:10px;color:var(--muted);font-family:\'DM Mono\',monospace">' + a.id + '</div></td>' +
+      '<td><span class="badge b-muted">' + (TYPE_LABEL[a.type]||a.type) + '</span></td>' +
+      '<td><span style="font-size:12px;font-weight:700;color:' + rk.c + '">' + rk.icon + ' ' + rk.label + '</span></td>' +
+      '<td><span style="font-size:14px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--navy)">' + a.pts + '</span>' +
+        '<span style="font-size:10px;color:' + trendColor + ';margin-left:4px">' + trendText + '</span></td>' +
+      '<td style="font-size:11px;color:var(--muted)">' + (a.rank==='platinum'?'—':nextLabel + ' まで <strong>' + prog.diff + 'pt</strong>') + '</td>' +
+      '<td>' + progBar + '</td>' +
+      '<td>' + statusBadge + '</td>' +
+      '<td>' +
+        (isPromo ? '<button class="btn btn-ghost" style="font-size:10px;padding:4px 10px" onclick="encourage(\'' + a.id + '\',\'' + a.name + '\')">📲 励ます</button>' : '') +
+        (isDrop  ? '<button class="btn btn-ghost" style="font-size:10px;padding:4px 10px;color:var(--rd);border-color:rgba(220,38,38,.3)" onclick="support(\'' + a.id + '\',\'' + a.name + '\')">🆘 サポート</button>' : '') +
+      '</td>' +
+    '</tr>';
+  }).join('');
+}
+
+function encourage(id, name) {
+  coretoConfirm({
+    title:'昇格応援メッセージ',
+    message: name + ' さんに昇格を応援するLINEメッセージを送信しますか？',
+    detail: 'あと数ptで昇格できることを伝え、モチベーション向上を促します',
+    okLabel:'送信する',
+    danger:false,
+    onOk:function(){
+      showToast('📲 ' + name + ' さんに応援メッセージを送信しました', 'em');
+    }
+  });
+}
+
+function support(id, name) {
+  coretoConfirm({
+    title:'降格リスクサポート',
+    message: name + ' さんにサポート連絡を送信しますか？',
+    detail: '活動状況を確認し、ランク維持のためのサポートを申し出ます',
+    okLabel:'連絡する',
+    danger:false,
+    onOk:function(){
+      showToast('📲 ' + name + ' さんにサポート連絡を送信しました', 'am');
+    }
+  });
+}
+
+function showToast(msg, type) {
+  var t = document.getElementById('rd-toast');
+  var bg = type==='em'?'var(--em)':type==='am'?'var(--am)':type==='rd'?'var(--rd)':'var(--navy)';
+  t.style.background = bg;
+  t.textContent = msg;
+  t.style.opacity = '1';
+  t.style.transform = 'translateX(-50%) translateY(0)';
+  setTimeout(function(){ t.style.opacity='0'; t.style.transform='translateX(-50%) translateY(10px)'; }, 3200);
+}
+
+window.addEventListener('DOMContentLoaded', function() {
+  CNAV.init('rank_dashboard');
+  renderAll();
+});
+</script>
+</body>
+</html>

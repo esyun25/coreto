@@ -154,6 +154,7 @@ const NAV = {
         { icon:'🎓', label:'インターン管理',       href:'coreto-intern-v2.html',          key:'intern'          },
         { icon:'📍', label:'訪問記録・エリアマップ', href:'coreto-intern-visit-v2.html',   key:'intern_visit'    },
         { icon:'📉', label:'AG離脱リスク管理',     href:'coreto-agent-retention-v2.html', key:'agent_retention' },
+        { icon:'🏅', label:'AGランクダッシュボード',  href:'coreto-rank-dashboard-v2.html',  key:'rank_dashboard'  },
         { icon:'🌐', label:'紹介ネットワーク図',   href:'coreto-network-v2.html',         key:'network'         },
         { icon:'🏢', label:'ユーザー・権限管理',   href:'coreto-user-mgmt-v2.html',       key:'hq_mgmt'         },
       ],
