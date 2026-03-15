@@ -400,10 +400,12 @@ function meetBtn(b){
     onclick="event.stopPropagation();openItChecklist('${b.id}','${b.caseId}','${b.caseName}','${b.contractType||'paper'}','${b.caseType||'rental'}')">
     📋 重説チェック</button>`;
   if (b.status === 'done') {
-    return clBtn + `<a href="coreto-invoice-check-v2.html?caseId=${encodeURIComponent(b.caseId)}"
-      style="font-size:10px;font-weight:700;color:var(--em);background:var(--em-bg);
-      padding:3px 9px;border-radius:4px;text-decoration:none;white-space:nowrap;display:inline-flex;align-items:center">
-      初期費用確認へ →</a>`;
+    // IT重説完了後は「初期費用確認」へ（HQ専用ページのためHQのみ表示）
+    var _currentRole = sessionStorage.getItem('coreto_role') || '';
+    var invoiceLink = _currentRole === 'hq'
+      ? `<a href="coreto-invoice-check-v2.html?caseId=${encodeURIComponent(b.caseId)}" style="font-size:10px;font-weight:700;color:var(--em);background:var(--em-bg);padding:3px 9px;border-radius:4px;text-decoration:none;white-space:nowrap;display:inline-flex;align-items:center">初期費用確認（HQ）→</a>`
+      : `<span style="font-size:10px;color:var(--em);padding:3px 9px">✅ IT重説完了</span>`;
+    return clBtn + invoiceLink;
   }
   var meetPart = '';
   if(b.meetUrl) meetPart = `<a href="${b.meetUrl}" target="_blank" style="font-size:10px;color:var(--sk);text-decoration:none;white-space:nowrap">Meet ↗</a>`;

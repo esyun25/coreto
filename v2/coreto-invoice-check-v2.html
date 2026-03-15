@@ -225,14 +225,14 @@ html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:
         <!-- Step1: AG手入力 -->
         <div class="card">
           <div class="card-head">
-            <div class="card-title">① AGが入力する情報</div>
-            <span style="font-size:10px;color:var(--muted)">送金依頼に記載した内容を正確に入力</span>
+            <div class="card-title">① 口座・送金情報を入力</div>
+            <span style="font-size:10px;color:var(--muted)">管理会社への送金依頼書に記載した内容を入力</span>
           </div>
           <div class="card-body">
 
             <div style="background:var(--sk-bg);border:1px solid rgba(2,132,199,.15);
               border-radius:8px;padding:10px 13px;margin-bottom:16px;font-size:10px;color:var(--sk);line-height:1.6">
-              💡 管理会社に送付済みの送金依頼書 / 出金申請書に記載した内容をそのまま入力してください
+              💡 管理会社への送金依頼書 / 振込依頼書に記載した口座情報と金額を入力してください
             </div>
 
             <div class="form-group">
@@ -348,8 +348,8 @@ html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:
 <script>
 (function(){
   var _role = sessionStorage.getItem('coreto_role') || '';
-  var _allowed = ["hq", "re_ag"];
-  var IS_HQ_INVOICE = _role === 'hq';
+  var _allowed = ["hq"];
+  var IS_HQ_INVOICE = true; // HQ専用ページ
   if (_allowed.length && !_allowed.includes(_role)) {
     location.replace('coreto-hub-v2.html?unauthorized=1');
   }
@@ -786,16 +786,11 @@ function renderResult(agInput, result){
   panel.innerHTML = bannerHtml + scanInfoHtml + headerHtml +
     `<div class="result-grid">${rowsHtml}</div>` + confHtml + actionHtml;
 
-  // ロール別にボタンラベルを変更
+  // HQ専用: 送金申請へ進むボタン
   var proceedBtn = document.getElementById('proceed-btn');
   if (proceedBtn) {
-    if (IS_HQ_INVOICE) {
-      proceedBtn.textContent = '💴 送金申請へ進む';
-      proceedBtn.style.background = 'var(--navy)';
-    } else {
-      proceedBtn.textContent = '✅ チェック完了をHQに送信';
-      proceedBtn.style.background = 'var(--em)';
-    }
+    proceedBtn.textContent = '💴 送金申請へ進む';
+    proceedBtn.style.background = 'var(--navy)';
   }
 }
 
@@ -899,14 +894,10 @@ document.addEventListener('DOMContentLoaded',()=>{
   });
   if (typeof CNAV !== 'undefined') CNAV.init('invoice_check');
 
-  // ロール別ガイダンス表示
+  // HQ専用ページのガイダンス
   var roleNote = document.getElementById('role-note');
   if (roleNote) {
-    if (IS_HQ_INVOICE) {
-      roleNote.innerHTML = ' <span style="font-size:10px;background:var(--vt-bg);color:var(--vt);padding:2px 8px;border-radius:4px;font-weight:700">HQ：照合確認後に送金申請へ進めます</span>';
-    } else {
-      roleNote.innerHTML = ' <span style="font-size:10px;background:var(--em-bg);color:var(--em);padding:2px 8px;border-radius:4px;font-weight:700">AG：照合完了後にHQへ送信してください</span>';
-    }
+    roleNote.innerHTML = ' <span style="font-size:10px;background:var(--vt-bg);color:var(--vt);padding:2px 8px;border-radius:4px;font-weight:700">HQ専用：照合確認後に送金申請へ進めます</span>';
   }
 });
 </script>
