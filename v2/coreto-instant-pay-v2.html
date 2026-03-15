@@ -323,6 +323,7 @@ html,body{background:#FFFFFF !important}
 
 <div id="ip-toast"></div>
 
+<script src="coreto-slack-config-v2.js"></script>
 <script src="coreto-nav-v2.js"></script>
 <script>
 (function(){
@@ -997,10 +998,11 @@ function exportZengin() {
 // ══════════════════════════════════════════════════════════════
 // Slack通知（console.log / 本番はWebhook）
 // ══════════════════════════════════════════════════════════════
-const SLACK_WEBHOOK = (window.SLACK_CONFIG ? window.SLACK_CONFIG.GENERAL : '') || 'YOUR_SLACK_WEBHOOK_URL';
+// Slack送信: coreto-slack-config-v2.js の slackPost(channel, payload) を使用
 function slackPost(payload) {
-  if (!SLACK_WEBHOOK || SLACK_WEBHOOK === 'YOUR_SLACK_WEBHOOK_URL') { /* console.log('[Slack]', payload); */ return; }
-  fetch(SLACK_WEBHOOK, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload), mode:'no-cors' }).catch(e => console.error(e));
+  if (typeof window.slackPost === 'function') {
+    window.slackPost('PAYMENT', payload);
+  }
 }
 const fmt = v => '¥' + Number(v).toLocaleString();
 function slackNotifyInstantPay({reqId, agName, agId, amount, fee, payout, ts}) {

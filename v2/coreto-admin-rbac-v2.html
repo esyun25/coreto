@@ -608,6 +608,7 @@ body, input, select, textarea, button {
 
 <div class="toast" id="toast"></div>
 
+<script src="coreto-slack-config-v2.js"></script>
 <script src="coreto-nav-v2.js"></script>
 <script>
 (function(){
@@ -1104,6 +1105,109 @@ function genReferralCode(){
 // ════════════════════════════════════════════════════
 // 初期化
 // ════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════
+// Slack設定UI
+// ═══════════════════════════════════════════
+var SLACK_CHANNEL_LABELS = {
+  GENERAL:    '#general（汎用通知）',
+  SIGNUP:     '#ag-signup（入会申込）',
+  KYC:        '#kyc-審査（本人確認）',
+  CONTRACT:   '#成約報告',
+  ITSETSU:    '#重説管理（IT重説）',
+  HR:         '#hr-案件',
+  PAYMENT:    '#入金管理（即時払い）',
+  PAYROLL:    '#月次給与',
+  RANK:       '#ランク管理',
+  HQ_ONBOARD: '#hq-内部（HQ入会）',
+};
+
+function renderSlackSettings() {
+  if (typeof window.SLACK === 'undefined') {
+    document.getElementById('slack-fields-area').innerHTML =
+      '<div style="color:var(--rd);font-size:12px">⚠️ coreto-slack-config-v2.js が読み込まれていません</div>';
+    return;
+  }
+  var cfg = window.SLACK.load();
+  var btn = document.getElementById('slack-toggle-btn');
+  btn.textContent          = cfg.ENABLED ? '✅ ON' : '⏸ OFF';
+  btn.style.background     = cfg.ENABLED ? 'var(--em)' : 'var(--cream2)';
+  btn.style.color          = cfg.ENABLED ? '#fff' : 'var(--muted)';
+  btn.style.border         = cfg.ENABLED ? 'none' : '1.5px solid var(--bd)';
+
+  var area = document.getElementById('slack-fields-area');
+  area.innerHTML = '';
+
+  Object.keys(SLACK_CHANNEL_LABELS).forEach(function(ch) {
+    var url = cfg[ch] || '';
+
+    var wrap = document.createElement('div');
+    wrap.style.marginBottom = '14px';
+
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:5px';
+
+    var lbl = document.createElement('label');
+    lbl.style.cssText = 'font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.3px';
+    lbl.textContent = SLACK_CHANNEL_LABELS[ch];
+
+    var testBtn = document.createElement('button');
+    testBtn.style.cssText = 'padding:3px 10px;background:transparent;border:1.5px solid var(--bd);border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;color:var(--muted);font-family:Outfit,sans-serif';
+    testBtn.textContent = '📡 テスト送信';
+    (function(channel){ testBtn.onclick = function(){ testSlack(channel); }; })(ch);
+
+    row.appendChild(lbl);
+    row.appendChild(testBtn);
+
+    var input = document.createElement('input');
+    input.id          = 'slack-url-' + ch;
+    input.type        = 'url';
+    input.value       = url;
+    input.placeholder = 'https://hooks.slack.com/services/...';
+    input.style.cssText = 'width:100%;padding:9px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:12px;font-family:monospace;outline:none;transition:.15s;box-sizing:border-box';
+    input.addEventListener('focus', function(){ this.style.borderColor='var(--navy)'; });
+    input.addEventListener('blur',  function(){ this.style.borderColor='var(--bd)'; });
+
+    wrap.appendChild(row);
+    wrap.appendChild(input);
+    area.appendChild(wrap);
+  });
+}
+
+function toggleSlackEnabled() {
+  if (typeof window.SLACK === 'undefined') return;
+  var cfg = window.SLACK.load();
+  cfg.ENABLED = !cfg.ENABLED;
+  window.SLACK.save(cfg);
+  renderSlackSettings();
+  showToast(cfg.ENABLED ? '✅ Slack通知をONにしました' : '⏸ Slack通知をOFFにしました', cfg.ENABLED ? 'ok' : 'warn');
+}
+
+function saveSlackConfig() {
+  if (typeof window.SLACK === 'undefined') return;
+  var cfg = window.SLACK.load();
+  Object.keys(SLACK_CHANNEL_LABELS).forEach(function(ch) {
+    var el = document.getElementById('slack-url-' + ch);
+    if (el) cfg[ch] = el.value.trim();
+  });
+  window.SLACK.save(cfg);
+  var msg = document.getElementById('slack-save-msg');
+  msg.style.display = '';
+  setTimeout(function(){ msg.style.display = 'none'; }, 3000);
+  showToast('✅ Slack設定を保存しました', 'ok');
+}
+
+function testSlack(channel) {
+  if (typeof window.slackTestSend === 'undefined') {
+    showToast('⚠️ Slack設定ファイルが読み込まれていません', 'warn'); return;
+  }
+  // まず現在の入力値で一時保存
+  saveSlackConfig();
+  slackTestSend(channel)
+    .then(function(){ showToast('📡 テスト送信しました（' + channel + '）\nSlackを確認してください', 'ok'); })
+    .catch(function(e){ showToast('❌ 送信失敗: ' + (e.message||'URLを確認してください'), 'warn'); });
+}
+
 window.addEventListener('DOMContentLoaded', () => {
   CNAV.init('hq_mgmt');
   renderStats();

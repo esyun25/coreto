@@ -468,6 +468,14 @@ function exportCSV() {
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
   a.download = 'gmo_furikomi_202602.csv'; a.click();
   showToast('📥 GMO振込CSVをダウンロードしました');
+  if(typeof window.slackNotifyPayroll==='function'){
+    var totalAmt = 0;
+    try{
+      var pts=(buildPayoutsFromLS()||PAYOUTS);
+      pts.forEach(function(p){totalAmt+=calcPayout(p).payout||0;});
+    }catch(e){}
+    slackNotifyPayroll({month:'当月', count:(buildPayoutsFromLS()||PAYOUTS).length, total:totalAmt});
+  }
 }
 
 window.addEventListener('DOMContentLoaded', () => {
@@ -489,6 +497,7 @@ window.addEventListener('DOMContentLoaded', () => {
   CNAV.init('payroll');
 });
 </script>
+<script src="coreto-slack-config-v2.js"></script>
 <script src="coreto-nav-v2.js"></script>
 
 <!-- 支払明細書モーダル -->
