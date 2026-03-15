@@ -332,12 +332,34 @@ function updateTabLocks() {
 // ══════════════════════════════════════════════
 // DATA
 // ══════════════════════════════════════════════
-const HQ_USERS = [
-  {id:'HQ-001',name:'田中 誠一',hqRole:'exec',   email:'tanaka@coreto.jp',   tel:'090-1234-0001',status:'active', reg:'2025/10/01',last:'本日',   cls:'av-exec',av:'E'},
-  {id:'HQ-002',name:'佐藤 理恵',hqRole:'manager',email:'sato.r@coreto.jp',   tel:'090-1234-0002',status:'active', reg:'2025/10/15',last:'本日',   cls:'av-mgr', av:'M'},
-  {id:'HQ-003',name:'小林 健二',hqRole:'staff',  email:'kobayashi@coreto.jp', tel:'090-1234-0003',status:'active', reg:'2025/11/01',last:'昨日',   cls:'av-stf', av:'S'},
-  {id:'HQ-004',name:'加藤 美咲',hqRole:'part',   email:'kato@coreto.jp',      tel:'090-1234-0004',status:'active', reg:'2026/01/10',last:'3日前',  cls:'av-prt', av:'P'},
+// hqRoleはIDの数値範囲から自動決定（getHQRoleFromId関数）
+// 実運用ではKintoneのマスターデータから取得
+const HQ_USERS_RAW = [
+  {id:'HQ-00001',name:'田中 誠一', email:'tanaka@coreto.jp',    tel:'090-1234-0001',status:'active', reg:'2025/10/01',last:'本日' },
+  {id:'HQ-00100',name:'佐藤 理恵', email:'sato.r@coreto.jp',    tel:'090-1234-0002',status:'active', reg:'2025/10/15',last:'本日' },
+  {id:'HQ-00500',name:'小林 健二', email:'kobayashi@coreto.jp', tel:'090-1234-0003',status:'active', reg:'2025/11/01',last:'昨日' },
+  {id:'HQ-05000',name:'加藤 美咲', email:'kato@coreto.jp',       tel:'090-1234-0004',status:'active', reg:'2026/01/10',last:'3日前'},
 ];
+function _hqRoleFromId(id) {
+  var m = String(id).match(/^HQ-0*(\d+)$/);
+  if (!m) return 'staff';
+  var n = parseInt(m[1], 10);
+  if (n <= 99)   return 'exec';
+  if (n <= 499)  return 'manager';
+  if (n <= 4999) return 'staff';
+  if (n <= 9899) return 'part';
+  return 'reserved';
+}
+function _hqAvCls(role) {
+  return {exec:'av-exec',manager:'av-mgr',staff:'av-stf',part:'av-prt'}[role]||'av-stf';
+}
+function _hqAv(role) {
+  return {exec:'E',manager:'M',staff:'S',part:'P'}[role]||'S';
+}
+const HQ_USERS = HQ_USERS_RAW.map(function(u){
+  var r = _hqRoleFromId(u.id);
+  return Object.assign({}, u, { hqRole: r, cls: _hqAvCls(r), av: _hqAv(r) });
+});
 
 const AG_USERS = [
   {id:'AG-0042',name:'山田 誠',   roleKey:'re_ag',    roleLabel:'不動産AG', rank:'Gold',  rankPts:8420,status:'active', email:'yamada@coreto.jp',   tel:'090-2001-0042',reg:'2025/11/15',last:'本日',  kyc:'済',monthlyAmt:280000,monthlyContracts:4,totalContracts:23,activeCase:6,tenure:'4ヶ月',cls:'av-re',av:'RE',note:'',hqRole:''},
@@ -486,7 +508,7 @@ function renderAccount() {
     ${!canStop ? '<div class="lock-notice">🔒 このロール（'+HQ_ROLE+'）では停止・ロール変更操作はできません。execのみ実行可能です。</div>' : ''}
     <div class="kpi-row">
       <div class="kpi gd"><div class="kpi-lb">総アカウント数</div><div class="kpi-vl">${HQ_USERS.length + AG_USERS.length + PT_DATA.length + INTERNS.length}</div></div>
-      <div class="kpi em"><div class="kpi-lb">HQスタッフ</div><div class="kpi-vl">${HQ_USERS.length}</div><div class="kpi-sb">exec 1 / manager 1 / staff 1 / part 1</div></div>
+      <div class="kpi em"><div class="kpi-lb">HQスタッフ</div><div class="kpi-vl">${HQ_USERS.length}</div><div class="kpi-sb">exec / manager / staff / part</div></div>
       <div class="kpi sk"><div class="kpi-lb">AG（全種別・有効）</div><div class="kpi-vl">${AG_USERS.filter(u=>u.status==='active').length}</div></div>
       <div class="kpi am"><div class="kpi-lb">審査中・要対応</div><div class="kpi-vl">${AG_USERS.filter(u=>u.status==='pending').length + PT_DATA.filter(p=>p.status==='pending').length}</div></div>
     </div>
@@ -961,16 +983,16 @@ function renderSettings() {
 // ══════════════════════════════════════════════
 function renderLogs() {
   const logs = [
-    {time:'2026/03/12 11:42',user:'HQ-001 田中 誠一（exec）',  action:'AI育成FB生成',     target:'AG-0042 山田 誠',        level:'info'},
-    {time:'2026/03/11 16:20',user:'HQ-001 田中 誠一（exec）',  action:'アカウント停止',   target:'AG-0073 佐藤 純平',      level:'warn'},
-    {time:'2026/03/11 14:32',user:'HQ-001 田中 誠一（exec）',  action:'ユーザー招待',     target:'AG-0105 田村 春香',      level:'info'},
-    {time:'2026/03/11 13:15',user:'HQ-002 佐藤 理恵（manager）',action:'送金承認',       target:'RENT-0194 / ¥495,000',  level:'info'},
+    {time:'2026/03/12 11:42',user:'HQ-00001 田中 誠一（exec）',  action:'AI育成FB生成',     target:'AG-0042 山田 誠',        level:'info'},
+    {time:'2026/03/11 16:20',user:'HQ-00001 田中 誠一（exec）',  action:'アカウント停止',   target:'AG-0073 佐藤 純平',      level:'warn'},
+    {time:'2026/03/11 14:32',user:'HQ-00001 田中 誠一（exec）',  action:'ユーザー招待',     target:'AG-0105 田村 春香',      level:'info'},
+    {time:'2026/03/11 13:15',user:'HQ-00100 佐藤 理恵（manager）',action:'送金承認',       target:'RENT-0194 / ¥495,000',  level:'info'},
     {time:'2026/03/10 11:42',user:'AG-0042 山田 誠',           action:'書類アップロード', target:'CLI-0001 田中 優子',     level:'info'},
     {time:'2026/03/09 15:08',user:'AG-0088 鈴木 花子',         action:'パスワード変更',   target:'自アカウント',           level:'info'},
-    {time:'2026/03/09 10:55',user:'HQ-001 田中 誠一（exec）',  action:'全銀ファイル出力', target:'2026年3月分 8件',        level:'info'},
+    {time:'2026/03/09 10:55',user:'HQ-00001 田中 誠一（exec）',  action:'全銀ファイル出力', target:'2026年3月分 8件',        level:'info'},
     {time:'2026/03/08 09:10',user:'不明',                      action:'ログイン失敗（3回）',target:'AG-0055',              level:'error'},
-    {time:'2026/03/07 18:30',user:'HQ-002 佐藤 理恵（manager）',action:'PT招待発行',     target:'高橋 由紀（PT-0042）',   level:'info'},
-    {time:'2026/03/07 14:22',user:'HQ-001 田中 誠一（exec）',  action:'HQロール変更',     target:'HQ-003 小林 → staff',   level:'warn'},
+    {time:'2026/03/07 18:30',user:'HQ-00100 佐藤 理恵（manager）',action:'PT招待発行',     target:'高橋 由紀（PT-0042）',   level:'info'},
+    {time:'2026/03/07 14:22',user:'HQ-00001 田中 誠一（exec）',  action:'HQロール変更',     target:'HQ-00500 小林 → staff',   level:'warn'},
   ];
   const rows = logs.map(l => `
     <tr>

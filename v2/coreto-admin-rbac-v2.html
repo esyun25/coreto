@@ -626,13 +626,22 @@ const RANK_LABEL    = {bronze:'Bronze', silver:'Silver', gold:'Gold', platinum:'
 const RANK_COLOR    = {bronze:'#92400E', silver:'#374151', gold:'#B45309', platinum:'#5B21B6'};
 const RANK_BG       = {bronze:'#FEF3C7', silver:'#F3F4F6', gold:'#FFFBEB', platinum:'#EDE9FE'};
 
+function _rbacHqRole(id) {
+  var m = String(id).match(/^HQ-0*(\d+)$/);
+  if (!m) return 'staff';
+  var n = parseInt(m[1], 10);
+  if (n <= 99)   return 'exec';
+  if (n <= 499)  return 'manager';
+  if (n <= 4999) return 'staff';
+  if (n <= 9899) return 'part';
+  return 'reserved';
+}
 let HQ_MEMBERS = [
-  {id:'HQ-001', name:'田中 誠一', kana:'タナカ セイイチ', email:'s-tanaka@coreto.co.jp', role:'exec',   joinedAt:'2025-01-01', status:'active'},
-  {id:'HQ-002', name:'木下 大輔', kana:'キノシタ ダイスケ', email:'d-kinoshita@coreto.co.jp', role:'manager', joinedAt:'2025-03-01', status:'active'},
-  {id:'HQ-003', name:'大橋 さくら', kana:'オオハシ サクラ', email:'s-ohashi@coreto.co.jp', role:'manager', joinedAt:'2025-03-15', status:'active'},
-  {id:'HQ-004', name:'山本 太郎',   kana:'ヤマモト タロウ',  email:'t-yamamoto@coreto.co.jp', role:'staff',   joinedAt:'2025-06-01', status:'active'},
-  {id:'HQ-005', name:'佐藤 美里',   kana:'サトウ ミサト',   email:'m-sato@coreto.co.jp',     role:'staff',   joinedAt:'2025-08-01', status:'active'},
-];
+  {id:'HQ-00001', name:'田中 誠一',   kana:'タナカ セイイチ',   email:'s-tanaka@coreto.co.jp',   joinedAt:'2025-01-01', status:'active'},
+  {id:'HQ-00100', name:'木下 大輔',   kana:'キノシタ ダイスケ', email:'d-kinoshita@coreto.co.jp', joinedAt:'2025-03-01', status:'active'},
+  {id:'HQ-00500', name:'大橋 さくら', kana:'オオハシ サクラ',   email:'s-ohashi@coreto.co.jp',   joinedAt:'2025-03-15', status:'active'},
+  {id:'HQ-05000', name:'山本 太郎',   kana:'ヤマモト タロウ',   email:'t-yamamoto@coreto.co.jp', joinedAt:'2025-06-01', status:'active'},
+].map(function(m){ return Object.assign({}, m, { role: _rbacHqRole(m.id) }); });
 
 let AGENTS = [
   {id:'AG-10001', name:'木下 大輔',   type:'re', subtype:'専任宅建士', rank:'gold',     pts:22.5, email:'kinoshita10001@coreto.co.jp', phone:'090-1111-2222', feeOverride:null,  monthlyFree:false, status:'active'},
@@ -740,12 +749,12 @@ function renderHQ(){
         <div class="u-right">
           ${roleBadge}
           <select class="role-select" onchange="changeHQRole('${m.id}', this.value)"
-            ${m.id === 'HQ-001' ? 'disabled title="自分自身のロールは変更できません"' : ''}>
+            ${m.id === 'HQ-00001' ? 'disabled title="自分自身のロールは変更できません"' : ''}>
             <option value="exec"    ${m.role==='exec'   ?'selected':''}>👑 exec</option>
             <option value="manager" ${m.role==='manager'?'selected':''}>🔑 manager</option>
             <option value="staff"   ${m.role==='staff'  ?'selected':''}>👤 staff</option>
           </select>
-          ${m.id !== 'HQ-001' ? `
+          ${m.id !== 'HQ-00001' ? `
           <button class="act-btn ${m.status==='active'?'act-warn':'act-primary'}"
             onclick="toggleHQStatus('${m.id}')">
             ${m.status==='active' ? '⏸ 停止' : '▶ 有効化'}

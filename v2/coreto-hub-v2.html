@@ -940,7 +940,7 @@ html, body { background:#FFFFFF !important; }
       <div class="login-title-sub">ID・パスワードを入力してください</div>
 
       <label class="field-label">ログインID</label>
-      <input class="field-input" type="text" placeholder="HQ-0001 / AG-0042 / PT-0015" id="login-id" autocomplete="username">
+      <input class="field-input" type="text" placeholder="HQ-00001 / AG-0042 / PT-0015" id="login-id" autocomplete="username">
 
       <label class="field-label">パスワード</label>
       <input class="field-input" type="password" placeholder="••••••••" id="login-pw" autocomplete="current-password">
@@ -951,9 +951,9 @@ html, body { background:#FFFFFF !important; }
       <div class="login-demo">
         <div class="demo-title">⚠️ 開発デモ（本番では非表示）— ロール切替</div>
         <div class="demo-roles">
-          <div class="demo-role" onclick="demoLogin('HQ-0001')">HQ統括（田中）</div>
-          <div class="demo-role" onclick="demoLogin('HQ-0002')">HQ Mgr（山本）</div>
-          <div class="demo-role" onclick="demoLogin('HQ-0003')">HQ Staff（佐々木）</div>
+          <div class="demo-role" onclick="demoLogin('HQ-00001')">HQ統括（田中）</div>
+          <div class="demo-role" onclick="demoLogin('HQ-00100')">HQ マネージャー</div>
+          <div class="demo-role" onclick="demoLogin('HQ-00500')">HQ 社員</div>
           <div class="demo-role" onclick="demoLogin('AG-0042')">不動産AG</div>
           <div class="demo-role" onclick="demoLogin('AG-0103')">人材AG</div>
           <div class="demo-role" onclick="demoLogin('AG-0071')">光通信AG</div>
@@ -1052,10 +1052,12 @@ const ROLES = {
 // IDとパスワードのマッピング。本番ではこのオブジェクトをサーバーサイドに移動すること
 const USER_CREDENTIALS = {
   // HQ
-  'HQ-0001': { pw: 'Coreto2026!', role: 'hq', hqRole:'exec',    name: '田中 誠一（統括）',    userId: 'HQ-0001', rank: null },
-  'HQ-0002': { pw: 'Coreto2026!', role: 'hq', hqRole:'manager', name: '山本 マネージャー',    userId: 'HQ-0002', rank: null },
-  'HQ-0003': { pw: 'Coreto2026!', role: 'hq', hqRole:'staff',   name: '佐々木 リーダー',          userId: 'HQ-0003', rank: null },
-  'HQ-0004': { pw: 'Coreto2026!', role: 'hq', hqRole:'staff',   name: '伊藤 スタッフ',               userId: 'HQ-0004', rank: null },
+  // HQ ID体系: 00001-00099=経営者 / 00100-00499=マネージャー / 00500-04999=社員 / 05000-09899=パート / 09900-09999=予備
+  // hqRoleはloginAs()内でgetHQRoleFromId()により自動決定
+  'HQ-00001': { pw: 'Coreto2026!', role: 'hq', name: '田中 誠一（統括）',    userId: 'HQ-00001', rank: null },
+  'HQ-00100': { pw: 'Coreto2026!', role: 'hq', name: '山本 マネージャー',    userId: 'HQ-00100', rank: null },
+  'HQ-00500': { pw: 'Coreto2026!', role: 'hq', name: '佐々木 リーダー',      userId: 'HQ-00500', rank: null },
+  'HQ-05000': { pw: 'Coreto2026!', role: 'hq', name: '伊藤 スタッフ',        userId: 'HQ-05000', rank: null },
   // RE-AG
   'AG-0042':  { pw: 'agent2026',  role: 're_ag',      name: '山田 誠',            userId: 'AG-0042',  rank: 'Gold' },
   'AG-0088':  { pw: 'agent2026',  role: 're_ag',      name: '鈴木 花子',          userId: 'AG-0088',  rank: 'Silver' },
@@ -1081,7 +1083,11 @@ function demoLogin(userId) {
   sessionStorage.setItem('coreto_user_id', user.userId);
   sessionStorage.setItem('coreto_name',    user.name);
   if (user.rank)   sessionStorage.setItem('coreto_rank',    user.rank);
-  if (user.hqRole) sessionStorage.setItem('coreto_hq_role', user.hqRole);
+  // hqRoleをID範囲から自動決定
+  if (user.role === 'hq') {
+    var detectedRole = (typeof getHQRoleFromId === 'function') ? getHQRoleFromId(user.userId) : (user.hqRole || 'staff');
+    sessionStorage.setItem('coreto_hq_role', detectedRole);
+  }
   loginAs(user.role, user);
 }
 function doLogin() {
@@ -1113,7 +1119,11 @@ function doLogin() {
   sessionStorage.setItem('coreto_user_id', user.userId);
   sessionStorage.setItem('coreto_name',    user.name);
   if (user.rank)   sessionStorage.setItem('coreto_rank',    user.rank);
-  if (user.hqRole) sessionStorage.setItem('coreto_hq_role', user.hqRole);
+  // hqRoleをID範囲から自動決定
+  if (user.role === 'hq') {
+    var detectedRole = (typeof getHQRoleFromId === 'function') ? getHQRoleFromId(user.userId) : (user.hqRole || 'staff');
+    sessionStorage.setItem('coreto_hq_role', detectedRole);
+  }
   loginAs(user.role, user);
 }
 
@@ -1138,7 +1148,9 @@ function loginAs(role, user) {
   document.getElementById('sb-name').textContent = user.name || sessionStorage.getItem('coreto_name') || r.label;
   const uid   = user.userId || sessionStorage.getItem('coreto_user_id') || '';
   const rank  = user.rank   || sessionStorage.getItem('coreto_rank')    || '';
-  document.getElementById('sb-role').textContent = uid + (rank ? ' / ' + rank : '') || r.label;
+  var hqRole = sessionStorage.getItem('coreto_hq_role') || '';
+  var hqLabel = hqRole && typeof getHQRoleLabel === 'function' ? ' / ' + getHQRoleLabel(hqRole) : '';
+  document.getElementById('sb-role').textContent = uid + hqLabel || r.label;
 
   renderNav(r.nav());
   r.page();
@@ -3067,12 +3079,42 @@ function doLogout() {
 // ══════════════════════════════════════════════════════
 // HQタスク管理: グローバル関数（DOMContentLoaded外で定義）
 // ══════════════════════════════════════════════════════
+// ════════════════════════════════════════════
+// HQ ID体系: 番号範囲からhqRoleを自動判定
+// HQ-00001〜HQ-00099 : exec    （経営者）
+// HQ-00100〜HQ-00499 : manager （マネージャー）
+// HQ-00500〜HQ-04999 : staff   （社員）
+// HQ-05000〜HQ-09899 : part    （パート）
+// HQ-09900〜HQ-09999 : reserved（予備）
+// ════════════════════════════════════════════
+function getHQRoleFromId(userId) {
+  var m = String(userId).match(/^HQ-0*(\d+)$/);
+  if (!m) return 'staff';
+  var n = parseInt(m[1], 10);
+  if (n >= 1    && n <= 99)   return 'exec';
+  if (n >= 100  && n <= 499)  return 'manager';
+  if (n >= 500  && n <= 4999) return 'staff';
+  if (n >= 5000 && n <= 9899) return 'part';
+  if (n >= 9900 && n <= 9999) return 'reserved';
+  return 'staff';
+}
+function getHQRoleLabel(hqRole) {
+  var labels = { exec:'経営者', manager:'マネージャー', staff:'社員', part:'パート', reserved:'予備' };
+  return labels[hqRole] || hqRole;
+}
+
+// HQメンバー一覧（実運用ではKintoneから取得）
+// hqRoleはID範囲から自動判定: getHQRoleFromId()を使用
 var HQ_MEMBERS_LIST = [
-  { id:'HQ-0001', name:'田中 誠一（統括）',   hqRole:'exec'    },
-  { id:'HQ-0002', name:'山本 マネージャー',   hqRole:'manager' },
-  { id:'HQ-0003', name:'佐々木 リーダー',         hqRole:'staff'   },
-  { id:'HQ-0004', name:'伊藤 スタッフ',               hqRole:'staff'   },
-];
+  { id:'HQ-00001', name:'田中 誠一（統括）' },
+  { id:'HQ-00100', name:'山本 マネージャー' },
+  { id:'HQ-00500', name:'佐々木 リーダー' },
+  { id:'HQ-05000', name:'伊藤 スタッフ' },
+].map(function(m) {
+  m.hqRole = getHQRoleFromId(m.id);
+  m.hqRoleLabel = getHQRoleLabel(m.hqRole);
+  return m;
+});
 
 function assignHQTask(taskId, assigneeId) {
   try {
