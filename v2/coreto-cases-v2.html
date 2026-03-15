@@ -652,6 +652,25 @@ JSONのみ（前置き不要）:
 <script src="coreto-nav-v2.js"></script>
 <script>
 window.addEventListener('DOMContentLoaded', function() {
+  // CORETO_REPORTSから成約済み案件IDをセットしてカードに反映
+  try {
+    var reports = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]');
+    var closedIds = new Set(reports.map(function(r){ return r.caseId; }).filter(Boolean));
+    if (closedIds.size > 0) {
+      setTimeout(function() {
+        document.querySelectorAll('[data-case-id]').forEach(function(el) {
+          var cid = el.getAttribute('data-case-id');
+          if (closedIds.has(cid)) {
+            var badge = el.querySelector('.case-status-badge');
+            if (badge && badge.textContent !== '成約済み') {
+              badge.textContent = '成約済み';
+              badge.className = 'case-status-badge badge badge-em';
+            }
+          }
+        });
+      }, 300);
+    }
+  } catch(e) {}
   CNAV.init('cases');
 
   // ── ロール別 案件フィルタ ──

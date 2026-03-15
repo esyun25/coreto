@@ -413,19 +413,45 @@ async function aiGenerateMonthlyReport() {
   btn.innerHTML = '<span style="animation:spin .8s linear infinite;display:inline-block">✨</span> 生成中...';
   btn.disabled = true;
 
-  // KPIデータ収集（ページの数値から）
-  const kpiData = {
-    month: '2026年2月',
-    total_commission: 2140000,
-    agent_count: 47,
-    new_contracts: 23,
-    instant_pay_total: 3200000,
-    rank_distribution: { platinum: 10, gold: 12, silver: 18, bronze: 7 },
-    utility_contracts: 38,
-    hr_contracts: 5,
-    pending_kyc: 3,
-    top_agent: '中村陽子(Platinum) ¥666,000'
-  };
+  // KPIデータ収集（CORETO_REPORTSから動的計算 + フォールバック）
+  const kpiData = (function() {
+    try {
+      const reports = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]');
+      const now = new Date();
+      const monthStr = now.getFullYear() + '年' + (now.getMonth()+1) + '月';
+      const thisMonth = reports.filter(function(r) {
+        return r.reportedAt && r.reportedAt.startsWith(now.getFullYear() + '/0' + (now.getMonth()+1) > 9 ? now.getFullYear() + '/' + (now.getMonth()+1) : now.getFullYear() + '/0' + (now.getMonth()+1));
+      });
+      const totalFee = reports.reduce(function(s,r){ return s+(r.fee||0); }, 0);
+      const reCount  = reports.filter(function(r){ return r.type==='賃貸'||r.type==='売買'; }).length;
+      const hrCount  = reports.filter(function(r){ return r.type==='人材'; }).length;
+      const utCount  = reports.filter(function(r){ return r.type==='光通信'; }).length;
+      const agIds    = new Set(reports.map(function(r){ return r.agId||r.ag; }));
+      if (reports.length > 0) {
+        return {
+          month: monthStr,
+          total_commission: totalFee,
+          agent_count: agIds.size || 47,
+          new_contracts: reports.length,
+          instant_pay_total: Math.round(totalFee * 0.15),
+          rank_distribution: { platinum: 10, gold: 12, silver: 18, bronze: 7 },
+          utility_contracts: utCount,
+          hr_contracts: hrCount,
+          pending_kyc: (JSON.parse(localStorage.getItem('CORETO_HQ_TASKS')||'[]')).filter(function(t){return t.type==='kyc';}).length,
+          top_agent: reports[0] ? (reports[0].ag || '—') : '—',
+          _source: 'dynamic'
+        };
+      }
+    } catch(e) {}
+    // フォールバック（デモデータ）
+    return {
+      month: '2026年2月', total_commission: 2140000, agent_count: 47,
+      new_contracts: 23, instant_pay_total: 3200000,
+      rank_distribution: { platinum: 10, gold: 12, silver: 18, bronze: 7 },
+      utility_contracts: 38, hr_contracts: 5, pending_kyc: 3,
+      top_agent: '中村陽子(Platinum) ¥666,000', _source: 'demo'
+    };
+  })();
 
   try {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
