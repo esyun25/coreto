@@ -346,7 +346,7 @@ body, input, select, textarea, button { font-family:'Outfit','Noto Sans JP',sans
               <th class="amt">報酬額</th><th class="amt">システム利用料</th>
               <th class="amt">源泉徴収</th><th class="amt">即時払控除</th>
               <th class="amt" style="color:var(--em)">振込額</th>
-              <th>振込方法</th><th>状態</th>
+              <th>振込方法</th><th>状態</th><th>明細書</th>
             </tr></thead>
             <tbody id="payout-tbody"></tbody>
           </table>
@@ -489,5 +489,132 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 <script src="coreto-nav-v2.js"></script>
+
+<!-- 支払明細書モーダル -->
+<div id="payslip-overlay"
+  style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:2000;
+         align-items:flex-start;justify-content:center;padding:24px 16px;overflow-y:auto"
+  onclick="if(event.target===this)closePayslip()">
+  <div style="background:#fff;border-radius:16px;width:100%;max-width:580px;
+              box-shadow:0 20px 60px rgba(0,0,0,.25);font-family:'Outfit','Noto Sans JP',sans-serif">
+    <div style="padding:16px 24px;border-bottom:1px solid #e8eaed;display:flex;align-items:center;
+                justify-content:space-between;position:sticky;top:0;background:#fff;border-radius:16px 16px 0 0;z-index:1">
+      <div style="font-size:15px;font-weight:700;color:#202124">📄 支払明細書</div>
+      <div style="display:flex;gap:8px">
+        <button onclick="printPayslip()"
+          style="padding:6px 14px;background:#0D1A2D;color:#C8A951;border-radius:8px;
+                 font-size:11px;font-weight:700;cursor:pointer;border:none;font-family:'Outfit',sans-serif">
+          🖨️ 印刷
+        </button>
+        <button onclick="closePayslip()"
+          style="padding:6px 12px;border:1px solid #e8eaed;border-radius:8px;
+                 background:#f8f9fa;font-size:12px;cursor:pointer">✕</button>
+      </div>
+    </div>
+    <div id="payslip-body" style="padding:28px 32px"></div>
+  </div>
+</div>
+
+<script>
+var _payslipAgId = null;
+
+function openPayslip(agId, agName) {
+  _payslipAgId = agId;
+  const p = (buildPayoutsFromLS() || PAYOUTS).find(function(x){ return x.id === agId; }) ||
+            PAYOUTS.find(function(x){ return x.id === agId; });
+  if (!p) return;
+  const calc = calcPayout(p);
+  const month = '2026年2月';
+  const issued = new Date().toLocaleDateString('ja-JP', {year:'numeric',month:'long',day:'numeric'});
+
+  const rows = p.cases.map(function(c, i) {
+    var label, fee, reward;
+    if (p.type === 'PT' || p.type === 'PT-corp') {
+      label = '紹介報酬（案件 #' + (i+1) + '）';
+      fee    = c.fee;
+      reward = Math.round(c.fee * (c.ptShare || 0.25));
+    } else if (c.pt) {
+      label = 'PT紹介分（案件 #' + (i+1) + '）';
+      fee    = c.fee;
+      reward = Math.round(c.fee * 0.25);
+    } else {
+      const typeLabel = p.type === 'HR' ? '人材紹介' : '不動産仲介';
+      label = typeLabel + '（案件 #' + (i+1) + '）';
+      fee    = c.fee;
+      const rate = RANKS[p.rank] ? RANKS[p.rank].rate : 0.65;
+      const split = c.hrSplit || 1;
+      reward = Math.round(fee * rate * split);
+    }
+    return '<tr>' +
+      '<td style="padding:8px 0;font-size:12px;color:#202124;border-bottom:1px solid #f1f3f4">' + label + '</td>' +
+      '<td style="padding:8px 0;text-align:right;font-variant-numeric:tabular-nums;font-size:12px;border-bottom:1px solid #f1f3f4">¥' + fee.toLocaleString() + '</td>' +
+      '<td style="padding:8px 0;text-align:right;font-variant-numeric:tabular-nums;font-size:12px;font-weight:700;color:#059669;border-bottom:1px solid #f1f3f4">¥' + reward.toLocaleString() + '</td>' +
+    '</tr>';
+  }).join('');
+
+  const yen = function(v){ return '¥' + Math.round(v).toLocaleString(); };
+
+  document.getElementById('payslip-body').innerHTML =
+    '<div style="border:2px solid #0D1A2D;border-radius:12px;padding:24px;margin-bottom:16px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px">' +
+        '<div>' +
+          '<div style="font-size:18px;font-weight:700;color:#0D1A2D;letter-spacing:.5px">支払明細書</div>' +
+          '<div style="font-size:11px;color:#5f6368;margin-top:2px">' + month + '分</div>' +
+        '</div>' +
+        '<div style="text-align:right;font-size:10px;color:#5f6368">' +
+          '<div>株式会社CORETO</div>' +
+          '<div>発行日: ' + issued + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div style="background:#f8f9fa;border-radius:8px;padding:12px 16px;margin-bottom:20px">' +
+        '<div style="font-size:11px;color:#5f6368;margin-bottom:3px">支払先</div>' +
+        '<div style="font-size:15px;font-weight:700;color:#202124">' + p.name + '</div>' +
+        '<div style="font-size:11px;color:#5f6368;font-family:monospace">' + p.id + ' / ' + (p.rank||'—').toUpperCase() + ' / ' + (p.type||'RE') + '</div>' +
+      '</div>' +
+      '<table style="width:100%;border-collapse:collapse;margin-bottom:16px">' +
+        '<thead><tr>' +
+          '<th style="padding:6px 0;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#5f6368;border-bottom:2px solid #0D1A2D;text-align:left">項目</th>' +
+          '<th style="padding:6px 0;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#5f6368;border-bottom:2px solid #0D1A2D;text-align:right">仲介料</th>' +
+          '<th style="padding:6px 0;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#5f6368;border-bottom:2px solid #0D1A2D;text-align:right">AG報酬</th>' +
+        '</tr></thead>' +
+        '<tbody>' + rows + '</tbody>' +
+      '</table>' +
+      '<div style="border-top:2px solid #0D1A2D;padding-top:12px">' +
+        '<div style="display:flex;justify-content:space-between;font-size:12px;color:#5f6368;margin-bottom:5px">' +
+          '<span>報酬合計</span><span style="font-variant-numeric:tabular-nums">' + yen(calc.reward) + '</span></div>' +
+        (calc.sysFee > 0 ? '<div style="display:flex;justify-content:space-between;font-size:12px;color:#5f6368;margin-bottom:5px"><span>システム利用料</span><span style="font-variant-numeric:tabular-nums;color:#dc2626">−' + yen(calc.sysFee) + '</span></div>' : '') +
+        (calc.withholding > 0 ? '<div style="display:flex;justify-content:space-between;font-size:12px;color:#5f6368;margin-bottom:5px"><span>源泉徴収税（10.21%）</span><span style="font-variant-numeric:tabular-nums;color:#dc2626">−' + yen(calc.withholding) + '</span></div>' : '') +
+        (calc.instantPay > 0 ? '<div style="display:flex;justify-content:space-between;font-size:12px;color:#5f6368;margin-bottom:5px"><span>即時払い控除</span><span style="font-variant-numeric:tabular-nums;color:#dc2626">−' + yen(calc.instantPay) + '</span></div>' : '') +
+        '<div style="display:flex;justify-content:space-between;font-size:16px;font-weight:800;color:#059669;margin-top:8px;padding-top:8px;border-top:1px solid #e8eaed">' +
+          '<span>お支払い金額</span><span style="font-variant-numeric:tabular-nums">¥' + calc.transfer.toLocaleString() + '</span></div>' +
+      '</div>' +
+    '</div>' +
+    '<div style="font-size:10px;color:#5f6368;text-align:center;line-height:1.8">' +
+      '振込予定日: ' + month.replace('年','年').replace('月分','月25日') + ' ／ ' +
+      '※源泉徴収票は翌年1月に別途発行します' +
+    '</div>';
+
+  document.getElementById('payslip-overlay').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function closePayslip() {
+  document.getElementById('payslip-overlay').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+function printPayslip() {
+  var body = document.getElementById('payslip-body').innerHTML;
+  var win = window.open('', '_blank', 'width=640,height=760');
+  var html = '<!DOCTYPE html><html><head><title>支払明細書</title>';
+  html += '<style>body{font-family:sans-serif;padding:32px;max-width:520px;margin:0 auto}';
+  html += '@media print{body{padding:16px}}</style>';
+  html += '</head><body>' + body + '</body></html>';
+  win.document.write(html);
+  win.document.close();
+  setTimeout(function(){ win.print(); }, 500);
+}
+</script>
+
 </body>
 </html>

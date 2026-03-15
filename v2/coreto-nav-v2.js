@@ -149,6 +149,7 @@ const NAV = {
       items: [
         { icon:'📝', label:'応募者管理',           href:'coreto-applicants-v2.html',      key:'applicants'      },
         { icon:'🔗', label:'リクルートリンク発行', href:'coreto-recruit-link-v2.html',    key:'recruit_link'    },
+        { icon:'🎫', label:'特別紹介コード管理',     href:'coreto-special-code-v2.html',    key:'special_code'    },
         { icon:'📨', label:'AG招待・新規登録',     href:'coreto-agent-signup-v2.html',    key:'agent_invite'    },
         { icon:'📨', label:'PT招待・新規登録',     href:'coreto-partner-signup-v2.html',  key:'pt_invite'       },
         { icon:'🎓', label:'インターン管理',       href:'coreto-intern-v2.html',          key:'intern'          },
@@ -232,6 +233,7 @@ const NAV = {
       section: '採用',
       items: [
         { icon:'🔗', label:'リクルートリンク発行', href:'coreto-recruit-link-v2.html',    key:'recruit_link'    },
+        { icon:'🎫', label:'特別紹介コード管理',     href:'coreto-special-code-v2.html',    key:'special_code'    },
       ],
     },
     {
@@ -291,6 +293,7 @@ const NAV = {
       section: '採用',
       items: [
         { icon:'🔗', label:'リクルートリンク発行', href:'coreto-recruit-link-v2.html',    key:'recruit_link'    },
+        { icon:'🎫', label:'特別紹介コード管理',     href:'coreto-special-code-v2.html',    key:'special_code'    },
       ],
     },
     {
@@ -344,6 +347,7 @@ const NAV = {
       section: '採用',
       items: [
         { icon:'🔗', label:'リクルートリンク発行', href:'coreto-recruit-link-v2.html',    key:'recruit_link'    },
+        { icon:'🎫', label:'特別紹介コード管理',     href:'coreto-special-code-v2.html',    key:'special_code'    },
       ],
     },
     {
