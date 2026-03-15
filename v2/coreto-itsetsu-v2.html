@@ -180,7 +180,7 @@ html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:
       📋 予約一覧
       <span class="tab-cnt" id="tab-list-cnt">—</span>
     </div>
-    <div class="tab-item" id="tab-alert" onclick="switchTab('alert')">
+    <div class="tab-item" id="tab-alert" onclick="switchTab('alert')" style="display:none">
       🔴 要対応
       <span class="tab-cnt red" id="tab-alert-cnt">—</span>
     </div>
@@ -305,7 +305,7 @@ html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:
     <div class="panel">
       <div class="panel-head">
         <div class="panel-title" style="color:var(--rd)">🔴 未マッチング・照合中 — 手動対応が必要</div>
-        <button class="btn btn-primary btn-sm" onclick="location.href='coreto-itsetsu-hq-v2.html'">🎯 HQマッチングで対応する</button>
+        <button class="btn btn-primary btn-sm" id="hq-match-panel-btn" onclick="location.href='coreto-itsetsu-hq-v2.html'" style="display:none">🎯 HQマッチングで対応する</button>
       </div>
       <div id="alert-list-full"></div>
     </div>
@@ -330,6 +330,7 @@ html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:
 (function(){
   var _role = sessionStorage.getItem('coreto_role') || '';
   var _allowed = ["hq", "re_ag"];
+  var _ITSETSU_IS_HQ = _role === 'hq';
   if (_allowed.length && !_allowed.includes(_role)) {
     location.replace('coreto-hub-v2.html?unauthorized=1');
   }
@@ -439,7 +440,7 @@ function alertRowHtml(b){
       </div>
     </div>
     <div class="alert-actions">
-      <button class="btn btn-primary btn-sm" onclick="location.href='coreto-itsetsu-hq-v2.html'">🎯 マッチングする</button>
+      ${_ITSETSU_IS_HQ ? `<button class="btn btn-primary btn-sm" onclick="location.href='coreto-itsetsu-hq-v2.html'">🎯 マッチングする</button>` : `<span style="font-size:10px;color:var(--muted)">HQが対応します</span>`}
     </div>
   </div>`;
 }
@@ -676,7 +677,16 @@ window.addEventListener('DOMContentLoaded', function(){
 </script>
 
 <script src="coreto-nav-v2.js"></script>
-<script>window.addEventListener('DOMContentLoaded',()=>CNAV.init('itsetsu'));</script>
+<script>window.addEventListener('DOMContentLoaded', function() {
+  CNAV.init('itsetsu');
+  // HQ専用UI要素の表示制御（_ITSETSU_IS_HQはmainスクリプトで定義済み）
+  if (typeof _ITSETSU_IS_HQ !== 'undefined' && _ITSETSU_IS_HQ) {
+    var alertTab = document.getElementById('tab-alert');
+    if (alertTab) alertTab.style.display = '';
+    var hqBtn = document.getElementById('hq-match-panel-btn');
+    if (hqBtn) hqBtn.style.display = '';
+  }
+});</script>
 
 <!-- ══════════════════════════════════════════
      IT重説チェックシートモーダル
