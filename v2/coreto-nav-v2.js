@@ -101,7 +101,6 @@ const NAV = {
         { icon:'🏠', label:'内見管理（全体）',     href:'coreto-showing-v2.html',         key:'showing_hq'      },
         { icon:'📋', label:'書類送付管理',     href:'coreto-screening-v2.html',       key:'screening',       badge:'5', badgeColor:'amber' },
         { icon:'🔑', label:'IT重説管理（全体）',   href:'coreto-itsetsu-v2.html',         key:'itsetsu',         badge:'2', badgeColor:'amber' },
-        { icon:'👨‍⚖️', label:'宅建士割当（IT重説）',  href:'coreto-itsetsu-hq-v2.html',      key:'itsetsu_hq'      },
         { icon:'🏦', label:'初期費用明細チェック', href:'coreto-invoice-check-v2.html',   key:'invoice_check'   },
         { icon:'📷', label:'バーコードスキャン',   href:'coreto-barcode-scan-v2.html',    key:'barcode_scan'    },
         { icon:'📝', label:'成約報告一覧',         href:'coreto-contract-report-v2.html', key:'contract_report' },
