@@ -441,6 +441,10 @@ function renderCase(c) {
       </div>
     </div>
     <div style="margin-left:12px">${statusBadge(st)}</div>
+    <button class="btn btn-ghost btn-sm" style="margin-left:6px;font-size:11px;flex-shrink:0"
+      onclick="event.stopPropagation();openChecklist('${c.id}','${c.name}','${c.type||'re'}')">
+      📋 審査チェック
+    </button>
     <div class="case-chevron">▼</div>
   </div>
 
@@ -643,5 +647,313 @@ function showToast(msg, type) {
 }
 </script>
 <script src="coreto-nav-v2.js"></script>
+
+<!-- ══════════════════════════════════════════
+     書類審査チェックシートモーダル
+══════════════════════════════════════════ -->
+<div id="checklist-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:2000;align-items:flex-start;justify-content:center;padding:24px 16px;overflow-y:auto"
+  onclick="if(event.target===this)closeChecklist()">
+  <div style="background:var(--white);border-radius:16px;width:100%;max-width:720px;box-shadow:0 20px 60px rgba(0,0,0,.25);font-family:'Outfit','Noto Sans JP',sans-serif">
+    <!-- ヘッダー -->
+    <div style="padding:20px 24px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;gap:12px;position:sticky;top:0;background:var(--white);border-radius:16px 16px 0 0;z-index:1">
+      <div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);margin-bottom:3px">📋 書類審査チェックシート</div>
+        <div id="cl-title" style="font-size:17px;font-weight:700;color:var(--ink)">—</div>
+        <div id="cl-meta" style="font-size:11px;color:var(--muted);margin-top:2px"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div id="cl-progress-wrap" style="text-align:right">
+          <div id="cl-progress-pct" style="font-size:22px;font-weight:800;color:var(--navy)">0%</div>
+          <div id="cl-progress-lbl" style="font-size:10px;color:var(--muted)">完了</div>
+        </div>
+        <button onclick="closeChecklist()" style="padding:6px 12px;border:1px solid var(--bd);border-radius:8px;background:var(--cream);font-size:12px;cursor:pointer">✕ 閉じる</button>
+      </div>
+    </div>
+    <!-- 判定バナー -->
+    <div id="cl-verdict-banner" style="display:none;padding:10px 24px;font-size:12px;font-weight:600"></div>
+    <!-- チェックリスト本体 -->
+    <div id="cl-body" style="padding:20px 24px;max-height:60vh;overflow-y:auto"></div>
+    <!-- フッター -->
+    <div style="padding:16px 24px;border-top:1px solid var(--bd);display:flex;gap:10px;justify-content:flex-end;position:sticky;bottom:0;background:var(--white);border-radius:0 0 16px 16px">
+      <button onclick="clVerdict('ng')" style="padding:8px 18px;background:var(--rd-bg);color:var(--rd);border:1px solid rgba(220,38,38,.2);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">❌ 不合格</button>
+      <button onclick="clVerdict('hold')" style="padding:8px 18px;background:var(--am-bg);color:var(--am);border:1px solid rgba(217,119,6,.2);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">⏸ 保留</button>
+      <button onclick="clVerdict('pass')" style="padding:8px 18px;background:var(--navy);color:var(--gold);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">✅ 合格</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+// 書類審査チェックシート
+// ══════════════════════════════════════════
+
+// V1準拠 + V2拡張
+var SCREENING_CHECKLISTS = {
+  re: {
+    label:'不動産AG',
+    sections:[
+      { id:'basic', icon:'👤', title:'基本情報確認',
+        items:[
+          { id:'name',   label:'氏名・フリガナの一致確認',          desc:'申請フォームの氏名とフリガナが正確に記載されているか' },
+          { id:'age',    label:'年齢確認（18歳以上）',               desc:'生年月日から計算し18歳以上であることを確認', warn:'18歳未満は即不合格' },
+          { id:'addr',   label:'住所・連絡先の有効性確認',           desc:'郵便番号・住所・メール・電話が有効な形式か' },
+          { id:'indiv',  label:'個人事業主確認（法人不可）',         desc:'宅建業法により個人契約のみ。法人希望は即不合格', fatal:true },
+        ]},
+      { id:'antisocial', icon:'🔍', title:'反社チェック',
+        items:[
+          { id:'google',  label:'Google検索チェック',                desc:'氏名・住所で検索し反社・詐欺・犯罪歴等の情報がないか確認' },
+          { id:'kintone', label:'Kintone内部DB照合',                 desc:'過去の除名・トラブル事例と照合', fatal:true },
+        ]},
+      { id:'takken', icon:'📜', title:'宅建士資格確認',
+        items:[
+          { id:'tk-held',  label:'資格保有有無の確認',               desc:'申請フォームの回答を確認（非保有は以下スキップ可）' },
+          { id:'tk-fmt',   label:'登録番号の形式チェック',           desc:'形式：都道府県名（数字）登録番号　例：東京(2)098765', hint:'保有者のみ' },
+          { id:'tk-exp',   label:'有効期限内か確認',                 desc:'宅建士証の有効期限が現在日付より後であることを確認', hint:'保有者のみ' },
+          { id:'tk-img',   label:'宅建士証画像の真正性確認',         desc:'氏名と番号が申請と一致・画像が鮮明・偽造の疑いなし', hint:'保有者のみ' },
+          { id:'tk-db',    label:'国交省DBとの照合',                 desc:'retio.or.jp（国交省DB）で登録番号を照合し、氏名・有効期限が一致するか確認', hint:'保有者のみ', fatal:true },
+        ]},
+      { id:'career', icon:'💼', title:'職歴・経験確認',
+        items:[
+          { id:'exp-yr',   label:'業界経験年数の評価',               desc:'3年以上：優遇 / 1〜3年：問題なし / 1年未満・未経験：面接で判断' },
+          { id:'exp-det',  label:'実績・職歴の具体性確認',           desc:'月平均成約件数・担当エリア・得意物件タイプが具体的に記載されているか' },
+          { id:'area',     label:'得意エリア・物件タイプの確認',     desc:'活動可能な地域・専門分野が明記されているか（任意だが記載があると優遇）' },
+        ]},
+      { id:'motivation', icon:'📝', title:'志望動機確認',
+        items:[
+          { id:'mot-len',  label:'志望動機 100文字以上',             desc:'100文字以上で記載されているか確認' },
+          { id:'mot-qual', label:'志望動機の具体性・誠実さ',         desc:'冷やかし・コピペ・過度に短い動機でないか' },
+        ]},
+      { id:'referral', icon:'🔗', title:'紹介者確認',
+        items:[
+          { id:'ref-chk',  label:'紹介コード確認・紹介者ランク確認', desc:'Goldランク以上の紹介者がいる場合は審査を優遇' },
+        ]},
+    ]
+  },
+  hr: {
+    label:'人材AG',
+    sections:[
+      { id:'basic', icon:'👤', title:'基本情報確認',
+        items:[
+          { id:'name',   label:'氏名・フリガナの一致確認',          desc:'申請フォームの氏名とフリガナが正確に記載されているか' },
+          { id:'age',    label:'年齢確認（18歳以上）',               desc:'生年月日から計算し18歳以上であることを確認', warn:'18歳未満は即不合格' },
+          { id:'addr',   label:'住所・連絡先の有効性確認',           desc:'郵便番号・住所・メール・電話が有効な形式か' },
+          { id:'indiv',  label:'個人事業主確認（法人不可）',         desc:'職業安定法により個人契約のみ', fatal:true },
+        ]},
+      { id:'antisocial', icon:'🔍', title:'反社チェック',
+        items:[
+          { id:'google',  label:'Google検索チェック',                desc:'氏名・住所で検索し反社・詐欺・犯罪歴等の情報がないか確認' },
+          { id:'kintone', label:'Kintone内部DB照合',                 desc:'過去の除名・トラブル事例と照合', fatal:true },
+        ]},
+      { id:'hrexp', icon:'🏢', title:'人材業界経験確認 ★最重要',
+        items:[
+          { id:'exp-yr',   label:'業界経験年数の確認',               desc:'1年未満・未経験：即不合格 / 1〜3年：OK / 3年以上：優遇', fatal:true },
+          { id:'jobtype',  label:'業務内容の確認',                   desc:'CA/RA/両面型：合格 / 人材営業のみ：面接で確認 / 事務・受付のみ：不合格' },
+          { id:'exp-det',  label:'実績・職歴の具体性確認',           desc:'担当業界・年間支援件数・得意職種が具体的に記載されているか' },
+        ]},
+      { id:'specialty', icon:'🎯', title:'専門分野確認',
+        items:[
+          { id:'industry', label:'得意業界・職種の確認',             desc:'特化分野が明確か。カバレッジの広さより深さを重視' },
+        ]},
+      { id:'motivation', icon:'📝', title:'志望動機確認',
+        items:[
+          { id:'mot-len',  label:'志望動機 100文字以上',             desc:'100文字以上で記載されているか確認' },
+          { id:'mot-qual', label:'志望動機の具体性・誠実さ',         desc:'独立志向・実績への言及・フリーランス経験の有無など' },
+        ]},
+    ]
+  },
+  pt: {
+    label:'パートナー',
+    sections:[
+      { id:'basic', icon:'👤', title:'基本情報確認',
+        items:[
+          { id:'name',     label:'氏名（または法人名）の確認',       desc:'個人：氏名・フリガナ / 法人：法人名・代表者名の確認' },
+          { id:'age',      label:'年齢確認（18歳以上）',             desc:'個人の場合のみ（法人はスキップ可）' },
+          { id:'addr',     label:'住所・連絡先の有効性確認',         desc:'郵便番号・住所・メール・電話が有効な形式か' },
+        ]},
+      { id:'antisocial', icon:'🔍', title:'反社チェック',
+        items:[
+          { id:'google',   label:'Google検索チェック',               desc:'氏名・法人名で検索し反社・詐欺等の情報がないか確認' },
+          { id:'kintone',  label:'Kintone内部DB照合',               desc:'過去の除名・トラブル事例と照合', fatal:true },
+        ]},
+      { id:'corp', icon:'🏢', title:'法人確認（法人の場合のみ）',
+        items:[
+          { id:'corp-no',  label:'法人番号の確認（国税庁DB）',       desc:'国税庁 法人番号公表サイトで法人番号を照合', hint:'法人のみ' },
+          { id:'corp-rep', label:'代表者の確認',                     desc:'登記情報と申請の代表者名が一致するか', hint:'法人のみ' },
+        ]},
+      { id:'job', icon:'💼', title:'職業・ネットワーク確認',
+        items:[
+          { id:'occupation', label:'職業・立場の確認',               desc:'どのような顧客ネットワークを持つか。個人・企業どちらの紹介が主か' },
+        ]},
+      { id:'motivation', icon:'📝', title:'志望動機確認',
+        items:[
+          { id:'mot-len',  label:'志望動機 50文字以上',              desc:'50文字以上で記載されているか確認（冷やかし判定）' },
+          { id:'mot-qual', label:'志望動機の具体性確認',             desc:'紹介ルートの具体性があるか' },
+        ]},
+      { id:'referral', icon:'🔗', title:'紹介者確認',
+        items:[
+          { id:'ref-chk',  label:'紹介コード確認・紹介者ランク確認', desc:'Goldランク以上の紹介者がいる場合は審査を優遇' },
+        ]},
+    ]
+  },
+  hikari: {
+    label:'光通信AG',
+    sections:[
+      { id:'basic', icon:'👤', title:'基本情報確認',
+        items:[
+          { id:'name',   label:'氏名・フリガナの一致確認',          desc:'申請フォームの氏名とフリガナが正確に記載されているか' },
+          { id:'age',    label:'年齢確認（18歳以上）',               desc:'生年月日から計算し18歳以上であることを確認' },
+          { id:'addr',   label:'住所・連絡先の有効性確認',           desc:'郵便番号・住所・メール・電話が有効な形式か' },
+        ]},
+      { id:'antisocial', icon:'🔍', title:'反社チェック',
+        items:[
+          { id:'google',  label:'Google検索チェック',                desc:'氏名・住所で検索し反社・詐欺・犯罪歴等の情報がないか確認' },
+          { id:'kintone', label:'Kintone内部DB照合',                 desc:'過去の除名・トラブル事例と照合', fatal:true },
+        ]},
+      { id:'sales', icon:'📞', title:'営業・光通信業経験確認',
+        items:[
+          { id:'exp',     label:'光通信・通信業界経験の確認',        desc:'経験者：優遇 / 他業界営業経験者：問題なし / 完全未経験：面接で判断' },
+          { id:'area',    label:'活動エリアの確認',                   desc:'主な活動地域・訪問可能エリアが明記されているか' },
+        ]},
+      { id:'motivation', icon:'📝', title:'志望動機確認',
+        items:[
+          { id:'mot-len',  label:'志望動機 50文字以上',              desc:'50文字以上で記載されているか確認' },
+          { id:'mot-qual', label:'志望動機の具体性',                  desc:'通信業への関心・独立志向が読み取れるか' },
+        ]},
+    ]
+  }
+};
+
+var _clState    = {};   // { itemId: 'ok'|'ng'|'skip' }
+var _clCaseId   = null;
+var _clTypeName = '';
+
+function openChecklist(caseId, caseName, type) {
+  _clCaseId = caseId;
+  _clState  = {};
+  var cl = SCREENING_CHECKLISTS[type] || SCREENING_CHECKLISTS.re;
+  _clTypeName = cl.label;
+  document.getElementById('cl-title').textContent = caseName + '　書類審査';
+  document.getElementById('cl-meta').textContent  = cl.label + ' ／ 担当: ' + (sessionStorage.getItem('coreto_name') || 'HQ');
+  document.getElementById('cl-verdict-banner').style.display = 'none';
+  renderChecklistBody(cl);
+  updateClProgress(cl);
+  document.getElementById('checklist-overlay').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeChecklist() {
+  document.getElementById('checklist-overlay').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+function renderChecklistBody(cl) {
+  var body = document.getElementById('cl-body');
+  body.innerHTML = cl.sections.map(function(sec) {
+    var items = sec.items.map(function(item) {
+      var st = _clState[item.id] || null;
+      return '<div id="cli-' + item.id + '" style="padding:10px 12px;border-radius:10px;border:1.5px solid ' +
+        (st==='ok'?'var(--em)':st==='ng'?'var(--rd)':st==='skip'?'var(--bd)':'var(--bd)') +
+        ';background:' +
+        (st==='ok'?'var(--em-bg)':st==='ng'?'var(--rd-bg)':st==='skip'?'var(--cream2)':'var(--cream)') +
+        ';margin-bottom:6px;transition:.15s">' +
+        '<div style="display:flex;align-items:center;gap:8px">' +
+          '<div style="display:flex;gap:5px;flex-shrink:0">' +
+            '<button data-id="' + item.id + '" data-val="ok" onclick="clCheck(this.dataset.id,this.dataset.val)" style="padding:3px 9px;border-radius:6px;border:1.5px solid ' +
+              (st==='ok'?'var(--em)':'var(--bd)') + ';background:' + (st==='ok'?'var(--em)':'transparent') +
+              ';color:' + (st==='ok'?'#fff':'var(--muted)') + ';font-size:11px;font-weight:700;cursor:pointer">OK</button>' +
+            '<button data-id="' + item.id + '" data-val="ng" onclick="clCheck(this.dataset.id,this.dataset.val)" style="padding:3px 9px;border-radius:6px;border:1.5px solid ' +
+              (st==='ng'?'var(--rd)':'var(--bd)') + ';background:' + (st==='ng'?'var(--rd)':'transparent') +
+              ';color:' + (st==='ng'?'#fff':'var(--muted)') + ';font-size:11px;font-weight:700;cursor:pointer">NG</button>' +
+            '<button data-id="' + item.id + '" data-val="skip" onclick="clCheck(this.dataset.id,this.dataset.val)" style="padding:3px 9px;border-radius:6px;border:1.5px solid ' +
+              (st==='skip'?'var(--bd2)':'var(--bd)') + ';background:' + (st==='skip'?'var(--bd2)':'transparent') +
+              ';color:var(--muted);font-size:11px;cursor:pointer">SK</button>' +
+          '</div>' +
+          '<div style="flex:1">' +
+            '<div style="font-size:12px;font-weight:600;color:var(--ink);display:flex;align-items:center;gap:5px">' +
+              item.label +
+              (item.fatal ? '<span style="font-size:9px;padding:1px 6px;background:var(--rd-bg);color:var(--rd);border-radius:4px;font-weight:700">即不合格</span>' : '') +
+              (item.hint  ? '<span style="font-size:9px;color:var(--muted)">' + item.hint + '</span>' : '') +
+            '</div>' +
+            (item.desc ? '<div style="font-size:10px;color:var(--muted);margin-top:1px">' + item.desc + '</div>' : '') +
+            (item.warn  ? '<div style="font-size:10px;color:var(--am);margin-top:2px;font-weight:600">⚠️ ' + item.warn + '</div>' : '') +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+    return '<div style="margin-bottom:18px">' +
+      '<div style="font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:6px;margin-bottom:8px">' +
+        sec.icon + ' ' + sec.title +
+      '</div>' + items + '</div>';
+  }).join('');
+}
+
+function clCheck(itemId, val) {
+  _clState[itemId] = (_clState[itemId] === val) ? null : val;
+  var type = _clCaseId ? (CASES.find(function(c){return c.id===_clCaseId;}) || {}).type || 're' : 're';
+  var cl = SCREENING_CHECKLISTS[type] || SCREENING_CHECKLISTS.re;
+  // 当該行を更新
+  var row = document.getElementById('cli-' + itemId);
+  if (row) {
+    var st = _clState[itemId] || null;
+    row.style.borderColor = st==='ok'?'var(--em)':st==='ng'?'var(--rd)':st==='skip'?'var(--bd)':'var(--bd)';
+    row.style.background  = st==='ok'?'var(--em-bg)':st==='ng'?'var(--rd-bg)':st==='skip'?'var(--cream2)':'var(--cream)';
+    var btns = row.querySelectorAll('button');
+    var vals = ['ok','ng','skip'];
+    btns.forEach(function(btn, i) {
+      if (i === 0) { btn.style.background=st==='ok'?'var(--em)':'transparent'; btn.style.color=st==='ok'?'#fff':'var(--muted)'; btn.style.borderColor=st==='ok'?'var(--em)':'var(--bd)'; }
+      if (i === 1) { btn.style.background=st==='ng'?'var(--rd)':'transparent'; btn.style.color=st==='ng'?'#fff':'var(--muted)'; btn.style.borderColor=st==='ng'?'var(--rd)':'var(--bd)'; }
+      if (i === 2) { btn.style.background=st==='skip'?'var(--bd2)':'transparent'; btn.style.borderColor=st==='skip'?'var(--bd2)':'var(--bd)'; }
+    });
+  }
+  updateClProgress(cl);
+  // NGが1件でも即不合格チェックに引っかかったら自動バナー
+  var fatalNG = false;
+  cl.sections.forEach(function(sec) {
+    sec.items.forEach(function(item) {
+      if (item.fatal && _clState[item.id] === 'ng') fatalNG = true;
+    });
+  });
+  if (fatalNG) showClBanner('ng', '⚠️ 即不合格該当項目があります');
+  else document.getElementById('cl-verdict-banner').style.display = 'none';
+}
+
+function updateClProgress(cl) {
+  var total = 0, done = 0;
+  cl.sections.forEach(function(sec) {
+    sec.items.forEach(function(item) {
+      total++;
+      if (_clState[item.id]) done++;
+    });
+  });
+  var pct = total ? Math.round(done / total * 100) : 0;
+  document.getElementById('cl-progress-pct').textContent = pct + '%';
+  document.getElementById('cl-progress-lbl').textContent = done + ' / ' + total + ' 確認済み';
+  document.getElementById('cl-progress-pct').style.color = pct === 100 ? 'var(--em)' : pct >= 50 ? 'var(--am)' : 'var(--navy)';
+}
+
+function showClBanner(type, msg) {
+  var b = document.getElementById('cl-verdict-banner');
+  b.style.display = 'block';
+  b.style.background = type==='pass' ? 'var(--em-bg)' : type==='ng' ? 'var(--rd-bg)' : 'var(--am-bg)';
+  b.style.color = type==='pass' ? 'var(--em)' : type==='ng' ? 'var(--rd)' : 'var(--am)';
+  b.style.borderBottom = '1px solid ' + (type==='pass'?'rgba(5,150,105,.15)':type==='ng'?'rgba(220,38,38,.15)':'rgba(217,119,6,.15)');
+  b.textContent = msg;
+}
+
+function clVerdict(type) {
+  var label = { pass:'✅ 合格', ng:'❌ 不合格', hold:'⏸ 保留' }[type];
+  var msg = { pass:'合格として記録しました', ng:'不合格として記録しました', hold:'保留として記録しました' }[type];
+  showClBanner(type, label + ' — ' + msg);
+  // CORETO_HQ_TASKSに審査結果を記録
+  try {
+    var saved = JSON.parse(localStorage.getItem('CORETO_SCREENING_RESULTS') || '{}');
+    saved[_clCaseId] = { verdict:type, checkedAt:new Date().toLocaleDateString('ja-JP'), by:sessionStorage.getItem('coreto_name')||'HQ', state:_clState };
+    localStorage.setItem('CORETO_SCREENING_RESULTS', JSON.stringify(saved));
+  } catch(e) {}
+  showToast(label + ' — ' + _clCaseId, type==='pass'?'em':type==='ng'?'rd':'am');
+  setTimeout(function(){ closeChecklist(); }, 1500);
+}
+</script>
+
 </body>
 </html>
