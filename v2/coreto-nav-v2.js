@@ -504,7 +504,7 @@ function closeSettings() {
 function logout() {
   if (!confirm('ログアウトしますか？')) return;
   // 全セッション情報をクリア（残-2修正）
-  ['coreto_role','coreto_user_id','coreto_name','coreto_rank','coreto_balance'].forEach(function(k) {
+  ['coreto_role','coreto_user_id','coreto_name','coreto_rank','coreto_balance','coreto_hq_role'].forEach(function(k) {
     sessionStorage.removeItem(k);
   });
   window.location.href = 'coreto-hub-v2.html';

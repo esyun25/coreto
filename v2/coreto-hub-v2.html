@@ -951,7 +951,9 @@ html, body { background:#FFFFFF !important; }
       <div class="login-demo">
         <div class="demo-title">⚠️ 開発デモ（本番では非表示）— ロール切替</div>
         <div class="demo-roles">
-          <div class="demo-role" onclick="demoLogin('HQ-0001')">HQ統括</div>
+          <div class="demo-role" onclick="demoLogin('HQ-0001')">HQ統括（田中）</div>
+          <div class="demo-role" onclick="demoLogin('HQ-0002')">HQ Mgr（山本）</div>
+          <div class="demo-role" onclick="demoLogin('HQ-0003')">HQ Staff（佐々木）</div>
           <div class="demo-role" onclick="demoLogin('AG-0042')">不動産AG</div>
           <div class="demo-role" onclick="demoLogin('AG-0103')">人材AG</div>
           <div class="demo-role" onclick="demoLogin('AG-0071')">光通信AG</div>
@@ -1050,7 +1052,10 @@ const ROLES = {
 // IDとパスワードのマッピング。本番ではこのオブジェクトをサーバーサイドに移動すること
 const USER_CREDENTIALS = {
   // HQ
-  'HQ-0001': { pw: 'Coreto2026!', role: 'hq',        name: '田中 誠一（統括）',  userId: 'HQ-0001', rank: null },
+  'HQ-0001': { pw: 'Coreto2026!', role: 'hq', hqRole:'exec',    name: '田中 誠一（統括）',    userId: 'HQ-0001', rank: null },
+  'HQ-0002': { pw: 'Coreto2026!', role: 'hq', hqRole:'manager', name: '山本 マネージャー',    userId: 'HQ-0002', rank: null },
+  'HQ-0003': { pw: 'Coreto2026!', role: 'hq', hqRole:'staff',   name: '佐々木 リーダー',          userId: 'HQ-0003', rank: null },
+  'HQ-0004': { pw: 'Coreto2026!', role: 'hq', hqRole:'staff',   name: '伊藤 スタッフ',               userId: 'HQ-0004', rank: null },
   // RE-AG
   'AG-0042':  { pw: 'agent2026',  role: 're_ag',      name: '山田 誠',            userId: 'AG-0042',  rank: 'Gold' },
   'AG-0088':  { pw: 'agent2026',  role: 're_ag',      name: '鈴木 花子',          userId: 'AG-0088',  rank: 'Silver' },
@@ -1075,7 +1080,8 @@ function demoLogin(userId) {
   sessionStorage.setItem('coreto_role',    user.role);
   sessionStorage.setItem('coreto_user_id', user.userId);
   sessionStorage.setItem('coreto_name',    user.name);
-  if (user.rank) sessionStorage.setItem('coreto_rank', user.rank);
+  if (user.rank)   sessionStorage.setItem('coreto_rank',    user.rank);
+  if (user.hqRole) sessionStorage.setItem('coreto_hq_role', user.hqRole);
   loginAs(user.role, user);
 }
 function doLogin() {
@@ -1106,7 +1112,8 @@ function doLogin() {
   sessionStorage.setItem('coreto_role',    user.role);
   sessionStorage.setItem('coreto_user_id', user.userId);
   sessionStorage.setItem('coreto_name',    user.name);
-  if (user.rank) sessionStorage.setItem('coreto_rank', user.rank);
+  if (user.rank)   sessionStorage.setItem('coreto_rank',    user.rank);
+  if (user.hqRole) sessionStorage.setItem('coreto_hq_role', user.hqRole);
   loginAs(user.role, user);
 }
 
@@ -3057,6 +3064,110 @@ function doLogout() {
 }
 
 // Auto-login as HQ for demo
+// ══════════════════════════════════════════════════════
+// HQタスク管理: グローバル関数（DOMContentLoaded外で定義）
+// ══════════════════════════════════════════════════════
+var HQ_MEMBERS_LIST = [
+  { id:'HQ-0001', name:'田中 誠一（統括）',   hqRole:'exec'    },
+  { id:'HQ-0002', name:'山本 マネージャー',   hqRole:'manager' },
+  { id:'HQ-0003', name:'佐々木 リーダー',         hqRole:'staff'   },
+  { id:'HQ-0004', name:'伊藤 スタッフ',               hqRole:'staff'   },
+];
+
+function assignHQTask(taskId, assigneeId) {
+  try {
+    var tasks = JSON.parse(localStorage.getItem('CORETO_HQ_TASKS') || '[]');
+    var t = tasks.find(function(x){ return x.id === taskId; });
+    if (!t) return;
+    var member = HQ_MEMBERS_LIST.find(function(m){ return m.id === assigneeId; });
+    t.assignee     = assigneeId;
+    t.assigneeName = member ? member.name : assigneeId;
+    t.assignedAt   = new Date().toLocaleDateString('ja-JP');
+    localStorage.setItem('CORETO_HQ_TASKS', JSON.stringify(tasks));
+    var taskList = document.getElementById('hq-task-list');
+    if (taskList) {
+      taskList.querySelectorAll('[data-dynamic]').forEach(function(el){ el.remove(); });
+      renderHQDynamicTasks();
+    }
+    showHQNotice('✅ ' + t.assigneeName + ' に割り当てました');
+  } catch(e) {}
+}
+
+function showHQNotice(msg) {
+  var n = document.createElement('div');
+  n.style.cssText = 'position:fixed;top:20px;right:20px;z-index:9999;background:#059669;color:#fff;padding:10px 18px;border-radius:9px;font-size:12px;font-weight:600;font-family:Outfit,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,.2)';
+  n.textContent = msg;
+  document.body.appendChild(n);
+  setTimeout(function(){ n.remove(); }, 2500);
+}
+
+function renderHQDynamicTasks() {
+  var taskList = document.getElementById('hq-task-list');
+  if (!taskList) return;
+  taskList.querySelectorAll('[data-dynamic]').forEach(function(el){ el.remove(); });
+  var TASK_META = {
+    contract_report:  { href:'coreto-contract-report-v2.html?tab=history', label:'成約報告', cls:'badge-am', action:'承認する' },
+    contract_signed:  { href:'coreto-kyc-v2.html',   label:'電子署名', cls:'badge-sk', action:'確認する' },
+    kyc:              { href:'coreto-kyc-v2.html',   label:'KYC審査',  cls:'badge-am', action:'審査する' },
+    hr_needs_hq:      { href:'coreto-hr-matching-v2.html', label:'HR案件', cls:'badge-vt', action:'対応する' },
+    itsetsu_hq:       { href:'coreto-itsetsu-hq-v2.html',  label:'IT重説', cls:'badge-am', action:'割当する' },
+    line_hq_response: { href:'coreto-line-ai-v2.html', label:'LINE', cls:'badge-rd', action:'返答する' },
+    training_remind:  { href:'coreto-training-mgmt-v2.html', label:'研修', cls:'badge-sk', action:'確認する' },
+  };
+  try {
+    var tasks     = JSON.parse(localStorage.getItem('CORETO_HQ_TASKS')    || '[]');
+    var reminders = JSON.parse(localStorage.getItem('CORETO_HR_REMINDERS')|| '[]');
+    var all = tasks.concat(
+      reminders.filter(function(r){ return r.status === 'pending'; }).map(function(r){
+        return { assignee:null, assigneeName:null, id:r.id, type:'hr_needs_hq',
+                 title:'在籍確認: '+r.name+' — '+r.label, createdAt:r.dueDate };
+      })
+    ).slice(0, 8);
+    var myId = sessionStorage.getItem('coreto_user_id') || '';
+    all.forEach(function(t) {
+      var meta   = TASK_META[t.type] || { href:'coreto-hub-v2.html', label:'タスク', cls:'badge-sk', action:'確認する' };
+      var isMine = (t.assignee === myId);
+      var aName  = t.assigneeName || (t.assignee || '未割当');
+      var aClr   = isMine ? 'var(--em)' : (t.assignee ? 'var(--muted)' : 'var(--am)');
+      var opts = HQ_MEMBERS_LIST.map(function(m){
+        return '<option value="' + m.id + '"' + (t.assignee===m.id?' selected':'') + '>' + m.name + '</option>';
+      }).join('');
+      var el = document.createElement('div');
+      el.className = 'task-item';
+      el.setAttribute('data-dynamic', t.id);
+      el.style.cssText = 'border-top:1px dashed var(--bd);cursor:pointer;border-left:3px solid ' + (isMine ? 'var(--em)' : 'var(--gold)');
+      el.innerHTML =
+        '<div class="task-prio ' + (isMine?'high':'mid') + '"></div>' +
+        '<div class="task-main" style="flex:1">' +
+          '<div class="task-name" style="display:flex;align-items:center;gap:6px">' +
+            '<span class="badge ' + meta.cls + '" style="font-size:9px;padding:2px 6px">' + meta.label + '</span>' +
+            (isMine ? '<span style="font-size:9px;color:var(--em);font-weight:700">自分</span>' : '') +
+            (t.title || t.type || '—') +
+          '</div>' +
+          '<div class="task-meta" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
+            '<span>' + (t.createdAt || '—') + '</span>' +
+            '<span style="color:' + aClr + ';font-weight:600">担当: ' + aName + '</span>' +
+            '<select onclick="event.stopPropagation()" data-task-id="' + t.id + '"' +
+              ' onchange="assignHQTask(this.dataset.taskId, this.value)"' +
+              ' style="font-size:10px;padding:2px 6px;border:1px solid var(--bd);border-radius:5px;font-family:Outfit,sans-serif;background:var(--cream);cursor:pointer">' +
+              '<option value="">割当先を変更</option>' +
+              opts +
+            '</select>' +
+          '</div>' +
+        '</div>' +
+        '<a href="' + meta.href + '" onclick="event.stopPropagation()"' +
+          ' style="flex-shrink:0;padding:6px 12px;background:' + (isMine?'var(--em)':'var(--navy)') + ';color:' + (isMine?'#fff':'var(--gold)') + ';border-radius:7px;font-size:11px;font-weight:700;text-decoration:none;font-family:Outfit,sans-serif;white-space:nowrap">' +
+          meta.action + '</a>';
+      el.addEventListener('click', function(){ window.location.href = meta.href; });
+      taskList.appendChild(el);
+    });
+    var cb = document.getElementById('hq-task-count');
+    if (cb && all.length > 0) { cb.textContent = all.length + '件'; cb.style.display = ''; }
+    var pb = document.querySelector('[data-kpi="pending"]');
+    if (pb && all.length > 0) pb.textContent = all.length + '件 承認待ち';
+  } catch(e) {}
+}
+
 window.addEventListener('DOMContentLoaded', () => {
   // 権限不足でリダイレクトされた場合の通知
   if (new URLSearchParams(location.search).get('unauthorized') === '1') {
@@ -3136,69 +3247,8 @@ window.addEventListener('DOMContentLoaded', () => {
     } catch(e) {}
   }, 250);
 
-  // 残-13: HQタスク一覧にlocalStorageの動的タスクを追加
-  setTimeout(() => {
-    const taskList = document.getElementById('hq-task-list');
-    if (!taskList) return;
-
-    // タスクtypeからリンク先・ラベルへのマップ
-    const TASK_META = {
-      contract_report: { href: 'coreto-contract-report-v2.html?tab=history', label: '成約報告', badge: '承認待ち', cls: 'badge-am', action: '承認する' },
-      contract_signed: { href: 'coreto-kyc-v2.html',                         label: '電子署名', badge: '確認待ち', cls: 'badge-sk', action: '確認する' },
-      kyc:             { href: 'coreto-kyc-v2.html',                         label: 'KYC審査', badge: '審査待ち', cls: 'badge-am', action: '審査する' },
-      hr_needs_hq:     { href: 'coreto-hr-matching-v2.html',                 label: 'HR案件',  badge: 'HQ対応',  cls: 'badge-vt', action: '対応する' },
-      itsetsu_hq:      { href: 'coreto-itsetsu-hq-v2.html',                 label: 'IT重説',  badge: '割当待ち', cls: 'badge-am', action: '割当する' },
-      line_hq_response:{ href: 'coreto-line-ai-v2.html',                    label: 'LINE',    badge: '要返答',  cls: 'badge-rd', action: '返答する' },
-      training_remind: { href: 'coreto-training-mgmt-v2.html',              label: '研修',    badge: 'リマインド', cls: 'badge-sk', action: '確認する' },
-    };
-
-    try {
-      const tasks = JSON.parse(localStorage.getItem('CORETO_HQ_TASKS') || '[]');
-      const reminders = JSON.parse(localStorage.getItem('CORETO_HR_REMINDERS') || '[]');
-      const allDynamic = [
-        ...tasks.map(t => ({ ...t })),
-        ...reminders.filter(r=>r.status==='pending').map(r => ({
-          id: r.id, type:'hr_needs_hq',
-          title: '在籍確認: ' + r.name + ' — ' + r.label,
-          createdAt: r.dueDate,
-        })),
-      ].slice(0, 8);
-
-      allDynamic.forEach(t => {
-        const meta = TASK_META[t.type] || { href: 'coreto-hub-v2.html', label: 'タスク', badge: '確認待ち', cls: 'badge-sk', action: '確認する' };
-        const el = document.createElement('div');
-        el.className = 'task-item';
-        el.style.cssText = 'border-top:1px dashed var(--bd);cursor:pointer;border-left:3px solid var(--gold)';
-        el.innerHTML =
-          '<div class="task-prio mid"></div>' +
-          '<div class="task-main" style="flex:1">' +
-            '<div class="task-name" style="display:flex;align-items:center;gap:6px">' +
-              '<span class="badge ' + meta.cls + '" style="font-size:9px;padding:2px 6px">' + meta.label + '</span>' +
-              (t.title || t.type || '—') +
-            '</div>' +
-            '<div class="task-meta">' + (t.createdAt || '—') + '</div>' +
-          '</div>' +
-          '<a href="' + meta.href + '" ' +
-            'style="flex-shrink:0;padding:6px 12px;background:var(--navy);color:var(--gold);border-radius:7px;' +
-            'font-size:11px;font-weight:700;text-decoration:none;font-family:Outfit,sans-serif;white-space:nowrap" ' +
-            'onclick="event.stopPropagation()">' +
-            meta.action +
-          '</a>';
-        // 行全体クリックでも同じページへ
-        el.addEventListener('click', function() { window.location.href = meta.href; });
-        taskList.appendChild(el);
-      });
-
-      // タスク件数バッジを更新
-      const countBadge = document.getElementById('hq-task-count');
-      if (countBadge && allDynamic.length > 0) {
-        countBadge.textContent = allDynamic.length + '件';
-        countBadge.style.display = '';
-      }
-      const badge = document.querySelector('[data-kpi="pending"]');
-      if (badge && allDynamic.length > 0) badge.textContent = allDynamic.length + '件 承認待ち';
-    } catch(e) {}
-  }, 200);
+  // 残-13: HQタスク一覧（グローバル関数で初回レンダリング）
+  setTimeout(function() { renderHQDynamicTasks(); }, 200);
 });
 
 // ── AI月次レポート（HQダッシュボード） ────────────────
