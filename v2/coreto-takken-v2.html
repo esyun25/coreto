@@ -745,7 +745,7 @@ function renderList(){
         ${tk.active ? `
         <div style="display:flex;gap:6px;flex-shrink:0">
           <button class="act-btn act-ghost" style="font-size:10px"
-            onclick="showToast('📧 ${tk.name} へメールを送信（デモ）')">📧</button>
+            onclick="sendTakkenReminder(this)" data-name="${tk.name}">📧</button>
           <button class="act-btn act-danger" onclick="openDismissModal('${tk.agId}')">
             🔓 専任解除
           </button>
@@ -834,7 +834,7 @@ function renderExpiry(){
               </div>
               ${exp.cls === 'danger' || exp.cls === 'warn' ? `
               <button class="act-btn act-ghost" style="font-size:10px;padding:5px 10px"
-                onclick="showToast('📧 更新リマインダーを送信しました（デモ）')">
+                onclick="sendTakkenReminder(this)">
                 📧 リマインド
               </button>` : ''}
             </div>`;
@@ -970,6 +970,23 @@ try {
   var additions = JSON.parse(localStorage.getItem('CORETO_TAKKEN_ADDITIONS') || '[]');
   if (additions.length) TAKKEN = TAKKEN.concat(additions);
 } catch(e) {}
+
+function sendTakkenReminder(btn) {
+  var row = btn.closest('[data-takken-id]') || btn.closest('tr') || btn.parentElement;
+  var name = row ? (row.querySelector('[data-name]')?.textContent || '宅建士') : '宅建士';
+  var lineToken = (window.LINE_CONFIG && window.LINE_CONFIG.ENABLED && window.LINE_CONFIG.AG_CHANNEL_TOKEN) || '';
+  if (lineToken) {
+    fetch('https://api.line.me/v2/bot/message/broadcast', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + lineToken },
+      body: JSON.stringify({ messages: [{ type: 'text', text: '【CORETO 宅建士証 更新リマインダー】\n' + name + ' 様\n\n宅建士証の更新期限が近づいています。\nお早めに更新手続きをお願いします。\n\n詳細はCOREBLDGシステムをご確認ください。' }] })
+    }).then(function(){ showToast('📧 ' + name + 'に更新リマインダーをLINE送信しました', 'em'); })
+     .catch(function(e){ showToast('⚠️ LINE送信エラー: ' + e.message, 'warn'); });
+  } else {
+    showToast('📧 更新リマインダーを送信しました（LINE未設定）', 'em');
+  }
+}
+
 window.addEventListener('DOMContentLoaded', () => {
   CNAV.init('takken');
   renderStats();

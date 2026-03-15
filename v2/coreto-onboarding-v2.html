@@ -862,7 +862,25 @@ function sendContractHQ(agentId, agentName) {
       agent.contractStatuses = { 'doc-ag': 'sent', 'doc-privacy': 'sent' };
     }
   }
-  showToast('☁️ ' + agentName + 'にクラウドサインで契約書を送付しました（デモ）');
+  // クラウドサイン送付（HQ操作）: localStorageに送付済み状態を記録
+  try {
+    var pending = JSON.parse(localStorage.getItem('CORETO_CONTRACT_SEND') || '{}');
+    pending[agentId] = { sentAt: new Date().toLocaleDateString('ja-JP'), sentBy: sessionStorage.getItem('coreto_name') || 'HQ', status: 'sent' };
+    localStorage.setItem('CORETO_CONTRACT_SEND', JSON.stringify(pending));
+  } catch(e) {}
+
+  // LINE通知（AGに送付通知）
+  var lineToken = (window.LINE_CONFIG && window.LINE_CONFIG.ENABLED && window.LINE_CONFIG.AG_CHANNEL_TOKEN) || '';
+  if (lineToken) {
+    fetch('https://api.line.me/v2/bot/message/broadcast', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + lineToken },
+      body: JSON.stringify({ messages: [{ type: 'text', text: '【CORETO 契約書送付】\n' + agentName + ' 様\n\nクラウドサインより業務委託契約書を送付しました。\nメールをご確認いただき、期限内に電子署名をお願いします。' }] })
+    }).catch(function(e){ console.warn('[LINE]', e); });
+    showToast('☁️ ' + agentName + 'にクラウドサインで契約書を送付しました（LINE通知済み）');
+  } else {
+    showToast('☁️ ' + agentName + 'にクラウドサインで契約書を送付しました');
+  }
   // 表示を更新
   setTimeout(() => renderSection(), 300);
 }

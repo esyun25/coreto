@@ -655,7 +655,21 @@ function sendInviteMail() {
   a.inviteSent = true;
   closeMailModal();
   completeHQTask('SIG-' + (_mailTargetId||''));
-  showToast('📧 入会案内メールを送信しました（デモ）');
+
+  // LINE通知送信（LINE_CONFIGが設定済みの場合）
+  var lineToken = (window.LINE_CONFIG && window.LINE_CONFIG.ENABLED && window.LINE_CONFIG.AG_CHANNEL_TOKEN) || '';
+  if (lineToken) {
+    var subject = document.getElementById('mail-subject') ? document.getElementById('mail-subject').value : '入会案内';
+    var msgText = '【CORETO 入会案内】\n' + a.lastName + ' ' + a.firstName + ' 様\n\n' + subject + '\n\nオンボーディングページへのURLをご確認ください。';
+    fetch('https://api.line.me/v2/bot/message/broadcast', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + lineToken },
+      body: JSON.stringify({ messages: [{ type: 'text', text: msgText }] })
+    }).catch(function(e){ console.warn('[LINE]', e); });
+    showToast('📧 入会案内をLINEで送信しました');
+  } else {
+    showToast('📧 入会案内を送信しました（LINE未設定のためログのみ）');
+  }
 
   // ドロワーを再描画
   openDrawer(_mailTargetId);

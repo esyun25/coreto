@@ -443,6 +443,42 @@ html, body { background:#FFFFFF !important; }
               </div>`).join('')}
           </div>
         </div>
+
+        <!-- ══ LINE通知設定 ══ -->
+        <div class="issue-card" id="line-config-card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+            <div class="issue-title" style="margin:0">🔧 LINE通知 API設定</div>
+            <button id="line-enabled-btn" onclick="toggleLineEnabled()"
+              style="padding:5px 16px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:none;font-family:'Outfit',sans-serif;transition:.15s">—</button>
+          </div>
+          <div style="background:var(--sk-bg);border:1px solid rgba(2,132,199,.2);border-radius:8px;padding:10px 14px;font-size:11px;color:var(--sk);line-height:1.7;margin-bottom:16px">
+            ℹ️ <strong>LINE Messaging API</strong> の Channel Access Token を設定してください。<br>
+            LINE Developersコンソール → チャンネル → Messaging API → Channel access token (long-lived)
+          </div>
+          <div style="margin-bottom:14px">
+            <label style="font-size:11px;font-weight:700;color:var(--muted);display:block;margin-bottom:5px">AG_CHANNEL_TOKEN（AGへのプッシュ通知用）</label>
+            <input id="line-ag-token" type="text" placeholder="Channel Access Token を貼り付け"
+              style="width:100%;padding:9px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:12px;font-family:monospace;outline:none;box-sizing:border-box">
+            <div style="font-size:10px;color:var(--muted);margin-top:4px">apply / rental / barcode-scan / contract-report 等のLINE通知に使用</div>
+          </div>
+          <div style="margin-bottom:16px">
+            <label style="font-size:11px;font-weight:700;color:var(--muted);display:block;margin-bottom:5px">HQ_CHANNEL_TOKEN（HQ内部通知用・任意）</label>
+            <input id="line-hq-token" type="text" placeholder="HQ通知用チャンネルのトークン（省略可）"
+              style="width:100%;padding:9px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:12px;font-family:monospace;outline:none;box-sizing:border-box">
+          </div>
+          <div style="display:flex;gap:10px;align-items:center">
+            <button onclick="saveLineConfig()"
+              style="padding:9px 20px;background:var(--navy);color:var(--gold);border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif">
+              💾 保存する
+            </button>
+            <button onclick="testLineConfig()"
+              style="padding:9px 16px;background:transparent;border:1.5px solid var(--bd);border-radius:9px;font-size:11px;font-weight:600;cursor:pointer;color:var(--muted);font-family:'Outfit',sans-serif">
+              📡 テスト送信
+            </button>
+            <span id="line-save-msg" style="font-size:11px;color:var(--em);display:none">✅ 保存しました</span>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>
@@ -461,7 +497,74 @@ html, body { background:#FFFFFF !important; }
 let lastCode = '';
 
 // LINE WORKS 選択時にノート表示
+
+// ══ LINE_CONFIG 設定管理 ══════════════════════════════
+var LS_LINE_KEY = 'CORETO_LINE_CONFIG';
+
+function loadLineConfig() {
+  try { return JSON.parse(localStorage.getItem(LS_LINE_KEY) || '{}'); } catch(e) { return {}; }
+}
+
+function initLineConfigUI() {
+  var cfg = loadLineConfig();
+  var btn = document.getElementById('line-enabled-btn');
+  btn.textContent      = cfg.ENABLED ? '✅ ON' : '⏸ OFF';
+  btn.style.background = cfg.ENABLED ? 'var(--em)' : 'var(--cream2)';
+  btn.style.color      = cfg.ENABLED ? '#fff' : 'var(--muted)';
+  btn.style.border     = cfg.ENABLED ? 'none' : '1.5px solid var(--bd)';
+  var agEl = document.getElementById('line-ag-token');
+  var hqEl = document.getElementById('line-hq-token');
+  if (agEl) agEl.value = cfg.AG_CHANNEL_TOKEN || '';
+  if (hqEl) hqEl.value = cfg.HQ_CHANNEL_TOKEN || '';
+  // window.LINE_CONFIGを即時反映
+  window.LINE_CONFIG = { AG_CHANNEL_TOKEN: cfg.AG_CHANNEL_TOKEN || '', HQ_CHANNEL_TOKEN: cfg.HQ_CHANNEL_TOKEN || '', ENABLED: !!cfg.ENABLED };
+}
+
+function toggleLineEnabled() {
+  var cfg = loadLineConfig();
+  cfg.ENABLED = !cfg.ENABLED;
+  localStorage.setItem(LS_LINE_KEY, JSON.stringify(cfg));
+  initLineConfigUI();
+  showToast(cfg.ENABLED ? '✅ LINE通知をONにしました' : '⏸ LINE通知をOFFにしました', cfg.ENABLED ? 'em' : 'warn');
+}
+
+function saveLineConfig() {
+  var cfg = loadLineConfig();
+  var agEl = document.getElementById('line-ag-token');
+  var hqEl = document.getElementById('line-hq-token');
+  cfg.AG_CHANNEL_TOKEN = agEl ? agEl.value.trim() : '';
+  cfg.HQ_CHANNEL_TOKEN = hqEl ? hqEl.value.trim() : '';
+  localStorage.setItem(LS_LINE_KEY, JSON.stringify(cfg));
+  window.LINE_CONFIG = { AG_CHANNEL_TOKEN: cfg.AG_CHANNEL_TOKEN, HQ_CHANNEL_TOKEN: cfg.HQ_CHANNEL_TOKEN, ENABLED: !!cfg.ENABLED };
+  var msg = document.getElementById('line-save-msg');
+  if (msg) { msg.style.display = ''; setTimeout(function(){ msg.style.display = 'none'; }, 3000); }
+  showToast('✅ LINE API設定を保存しました', 'em');
+}
+
+function testLineConfig() {
+  var cfg = loadLineConfig();
+  var token = cfg.AG_CHANNEL_TOKEN;
+  if (!token || token.length < 20) { showToast('⚠️ AG_CHANNEL_TOKENを入力してください', 'warn'); return; }
+  // LINE Broadcast APIでテスト送信
+  fetch('https://api.line.me/v2/bot/message/broadcast', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ messages: [{ type:'text', text:'🔔 COREBLDGシステム — LINE通知テスト\n接続確認が完了しました。' }] })
+  }).then(function(r){
+    if (r.ok || r.status === 200) showToast('✅ テスト送信成功', 'em');
+    else showToast('⚠️ 送信に失敗しました（ステータス: ' + r.status + '）', 'warn');
+  }).catch(function(e){ showToast('⚠️ 送信エラー: ' + e.message, 'warn'); });
+}
+
+// hub-v2.html等がLINE_CONFIGを参照できるようlocalStorageから起動時に反映
+(function() {
+  var cfg = {};
+  try { cfg = JSON.parse(localStorage.getItem('CORETO_LINE_CONFIG') || '{}'); } catch(e) {}
+  window.LINE_CONFIG = { AG_CHANNEL_TOKEN: cfg.AG_CHANNEL_TOKEN || '', HQ_CHANNEL_TOKEN: cfg.HQ_CHANNEL_TOKEN || '', ENABLED: !!cfg.ENABLED };
+})();
+
 document.addEventListener('DOMContentLoaded', function() {
+  initLineConfigUI();
   const sel = document.getElementById('code-line');
   if (sel) {
     sel.addEventListener('change', function() {
