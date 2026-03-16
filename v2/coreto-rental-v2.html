@@ -529,6 +529,10 @@ html, body { background:#FFFFFF !important; }
             onclick="openMeisaiUpload()">
             💴 初期費用明細をアップロード
           </button>
+          <button class="action-btn secondary" id="receipt-view-btn" style="display:none"
+            onclick="(function(){ var p=new URLSearchParams(location.search); var cid=p.get('caseId')||'RENT-0194'; var cn=p.get('clientName')||''; window.open('coreto-hq-receipt-v2.html?caseId='+cid+(cn?'&clientName='+encodeURIComponent(cn):''),'_blank'); })()">
+            🧾 請求書を確認・印刷
+          </button>
           <div id="meisai-status" style="display:none;font-size:10px;color:var(--em);padding:4px 8px;background:var(--em-bg);border-radius:5px;margin-top:2px">✅ 明細書アップロード済み</div>
           <!-- 初期費用明細チェックはHQ専用のためAGナビから削除 -->
           <button class="action-btn warn" onclick="(function(){ var p=new URLSearchParams(location.search); var cid=p.get('caseId')||'RENT-0194'; var cn=p.get('clientName')||''; window.location.href='coreto-contract-report-v2.html?caseId='+cid+(cn?'&clientName='+cn:''); })()">🏆 成約を報告する</button>
@@ -1031,6 +1035,14 @@ function submitMeisai() {
         var btnEl = document.getElementById('meisai-upload-btn');
         if (statusEl) statusEl.style.display = '';
         if (btnEl) btnEl.textContent = '💴 初期費用明細 ✅ 済み';
+      }
+    } catch(e) {}
+    // HQが照合完了済みなら「請求書を確認・印刷」ボタンを表示
+    try {
+      var checks = JSON.parse(localStorage.getItem('CORETO_INVOICE_CHECK') || '{}');
+      if (checks[cid] && checks[cid].status === 'ok') {
+        var receiptBtn = document.getElementById('receipt-view-btn');
+        if (receiptBtn) receiptBtn.style.display = '';
       }
     } catch(e) {}
   });

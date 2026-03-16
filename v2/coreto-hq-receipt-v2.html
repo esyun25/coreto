@@ -332,7 +332,8 @@ body, input, select, textarea, button { font-family:'Outfit','Noto Sans JP',sans
 <script>
 (function(){
   var _role = sessionStorage.getItem('coreto_role') || '';
-  var _allowed = ["hq"];
+  var _allowed = ["hq", "re_ag", "hr_ag", "pt"];
+  var IS_HQ_RECEIPT = _role === 'hq';
   if (_allowed.length && !_allowed.includes(_role)) {
     location.replace('coreto-hub-v2.html?unauthorized=1');
   }
@@ -501,6 +502,33 @@ window.addEventListener('DOMContentLoaded', () => {
   generateDoc();
   CNAV.init('receipt');
   autoFillFromCase();
+
+  // AGはフォーム入力不可（閲覧・印刷のみ）
+  if (!IS_HQ_RECEIPT) {
+    // 入力欄を全て読み取り専用に
+    document.querySelectorAll('.form-input-inv, select.form-input-inv').forEach(function(el) {
+      el.readOnly = true;
+      el.disabled = true;
+      el.style.background = '#F8F9FA';
+      el.style.cursor = 'default';
+    });
+    // 行追加ボタンを非表示
+    var addBtn = document.querySelector('[onclick="addItem()"]');
+    if (addBtn) addBtn.style.display = 'none';
+    // 発行モードボタンを非表示
+    var tbActions = document.querySelector('.tb-act');
+    if (tbActions) {
+      tbActions.innerHTML = '<button class="btn btn-sm" style="background:var(--em);color:#fff;border:none" onclick="window.print()">📥 PDFダウンロード・印刷</button>';
+    }
+    // 閲覧専用バナーを表示
+    var page = document.querySelector('.page');
+    if (page) {
+      var banner = document.createElement('div');
+      banner.style.cssText = 'background:var(--sk-bg);border:1px solid rgba(2,132,199,.2);border-radius:8px;padding:10px 14px;font-size:11px;color:var(--sk);margin-bottom:16px';
+      banner.innerHTML = 'ℹ️ この請求書はHQが発行しました。印刷またはPDF保存してクライアントにお渡しください。';
+      page.insertBefore(banner, page.firstChild);
+    }
+  }
 });
 </script>
 <script src="coreto-nav-v2.js"></script>
