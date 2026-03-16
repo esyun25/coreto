@@ -388,6 +388,23 @@ html, body { background:#FFFFFF !important; }
         </div>
       </div>
 
+
+      <!-- 内見状況セクション -->
+      <div class="remit-section" id="showing-section">
+        <div class="remit-head" style="cursor:pointer" onclick="toggleShowingSection()">
+          <div class="remit-head-title">📅 内見状況</div>
+          <span class="badge" id="showing-badge" style="background:var(--sk-bg);color:var(--sk)">読込中</span>
+          <span id="showing-chevron" style="margin-left:auto;font-size:12px;color:var(--faint);transition:transform .2s">▼</span>
+        </div>
+        <div class="remit-body" id="showing-body">
+          <div id="showing-list-inline" style="margin-bottom:12px"></div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-primary btn-sm" style="flex:1" onclick="openAddShowingModal()">＋ 内見を追加</button>
+            <button class="btn btn-ghost btn-sm" onclick="(function(){ var p=new URLSearchParams(location.search); var cid=p.get('caseId')||'RENT-0194'; var cn=p.get('clientName')||''; window.location.href='coreto-showing-v2.html?caseId='+cid+(cn?'&client='+encodeURIComponent(cn):''); })()">内見管理を開く →</button>
+          </div>
+        </div>
+      </div>
+
       <!-- Remittance Section -->
       <div class="remit-section" id="remit-section">
         <div class="remit-head">
@@ -1019,6 +1036,9 @@ window.addEventListener('DOMContentLoaded', function() {
   // UX-1: localStorageからステータスを取得してパイプラインを動的レンダリング
   const caseStatus = getCaseStatus(caseId);
   renderPipeline(caseId, caseStatus.step);
+
+  // 内見状況をインラインで読み込み
+  if (typeof loadShowingsInline === 'function') loadShowingsInline();
 
   // 送金期限を自動設定（明細 or 入居予定日から計算）
   (function() {
@@ -1679,5 +1699,374 @@ window.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
+<script>
+
+// ─── 内見状況インライン表示 ────────────────────────────
+var _showingSectionOpen = true;
+
+function toggleShowingSection() {
+  _showingSectionOpen = !_showingSectionOpen;
+  var body = document.getElementById('showing-body');
+  var chev = document.getElementById('showing-chevron');
+  if (body) body.style.display = _showingSectionOpen ? '' : 'none';
+  if (chev) chev.style.transform = _showingSectionOpen ? '' : 'rotate(-90deg)';
+}
+
+function loadShowingsInline() {
+  var p   = new URLSearchParams(location.search);
+  var cid = p.get('caseId') || 'RENT-0194';
+  var key = 'CORETO_SHOWINGS_' + cid;
+  var list = [];
+  try {
+    var raw = localStorage.getItem(key);
+    if (raw) list = JSON.parse(raw);
+  } catch(e) {}
+
+  // デモデータ（初回のみ）
+  if (!list.length && cid === 'RENT-0194') {
+    list = [
+      {id:'SH-001', case:cid, client:'田中 優子', prop:'パークタワー三田 302',   addr:'港区三田3丁目',     date:'2026-03-14', time:'14:00', method:'現地案内（AG同行）', companion:'管理会社 田村様', status:'完了', result:'申込意向あり', note:'2LDKを大変気に入っていただいた。'},
+      {id:'SH-002', case:cid, client:'田中 優子', prop:'グランドメゾン赤坂 805', addr:'港区赤坂2丁目',     date:'2026-03-14', time:'16:00', method:'現地案内（AG同行）', companion:'',              status:'完了', result:'見送り',       note:'家賃が予算オーバー。'},
+      {id:'SH-003', case:cid, client:'田中 優子', prop:'リバーサイド麻布 1204',  addr:'港区麻布十番1丁目', date:'2026-03-21', time:'13:00', method:'現地案内（AG同行）', companion:'管理会社 山田様', status:'確定', result:'',            note:'2番手申込みの可能性あり。'},
+    ];
+    try { localStorage.setItem(key, JSON.stringify(list)); } catch(e) {}
+  }
+
+  var badge = document.getElementById('showing-badge');
+  var upcoming = list.filter(function(s){ return s.status === '確定'; });
+  var done     = list.filter(function(s){ return s.status === '完了'; });
+  if (badge) {
+    if (!list.length) { badge.textContent = '未登録'; badge.style.background='var(--cream2)'; badge.style.color='var(--muted)'; }
+    else if (upcoming.length) { badge.textContent = '予定 ' + upcoming.length + '件'; badge.style.background='var(--sk-bg)'; badge.style.color='var(--sk)'; }
+    else { badge.textContent = '完了 ' + done.length + '件'; badge.style.background='var(--em-bg)'; badge.style.color='var(--em)'; }
+  }
+
+  var el = document.getElementById('showing-list-inline');
+  if (!el) return;
+  // イベントデリゲーション（re-attachのため毎回セット）
+  el.onclick = function(e) {
+    var btn = e.target.closest('.sh-result-btn');
+    if (btn) openInlineResultModal(btn.dataset.showingId);
+  };
+  if (!list.length) {
+    el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);font-size:12px">内見がまだ登録されていません</div>';
+    return;
+  }
+
+  el.innerHTML = list.map(function(s) {
+    var doneStyle = s.status === '完了' ? 'opacity:.8;' : '';
+    var d = s.date ? new Date(s.date) : null;
+    var dateStr = d ? (d.getMonth()+1) + '/' + d.getDate() + '（' + ['日','月','火','水','木','金','土'][d.getDay()] + '）' : '—';
+    var resultHtml = s.result ?
+      (s.result === '申込意向あり' ? '<span class="badge" style="background:var(--em-bg);color:var(--em);font-size:9px">' + s.result + '</span>' :
+       s.result === '2番手申込'   ? '<span class="badge" style="background:var(--am-bg);color:var(--am);font-size:9px">' + s.result + '</span>' :
+       s.result === '見送り'      ? '<span class="badge" style="background:var(--cream2);color:var(--muted);font-size:9px">' + s.result + '</span>' :
+       s.result === '検討中'      ? '<span class="badge" style="background:var(--sk-bg);color:var(--sk);font-size:9px">' + s.result + '</span>' :
+       '<span class="badge" style="background:var(--cream2);color:var(--muted);font-size:9px">' + s.result + '</span>') :
+      '<span class="badge" style="background:var(--sk-bg);color:var(--sk);font-size:9px">確定</span>';
+
+        var actionBtn = s.status !== '完了'
+      ? '<button data-sid=\"' + s.id + '\" class=\"sh-result-btn\" style=\"padding:4px 10px;background:var(--navy);color:var(--gold);border:none;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;font-family:Outfit,sans-serif;white-space:nowrap\">結果を記録</button>'
+      : '';
+
+    return '<div style="display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid var(--bd);' + doneStyle + '">' +
+      '<div style="flex-shrink:0;width:38px;text-align:center;background:' + (s.status==='完了'?'var(--cream2)':'var(--sk-bg)') + ';border-radius:7px;padding:4px 0">' +
+        '<div style="font-size:16px;font-weight:700;color:' + (s.status==='完了'?'var(--muted)':'var(--sk)') + '">' + (d ? d.getDate() : '—') + '</div>' +
+        '<div style="font-size:9px;color:var(--faint)">' + (d ? (d.getMonth()+1) + '月' : '') + '</div>' +
+      '</div>' +
+      '<div style="flex:1;min-width:0">' +
+        '<div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:2px">' + s.prop + '</div>' +
+        '<div style="font-size:11px;color:var(--muted)">' + dateStr + ' ' + s.time + (s.companion ? ' ／ ' + s.companion : '') + '</div>' +
+        (s.note ? '<div style="font-size:11px;color:var(--faint);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + s.note + '</div>' : '') +
+      '</div>' +
+      '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">' +
+        resultHtml + actionBtn +
+      '</div>' +
+    '</div>';
+  }).join('') + '<div style="border-bottom:none"></div>';
+}
+
+// ─── 結果記録モーダル（rental-v2インライン）────────────
+function openInlineResultModal(showingId) {
+  var cid = (new URLSearchParams(location.search)).get('caseId') || 'RENT-0194';
+  var key = 'CORETO_SHOWINGS_' + cid;
+  var list = [];
+  try { list = JSON.parse(localStorage.getItem(key) || '[]'); } catch(e) {}
+  var s = list.find(function(x){ return x.id === showingId; });
+  if (!s) return;
+
+  var existing = document.getElementById('inline-result-overlay');
+  if (existing) existing.remove();
+
+  var overlay = document.createElement('div');
+  overlay.id = 'inline-result-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.onclick = function(e){ if(e.target===overlay) overlay.remove(); };
+
+  var d = s.date ? new Date(s.date) : null;
+  var days = ['日','月','火','水','木','金','土'];
+  var dateStr = d ? (d.getMonth()+1)+'/'+d.getDate()+'（'+days[d.getDay()]+'）' : '—';
+
+  var modal = document.createElement('div');
+  modal.style.cssText = 'background:#fff;border-radius:14px;width:100%;max-width:460px;font-family:Outfit,sans-serif';
+
+  // ヘッダー
+  var head = document.createElement('div');
+  head.style.cssText = 'padding:16px 22px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between';
+  var hLeft = document.createElement('div');
+  var hTitle = document.createElement('div');
+  hTitle.style.cssText = 'font-size:15px;font-weight:700;color:var(--navy)';
+  hTitle.textContent = s.prop;
+  var hSub = document.createElement('div');
+  hSub.style.cssText = 'font-size:11px;color:var(--muted);margin-top:2px';
+  hSub.textContent = dateStr + ' ' + s.time + ' ／ ' + s.client;
+  hLeft.appendChild(hTitle); hLeft.appendChild(hSub);
+  var hClose = document.createElement('button');
+  hClose.style.cssText = 'background:none;border:none;font-size:18px;cursor:pointer;color:var(--muted)';
+  hClose.textContent = '✕';
+  hClose.onclick = function(){ overlay.remove(); };
+  head.appendChild(hLeft); head.appendChild(hClose);
+  modal.appendChild(head);
+
+  // ボディ
+  var body = document.createElement('div');
+  body.style.cssText = 'padding:20px 22px';
+
+  var sectionLabel = document.createElement('div');
+  sectionLabel.style.cssText = 'font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px';
+  sectionLabel.textContent = '📋 内見結果を記録';
+  body.appendChild(sectionLabel);
+
+  var sel = document.createElement('select');
+  sel.id = 'ir-result';
+  sel.style.cssText = 'width:100%;padding:10px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:13px;font-family:Outfit,sans-serif;outline:none;background:#fff;margin-bottom:12px';
+  sel.onchange = function(){ onInlineResultChange(this.value); };
+  [['','結果を選択してください'],['申込意向あり','✅ 申込意向あり — この物件に申し込む'],['2番手申込','📋 2番手で申込み — キャンセル待ち'],['検討中','🤔 検討中 — 他物件と比較・追加内見予定'],['見送り','❌ 見送り — この物件には申込しない']].forEach(function(opt){
+    var o = document.createElement('option'); o.value=opt[0]; o.textContent=opt[1]; sel.appendChild(o);
+  });
+  body.appendChild(sel);
+
+  var extraArea = document.createElement('div');
+  extraArea.id = 'ir-extra';
+  extraArea.style.marginBottom = '12px';
+  body.appendChild(extraArea);
+
+  var ta = document.createElement('textarea');
+  ta.id = 'ir-note';
+  ta.placeholder = 'コメント・次のアクション（任意）';
+  ta.style.cssText = 'width:100%;padding:10px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:12px;font-family:Outfit,sans-serif;resize:none;height:64px;outline:none;margin-bottom:14px;box-sizing:border-box';
+  ta.value = s.note || '';
+  body.appendChild(ta);
+
+  var hidInput = document.createElement('input');
+  hidInput.type = 'hidden'; hidInput.id = 'ir-showing-id'; hidInput.value = showingId;
+  body.appendChild(hidInput);
+
+  var submitBtn = document.createElement('button');
+  submitBtn.style.cssText = 'width:100%;padding:11px;background:var(--navy);color:var(--gold);border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:Outfit,sans-serif';
+  submitBtn.textContent = '✅ 結果を記録する';
+  submitBtn.onclick = submitInlineResult;
+  body.appendChild(submitBtn);
+
+  modal.appendChild(body);
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+}
+
+
+function onInlineResultChange(val) {
+  var area = document.getElementById('ir-extra');
+  if (!area) return;
+  if (val === '申込意向あり') {
+    area.innerHTML = '<div style="background:var(--em-bg);border:1px solid rgba(5,150,105,.2);border-radius:8px;padding:10px 13px;font-size:11px;color:var(--em)">✅ 記録後、書類送付管理へ移動して申込書類を揃えてください。</div>';
+  } else if (val === '2番手申込') {
+    area.innerHTML = '<div style="background:var(--am-bg);border:1px solid rgba(217,119,6,.2);border-radius:8px;padding:10px 13px;font-size:11px;color:var(--am)">⚠️ 1番手キャンセル待ちで申込書を提出します。HQに連絡してください。</div>';
+  } else if (val === '検討中') {
+    area.innerHTML = '<div style="background:var(--sk-bg);border:1px solid rgba(2,132,199,.15);border-radius:8px;padding:10px 13px;font-size:11px;color:var(--sk)">ℹ️ 「＋ 内見を追加」から別物件の内見を追加してください。</div>';
+  } else {
+    area.innerHTML = '';
+  }
+}
+
+function submitInlineResult() {
+  var result    = document.getElementById('ir-result')?.value;
+  var note      = document.getElementById('ir-note')?.value || '';
+  var showingId = document.getElementById('ir-showing-id')?.value;
+  if (!result) { if(typeof showToast==='function') showToast('結果を選択してください','warn'); return; }
+
+  var cid = (new URLSearchParams(location.search)).get('caseId') || 'RENT-0194';
+  var key = 'CORETO_SHOWINGS_' + cid;
+  var list = [];
+  try { list = JSON.parse(localStorage.getItem(key) || '[]'); } catch(e) {}
+  var idx = list.findIndex(function(x){ return x.id === showingId; });
+  if (idx >= 0) {
+    list[idx].status = '完了';
+    list[idx].result = result;
+    list[idx].note   = note;
+    try { localStorage.setItem(key, JSON.stringify(list)); } catch(e) {}
+  }
+
+  document.getElementById('inline-result-overlay')?.remove();
+  loadShowingsInline();
+
+  if (typeof showToast === 'function') showToast('✅ 内見結果を記録しました', 'em');
+
+  if ((result === '申込意向あり' || result === '2番手申込') && cid) {
+    if (typeof coretoConfirm === 'function') {
+      coretoConfirm({
+        title:'結果を記録しました',
+        message:'申込書類の収集へ進みますか？',
+        detail:'申込書類管理で必要書類を揃えてください。',
+        okLabel:'申込書類管理へ →',
+        danger:false,
+        onOk: function(){ window.location.href = 'coreto-screening-v2.html?caseId=' + encodeURIComponent(cid); }
+      });
+    }
+  }
+}
+
+// ─── 内見追加モーダル（rental-v2インライン）────────────
+function openAddShowingModal() {
+  var p   = new URLSearchParams(location.search);
+  var cid = p.get('caseId') || 'RENT-0194';
+  var cn  = p.get('clientName') || '';
+  var detail = {};
+  try { detail = JSON.parse(localStorage.getItem('CORETO_CASE_DETAIL_' + cid) || '{}'); } catch(e) {}
+
+  var existing = document.getElementById('add-showing-overlay');
+  if (existing) existing.remove();
+
+  var overlay = document.createElement('div');
+  overlay.id = 'add-showing-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.onclick = function(e){ if(e.target===overlay) overlay.remove(); };
+
+  var modal = document.createElement('div');
+  modal.style.cssText = 'background:#fff;border-radius:14px;width:100%;max-width:500px;max-height:90vh;overflow-y:auto;font-family:Outfit,sans-serif';
+
+  // ヘッダー
+  var head = document.createElement('div');
+  head.style.cssText = 'padding:16px 22px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff';
+  var hTitle = document.createElement('div');
+  hTitle.style.cssText = 'font-size:14px;font-weight:700;color:var(--navy)';
+  hTitle.textContent = '📅 内見を追加';
+  var hClose = document.createElement('button');
+  hClose.style.cssText = 'background:none;border:none;font-size:18px;cursor:pointer;color:var(--muted)';
+  hClose.textContent = '✕';
+  hClose.onclick = function(){ overlay.remove(); };
+  head.appendChild(hTitle); head.appendChild(hClose);
+  modal.appendChild(head);
+
+  // ボディ
+  var body = document.createElement('div');
+  body.style.cssText = 'padding:20px 22px';
+
+  var grid = document.createElement('div');
+  grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px';
+
+  function mkField(id, label, type, placeholder, val) {
+    var wrap = document.createElement('div');
+    var lbl  = document.createElement('label');
+    lbl.style.cssText = 'font-size:10px;font-weight:700;color:var(--muted);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.3px';
+    lbl.textContent = label;
+    var inp = document.createElement('input');
+    inp.id = id; inp.type = type; inp.placeholder = placeholder; inp.value = val||'';
+    inp.style.cssText = 'width:100%;padding:9px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:13px;font-family:Outfit,sans-serif;outline:none;box-sizing:border-box';
+    wrap.appendChild(lbl); wrap.appendChild(inp);
+    return wrap;
+  }
+
+  grid.appendChild(mkField('as-prop', '物件名・部屋番号', 'text', 'パークタワー三田 302', detail.propName||''));
+  grid.appendChild(mkField('as-addr', '物件住所',         'text', '港区三田3丁目XX-XX',  detail.propAddr||''));
+  grid.appendChild(mkField('as-date', '内見日',           'date', '', ''));
+  grid.appendChild(mkField('as-time', '時間',             'time', '', '14:00'));
+  grid.appendChild(mkField('as-comp', '同行者',           'text', '管理会社担当者名など', ''));
+
+  // 内見方法select
+  var methodWrap = document.createElement('div');
+  var methodLbl  = document.createElement('label');
+  methodLbl.style.cssText = 'font-size:10px;font-weight:700;color:var(--muted);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.3px';
+  methodLbl.textContent = '内見方法';
+  var methodSel = document.createElement('select');
+  methodSel.id = 'as-method';
+  methodSel.style.cssText = 'width:100%;padding:9px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:13px;font-family:Outfit,sans-serif;outline:none';
+  ['現地案内（AG同行）','オンライン内見'].forEach(function(o){ var opt=document.createElement('option'); opt.textContent=o; methodSel.appendChild(opt); });
+  methodWrap.appendChild(methodLbl); methodWrap.appendChild(methodSel);
+  grid.appendChild(methodWrap);
+  body.appendChild(grid);
+
+  // 注意書き
+  var warn = document.createElement('div');
+  warn.style.cssText = 'background:var(--am-bg);border:1px solid rgba(217,119,6,.2);border-radius:7px;padding:8px 12px;font-size:11px;color:var(--am);margin-bottom:12px';
+  warn.innerHTML = '⚠️ <strong>セルフ内見（鍵貸出）は禁止</strong>です。';
+  body.appendChild(warn);
+
+  // メモ
+  var noteLbl = document.createElement('label');
+  noteLbl.style.cssText = 'font-size:10px;font-weight:700;color:var(--muted);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.3px';
+  noteLbl.textContent = 'メモ';
+  var noteTa = document.createElement('textarea');
+  noteTa.id = 'as-note';
+  noteTa.placeholder = '集合場所・注意事項など';
+  noteTa.style.cssText = 'width:100%;padding:9px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:12px;font-family:Outfit,sans-serif;resize:none;height:56px;outline:none;box-sizing:border-box';
+  body.appendChild(noteLbl); body.appendChild(noteTa);
+
+  // ボタン
+  var btnRow = document.createElement('div');
+  btnRow.style.cssText = 'display:flex;gap:10px;margin-top:14px';
+  var saveBtn = document.createElement('button');
+  saveBtn.style.cssText = 'flex:2;padding:10px;background:var(--navy);color:var(--gold);border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:Outfit,sans-serif';
+  saveBtn.textContent = '登録する';
+  var clientName = detail.client || (cn ? decodeURIComponent(cn) : '');
+  saveBtn.onclick = function(){ saveNewShowing(cid, clientName); };
+  var cancelBtn = document.createElement('button');
+  cancelBtn.style.cssText = 'flex:1;padding:10px;background:transparent;border:1.5px solid var(--bd);border-radius:9px;font-size:12px;color:var(--muted);cursor:pointer;font-family:Outfit,sans-serif';
+  cancelBtn.textContent = 'キャンセル';
+  cancelBtn.onclick = function(){ overlay.remove(); };
+  btnRow.appendChild(saveBtn); btnRow.appendChild(cancelBtn);
+  body.appendChild(btnRow);
+
+  modal.appendChild(body);
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+}
+
+
+function field(id, label, type, placeholder, val) {
+  return '<div>' +
+    '<label style="font-size:10px;font-weight:700;color:var(--muted);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.3px">' + label + '</label>' +
+    '<input id="' + id + '" type="' + type + '" placeholder="' + placeholder + '" value="' + val + '" style="width:100%;padding:9px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:13px;font-family:Outfit,sans-serif;outline:none;box-sizing:border-box">' +
+  '</div>';
+}
+
+function saveNewShowing(cid, clientName) {
+  var prop = document.getElementById('as-prop')?.value.trim();
+  var date = document.getElementById('as-date')?.value;
+  var time = document.getElementById('as-time')?.value;
+  if (!prop || !date || !time) { if(typeof showToast==='function') showToast('物件名・日付・時間は必須です','warn'); return; }
+
+  var key  = 'CORETO_SHOWINGS_' + cid;
+  var list = [];
+  try { list = JSON.parse(localStorage.getItem(key) || '[]'); } catch(e) {}
+  var newS = {
+    id: 'SH-' + Date.now().toString().slice(-6),
+    case: cid, client: clientName,
+    prop: prop,
+    addr: document.getElementById('as-addr')?.value.trim() || '',
+    date: date, time: time,
+    companion: document.getElementById('as-comp')?.value.trim() || '',
+    method: document.getElementById('as-method')?.value || '現地案内（AG同行）',
+    note: document.getElementById('as-note')?.value.trim() || '',
+    status: '確定', result: '',
+  };
+  list.unshift(newS);
+  try { localStorage.setItem(key, JSON.stringify(list)); } catch(e) {}
+
+  document.getElementById('add-showing-overlay')?.remove();
+  loadShowingsInline();
+  if (typeof showToast==='function') showToast('✅ 内見を追加しました', 'em');
+}
+
+</script>
 </body>
 </html>
