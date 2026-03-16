@@ -288,10 +288,7 @@ function renderNew(){
         <div style="background:var(--am-bg);border:1px solid rgba(217,119,6,.2);border-radius:7px;padding:9px 13px;font-size:11px;color:var(--am);margin-bottom:14px">
           ⚠️ <strong>セルフ内見（鍵貸出）は禁止</strong>です。必ずAGが同行してください。
         </div>
-        <div class="field-row">
-          <div class="field"><label>AG携帯番号</label><input id="sh-mobile" type="tel" placeholder="090-XXXX-XXXX（内見依頼書に印刷）"></div>
-          <div class="field"><label>AG宅建士証番号</label><input id="sh-license" placeholder="第XXXXXX号（任意）"></div>
-        </div>
+
         <div class="field"><label>備考</label><textarea id="sh-note" placeholder="集合場所、駐車場の有無、２番手での申込みの可能性など"></textarea></div>
       </div>
     </div>
@@ -325,11 +322,18 @@ function printShowingRequest() {
     }
   } catch(e) {}
 
-  var agName    = sessionStorage.getItem('coreto_name') || '担当者名';
-  var agId      = sessionStorage.getItem('coreto_user_id') || '';
-  // 内見登録フォームのAG携帯番号欄から取得（入力済みの場合）
-  var agMobile  = document.getElementById('sh-mobile')?.value.trim() || '';
-  var agLicense = (document.getElementById('sh-license')?.value.trim() || '') || '宅地建物取引士証 第XXXXXX号';
+  var agName = sessionStorage.getItem('coreto_name') || '担当者名';
+  var agId   = sessionStorage.getItem('coreto_user_id') || '';
+  // CORETO_AG_PROFILE（account-v2で登録）から電話番号を自動取得
+  var agMobile  = '';
+  var agLicense = '宅地建物取引士証 第XXXXXX号';
+  try {
+    var profile = JSON.parse(localStorage.getItem('CORETO_AG_PROFILE') || '{}');
+    if (profile.phone) agMobile = profile.phone;
+    if (profile.takkenNo) agLicense = '宅地建物取引士証 第' + profile.takkenNo + '号';
+  } catch(e) {}
+  // フォールバック: account-v2のMEオブジェクト相当のハードコード値
+  if (!agMobile && agId === 'AG-0042') agMobile = '090-1234-5678';
 
   // 日付パース
   var month = '　', day = '　';
