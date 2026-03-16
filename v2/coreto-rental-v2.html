@@ -511,8 +511,9 @@ html, body { background:#FFFFFF !important; }
               <div class="check-meta">未対応</div>
             </div>
           </div>
-          <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--bd)">
-            <button class="btn btn-primary btn-sm" style="width:100%" onclick="(function(){ var p=new URLSearchParams(location.search); var cid=p.get('caseId')||'RENT-0194'; window.location.href='coreto-itsetsu-booking-v2.html?caseId='+cid; })()">🔑 IT重説を予約・管理する →</button>
+          <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--bd);display:flex;gap:8px">
+            <button class="btn btn-primary btn-sm" style="flex:1" onclick="openItsetsuModal()">🔗 日程調整リンクを発行する</button>
+            <button class="btn btn-ghost btn-sm" onclick="(function(){ var p=new URLSearchParams(location.search); var cid=p.get('caseId')||'RENT-0194'; window.location.href='coreto-itsetsu-booking-v2.html?caseId='+cid; })()">予約一覧</button>
           </div>
         </div>
       </div>
@@ -1519,6 +1520,162 @@ window.addEventListener('DOMContentLoaded', function() {
     if (btnEl) btnEl.textContent = '📎 書類 ✅ ' + count + '件アップロード済み';
     if (statusEl) { statusEl.style.display = ''; statusEl.textContent = '✅ ' + count + '件アップロード済み'; }
   }
+});
+</script>
+
+<!-- ══ IT重説 日程調整リンク発行モーダル ══ -->
+<div id="itsetsu-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#fff;border-radius:14px;width:100%;max-width:480px;font-family:'Outfit','Noto Sans JP',sans-serif">
+    <div style="padding:16px 22px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:14px;font-weight:700;color:var(--navy)">🔑 IT重説 日程調整リンク</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">クライアントに送付して希望日程を選んでもらいます</div>
+      </div>
+      <button onclick="closeItsetsuModal()" style="background:none;border:none;font-size:16px;cursor:pointer;color:var(--muted)">✕</button>
+    </div>
+    <div style="padding:20px 22px">
+
+      <!-- 案件情報（自動入力・readonly）-->
+      <div style="background:var(--cream2);border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:12px">
+        <div id="itsetsu-case-info" style="color:var(--ink)">案件情報を読み込み中...</div>
+      </div>
+
+      <!-- リンク生成エリア -->
+      <div id="itsetsu-link-area" style="display:none;margin-bottom:16px">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px">生成された日程調整リンク</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="itsetsu-link-input" readonly style="flex:1;padding:9px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:11px;font-family:monospace;background:var(--cream2);outline:none">
+          <button onclick="copyItsetsuLink()" style="padding:9px 14px;background:var(--navy);color:var(--gold);border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif;white-space:nowrap">コピー</button>
+        </div>
+        <div style="font-size:10px;color:var(--muted);margin-top:5px">有効期限: 7日間 ／ クライアントが日程を入力するとHQに通知されます</div>
+      </div>
+
+      <!-- 送付方法 -->
+      <div id="itsetsu-send-options" style="display:none;margin-bottom:16px">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px">送付方法</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <button onclick="copyItsetsuLink()" style="padding:9px 14px;background:var(--cream2);border:1.5px solid var(--bd);border-radius:8px;font-size:12px;cursor:pointer;font-family:'Outfit',sans-serif;text-align:left">📋 リンクをコピーして手動送付（LINE・メールなど）</button>
+        </div>
+      </div>
+
+      <button id="itsetsu-gen-btn" onclick="generateItsetsuLink()" style="width:100%;padding:11px;background:var(--navy);color:var(--gold);border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif">
+        🔗 日程調整リンクを生成する
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+function openItsetsuModal() {
+  var p = new URLSearchParams(location.search);
+  var cid = p.get('caseId') || 'RENT-0194';
+  var cn  = p.get('clientName') || '';
+
+  // 案件情報を表示
+  var infoEl = document.getElementById('itsetsu-case-info');
+  if (infoEl) {
+    try {
+      var d = JSON.parse(localStorage.getItem('CORETO_CASE_DETAIL_' + cid) || '{}');
+      infoEl.innerHTML =
+        '<strong>' + (d.client || cn || '—') + '</strong>' +
+        (d.propName ? ' ／ ' + d.propName : '') +
+        '<div style="font-size:11px;color:var(--muted);margin-top:3px">案件ID: ' + cid + '</div>';
+    } catch(e) {
+      infoEl.textContent = '案件ID: ' + cid;
+    }
+  }
+
+  // 既存のリンクがあれば表示
+  try {
+    var links = JSON.parse(localStorage.getItem('CORETO_ITSETSU_LINKS') || '{}');
+    var existingToken = Object.keys(links).find(function(t){ return links[t].caseId === cid; });
+    if (existingToken) {
+      var baseUrl = location.href.replace('coreto-rental-v2.html', '').split('?')[0];
+      var link = baseUrl + 'coreto-itsetsu-client-v2.html?token=' + existingToken + '&caseId=' + encodeURIComponent(cid);
+      var linkInput = document.getElementById('itsetsu-link-input');
+      if (linkInput) linkInput.value = link;
+      document.getElementById('itsetsu-link-area').style.display = '';
+      document.getElementById('itsetsu-send-options').style.display = '';
+      var genBtn = document.getElementById('itsetsu-gen-btn');
+      if (genBtn) { genBtn.textContent = '🔄 リンクを再生成'; genBtn.style.background = 'var(--muted)'; }
+    }
+  } catch(e) {}
+
+  document.getElementById('itsetsu-modal').style.display = 'flex';
+}
+
+function closeItsetsuModal() {
+  document.getElementById('itsetsu-modal').style.display = 'none';
+}
+
+function generateItsetsuLink() {
+  var p = new URLSearchParams(location.search);
+  var cid = p.get('caseId') || 'RENT-0194';
+  var agName = sessionStorage.getItem('coreto_name') || '担当AG';
+  var agId   = sessionStorage.getItem('coreto_user_id') || '';
+
+  var token = 'ITK-' + cid.replace(/[^A-Z0-9]/gi,'') + '-' + Date.now().toString(36).toUpperCase();
+  var baseUrl = location.href.replace('coreto-rental-v2.html', '').split('?')[0];
+  var link = baseUrl + 'coreto-itsetsu-client-v2.html?token=' + token + '&caseId=' + encodeURIComponent(cid);
+
+  // CORETO_ITSETSU_LINKS に保存
+  try {
+    var links = JSON.parse(localStorage.getItem('CORETO_ITSETSU_LINKS') || '{}');
+    links[token] = {
+      token: token, caseId: cid, agName: agName, agId: agId,
+      createdAt: new Date().toLocaleString('ja-JP'),
+      expiresAt: new Date(Date.now() + 7*24*60*60*1000).toLocaleDateString('ja-JP'),
+      status: 'sent',
+    };
+    localStorage.setItem('CORETO_ITSETSU_LINKS', JSON.stringify(links));
+  } catch(e) {}
+
+  // HQタスクに追加
+  try {
+    var tasks = JSON.parse(localStorage.getItem('CORETO_HQ_TASKS') || '[]');
+    tasks.unshift({ id:'ITSETSU-'+token, type:'itsetsu_link_sent', title:'IT重説 日程調整リンク送付済み — '+cid, caseId:cid, agName:agName, createdAt:new Date().toLocaleString('ja-JP'), status:'待機中' });
+    localStorage.setItem('CORETO_HQ_TASKS', JSON.stringify(tasks));
+  } catch(e) {}
+
+  // UI更新
+  var linkInput = document.getElementById('itsetsu-link-input');
+  if (linkInput) linkInput.value = link;
+  document.getElementById('itsetsu-link-area').style.display = '';
+  document.getElementById('itsetsu-send-options').style.display = '';
+  var genBtn = document.getElementById('itsetsu-gen-btn');
+  if (genBtn) { genBtn.textContent = '🔄 リンクを再生成'; genBtn.style.background = 'var(--muted)'; }
+
+  // ステータス表示
+  var statusEl = document.getElementById('itsetsu-link-status');
+  if (statusEl) statusEl.style.display = '';
+
+  if (typeof showToast === 'function') showToast('✅ IT重説の日程調整リンクを生成しました', 'em');
+}
+
+function copyItsetsuLink() {
+  var link = document.getElementById('itsetsu-link-input')?.value;
+  if (!link) return;
+  navigator.clipboard?.writeText(link).then(function(){
+    if (typeof showToast === 'function') showToast('📋 リンクをコピーしました', 'em');
+  }).catch(function(){
+    document.getElementById('itsetsu-link-input')?.select();
+  });
+}
+
+// ページロード時: 発行済みリンクがあればステータスを表示
+window.addEventListener('DOMContentLoaded', function() {
+  var p = new URLSearchParams(location.search);
+  var cid = p.get('caseId') || 'RENT-0194';
+  try {
+    var links = JSON.parse(localStorage.getItem('CORETO_ITSETSU_LINKS') || '{}');
+    var hasLink = Object.values(links).some(function(l){ return l.caseId === cid; });
+    if (hasLink) {
+      var s = document.getElementById('itsetsu-link-status');
+      if (s) s.style.display = '';
+      var b = document.getElementById('itsetsu-modal-btn');
+      if (b) b.textContent = '🔑 IT重説 🔗 リンク発行済み';
+    }
+  } catch(e) {}
 });
 </script>
 
