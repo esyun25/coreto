@@ -318,6 +318,7 @@ html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:
 <div class="mob-overlay" onclick="toggleSb()"></div>
 <div id="bc-toast" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--navy);color:#fff;padding:10px 20px;border-radius:8px;font-size:12px;font-weight:600;opacity:0;transition:.3s;z-index:999;pointer-events:none;white-space:nowrap"></div>
 
+<script src="coreto-slack-config-v2.js"></script>
 <script src="coreto-nav-v2.js"></script>
 <script>
 (function(){
@@ -712,6 +713,17 @@ function runBatchCheck() {
   document.getElementById('check-overall').textContent = checkPassed ? '全項目OK ✅' : '要対応あり ⚠️';
   document.getElementById('check-overall').className   = 'badge ' + (checkPassed ? 'b-em' : 'b-rd');
 
+  // チェック失敗時: HQ Slackに通知
+  if (!checkPassed) {
+    var failedItems = items.filter(function(i){ return !i.pass && i.no !== '⑦'; });
+    var nsNow = (function(){ var n=new Date(); return n.getFullYear()+'/'+(n.getMonth()+1).toString().padStart(2,'0')+'/'+n.getDate().toString().padStart(2,'0')+' '+n.getHours().toString().padStart(2,'0')+':'+n.getMinutes().toString().padStart(2,'0'); })();
+    slackNotifyBatchCheckBlocked({
+      month: document.getElementById('target-month')?.value || '—',
+      failedItems: failedItems.map(function(i){ return i.no + ' ' + i.label; }),
+      ts: nsNow,
+    });
+  }
+
   // チェック結果の下にCTAを表示
   const ctaEl = document.getElementById('check-cta');
   if (checkPassed) {
@@ -925,6 +937,26 @@ window.addEventListener('DOMContentLoaded', () => {
   updateZenginSummary(0);
   CNAV.init('batch_close');
 });
+
+// ── 全銀チェックブロック通知（HQ Slack PAYROLL チャンネル）─────────────
+function slackNotifyBatchCheckBlocked(params) {
+  if (typeof window.slackPost !== 'function') return;
+  var failList = params.failedItems.map(function(item){ return '• ' + item; }).join('\n');
+  window.slackPost('PAYROLL', {
+    text: '🚨 全銀チェックブロック — ' + params.month + ' ' + params.ts,
+    attachments: [{
+      color: '#e74c3c',
+      blocks: [
+        { type: 'header', text: { type: 'plain_text', text: '🚨 全銀ファイル出力がブロックされました', emoji: true } },
+        { type: 'section', text: { type: 'mrkdwn', text: '*対象月:* ' + params.month + '\n*検出日時:* ' + params.ts } },
+        { type: 'section', text: { type: 'mrkdwn', text: '*未通過チェック:*\n' + failList } },
+        { type: 'section', text: { type: 'mrkdwn', text: '⚠️ *batch-close-v2 を開いてチェック内容を確認・修正してから再実行してください。*' } },
+        { type: 'context', elements: [{ type: 'mrkdwn', text: 'COREBLDG 月次締め — 自動通知' }] },
+      ]
+    }]
+  });
+}
+
 </script>
 </body>
 </html>no:\'⑤\', label:\'即時払い控除額の確認（履歴照合）\',

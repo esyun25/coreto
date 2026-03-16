@@ -993,6 +993,16 @@ function showAiRejectedScreen(reason, data) {
   var ov = document.getElementById('success-overlay');
   ov.innerHTML = '';
   ov.style.display = 'flex';
+
+  // ブロック通知: HQ Slack + 申請AG LINE
+  var sess2   = CNAV.session ? CNAV.session() : null;
+  var ag2Name = sess2?.name   || 'エージェント';
+  var ag2Id   = sess2?.userId || '—';
+  var ts2 = (function(){ var n=new Date(); return n.getFullYear()+'/'+(n.getMonth()+1).toString().padStart(2,'0')+'/'+n.getDate().toString().padStart(2,'0')+' '+n.getHours().toString().padStart(2,'0')+':'+n.getMinutes().toString().padStart(2,'0'); })();
+  // HQ Slack（PAYMENTチャンネル）
+  slackNotifyInstantPayBlocked({ reqId: currentReqId, agName: ag2Name, agId: ag2Id, amount: currentNetAmount, reason: reason || '残高不足', ts: ts2 });
+  // 申請AG LINE（登録済みLINEチャンネルに通知）
+  lineNotifyInstantPayBlocked({ agName: ag2Name, reqId: currentReqId, reason: reason || '残高不足', ts: ts2 });
   var wrap = document.createElement('div');
   wrap.style.cssText = 'text-align:center;padding:40px 24px;max-width:400px';
   var icon = document.createElement('div');
@@ -1227,6 +1237,39 @@ function slackNotifyZenginExport({count, total, filename, valueDate, ts}) {
     ]},
     { type:'section', text:{ type:'mrkdwn', text:'⚠️ *ネットバンキングの「総合振込」画面からファイルをアップロードして送金を実行してください。*' }},
   ]}]});
+}
+
+// ── 即時払いブロック通知 ────────────────────────────────────────────
+function slackNotifyInstantPayBlocked(params) {
+  slackPost({ text: '🚫 即時払いブロック — ' + params.agName + ' ' + params.ts, attachments: [{ color: '#e74c3c', blocks: [
+    { type: 'header', text: { type: 'plain_text', text: '🚫 即時払い申請がブロックされました', emoji: true } },
+    { type: 'section', fields: [
+      { type: 'mrkdwn', text: '*申請ID*\n`' + params.reqId + '`' },
+      { type: 'mrkdwn', text: '*日時*\n' + params.ts },
+      { type: 'mrkdwn', text: '*エージェント*\n' + params.agName + '（' + params.agId + '）' },
+      { type: 'mrkdwn', text: '*申請額*\n¥' + Number(params.amount).toLocaleString() },
+    ]},
+    { type: 'section', text: { type: 'mrkdwn', text: '*ブロック理由:*\n' + params.reason } },
+    { type: 'context', elements: [{ type: 'mrkdwn', text: 'COREBLDG 即時払いシステム — HQ確認・手動対応が必要な場合は instant-pay-v2 を開いてください' }] },
+  ]}]});
+}
+
+function lineNotifyInstantPayBlocked(params) {
+  // LINE通知: 申請AGのチャンネルに送信
+  var cfg = {};
+  try { cfg = JSON.parse(localStorage.getItem('CORETO_SLACK_CONFIG') || '{}'); } catch(e) {}
+  var lineToken = (window.LINE_CONFIG && window.LINE_CONFIG.AG_CHANNEL_TOKEN) || '';
+  if (!lineToken) return;
+  var msg = '【COREBLDG】即時払いの申請がブロックされました\n'
+    + '申請ID: ' + params.reqId + '\n'
+    + '理由: ' + params.reason + '\n'
+    + '\nご不明な点はHQまでお問い合わせください。\n'
+    + '通常振込（毎月25日）は引き続きご利用いただけます。';
+  fetch('https://api.line.me/v2/bot/message/broadcast', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + lineToken },
+    body: JSON.stringify({ messages: [{ type: 'text', text: msg }] })
+  }).catch(function(e){ console.warn('[LINE block notify]', e); });
 }
 
 // ══ Utils ══
