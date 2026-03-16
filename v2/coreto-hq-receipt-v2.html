@@ -313,6 +313,20 @@ body, input, select, textarea, button { font-family:'Outfit','Noto Sans JP',sans
             <button class="btn btn-ghost btn-sm" onclick="addItem()">＋ 行追加</button>
           </div>
           <div style="margin-top:12px">
+            <div class="form-label" style="display:flex;align-items:center;justify-content:space-between">
+              <span>振込先口座</span>
+              <button id="va-issue-btn" onclick="issueVirtualAccountForInvoice()"
+                style="padding:4px 10px;background:var(--navy);color:var(--gold);border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif">
+                🏦 バーチャル口座を発行
+              </button>
+            </div>
+            <div id="va-result-box" style="display:none;background:var(--sk-bg);border:1px solid rgba(2,132,199,.2);border-radius:8px;padding:12px 14px;margin-bottom:8px;font-size:12px">
+              <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">発行済みバーチャル口座</div>
+              <div id="va-display"></div>
+              <div id="va-mock-badge" style="display:none;margin-top:6px;font-size:10px;color:var(--am);background:var(--am-bg);padding:2px 8px;border-radius:4px;display:inline-block">🔧 モック（テスト用）</div>
+            </div>
+          </div>
+          <div style="margin-top:8px">
             <div class="form-label">備考</div>
             <textarea class="form-input-inv" id="doc-note" rows="2" placeholder="支払期限: 2026年4月10日" oninput="generateDoc()">支払期限: 2026年4月10日
 振込先: 株式会社CORETO / GMOあおぞらネット銀行</textarea>
@@ -506,6 +520,86 @@ window.addEventListener('DOMContentLoaded', () => {
   // AG/HQ ともに作成・ダウンロード全操作可
 });
 </script>
+<script src="coreto-api-client.js"></script>
 <script src="coreto-nav-v2.js"></script>
+<script>
+
+// ─── バーチャル口座発行 ─────────────────────────────────────────────────
+async function issueVirtualAccountForInvoice() {
+  var btn = document.getElementById('va-issue-btn');
+  if (btn) btn.textContent = '⏳ 発行中...';
+
+  var caseId     = (document.getElementById('doc-case-id') || {}).value ||
+                   new URLSearchParams(location.search).get('caseId') || 'RENT-0194';
+  var clientName = (document.getElementById('doc-client') || {}).value || '';
+  var amount     = 0;
+  document.querySelectorAll('[id^="item-amt-"]').forEach(function(el) {
+    amount += parseInt(el.value) || 0;
+  });
+
+  if (!window.CORETO_API) {
+    showInvToast('coreto-api-client.js が読み込まれていません', 'error');
+    if (btn) btn.textContent = '🏦 バーチャル口座を発行';
+    return;
+  }
+  if (!window.CORETO_API.isConfigured()) {
+    showInvToast('API未設定。admin設定画面で設定してください。', 'error');
+    if (btn) btn.textContent = '🏦 バーチャル口座を発行';
+    return;
+  }
+
+  try {
+    var va = await window.CORETO_API.issueVirtualAccount(caseId, clientName, amount);
+
+    var displayEl = document.getElementById('va-display');
+    if (displayEl) {
+      displayEl.innerHTML =
+        '<div style="display:grid;grid-template-columns:auto 1fr;gap:4px 12px">' +
+        '<span style="color:var(--muted)">銀行</span><span>' + va.bankName + ' ' + va.branchName + '</span>' +
+        '<span style="color:var(--muted)">口座種別</span><span>' + va.accountType + '</span>' +
+        '<span style="color:var(--muted)">口座番号</span>' +
+        '<span style="font-family:monospace;font-weight:700;font-size:14px">' + va.accountNo + '</span>' +
+        '<span style="color:var(--muted)">口座名義</span><span>' + va.accountHolder + '</span>' +
+        '<span style="color:var(--muted)">金額</span><span>¥' + Number(va.amount).toLocaleString() + '</span>' +
+        '<span style="color:var(--muted)">有効期限</span><span>' +
+        new Date(va.expiresAt).toLocaleDateString('ja-JP') + '</span>' +
+        '</div>';
+    }
+
+    var mockBadge = document.getElementById('va-mock-badge');
+    if (mockBadge) mockBadge.style.display = va._mock ? 'inline-block' : 'none';
+
+    var resultBox = document.getElementById('va-result-box');
+    if (resultBox) resultBox.style.display = '';
+
+    var noteEl = document.getElementById('doc-note');
+    if (noteEl) {
+      var expStr  = new Date(va.expiresAt).toLocaleDateString('ja-JP');
+      var line1   = '支払期限: ' + expStr;
+      var line2   = '振込先: ' + va.bankName + ' ' + va.branchName;
+      var line3   = '口座種別: ' + va.accountType + '  口座番号: ' + va.accountNo;
+      var line4   = '口座名義: ' + va.accountHolder;
+      noteEl.value = [line1, line2, line3, line4].join('\n');
+      if (typeof generateDoc === 'function') generateDoc();
+    }
+
+    if (btn) btn.textContent = '🏦 口座発行済み ✅';
+    showInvToast('✅ バーチャル口座を発行しました', 'em');
+  } catch (err) {
+    console.error('[issueVirtualAccount]', err);
+    showInvToast('口座発行に失敗: ' + err.message, 'error');
+    if (btn) btn.textContent = '🏦 バーチャル口座を発行';
+  }
+}
+
+function showInvToast(msg, type) {
+  var t = document.getElementById('ip-toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.className = 'toast show' + (type ? ' ' + type : '');
+  setTimeout(function(){ t.className = 'toast'; }, 3000);
+}
+
+</script>
 </body>
 </html>
