@@ -532,7 +532,15 @@ function renderNew(){
             <div class="field"><label>物件名</label><input id="prop-name" placeholder="パークタワー三田"></div>
           </div>
           <div class="field-row">
-            <div class="field"><label class="required">月額家賃</label><input id="monthly-rent" placeholder="165,000"></div>
+            <div class="field"><label class="required">月額家賃（円）</label><input id="monthly-rent" placeholder="165,000" oninput="calcReward()"></div>
+            <div class="field"><label>管理費（円）</label><input id="mgmt-fee" placeholder="10,000"></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label>敷金（ヶ月）</label><input id="shikikin" placeholder="1" type="number" min="0" step="0.5"></div>
+            <div class="field"><label>礼金（ヶ月）</label><input id="reikin" placeholder="1" type="number" min="0" step="0.5"></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label>保証会社</label><input id="hosho-company" placeholder="日本賃貸保証（JID）等"></div>
             <div class="field"><label>管理会社</label><input id="mgmt-company" placeholder="東京不動産管理"></div>
           </div>
         </div>
@@ -629,12 +637,21 @@ function submitReport(){
 
   try {
     const reports = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]');
+    const monthlyRent = parseInt((document.getElementById('monthly-rent')?.value || '0').replace(/[^0-9]/g,'')) || 0;
+    const mgmtFee    = parseInt((document.getElementById('mgmt-fee')?.value || '0').replace(/[^0-9]/g,'')) || 0;
+    const shikikin   = parseFloat(document.getElementById('shikikin')?.value || '0') || 0;
+    const reikin     = parseFloat(document.getElementById('reikin')?.value || '0') || 0;
+    const hosho      = document.getElementById('hosho-company')?.value || '';
+    const propAddr   = document.getElementById('prop-addr')?.value || '';
+    const propName   = document.getElementById('prop-name')?.value || '';
+    const mgmtCo     = document.getElementById('mgmt-company')?.value || '';
     reports.unshift({
       id: rptId,
       case: 'RENT-' + String(Date.now()).slice(-4),
       client: document.getElementById('client-name')?.value || '—',
       type: biz === 'rental' ? '賃貸' : biz === 'sale' ? '売買' : biz === 'hr' ? '人材' : '光通信',
       fee, reward, date: closedAt || now, ag: agName, status: '承認待ち',
+      monthlyRent, mgmtFee, shikikin, reikin, hosho, propAddr, propName, mgmtCo,
     });
     localStorage.setItem('CORETO_REPORTS', JSON.stringify(reports));
   } catch(e) {}
@@ -690,11 +707,11 @@ function renderHistory(){
 
   // デモデータ（localStorageが空の場合のフォールバック）
   const demo = [
-    {id:'RPT-20260310-001', case:'RENT-0194', client:'田中 優子', type:'賃貸', fee:198000, reward:158400, date:'2026/03/10', ag:'山田 誠（AG-0042）', agId:'AG-0042', status:'承認待ち'},
-    {id:'RPT-20260228-003', case:'RENT-0180', client:'高橋 美咲', type:'賃貸', fee:380000, reward:304000, date:'2026/02/28', ag:'山田 誠（AG-0042）', agId:'AG-0042', status:'承認済み'},
+    {id:'RPT-20260310-001', case:'RENT-0194', client:'田中 優子', type:'賃貸', fee:198000, reward:158400, date:'2026/03/10', ag:'山田 誠（AG-0042）', agId:'AG-0042', status:'承認待ち', monthlyRent:165000, mgmtFee:10000, shikikin:1, reikin:1, hosho:'日本賃貸保証', propAddr:'港区三田3丁目5-7', propName:'パークタワー三田 302号', mgmtCo:'東京不動産管理'},
+    {id:'RPT-20260228-003', case:'RENT-0180', client:'高橋 美咲', type:'賃貸', fee:380000, reward:304000, date:'2026/02/28', ag:'山田 誠（AG-0042）', agId:'AG-0042', status:'承認済み', monthlyRent:320000, mgmtFee:20000, shikikin:2, reikin:1, hosho:'Casa', propAddr:'渋谷区代々木2丁目', propName:'プレミアムコート代々木 801号', mgmtCo:'渋谷管理センター'},
     {id:'RPT-20260215-001', case:'UTL-0071',  client:'田中 優子', type:'光通信', fee:180000, reward:144000, date:'2026/02/15', ag:'大橋 幸代（AG-0055）', agId:'AG-0055', status:'承認済み'},
     {id:'RPT-20260110-002', case:'RENT-0162', client:'渡辺 誠',   type:'賃貸', fee:420000, reward:336000, date:'2026/01/10', ag:'大橋 幸代（AG-0055）', agId:'AG-0055', status:'承認済み'},
-    {id:'RPT-20251220-001', case:'RENT-0145', client:'伊藤 花子', type:'賃貸', fee:510000, reward:408000, date:'2025/12/20', ag:'山田 誠（AG-0042）', agId:'AG-0042', status:'修正依頼'},
+    {id:'RPT-20251220-001', case:'RENT-0145', client:'伊藤 花子', type:'賃貸', fee:510000, reward:408000, date:'2025/12/20', ag:'山田 誠（AG-0042）', agId:'AG-0042', status:'修正依頼', monthlyRent:420000, mgmtFee:0, shikikin:2, reikin:2, hosho:'', propAddr:'目黒区青葉台1丁目', propName:'ブリリア目黒 1204号', mgmtCo:'目黒不動産'},
   ];
   // storedにdemoを末尾にマージ（重複除外）
   const storedIds = new Set(stored.map(r=>r.id));
@@ -932,11 +949,11 @@ function showReportDetail(id) {
   var reps = [];
   try { reps = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]'); } catch(e) {}
   var demo = [
-    {id:'RPT-20260310-001', case:'RENT-0194', client:'田中 優子', type:'賃貸', fee:198000, reward:158400, date:'2026/03/10', ag:'山田 誠（AG-0042）', agId:'AG-0042', status:'承認待ち'},
-    {id:'RPT-20260228-003', case:'RENT-0180', client:'高橋 美咲', type:'賃貸', fee:380000, reward:304000, date:'2026/02/28', ag:'山田 誠（AG-0042）', agId:'AG-0042', status:'承認済み'},
+    {id:'RPT-20260310-001', case:'RENT-0194', client:'田中 優子', type:'賃貸', fee:198000, reward:158400, date:'2026/03/10', ag:'山田 誠（AG-0042）', agId:'AG-0042', status:'承認待ち', monthlyRent:165000, mgmtFee:10000, shikikin:1, reikin:1, hosho:'日本賃貸保証', propAddr:'港区三田3丁目5-7', propName:'パークタワー三田 302号', mgmtCo:'東京不動産管理'},
+    {id:'RPT-20260228-003', case:'RENT-0180', client:'高橋 美咲', type:'賃貸', fee:380000, reward:304000, date:'2026/02/28', ag:'山田 誠（AG-0042）', agId:'AG-0042', status:'承認済み', monthlyRent:320000, mgmtFee:20000, shikikin:2, reikin:1, hosho:'Casa', propAddr:'渋谷区代々木2丁目', propName:'プレミアムコート代々木 801号', mgmtCo:'渋谷管理センター'},
     {id:'RPT-20260215-001', case:'UTL-0071',  client:'田中 優子', type:'光通信', fee:180000, reward:144000, date:'2026/02/15', ag:'大橋 幸代（AG-0055）', agId:'AG-0055', status:'承認済み'},
     {id:'RPT-20260110-002', case:'RENT-0162', client:'渡辺 誠',   type:'賃貸', fee:420000, reward:336000, date:'2026/01/10', ag:'大橋 幸代（AG-0055）', agId:'AG-0055', status:'承認済み'},
-    {id:'RPT-20251220-001', case:'RENT-0145', client:'伊藤 花子', type:'賃貸', fee:510000, reward:408000, date:'2025/12/20', ag:'山田 誠（AG-0042）', agId:'AG-0042', status:'修正依頼'},
+    {id:'RPT-20251220-001', case:'RENT-0145', client:'伊藤 花子', type:'賃貸', fee:510000, reward:408000, date:'2025/12/20', ag:'山田 誠（AG-0042）', agId:'AG-0042', status:'修正依頼', monthlyRent:420000, mgmtFee:0, shikikin:2, reikin:2, hosho:'', propAddr:'目黒区青葉台1丁目', propName:'ブリリア目黒 1204号', mgmtCo:'目黒不動産'},
   ];
   var storedIds = new Set(reps.map(function(r){ return r.id; }));
   var all = reps.concat(demo.filter(function(r){ return !storedIds.has(r.id); }));
@@ -992,6 +1009,7 @@ function showReportDetail(id) {
   var grid = document.createElement('div');
   grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px';
 
+  // 基本情報
   var infoFields = [
     ['クライアント名', r.client || '—'],
     ['案件ID',         r.case   || '—'],
@@ -1000,6 +1018,18 @@ function showReportDetail(id) {
     ['仲介料（税抜）', '¥' + (r.fee||0).toLocaleString()],
     ['報酬額',         '¥' + (r.reward||0).toLocaleString()],
   ];
+
+  // 賃貸詳細情報（賃料・敷金・礼金等）
+  var rentalFields = (r.type === '賃貸' || r.monthlyRent) ? [
+    ['物件住所',   r.propAddr || '—'],
+    ['物件名',     r.propName || '—'],
+    ['月額家賃',   r.monthlyRent ? '¥' + r.monthlyRent.toLocaleString() : '—'],
+    ['管理費',     r.mgmtFee  ? '¥' + r.mgmtFee.toLocaleString()  : '—'],
+    ['敷金',       r.shikikin != null ? r.shikikin + 'ヶ月（¥' + Math.round((r.monthlyRent||0)*r.shikikin).toLocaleString() + '）' : '—'],
+    ['礼金',       r.reikin   != null ? r.reikin   + 'ヶ月（¥' + Math.round((r.monthlyRent||0)*r.reikin).toLocaleString()   + '）' : '—'],
+    ['保証会社',   r.hosho    || '—'],
+    ['管理会社',   r.mgmtCo   || '—'],
+  ] : null;
 
   infoFields.forEach(function(fi) {
     var item = document.createElement('div');
@@ -1014,6 +1044,34 @@ function showReportDetail(id) {
     grid.appendChild(item);
   });
   mBody.appendChild(grid);
+
+  // 賃貸詳細セクション
+  if (rentalFields) {
+    var rentalSection = document.createElement('div');
+    rentalSection.style.cssText = 'margin-bottom:16px';
+    var rentalTitle = document.createElement('div');
+    rentalTitle.style.cssText = 'font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--bd)';
+    rentalTitle.textContent = '🏠 賃貸詳細';
+    rentalSection.appendChild(rentalTitle);
+    var rentalGrid = document.createElement('div');
+    rentalGrid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:10px';
+    rentalFields.forEach(function(fi) {
+      var item = document.createElement('div');
+      item.style.cssText = 'background:var(--cream);border-radius:8px;padding:10px 14px';
+      var lbl = document.createElement('div');
+      lbl.style.cssText = 'font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px';
+      lbl.textContent = fi[0];
+      var val = document.createElement('div');
+      val.style.cssText = 'font-size:13px;font-weight:600;color:var(--ink)';
+      val.textContent = fi[1];
+      item.appendChild(lbl); item.appendChild(val);
+      rentalGrid.appendChild(item);
+    });
+    // 物件住所は全幅表示
+    if (rentalGrid.firstChild) rentalGrid.firstChild.style.gridColumn = '1 / -1';
+    rentalSection.appendChild(rentalGrid);
+    mBody.appendChild(rentalSection);
+  }
 
   // 修正履歴（HQ強制修正があれば表示）
   if (r.hqEditedAt) {
@@ -1095,9 +1153,9 @@ function forceEditReport(id) {
   var reps = [];
   try { reps = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]'); } catch(e) {}
   var demo = [
-    {id:'RPT-20260310-001', case:'RENT-0194', client:'田中 優子', type:'賃貸', fee:198000, reward:158400, date:'2026/03/10', ag:'山田 誠（AG-0042）', agId:'AG-0042', status:'承認待ち'},
-    {id:'RPT-20260228-003', case:'RENT-0180', client:'高橋 美咲', type:'賃貸', fee:380000, reward:304000, date:'2026/02/28', ag:'山田 誠（AG-0042）', agId:'AG-0042', status:'承認済み'},
-    {id:'RPT-20251220-001', case:'RENT-0145', client:'伊藤 花子', type:'賃貸', fee:510000, reward:408000, date:'2025/12/20', ag:'山田 誠（AG-0042）', agId:'AG-0042', status:'修正依頼'},
+    {id:'RPT-20260310-001', case:'RENT-0194', client:'田中 優子', type:'賃貸', fee:198000, reward:158400, date:'2026/03/10', ag:'山田 誠（AG-0042）', agId:'AG-0042', status:'承認待ち', monthlyRent:165000, mgmtFee:10000, shikikin:1, reikin:1, hosho:'日本賃貸保証', propAddr:'港区三田3丁目5-7', propName:'パークタワー三田 302号', mgmtCo:'東京不動産管理'},
+    {id:'RPT-20260228-003', case:'RENT-0180', client:'高橋 美咲', type:'賃貸', fee:380000, reward:304000, date:'2026/02/28', ag:'山田 誠（AG-0042）', agId:'AG-0042', status:'承認済み', monthlyRent:320000, mgmtFee:20000, shikikin:2, reikin:1, hosho:'Casa', propAddr:'渋谷区代々木2丁目', propName:'プレミアムコート代々木 801号', mgmtCo:'渋谷管理センター'},
+    {id:'RPT-20251220-001', case:'RENT-0145', client:'伊藤 花子', type:'賃貸', fee:510000, reward:408000, date:'2025/12/20', ag:'山田 誠（AG-0042）', agId:'AG-0042', status:'修正依頼', monthlyRent:420000, mgmtFee:0, shikikin:2, reikin:2, hosho:'', propAddr:'目黒区青葉台1丁目', propName:'ブリリア目黒 1204号', mgmtCo:'目黒不動産'},
   ];
   var storedIds = new Set(reps.map(function(r){ return r.id; }));
   var all = reps.concat(demo.filter(function(r){ return !storedIds.has(r.id); }));
