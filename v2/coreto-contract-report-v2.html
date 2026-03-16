@@ -664,10 +664,27 @@ function submitReport(){
     localStorage.setItem('CORETO_REPORTS', JSON.stringify(reports));
   } catch(e) {}
 
-  // 残-5: 見込み報酬を残高に加算（HQ承認後に確定するため仮計上）
+  // 見込み報酬を残高に加算（HQ承認後に確定するため仮計上）
   try {
     const cur = parseInt(sessionStorage.getItem('coreto_balance') || '726163');
     sessionStorage.setItem('coreto_balance', String(cur + reward));
+  } catch(e) {}
+
+  // 入金確認済みチェック: rental-v2で入金確認が取れているかを確認
+  // CORETO_PAYMENT_{caseId} に {status:'paid'} があれば入金確認済みとみなす
+  const caseIdForReport = 'RENT-' + String(Date.now()).slice(-4);
+  try {
+    const payRec = JSON.parse(localStorage.getItem('CORETO_PAYMENT_' + caseIdForReport) || 'null');
+    const isPaymentConfirmed = payRec && payRec.status === 'paid';
+    // 今回の報告に入金確認済みフラグを付与
+    try {
+      const reps = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]');
+      if (reps.length > 0) {
+        reps[0].paymentConfirmed = isPaymentConfirmed;
+        reps[0].caseId = caseIdForReport;
+        localStorage.setItem('CORETO_REPORTS', JSON.stringify(reps));
+      }
+    } catch(e) {}
   } catch(e) {}
 
   // HQ用タスクを追加
@@ -1317,15 +1334,41 @@ function approveReport(id, client, ag, reward, btn) {
     const cell = btn.closest('td');
     cell.innerHTML = '<span class="badge b-em">承認済み</span>';
     // CORETO_REPORTSのstatusを「承認済み」に更新
+    let approvedReport = null;
     try {
       const reps = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]');
       const idx = reps.findIndex(r => r.id === id);
-      if (idx >= 0) { reps[idx].status = '承認済み'; reps[idx].approvedAt = new Date().toISOString(); }
+      if (idx >= 0) {
+        reps[idx].status = '承認済み';
+        reps[idx].approvedAt = new Date().toISOString();
+        approvedReport = reps[idx];
+      }
       localStorage.setItem('CORETO_REPORTS', JSON.stringify(reps));
       // HQタスクから削除
       const tasks = JSON.parse(localStorage.getItem('CORETO_HQ_TASKS') || '[]');
       localStorage.setItem('CORETO_HQ_TASKS', JSON.stringify(tasks.filter(t => t.id !== id)));
     } catch(e) {}
+
+    // 確定出金可能残高に加算（複数案件の累積対応）
+    // CORETO_COMPLETED_BALANCE_{agId}: 承認済み案件の出金可能残高
+    try {
+      const agIdKey = (approvedReport?.ag || ag).replace(/\s/g,'_');
+      const balKey  = 'CORETO_COMPLETED_BALANCE_' + agIdKey;
+      const cur     = parseInt(localStorage.getItem(balKey) || '0');
+      const add     = reward;
+      localStorage.setItem(balKey, String(cur + add));
+      // 承認済み案件リストに追加（即時払い申請時に照合できるよう）
+      const completedKey = 'CORETO_COMPLETED_CASES_' + agIdKey;
+      const completed    = JSON.parse(localStorage.getItem(completedKey) || '[]');
+      completed.push({
+        reportId:  id,
+        caseId:    approvedReport?.case || '—',
+        reward,
+        approvedAt: new Date().toISOString(),
+      });
+      localStorage.setItem(completedKey, JSON.stringify(completed));
+    } catch(e) {}
+
     showToast('✅ ' + id + ' を承認しました。' + ag + ' にLINEで通知します。', 'em');
     // LINE通知（設定後有効化）
     const LINE_TOKEN = (window.LINE_CONFIG && window.LINE_CONFIG.AG_CHANNEL_TOKEN) || '';
