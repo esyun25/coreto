@@ -393,7 +393,7 @@ function renderApply() {
     '<div><div class="card"><div class="card-head"><div class="card-title">申請内容</div></div><div class="card-body">' +
     '<div class="field"><label>受取希望額（振込される金額）<span style="color:var(--rd)">*</span></label><input type="number" id="req-amount" placeholder="例：300,000" min="10000" style="font-family:\'DM Mono\',monospace;font-size:18px" oninput="calcBreakdown()"><div style="font-size:10px;color:var(--muted);margin-top:4px">最低 ¥10,000〜 / 報酬残高の範囲内</div></div>' +
     methodSel +
-    '<div id="breakdown-wrap" style="display:none;background:var(--cream2);border:1px solid var(--bd);border-radius:var(--r-sm);padding:16px;margin-bottom:16px"><div id="method-badge" style="margin-bottom:10px"></div><div style="font-size:10px;color:var(--muted);margin-bottom:10px">手数料は報酬残高より差し引かれます。</div><div class="fee-row"><span class="fee-row-label">出金希望額</span><span class="fee-row-val" id="bd-req"></span></div><div id="bd-fee-rows"></div><div class="fee-row" style="border-top:1px solid var(--bd2);margin-top:4px;padding-top:10px"><span class="fee-row-label" style="font-weight:700">受取額</span><span class="fee-row-val" style="font-size:18px;font-weight:700;color:var(--em)" id="bd-payout">—</span></div></div>' +
+    '<div id="breakdown-wrap" style="display:none;background:var(--cream2);border:1px solid var(--bd);border-radius:var(--r-sm);padding:16px;margin-bottom:16px"><div id="method-badge" style="margin-bottom:10px"></div><div class="fee-row"><span class="fee-row-label">出金希望額</span><span class="fee-row-val" id="bd-req"></span></div><div id="bd-fee-rows"></div><div class="fee-row" style="border-top:1px solid var(--bd2);margin-top:4px;padding-top:10px"><span class="fee-row-label" style="font-weight:700">受取額</span><span class="fee-row-val" style="font-size:18px;font-weight:700;color:var(--em)" id="bd-payout">—</span></div></div>' +
     '<div id="method-notice" class="al al-info" style="margin-bottom:16px">📱 登録の携帯番号にSMSで認証コードを送信します</div>' +
     '<button class="btn btn-p btn-lg" id="req-submit-btn" onclick="startRequest()" disabled>🔐 申請して2段階認証へ</button>' +
     '</div></div></div>' +
@@ -464,8 +464,7 @@ function calcBreakdown() {
     // 現金は手数料が少額固定なので受取額 = req、手数料は別途報酬残高から引く
     fee   = cashFee(req);
     gross = req + fee; // 残高から差し引く総額
-    feeRows = '<div class="fee-row"><span class="fee-row-label">現金手数料（¥5,000/百万円）</span><span class="fee-row-val" style="color:var(--am)">− ' + fmt(fee) + '</span></div>' +
-              '<div class="fee-row"><span class="fee-row-label" style="color:var(--muted);font-size:11px">残高から差し引く総額</span><span class="fee-row-val" style="color:var(--muted);font-size:11px">' + fmt(gross) + '</span></div>';
+    feeRows = '<div class="fee-row"><span class="fee-row-label">現金手数料（¥5,000/百万円）</span><span class="fee-row-val" style="color:var(--am)">− ' + fmt(fee) + '</span></div>';
     methodBadge = '<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:var(--am-bg);border-radius:4px;font-size:11px;font-weight:600;color:var(--am)">💴 現金出金</span>';
     noticeHtml  = '<div class="al al-warn" style="margin-bottom:16px">💴 HQ担当者が現金で直接お渡しします。事前予約が必要です。</div>';
   } else {
@@ -483,11 +482,9 @@ function calcBreakdown() {
     if (camp && discount > 0) {
       var discPct = Math.round(camp.discountRate * 1000) / 10;
       feeRows =
-        '<div class="fee-row"><span class="fee-row-label" style="color:var(--muted);font-size:11px">残高から差し引く総額（15%手数料込）</span><span class="fee-row-val" style="color:var(--muted);text-decoration:line-through;font-size:11px">' + fmt(baseGross) + '</span></div>' +
-        '<div class="fee-row"><span class="fee-row-label" style="color:var(--em)">🎉 キャンペーン割引（−' + discPct + '%）<br><span style="font-size:10px;color:var(--em)">' + camp.label + ' / ' + camp.until + 'まで</span></span><span class="fee-row-val" style="color:var(--em)">− ' + fmt(discount) + '</span></div>' +
-        '<div class="fee-row"><span class="fee-row-label" style="color:var(--muted);font-size:11px">残高から差し引く総額（' + effPct + '%手数料込）</span><span class="fee-row-val" style="color:var(--muted);font-size:11px">' + fmt(gross) + '</span></div>';
+        '<div style="margin-top:6px;font-size:10px;color:var(--faint)">🎉 ' + camp.label + '：手数料 <s>' + fmt(baseFee) + '</s> → ' + fmt(fee) + '（' + effPct + '%）</div>';
     } else {
-      feeRows = '<div class="fee-row"><span class="fee-row-label" style="color:var(--muted);font-size:11px">残高から差し引く総額（15%手数料込）</span><span class="fee-row-val" style="color:var(--muted);font-size:11px">' + fmt(gross) + '</span></div>';
+      feeRows = '<div style="margin-top:6px;font-size:10px;color:var(--faint)">手数料 ' + fmt(fee) + '</div>';
     }
 
     methodBadge = '<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:var(--sk-bg);border-radius:4px;font-size:11px;font-weight:600;color:var(--sk)">🏦 銀行振込</span>';
