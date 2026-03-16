@@ -341,6 +341,86 @@ body, input, select, textarea, button { font-family:'Outfit','Noto Sans JP',sans
 function toggleSb(){ document.querySelector('.sb').classList.toggle('open'); document.querySelector('.mob-overlay').classList.toggle('show'); }
 function showToast(msg,type){ const t=document.getElementById('ip-toast'); t.textContent=msg; t.className='toast '+(type||''); t.style.opacity='1'; setTimeout(()=>t.style.opacity='0',3200); }
 
+
+// ── URLパラメータ・保存データから自動入力 ─────────────────
+function autoFillFromCase() {
+  var p = new URLSearchParams(location.search);
+  var cid = p.get('caseId') || '';
+  var clientName = p.get('clientName') || '';
+
+  if (cid) {
+    document.getElementById('doc-case').value = cid;
+    if (clientName) document.getElementById('doc-to').value = decodeURIComponent(clientName) + ' 様';
+
+    // CORETO_INVOICE_CHECKから照合済み明細を取得
+    var invoiceItems = [];
+    try {
+      var checks = JSON.parse(localStorage.getItem('CORETO_INVOICE_CHECK') || '{}');
+      var check = checks[cid];
+      if (check && check.finalValues) {
+        var fv = check.finalValues;
+        // 管理会社への送金明細を取得
+        if (fv.amount) {
+          // CORETO_INVOICE_MEISAIのAI読み取り詳細があれば展開、なければ合計のみ
+          var meisaiRaw = localStorage.getItem('CORETO_INVOICE_MEISAI_' + cid);
+          if (meisaiRaw) {
+            var meisai = JSON.parse(meisaiRaw);
+            if (meisai.aiItems && Array.isArray(meisai.aiItems)) {
+              // AI読み取りの個別行を転記
+              meisai.aiItems.forEach(function(item) {
+                invoiceItems.push({ desc: item.label, amt: item.amount });
+              });
+            } else {
+              // 合計のみ（内訳なし）
+              invoiceItems.push({ desc: '初期費用（管理会社へ支払済み）', amt: parseInt(fv.amount) || 0 });
+            }
+          } else {
+            invoiceItems.push({ desc: '初期費用（管理会社へ支払済み）', amt: parseInt(fv.amount) || 0 });
+          }
+        }
+      }
+    } catch(e) {}
+
+    // CORETO_REPORTSから仲介手数料を取得
+    try {
+      var reports = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]');
+      var report = reports.find(function(r){ return r.caseId === cid || r.id === cid; });
+      if (report) {
+        if (!clientName && report.clientName) {
+          document.getElementById('doc-to').value = report.clientName + ' 様';
+        }
+        if (report.fees || report.fee) {
+          invoiceItems.push({ desc: '仲介手数料', amt: parseInt(report.fees || report.fee) || 0 });
+        }
+      }
+    } catch(e) {}
+
+    // 明細行をセット
+    if (invoiceItems.length > 0) {
+      setItems(invoiceItems);
+      showToast('✅ 案件 ' + cid + ' の明細を自動入力しました', 'ok');
+    }
+  }
+}
+
+function setItems(items) {
+  // 既存行をリセット
+  var area = document.getElementById('item-rows');
+  area.innerHTML = '';
+  itemCount = 0;
+  items.forEach(function(item, i) {
+    var row = document.createElement('div');
+    row.className = 'form-row';
+    row.style.marginBottom = '8px';
+    row.innerHTML =
+      '<input class="form-input-inv" placeholder="摘要" id="item-desc-' + i + '" value="' + (item.desc||'') + '" oninput="generateDoc()">' +
+      '<input type="number" class="form-input-inv" placeholder="金額" id="item-amt-' + i + '" value="' + (item.amt||0) + '" oninput="generateDoc()">';
+    area.appendChild(row);
+    itemCount++;
+  });
+  generateDoc();
+}
+
 let itemCount = 1;
 
 function addItem() {
@@ -420,6 +500,7 @@ function switchMode(mode) {
 window.addEventListener('DOMContentLoaded', () => {
   generateDoc();
   CNAV.init('receipt');
+  autoFillFromCase();
 });
 </script>
 <script src="coreto-nav-v2.js"></script>
