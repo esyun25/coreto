@@ -380,7 +380,12 @@ function renderApply() {
 
     '<div class="card"><div class="card-head"><div class="card-title">受取条件チェック</div></div><div class="card-body" style="display:flex;flex-direction:column;gap:8px">' +
     '<span class="badge b-em">連携済み</span></div>' +
-    '<div class="check-item"><div class="check-item-left"><span class="check-item-icon">✅</span><div><div class="check-item-title">SMS認証番号</div><div class="check-item-sub">認証先：090-****-4321</div></div></div><span class="badge b-em">確認済み</span></div>' +
+    (function(){
+      var prof = {}; try { prof = JSON.parse(localStorage.getItem('CORETO_AG_PROFILE')||'{}'); } catch(e) {}
+      var phone = prof.phone || sessionStorage.getItem('coreto_phone') || '';
+      var masked = phone.length >= 4 ? phone.slice(0,3) + '-****-' + phone.slice(-4) : '未登録';
+      return '<div class="check-item"><div class="check-item-left"><span class="check-item-icon">' + (phone ? '✅' : '⚠️') + '</span><div><div class="check-item-title">SMS認証番号</div><div class="check-item-sub">認証先：' + masked + '</div></div></div><span class="badge ' + (phone ? 'b-em' : 'b-am') + '">' + (phone ? '確認済み' : '要登録') + '</span></div>';
+    })() +
     '</div></div>' +
 
     '<div class="card"><div class="card-head"><div class="card-title">出金方法</div></div>' +
@@ -417,7 +422,19 @@ function renderApply() {
   })() +
 
     '<div class="card"><div class="card-head"><div class="card-title">振込先・受取口座</div></div><div class="card-body" style="display:flex;flex-direction:column;gap:10px">' +
-    '<div style="background:var(--cream2);border-radius:var(--r-sm);padding:10px 14px;font-size:12px;line-height:2"><div style="font-size:10px;font-weight:600;color:var(--muted);margin-bottom:4px">🏦 振込先口座</div>GMOあおぞらネット銀行<br>ビジネス営業部（010）<br>普通 <span style="font-family:\'DM Mono\',monospace;color:var(--gold)">1234567</span><br><strong>ヤマダ マコト</strong></div>' +
+    (function(){
+      var bk = {}; try { bk = JSON.parse(localStorage.getItem('CORETO_MY_BANK')||'{}'); } catch(e) {}
+      if (bk.accountNo) {
+        return '<div style="background:var(--cream2);border-radius:var(--r-sm);padding:10px 14px;font-size:12px;line-height:2">'
+          + '<div style="font-size:10px;font-weight:600;color:var(--muted);margin-bottom:4px">🏦 振込先口座</div>'
+          + (bk.bankName||'') + (bk.branchName ? ' ' + bk.branchName : '') + '<br>'
+          + (bk.accountType === '1' || bk.accountType === '普通' ? '普通' : bk.accountType||'普通') + ' '
+          + '<span style="font-family:\'DM Mono\',monospace;color:var(--gold)">' + bk.accountNo + '</span><br>'
+          + '<strong>' + (bk.accountHolder||bk.accountName||'') + '</strong></div>';
+      }
+      return '<div style="background:var(--am-bg);border:1px solid rgba(217,119,6,.2);border-radius:var(--r-sm);padding:10px 14px;font-size:12px;color:var(--am)">'
+        + '⚠️ 振込先口座が未登録です。<a href="coreto-account-v2.html" style="color:var(--am);font-weight:700">アカウント設定</a>から銀行口座を登録してください。</div>';
+    })() +
     '</div></div>' +
 
     '<div class="card"><div class="card-head"><div class="card-title">2段階認証について</div></div><div class="card-body" style="font-size:11px;color:var(--muted);line-height:2">不正利用防止のため、申請後に必ず2段階認証が必要です。<br><br>① 申請ボタンを押す<br>② SMSで6桁コードが届く（有効期限10分）<br>③ 認証コード入力で確認完了<br>④ HQに振込依頼が自動送信される<br><br><strong style="color:var(--rd)">3回連続失敗でアカウントがロックされます。</strong></div></div>' +
@@ -522,11 +539,44 @@ function calcBreakdown() {
 // ══════════════════════════════════════════════════════════════
 // VIEW 3: HQ処理ダッシュボード
 // ══════════════════════════════════════════════════════════════
-const PENDING_TRANSFERS = [
-  {reqId:'IPY-2026-P9W4', agId:'10012', agName:'山田 誠',   agKana:'ヤマダ マコト',  reqAmt:300000, payoutAmt:255000, bankCode:'0310', bankName:'GMOアオゾラネットギンコウ', branchCode:'101', branchName:'ホンテン', accountType:1, accountNo:'7654321', accountName:'ヤマダ マコト', requestedAt:'2026/02/20 10:32', status:'pending'},
-  {reqId:'IPY-2026-A3R7', agId:'10008', agName:'佐藤 花子', agKana:'サトウ ハナコ',  reqAmt:500000, payoutAmt:425000, bankCode:'0005', bankName:'ミツビシUFJギンコウ',  branchCode:'001', branchName:'ホンテン', accountType:1, accountNo:'1234567', accountName:'サトウ ハナコ', requestedAt:'2026/02/20 09:18', status:'pending'},
-  {reqId:'IPY-2026-Z6T2', agId:'20005', agName:'田中 美穂', agKana:'タナカ ミホ',    reqAmt:150000, payoutAmt:127500, bankCode:'0033', bankName:'ペイペイギンコウ',      branchCode:'001', branchName:'ホンテン', accountType:1, accountNo:'9876543', accountName:'タナカ ミホ',  requestedAt:'2026/02/19 16:55', status:'pending'},
-];
+// HQ用: 未処理の即時払い申請をlocalStorageから取得（本番: Kintoneから取得）
+const PENDING_TRANSFERS = (function() {
+  var result = [];
+  var agIds = [];
+  // CORETO_INSTANT_PAY_HISTORY_* キーを全部検索
+  for (var i = 0; i < localStorage.length; i++) {
+    var key = localStorage.key(i);
+    if (key && key.startsWith('CORETO_INSTANT_PAY_HISTORY_')) {
+      var agId = key.replace('CORETO_INSTANT_PAY_HISTORY_', '');
+      agIds.push(agId);
+    }
+  }
+  agIds.forEach(function(agId) {
+    var hist = [];
+    try { hist = JSON.parse(localStorage.getItem('CORETO_INSTANT_PAY_HISTORY_' + agId) || '[]'); } catch(e) {}
+    hist.filter(function(h){ return h.status === 'pending_manual'; }).forEach(function(h) {
+      var bk = {}; try { bk = JSON.parse(localStorage.getItem('CORETO_MY_BANK') || '{}'); } catch(e) {}
+      result.push({
+        reqId:       h.id,
+        agId:        agId,
+        agName:      h.agName || agId,
+        agKana:      h.agKana || agId,
+        reqAmt:      h.amount,
+        payoutAmt:   h.payout || Math.round(h.amount * 0.85),
+        bankCode:    bk.bankCode    || '0000',
+        bankName:    bk.bankName    || '未登録',
+        branchCode:  bk.branchCode  || '000',
+        branchName:  bk.branchName  || '未登録',
+        accountType: bk.accountType || 1,
+        accountNo:   bk.accountNo   || '未登録',
+        accountName: bk.accountHolder || bk.accountName || agId,
+        requestedAt: h.date ? new Date(h.date).toLocaleString('ja-JP') : '—',
+        status:      'pending',
+      });
+    });
+  });
+  return result;
+})();
 
 const REQUESTER = {
   code:'XXXXXXXXXX', name:'カブシキカイシャコレト',
@@ -791,7 +841,12 @@ function openTfa() {
   clearOtp(); updateDots();
   document.getElementById('tfa-screen').style.display = 'flex';
   document.getElementById('tfa-sub').innerHTML =
-    `登録の携帯番号（090-****-4321）に<br>SMSで6桁の認証コードを送信しました。<br>` +
+    (function(){
+      var prof = {}; try { prof = JSON.parse(localStorage.getItem('CORETO_AG_PROFILE')||'{}'); } catch(e) {}
+      var phone = prof.phone || '';
+      var masked = phone.length >= 4 ? phone.slice(0,3) + '-****-' + phone.slice(-4) : '登録済みの携帯番号';
+      return '登録の携帯番号（' + masked + '）に<br>SMSで6桁の認証コードを送信しました。<br>';
+    })() +
     `<strong style="color:var(--am)">有効期限：5分</strong><br><br>` +
     `<em style="font-size:10px;color:var(--muted)">[デモ用コード: ${tfaOtp}]</em>`;
   tfaCountdown = 600;
