@@ -164,11 +164,11 @@ html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:
       </div>
     </div>
 
-    <!-- 新規予約フォーム -->
+    <!-- 新規予約フォーム（日程調整リンク送付） -->
     <div id="view-new" style="display:none">
       <div class="two-col">
 
-        <!-- 左: 案件・クライアント -->
+        <!-- 左: 案件・クライアント情報 -->
         <div>
           <div class="card">
             <div class="card-head"><div class="card-title">① 案件・クライアント情報</div></div>
@@ -177,61 +177,56 @@ html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:
                 <label class="form-label">案件ID</label>
                 <input id="bk-case-id" class="form-input" placeholder="RC-10042" oninput="lookupCase()">
               </div>
-              <div id="case-info-box" style="display:none;background:var(--sk-bg);border:1px solid var(--bd);
-                border-radius:8px;padding:11px 13px;font-size:12px;margin-top:4px">
+              <div id="case-info-box" style="display:none;background:var(--sk-bg);border:1px solid var(--bd);border-radius:8px;padding:11px 13px;font-size:12px;margin-top:4px">
                 <div id="case-info-text"></div>
               </div>
               <div class="form-group" style="margin-top:12px">
                 <label class="form-label">担当AG</label>
                 <input id="bk-ag" class="form-input" placeholder="木下 大輔">
               </div>
+              <div class="form-group" style="margin-top:12px">
+                <label class="form-label">クライアントの連絡先（任意）</label>
+                <input id="bk-client-contact" class="form-input" placeholder="例: tanaka@example.com">
+                <div style="font-size:10px;color:var(--muted);margin-top:4px">コピーして手動送付も可</div>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- 右: 日程選択 -->
+        <!-- 右: 日程調整リンク生成・送付 -->
         <div>
           <div class="card">
-            <div class="card-head"><div class="card-title">② 日程選択</div></div>
+            <div class="card-head"><div class="card-title">② 日程調整リンクを生成・送付</div></div>
             <div class="card-body">
-              <div class="tab-bar" style="margin-bottom:14px">
-                <div class="tab active" id="btab-slots" onclick="switchBookTab('slots')">空き枠から選ぶ</div>
-                <div class="tab" id="btab-req" onclick="switchBookTab('req')">希望日時をリクエスト</div>
+              <div style="background:var(--sk-bg);border:1px solid rgba(2,132,199,.15);border-radius:8px;padding:11px 14px;font-size:11px;color:var(--sk);line-height:1.8;margin-bottom:16px">
+                📋 <strong>フロー</strong><br>
+                ① このページでリンクを生成 → クライアントに送付<br>
+                ② クライアントがリンクから希望日程を選択・送信<br>
+                ③ HQが宅建士を割り当て → Meet URLをクライアントに通知
               </div>
 
-              <!-- 空き枠一覧 -->
-              <div id="btab-slots-view">
-                <div style="font-size:10px;color:var(--muted);margin-bottom:10px">
-                  登録済みの空き枠から選択してください
+              <div id="link-generated-area" style="display:none;margin-bottom:16px">
+                <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px">生成された日程調整リンク</div>
+                <div style="display:flex;gap:8px;align-items:center">
+                  <input id="scheduling-link" class="form-input" readonly style="font-family:monospace;font-size:11px;background:var(--cream2)">
+                  <button class="btn btn-ghost btn-sm" onclick="copySchedulingLink()" style="flex-shrink:0">コピー</button>
                 </div>
-                <div id="avail-slots"></div>
-                <div id="selected-slot-info" style="display:none;margin-top:10px;
-                  background:var(--em-bg);border:1px solid rgba(5,150,105,.2);border-radius:8px;
-                  padding:10px 13px;font-size:12px;color:var(--em)"></div>
+                <div id="link-expiry" style="font-size:10px;color:var(--muted);margin-top:4px"></div>
               </div>
 
-              <!-- リクエスト -->
-              <div id="btab-req-view" style="display:none">
-                <div style="font-size:10px;color:var(--muted);margin-bottom:10px">
-                  希望日時を最大3件入力してください（48時間以内に確定）
+              <div id="send-options" style="display:none;margin-bottom:16px">
+                <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px">送付方法</div>
+                <div style="display:flex;flex-direction:column;gap:8px">
+                  <button class="btn btn-ghost btn-sm" onclick="sendViaLine()" style="justify-content:flex-start">📲 LINEで送付</button>
+                  <button class="btn btn-ghost btn-sm" onclick="copySchedulingLink()" style="justify-content:flex-start">📋 リンクをコピーして手動送付</button>
                 </div>
-                <div id="req-slots">
-                  <div class="req-row" id="req-0" style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-bottom:8px">
-                    <input type="date" class="form-input req-date" style="font-size:12px">
-                    <input type="time" class="form-input req-time" style="font-size:12px" value="10:00">
-                    <button class="btn btn-ghost btn-sm" onclick="removeReq(0)" style="padding:0 10px">✕</button>
-                  </div>
-                </div>
-                <button class="btn btn-ghost btn-sm" onclick="addReqRow()" style="margin-top:4px">
-                  ＋ 希望日時を追加
-                </button>
               </div>
+
+              <button class="btn btn-navy" id="gen-link-btn" style="width:100%;justify-content:center" onclick="generateSchedulingLink()">
+                🔗 日程調整リンクを生成する
+              </button>
             </div>
           </div>
-
-          <button class="btn btn-navy" id="submit-btn" style="width:100%;justify-content:center" onclick="submitBooking()">
-            予約を送信する
-          </button>
         </div>
 
       </div>
@@ -404,6 +399,105 @@ function addReqRow(){
 function removeReq(i){
   const el=document.getElementById('req-'+i);
   if(el) el.remove();
+}
+
+// ─────────────────────────────────────────────────────
+// 日程調整リンク生成・送付
+// ─────────────────────────────────────────────────────
+function generateSchedulingLink() {
+  var caseId = document.getElementById('bk-case-id').value.trim().toUpperCase();
+  if (!caseId) { showToast('案件IDを入力してください', 'warn'); return; }
+
+  var cas = CASE_DB_LOCAL.find(function(c){ return c.caseId === caseId; }) || {};
+  var agName = document.getElementById('bk-ag').value.trim() ||
+               sessionStorage.getItem('coreto_name') || '担当AG';
+
+  // リンクトークンを生成（本番: サーバーサイドで発行）
+  var token = 'ITK-' + caseId.replace(/[^A-Z0-9]/g,'') + '-' + Date.now().toString(36).toUpperCase();
+  var baseUrl = window.location.origin + window.location.pathname.replace('coreto-itsetsu-booking-v2.html', '');
+  var link = baseUrl + 'coreto-itsetsu-client-v2.html?token=' + token + '&caseId=' + encodeURIComponent(caseId);
+
+  // CORETO_ITSETSU_LINKS に保存
+  try {
+    var links = JSON.parse(localStorage.getItem('CORETO_ITSETSU_LINKS') || '{}');
+    var expiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7日間有効
+    links[token] = {
+      token, caseId,
+      caseName: cas.caseName || '—',
+      agName,
+      agId:    sessionStorage.getItem('coreto_user_id') || '',
+      contact: document.getElementById('bk-client-contact')?.value || '',
+      createdAt: new Date().toLocaleString('ja-JP'),
+      expiresAt:  expiry.toLocaleDateString('ja-JP'),
+      status: 'sent',
+    };
+    localStorage.setItem('CORETO_ITSETSU_LINKS', JSON.stringify(links));
+  } catch(e) {}
+
+  // UIに表示
+  var linkEl = document.getElementById('scheduling-link');
+  if (linkEl) linkEl.value = link;
+  var expEl = document.getElementById('link-expiry');
+  if (expEl) expEl.textContent = '有効期限: 7日間 / クライアントが希望日程を入力するとHQに通知されます';
+  document.getElementById('link-generated-area').style.display = '';
+  document.getElementById('send-options').style.display = '';
+  document.getElementById('gen-link-btn').textContent = '🔄 リンクを再生成';
+  document.getElementById('gen-link-btn').style.background = 'var(--muted)';
+
+  // HQタスクに追加
+  try {
+    var tasks = JSON.parse(localStorage.getItem('CORETO_HQ_TASKS') || '[]');
+    tasks.unshift({
+      id: 'ITSETSU-LINK-' + token,
+      type: 'itsetsu_link_sent',
+      title: 'IT重説 日程調整リンク送付済み — ' + caseId + ' / ' + (cas.caseName||''),
+      caseId, agName,
+      createdAt: new Date().toLocaleString('ja-JP'),
+      status: '待機中',
+    });
+    localStorage.setItem('CORETO_HQ_TASKS', JSON.stringify(tasks));
+  } catch(e) {}
+
+  showToast('✅ 日程調整リンクを生成しました。クライアントに送付してください。', 'ok');
+}
+
+function copySchedulingLink() {
+  var link = document.getElementById('scheduling-link')?.value;
+  if (!link) { showToast('先にリンクを生成してください', 'warn'); return; }
+  navigator.clipboard?.writeText(link).then(function() {
+    showToast('📋 リンクをコピーしました', 'ok');
+  }).catch(function() {
+    document.getElementById('scheduling-link')?.select();
+    showToast('📋 テキストを選択しました。Ctrl+Cでコピーしてください', 'info');
+  });
+}
+
+function sendViaLine() {
+  var link = document.getElementById('scheduling-link')?.value;
+  var caseId = document.getElementById('bk-case-id').value.trim();
+  var cas = CASE_DB_LOCAL.find(function(c){ return c.caseId === caseId; }) || {};
+  if (!link) { showToast('先にリンクを生成してください', 'warn'); return; }
+
+  var msg = '【CORETO IT重説 日程調整のお願い】\n' +
+    (cas.caseName ? cas.caseName + ' 様\n\n' : '\n') +
+    '下記リンクから、IT重説（オンライン重要事項説明）の\nご希望日程をご入力ください。\n\n' +
+    link + '\n\n有効期限: 7日間';
+
+  var token = (window.LINE_CONFIG && window.LINE_CONFIG.ENABLED && window.LINE_CONFIG.AG_CHANNEL_TOKEN) || '';
+  if (token) {
+    fetch('https://api.line.me/v2/bot/message/broadcast', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ messages: [{ type: 'text', text: msg }] })
+    }).then(function() {
+      showToast('📲 LINEで日程調整リンクを送付しました', 'ok');
+    }).catch(function(e) {
+      showToast('⚠️ LINE送信エラー。リンクをコピーして手動送付してください', 'warn');
+    });
+  } else {
+    navigator.clipboard?.writeText(msg);
+    showToast('📋 メッセージをコピーしました（LINE未設定のため手動送付してください）', 'info');
+  }
 }
 
 function submitBooking(){
