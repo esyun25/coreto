@@ -621,8 +621,25 @@ window.addEventListener('DOMContentLoaded', () => {
     // AG: 担当案件のみ
     const myUserId = sessionStorage.getItem('coreto_user_id') || 'AG-0042';
     CASES = CASES.filter(c => c.ag.includes(myUserId));
-    document.getElementById('tb-actions').innerHTML =
-      '';
+    document.getElementById('tb-actions').innerHTML = '';
+  }
+
+  // URLパラメータにcaseIdがある場合はその案件のみ表示（rental-v2からの遷移）
+  const _paramCaseId = new URLSearchParams(location.search).get('caseId');
+  if (_paramCaseId) {
+    CASES = CASES.filter(c => c.id === _paramCaseId);
+    // タイトルに案件IDを表示
+    const titleEl = document.getElementById('tb-title');
+    if (titleEl) titleEl.textContent = '書類送付管理 — ' + _paramCaseId;
+    const crumbEl = document.getElementById('tb-crumb-label');
+    if (crumbEl) crumbEl.textContent = '書類送付管理（' + _paramCaseId + '）';
+    // 一覧に戻るリンクを追加
+    const crumb = document.querySelector('.tb-crumb');
+    if (crumb) {
+      const back = document.createElement('span');
+      back.innerHTML = ' › <a href="coreto-rental-v2.html?caseId=' + encodeURIComponent(_paramCaseId) + '" style="color:var(--sk)">案件詳細に戻る</a>';
+      crumb.appendChild(back);
+    }
   }
 
   filtered = [...CASES];
