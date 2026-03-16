@@ -859,21 +859,36 @@ function randomId(len) {
 function openTfa() {
   clearOtp(); updateDots();
   document.getElementById('tfa-screen').style.display = 'flex';
+
+  // 電話番号取得
+  var prof3 = {}; try { prof3 = JSON.parse(localStorage.getItem('CORETO_AG_PROFILE')||'{}'); } catch(e) {}
+  var phone3  = prof3.phone || '';
+  var masked3 = phone3.length >= 4 ? phone3.slice(0,3) + '-****-' + phone3.slice(-4) : '登録済みの携帯番号';
+
+  // SMS送信: Vercel API経由（設定済み・電話番号登録済みの場合）
+  var sentReal3 = false;
+  if (window.CORETO_API && window.CORETO_API.isConfigured() && phone3) {
+    var cfg3 = window.CORETO_API.getConfig();
+    fetch((cfg3.baseUrl||'') + '/api/sms/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-coreto-key': cfg3.internalKey||'' },
+      body: JSON.stringify({ to: phone3, message: '【CORETO】即時払い認証コードは ' + tfaOtp + ' です（5分間有効）。第三者に教えないでください。' }),
+    }).then(function(r){ return r.json(); })
+      .then(function(d){ if (!d._mock) { document.getElementById('tfa-demo-code').style.display = 'none'; } })
+      .catch(function(){});
+  }
+
   document.getElementById('tfa-sub').innerHTML =
-    (function(){
-      var prof = {}; try { prof = JSON.parse(localStorage.getItem('CORETO_AG_PROFILE')||'{}'); } catch(e) {}
-      var phone = prof.phone || '';
-      var masked = phone.length >= 4 ? phone.slice(0,3) + '-****-' + phone.slice(-4) : '登録済みの携帯番号';
-      return '登録の携帯番号（' + masked + '）に<br>SMSで6桁の認証コードを送信しました。<br>';
-    })() +
-    `<strong style="color:var(--am)">有効期限：5分</strong><br><br>` +
-    `<em style="font-size:10px;color:var(--muted)">[デモ用コード: ${tfaOtp}]</em>`;
+    '登録の携帯番号（' + masked3 + '）に<br>SMSで6桁の認証コードを送信しました。<br>' +
+    '<strong style="color:var(--am)">有効期限：5分</strong><br><br>' +
+    '<span id="tfa-demo-code" style="font-size:10px;color:var(--muted)">[デモ用コード: ' + tfaOtp + ']</span>';
+
   tfaCountdown = 600;
   clearInterval(tfaTimer);
   tfaTimer = setInterval(tickCountdown, 1000);
   document.getElementById('resend-btn').disabled = true;
   document.getElementById('tfa-countdown').style.color = 'var(--am)';
-  setTimeout(() => document.getElementById('otp-0').focus(), 100);
+  setTimeout(function(){ var el=document.getElementById('otp-0'); if(el) el.focus(); }, 100);
 }
 
 function tickCountdown() {
@@ -896,8 +911,8 @@ function resendOtp() {
   tfaTimer = setInterval(tickCountdown, 1000);
   document.getElementById('resend-btn').disabled = true;
   document.querySelectorAll('.otp-cell').forEach(c => c.disabled = false);
-  const sub = document.getElementById('tfa-sub');
-  sub.innerHTML = sub.innerHTML.replace(/\[デモ用コード: \d+\]/, `[デモ用コード: ${tfaOtp}]`);
+  var sub = document.getElementById('tfa-sub');
+  if (sub) sub.innerHTML = sub.innerHTML.replace(/\[デモ用コード: \d+\]/, '[デモ用コード: ' + tfaOtp + ']');
   document.getElementById('otp-0').focus();
 }
 

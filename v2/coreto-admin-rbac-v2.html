@@ -557,6 +557,7 @@ body, input, select, textarea, button {
       <button class="tab-btn"        id="tab-mentor"  onclick="switchTab('mentor')">💰 メンターフィー</button>
       <button class="tab-btn"        id="tab-stripe"  onclick="switchTab('stripe')">💳 Stripe管理</button>
       <button class="tab-btn"        id="tab-api"     onclick="switchTab('api')">⚙️ API設定</button>
+      <button class="tab-btn"        id="tab-kintone" onclick="switchTab('kintone')">🗂 Kintone設定</button>
     </div>
 
     <div id="tab-content"></div>
@@ -610,6 +611,7 @@ body, input, select, textarea, button {
 <div class="toast" id="toast"></div>
 
 <script src="coreto-slack-config-v2.js"></script>
+<script src="coreto-kintone-config-v2.js"></script>
 <script src="coreto-nav-v2.js"></script>
 <script>
 (function(){
@@ -707,10 +709,11 @@ function renderStats(){
 // タブ切替
 // ════════════════════════════════════════════════════
 function switchTab(tab){
-  ['hq','agents','mentor','stripe'].forEach(t => {
-    document.getElementById('tab-'+t).classList.toggle('active', t===tab);
+  ['hq','agents','mentor','stripe','api','kintone'].forEach(t => {
+    const el = document.getElementById('tab-'+t);
+    if (el) el.classList.toggle('active', t===tab);
   });
-  const TAB_MAP = {hq: renderHQ, agents: renderAgents, mentor: renderMentor, stripe: renderStripe};
+  const TAB_MAP = {hq: renderHQ, agents: renderAgents, mentor: renderMentor, stripe: renderStripe, api: renderApiSettings, kintone: renderKintoneSettings};
   TAB_MAP[tab]?.();
 }
 
@@ -1222,6 +1225,88 @@ async function runMockPayment() {
   } catch(err) {
     showToast('❌ ' + err.message, 'error');
   }
+}
+
+// ── Kintone設定タブ ──────────────────────────────────────────
+function renderKintoneSettings() {
+  var cfg = {};
+  try { cfg = JSON.parse(localStorage.getItem('CORETO_KINTONE_CONFIG') || '{}'); } catch(e) {}
+  var apps = cfg.apps || {};
+  var isConn = typeof window.KINTONE !== 'undefined' && window.KINTONE.isConfigured();
+  var content = document.getElementById('tab-content');
+  if (!content) return;
+
+  var statusBadge = isConn
+    ? '<span style="background:var(--em-bg);color:var(--em);font-size:10px;padding:2px 8px;border-radius:4px;font-weight:700">✅ 接続済み</span>'
+    : '<span style="background:var(--am-bg);color:var(--am);font-size:10px;padding:2px 8px;border-radius:4px;font-weight:700">未接続（デモモード）</span>';
+
+  var APP_LABELS = [
+    ['users','AGマスター・HQユーザー'],['reports','成約報告'],['cases','案件（パイプライン）'],
+    ['payouts','支払い履歴'],['payments','クライアント入金管理'],
+    ['kyc','KYC申請'],['applicants','AG応募者'],['training','研修完了記録'],
+  ];
+  var appRows = APP_LABELS.map(function(p) {
+    return '<div style="display:grid;grid-template-columns:200px 1fr;gap:8px;align-items:center;margin-bottom:8px">' +
+      '<label style="font-size:11px;color:var(--muted)">' + p[1] + '<br><span style="font-size:10px;color:var(--faint)">key: ' + p[0] + '</span></label>' +
+      '<input id="kt-app-' + p[0] + '" type="text" placeholder="アプリID（数値）" value="' + (apps[p[0]]||'') + '" ' +
+      'style="padding:7px 10px;border:1.5px solid var(--bd);border-radius:7px;font-size:12px;font-family:monospace;outline:none">' +
+      '</div>';
+  }).join('');
+
+  content.innerHTML = '<div style="max-width:620px">' +
+    '<div style="background:var(--cream2);border:1px solid var(--bd);border-radius:10px;padding:14px 18px;margin-bottom:20px">' +
+    '<div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:4px">接続状態 ' + statusBadge + '</div>' +
+    '<div style="font-size:11px;color:var(--muted);line-height:1.8">未設定の場合は localStorage / デモデータで動作します。設定後は成約報告・AG情報・月次締めデータが Kintone から動的取得されます。</div></div>' +
+    '<div style="display:flex;flex-direction:column;gap:12px;margin-bottom:18px">' +
+    '<div><label style="font-size:10px;font-weight:700;color:var(--muted);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px">サブドメイン</label>' +
+    '<div style="display:flex;align-items:center;gap:6px">' +
+    '<input id="kt-subdomain" type="text" placeholder="your-company" value="' + (cfg.subdomain||'') + '" style="flex:1;padding:9px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:13px;font-family:Outfit,sans-serif;outline:none">' +
+    '<span style="font-size:12px;color:var(--muted);white-space:nowrap">.cybozu.com</span></div></div>' +
+    '<div><label style="font-size:10px;font-weight:700;color:var(--muted);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px">APIトークン</label>' +
+    '<input id="kt-token" type="password" placeholder="••••••••••••••••" value="' + (cfg.apiToken||'') + '" style="width:100%;padding:9px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:13px;font-family:Outfit,sans-serif;outline:none">' +
+    '<div style="font-size:10px;color:var(--muted);margin-top:3px">各アプリで「APIトークンを追加」して取得。読み取り＋書き込み権限を付与してください。</div></div></div>' +
+    '<div style="border:1px solid var(--bd);border-radius:10px;padding:14px 18px;margin-bottom:18px">' +
+    '<div style="font-size:11px;font-weight:700;color:var(--navy);margin-bottom:10px">アプリID（Kintone管理画面のアプリ一覧で確認）</div>' +
+    appRows + '</div>' +
+    '<div style="display:flex;gap:10px;margin-bottom:20px">' +
+    '<button onclick="saveKintoneSettings()" style="flex:2;padding:10px;background:var(--navy);color:var(--gold);border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:Outfit,sans-serif">💾 Kintone設定を保存</button>' +
+    '<button onclick="testKintoneConn()" style="flex:1;padding:10px;background:transparent;border:1.5px solid var(--bd);border-radius:8px;font-size:12px;color:var(--muted);cursor:pointer;font-family:Outfit,sans-serif">接続テスト</button>' +
+    '<button onclick="clearKintoneSettings()" style="padding:10px 14px;background:transparent;border:1.5px solid rgba(220,38,38,.3);border-radius:8px;font-size:12px;color:var(--rd);cursor:pointer;font-family:Outfit,sans-serif">クリア</button>' +
+    '</div>' +
+    '<div style="background:var(--cream2);border:1px solid var(--bd);border-radius:10px;padding:14px 18px">' +
+    '<div style="font-size:11px;font-weight:700;color:var(--navy);margin-bottom:6px">接続後に自動切り替えされる機能</div>' +
+    '<div style="font-size:11px;color:var(--muted);line-height:2">' +
+    '✅ ログイン認証（hub-v2） ✅ 成約報告・承認処理<br>' +
+    '✅ 月次締め振込データ ✅ 即時払い実行記録 ✅ 入金確認データ' +
+    '</div></div></div>';
+}
+
+function saveKintoneSettings() {
+  var subdomain = (document.getElementById('kt-subdomain')?.value||'').trim();
+  var apiToken  = (document.getElementById('kt-token')?.value||'').trim();
+  var apps = {};
+  ['users','reports','cases','payouts','payments','kyc','applicants','training'].forEach(function(k){
+    var v = (document.getElementById('kt-app-'+k)?.value||'').trim();
+    if (v) apps[k] = v;
+  });
+  try { localStorage.setItem('CORETO_KINTONE_CONFIG', JSON.stringify({subdomain,apiToken,apps,savedAt:new Date().toLocaleString('ja-JP')})); } catch(e){}
+  showToast('✅ Kintone設定を保存しました','ok');
+  renderKintoneSettings();
+}
+
+async function testKintoneConn() {
+  if (typeof window.KINTONE==='undefined'){showToast('coreto-kintone-config-v2.js が読み込まれていません','warn');return;}
+  showToast('接続テスト中...','warn');
+  var r = await window.KINTONE.testConnection();
+  showToast(r.ok?'✅ Kintone接続成功':'❌ '+r.error, r.ok?'ok':'error');
+}
+
+function clearKintoneSettings() {
+  coretoConfirm({title:'Kintone設定をクリア',message:'Kintone設定を削除しますか？デモモードに戻ります。',okLabel:'クリアする',danger:true,onOk:function(){
+    localStorage.removeItem('CORETO_KINTONE_CONFIG');
+    showToast('Kintone設定をクリアしました','warn');
+    renderKintoneSettings();
+  }});
 }
 
 function renderSlackSettings() {
