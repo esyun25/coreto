@@ -172,7 +172,7 @@ body, input, select, textarea, button { font-family:'Outfit','Noto Sans JP',sans
   <div class="tab-bar">
     <div class="tab active" id="tab-list" onclick="switchTab('list',this)">内見一覧</div>
     <div class="tab" id="tab-new" onclick="switchTab('new',this)">内見登録</div>
-    <div class="tab" id="tab-report" onclick="switchTab('report',this)">内見後報告</div>
+    
   </div>
   <div class="page" id="pg"></div>
 </div>
@@ -180,51 +180,48 @@ body, input, select, textarea, button { font-family:'Outfit','Noto Sans JP',sans
 <div class="mob-overlay" onclick="toggleSb()"></div>
 <script src="coreto-nav-v2.js"></script>
 <script>
-// ────────────────────────────────────────────────────
+// ─────────────────────────────────────────────
 // 内見管理 — データ層
-// CORETO_SHOWINGS_{caseId} / CORETO_SHOWINGS_ALL
-// ────────────────────────────────────────────────────
-
-var _caseIdParam   = new URLSearchParams(location.search).get('caseId') || '';
-var _clientParam   = new URLSearchParams(location.search).get('client') || '';
-var _isNew         = new URLSearchParams(location.search).get('new') === '1';
-var _SHOWINGS_KEY  = _caseIdParam ? 'CORETO_SHOWINGS_' + _caseIdParam : 'CORETO_SHOWINGS_ALL';
+// ─────────────────────────────────────────────
+var _p           = new URLSearchParams(location.search);
+var _caseIdParam = _p.get('caseId') || '';
+var _clientParam = _p.get('client') || '';
+var _isNew       = _p.get('new') === '1';
+var _SKEY        = 'CORETO_SHOWINGS_' + (_caseIdParam || 'ALL');
 
 function loadShowings() {
   try {
-    var raw = localStorage.getItem(_SHOWINGS_KEY);
+    var raw = localStorage.getItem(_SKEY);
     if (raw) return JSON.parse(raw);
   } catch(e) {}
   // デモデータ（初回のみ）
-  return _caseIdParam === 'RENT-0194' || !_caseIdParam ? [
-    {id:'SH-001', case:'RENT-0194', client:'田中 優子', prop:'パークタワー三田 302',     addr:'港区三田3丁目',     date:'2026-03-14', time:'14:00', companion:'管理会社 田村様', method:'現地案内（AG同行）', status:'完了',  result:'申込意向あり', rent:165000, movein:'', note:'2LDKを大変気に入っていただいた。収納が多い点が特に好評。'},
-    {id:'SH-002', case:'RENT-0194', client:'田中 優子', prop:'グランドメゾン赤坂 805',   addr:'港区赤坂2丁目',     date:'2026-03-14', time:'16:00', companion:'',              method:'現地案内（AG同行）', status:'完了',  result:'見送り',       rent:0,      movein:'', note:'家賃が予算（17万）をオーバーしていたため見送り。'},
-    {id:'SH-003', case:'RENT-0194', client:'田中 優子', prop:'リバーサイド麻布 1204',   addr:'港区麻布十番1丁目', date:'2026-03-21', time:'13:00', companion:'管理会社 山田様', method:'現地案内（AG同行）', status:'確定',  result:'',             rent:0,      movein:'', note:'2番手での申込み可能性あり。先行申込がいる。'},
-  ] : [];
+  if (_caseIdParam === 'RENT-0194' || !_caseIdParam) {
+    return [
+      {id:'SH-001', case:'RENT-0194', client:'田中 優子', prop:'パークタワー三田 302',   addr:'港区三田3丁目',     date:'2026-03-14', time:'14:00', companion:'管理会社 田村様', method:'現地案内（AG同行）', status:'完了', result:'申込意向あり', note:'2LDKを大変気に入っていただいた。収納量が特に好評。'},
+      {id:'SH-002', case:'RENT-0194', client:'田中 優子', prop:'グランドメゾン赤坂 805', addr:'港区赤坂2丁目',     date:'2026-03-14', time:'16:00', companion:'',              method:'現地案内（AG同行）', status:'完了', result:'見送り',       note:'家賃が予算（17万）をオーバーしていたため見送り。'},
+      {id:'SH-003', case:'RENT-0194', client:'田中 優子', prop:'リバーサイド麻布 1204',  addr:'港区麻布十番1丁目', date:'2026-03-21', time:'13:00', companion:'管理会社 山田様', method:'現地案内（AG同行）', status:'確定', result:'',            note:'2番手での申込み可能性あり。先行申込がいる。'},
+    ];
+  }
+  return [];
 }
-
 function saveShowings(list) {
-  try { localStorage.setItem(_SHOWINGS_KEY, JSON.stringify(list)); } catch(e) {}
+  try { localStorage.setItem(_SKEY, JSON.stringify(list)); } catch(e) {}
 }
-
 var SHOWINGS = loadShowings();
 
-// ────────────────────────────────────────────────────
-// タブ切り替え
-// ────────────────────────────────────────────────────
-var currentTab = 'list';
+// ─────────────────────────────────────────────
+// タブ切り替え（「一覧」と「登録」の2タブのみ）
+// ─────────────────────────────────────────────
 function switchTab(t, el) {
   document.querySelectorAll('.tab').forEach(function(x){ x.classList.remove('active'); });
   if (el) el.classList.add('active');
-  currentTab = t;
-  if (t === 'list')   renderList();
-  if (t === 'new')    renderNew();
-  if (t === 'report') renderReport(null);
+  if (t === 'list') renderList();
+  if (t === 'new')  renderNew();
 }
 
-// ────────────────────────────────────────────────────
+// ─────────────────────────────────────────────
 // 内見一覧
-// ────────────────────────────────────────────────────
+// ─────────────────────────────────────────────
 function renderList() {
   SHOWINGS = loadShowings();
   var upcoming = SHOWINGS.filter(function(s){ return s.status === '確定'; });
@@ -232,29 +229,32 @@ function renderList() {
   var rateYes  = done.filter(function(s){ return s.result === '申込意向あり' || s.result === '2番手申込'; }).length;
   var rateNo   = done.filter(function(s){ return s.result === '見送り'; }).length;
 
-  var html = '<div class="kpi-row">' +
-    '<div class="kpi gd"><div class="kpi-lb">合計内見数</div><div class="kpi-vl">' + SHOWINGS.length + '件</div></div>' +
-    '<div class="kpi sk"><div class="kpi-lb">予定</div><div class="kpi-vl">' + upcoming.length + '件</div></div>' +
-    '<div class="kpi em"><div class="kpi-lb">申込意向</div><div class="kpi-vl">' + rateYes + '件</div><div class="kpi-sb">完了' + done.length + '件中</div></div>' +
-    '<div class="kpi am"><div class="kpi-lb">見送り</div><div class="kpi-vl">' + rateNo + '件</div></div>' +
+  var html =
+    '<div class="kpi-row">' +
+      kpi('gd', '合計内見数', SHOWINGS.length + '件') +
+      kpi('sk', '予定', upcoming.length + '件') +
+      kpi('em', '申込意向', rateYes + '件', done.length ? '完了' + done.length + '件中' : '') +
+      kpi('am', '見送り', rateNo + '件') +
     '</div>';
 
   if (upcoming.length) {
-    html += '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:10px">予定</div>';
+    html += '<div class="sh-section-label">📅 予定</div>';
     html += upcoming.map(function(s){ return buildCard(s); }).join('');
   }
   if (done.length) {
-    html += '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin:16px 0 10px">完了</div>';
+    html += '<div class="sh-section-label" style="margin-top:20px">✅ 完了</div>';
     html += done.map(function(s){ return buildCard(s, true); }).join('');
   }
   if (!SHOWINGS.length) {
-    html += '<div style="text-align:center;padding:48px;color:var(--muted)">' +
-      '<div style="font-size:36px;margin-bottom:12px">📅</div>' +
+    html += '<div class="sh-empty"><div style="font-size:36px;margin-bottom:12px">📅</div>' +
       '<div style="font-weight:700;margin-bottom:6px">内見がまだ登録されていません</div>' +
-      '<div style="font-size:12px">「＋ 内見を登録」から追加してください</div>' +
-    '</div>';
+      '<div style="font-size:12px">「＋ 内見を登録」から追加してください</div></div>';
   }
   document.getElementById('pg').innerHTML = html;
+}
+
+function kpi(cls, label, val, sub) {
+  return '<div class="kpi ' + cls + '"><div class="kpi-lb">' + label + '</div><div class="kpi-vl">' + val + '</div>' + (sub ? '<div class="kpi-sb">' + sub + '</div>' : '') + '</div>';
 }
 
 function fmtDate(dateStr) {
@@ -264,147 +264,225 @@ function fmtDate(dateStr) {
 }
 
 function buildCard(s, isDone) {
-  var resultBadge = s.result ? (
-    s.result === '申込意向あり' ? '<span class="badge b-em">' + s.result + '</span>' :
-    s.result === '2番手申込'   ? '<span class="badge b-am">' + s.result + '</span>' :
-    s.result === '見送り'      ? '<span class="badge b-nt">' + s.result + '</span>' :
-    s.result === '検討中'      ? '<span class="badge b-sk">' + s.result + '</span>' :
-    '<span class="badge b-nt">' + s.result + '</span>'
-  ) : '<span class="badge b-sk">確定</span>';
+  var resultBadge =
+    !s.result        ? '<span class="badge b-sk">確定</span>' :
+    s.result === '申込意向あり' ? '<span class="badge b-em">申込意向あり</span>' :
+    s.result === '2番手申込'   ? '<span class="badge b-am">2番手申込</span>' :
+    s.result === '検討中'      ? '<span class="badge b-sk">検討中</span>' :
+                                 '<span class="badge b-nt">見送り</span>';
 
-  return '<div class="sh-card" style="' + (isDone ? 'opacity:.8;' : '') + 'cursor:pointer" onclick="openDetail(\'' + s.id + '\')">' +
+  var actionBtn = isDone
+    ? '<button class="btn btn-g btn-sm" onclick="event.stopPropagation();openDetail(\'' + s.id + '\')">詳細</button>'
+    : '<button class="btn btn-p btn-sm" onclick="event.stopPropagation();openDetail(\'' + s.id + '\')">結果を記録 →</button>';
+
+  return '<div class="sh-card" style="cursor:pointer' + (isDone ? ';opacity:.8' : '') + '" onclick="openDetail(\'' + s.id + '\')">' +
     '<div class="sh-date-box" style="' + (isDone ? 'background:var(--cream2)' : '') + '">' +
-      '<div class="sh-date-d" style="' + (isDone ? 'color:var(--ink)' : '') + '">' + fmtDate(s.date).split('/')[1].split('（')[0] + '</div>' +
-      '<div class="sh-date-m" style="' + (isDone ? 'color:var(--faint)' : '') + '">' + fmtDate(s.date).split('/')[0] + '月</div>' +
+      '<div class="sh-date-d" style="' + (isDone ? 'color:var(--ink)' : '') + '">' + (s.date ? new Date(s.date).getDate() : '—') + '</div>' +
+      '<div class="sh-date-m" style="' + (isDone ? 'color:var(--faint)' : '') + '">' + (s.date ? (new Date(s.date).getMonth()+1) + '月' : '') + '</div>' +
     '</div>' +
     '<div class="sh-info">' +
       '<div class="sh-prop">' + s.prop + '</div>' +
-      '<div class="sh-meta">' + (s.addr||'') + ' ／ ' + s.time + ' ／ クライアント：<strong>' + s.client + '</strong>' +
-        '<span style="font-family:\'DM Mono\',monospace;color:var(--faint);margin-left:6px">' + s.case + '</span>' +
-      '</div>' +
-      (s.note ? '<div style="font-size:11px;color:var(--muted);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:360px">' + s.note + '</div>' : '') +
+      '<div class="sh-meta">' + s.time + ' ／ ' + (s.addr||'') + ' ／ <strong>' + s.client + '</strong> <span style="font-family:\'DM Mono\',monospace;color:var(--faint)">' + s.case + '</span></div>' +
+      (s.note ? '<div style="font-size:11px;color:var(--muted);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:340px">' + s.note + '</div>' : '') +
     '</div>' +
-    '<div class="sh-actions">' +
-      resultBadge +
-      (!isDone ? '<button class="btn btn-p btn-sm" onclick="event.stopPropagation();openDetail(\'' + s.id + '\')">詳細・報告入力</button>' :
-                 '<button class="btn btn-g btn-sm" onclick="event.stopPropagation();openDetail(\'' + s.id + '\')">詳細を見る</button>') +
-    '</div>' +
+    '<div class="sh-actions">' + resultBadge + actionBtn + '</div>' +
   '</div>';
 }
 
-// ────────────────────────────────────────────────────
-// 詳細モーダル（クリックで開く）
-// ────────────────────────────────────────────────────
+// ─────────────────────────────────────────────
+// 詳細モーダル
+// 予定 → 「結果を記録」ボタンで inline 結果記録
+// 完了 → 詳細表示のみ
+// ─────────────────────────────────────────────
 function openDetail(id) {
   var s = SHOWINGS.find(function(x){ return x.id === id; });
   if (!s) return;
 
+  var existing = document.getElementById('sh-overlay');
+  if (existing) existing.remove();
+
   var overlay = document.createElement('div');
-  overlay.id = 'showing-detail-overlay';
+  overlay.id = 'sh-overlay';
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
   overlay.onclick = function(e){ if(e.target===overlay) overlay.remove(); };
 
-  var isDone = s.status === '完了';
-  var resultColor = s.result === '申込意向あり' ? 'var(--em)' : s.result === '見送り' ? 'var(--muted)' : s.result === '2番手申込' ? 'var(--am)' : 'var(--sk)';
-
   var modal = document.createElement('div');
-  modal.style.cssText = 'background:#fff;border-radius:14px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;font-family:Outfit,sans-serif';
+  modal.style.cssText = 'background:#fff;border-radius:14px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;font-family:Outfit,sans-serif';
 
   // ヘッダー
   var head = document.createElement('div');
-  head.style.cssText = 'padding:16px 22px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff';
-  head.innerHTML = '<div>' +
-    '<div style="font-size:15px;font-weight:700;color:var(--navy)">' + s.prop + '</div>' +
-    '<div style="font-size:11px;color:var(--muted);margin-top:2px;font-family:monospace">' + s.id + ' ／ ' + s.case + '</div>' +
-  '</div>' +
-  '<button onclick="document.getElementById(\'showing-detail-overlay\').remove()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--muted)">✕</button>';
+  head.style.cssText = 'padding:16px 22px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff;z-index:1';
+  var isDone = s.status === '完了';
+  head.innerHTML =
+    '<div><div style="font-size:15px;font-weight:700;color:var(--navy)">' + s.prop + '</div>' +
+    '<div style="font-size:11px;color:var(--muted);margin-top:2px">' + fmtDate(s.date) + '　' + s.time + '　' + s.client + '　<span style="font-family:monospace">' + s.case + '</span></div></div>' +
+    '<button onclick="document.getElementById(\'sh-overlay\').remove()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--muted)">✕</button>';
 
   // ボディ
   var body = document.createElement('div');
   body.style.cssText = 'padding:20px 22px';
 
-  var infoGrid = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">' +
-    infoItem('クライアント', s.client) +
-    infoItem('内見日', fmtDate(s.date) + ' ' + s.time) +
-    infoItem('物件住所', s.addr) +
-    infoItem('内見方法', s.method || '—') +
-    infoItem('同行者', s.companion || 'なし') +
-    infoItem('ステータス', s.status, isDone ? 'var(--muted)' : 'var(--sk)') +
+  // 基本情報グリッド
+  var grid = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">' +
+    dItem('内見方法', s.method||'現地案内（AG同行）') +
+    dItem('同行者', s.companion||'なし') +
+    dItem('物件住所', s.addr||'—', '1/-1') +
     '</div>';
+  body.innerHTML = grid;
 
-  if (s.result) {
-    infoGrid += '<div style="background:var(--cream2);border-radius:8px;padding:12px 14px;margin-bottom:12px">' +
-      '<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">内見結果</div>' +
-      '<div style="font-size:16px;font-weight:700;color:' + resultColor + '">' + s.result + '</div>' +
-      (s.rent ? '<div style="font-size:12px;color:var(--muted);margin-top:4px">申込家賃: ¥' + Number(s.rent).toLocaleString() + '</div>' : '') +
-      (s.movein ? '<div style="font-size:12px;color:var(--muted)">入居希望: ' + fmtDate(s.movein) + '</div>' : '') +
-      '</div>';
+  // 完了済み：結果を表示
+  if (isDone && s.result) {
+    var rc = s.result==='申込意向あり'?'var(--em)':s.result==='2番手申込'?'var(--am)':s.result==='見送り'?'var(--muted)':'var(--sk)';
+    var rbox = document.createElement('div');
+    rbox.style.cssText = 'background:var(--cream2);border-radius:9px;padding:14px 16px;margin-bottom:14px';
+    rbox.innerHTML = '<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">内見結果</div>' +
+      '<div style="font-size:18px;font-weight:700;color:' + rc + '">' + s.result + '</div>';
+    body.appendChild(rbox);
   }
 
   if (s.note) {
-    infoGrid += '<div style="background:var(--cream2);border-radius:8px;padding:12px 14px;margin-bottom:12px">' +
-      '<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">コメント</div>' +
-      '<div style="font-size:13px;color:var(--ink);line-height:1.7">' + s.note + '</div>' +
-    '</div>';
+    var nbox = document.createElement('div');
+    nbox.style.cssText = 'background:var(--cream2);border-radius:9px;padding:14px 16px;margin-bottom:14px';
+    nbox.innerHTML = '<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">メモ</div>' +
+      '<div style="font-size:13px;color:var(--ink);line-height:1.7">' + s.note + '</div>';
+    body.appendChild(nbox);
   }
 
-  body.innerHTML = infoGrid;
-
-  // アクションボタン
-  var actions = document.createElement('div');
-  actions.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-top:8px';
-
+  // 予定 → 結果記録フォームをインラインで表示
   if (!isDone) {
-    var reportBtn = document.createElement('button');
-    reportBtn.style.cssText = 'flex:2;padding:10px;background:var(--navy);color:var(--gold);border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:Outfit,sans-serif';
-    reportBtn.textContent = '📋 報告を入力する';
-    reportBtn.onclick = function() { overlay.remove(); renderReport(s.id); document.getElementById('tab-report').click(); };
-    actions.appendChild(reportBtn);
+    var divider = document.createElement('div');
+    divider.style.cssText = 'border-top:1px solid var(--bd);margin:16px 0 14px;padding-top:14px';
+    divider.innerHTML = '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px">📋 内見結果を記録</div>';
+    body.appendChild(divider);
+
+    // 結果セレクト
+    var resultRow = document.createElement('div');
+    resultRow.style.marginBottom = '12px';
+    resultRow.innerHTML =
+      '<select id="modal-result" onchange="onModalResultChange(this.value)" style="width:100%;padding:10px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:13px;font-family:Outfit,sans-serif;outline:none;background:#fff">' +
+        '<option value="">結果を選択してください</option>' +
+        '<option value="申込意向あり">✅ 申込意向あり — 申込書を提出する</option>' +
+        '<option value="2番手申込">📋 2番手で申込み — 1番手キャンセル待ち</option>' +
+        '<option value="検討中">🤔 検討中 — 他物件と比較・追加内見予定</option>' +
+        '<option value="見送り">❌ 見送り — この物件には申込しない</option>' +
+      '</select>';
+    body.appendChild(resultRow);
+
+    // 追加情報エリア（結果によって切り替え）
+    var extraArea = document.createElement('div');
+    extraArea.id = 'modal-extra';
+    extraArea.style.marginBottom = '12px';
+    body.appendChild(extraArea);
+
+    // コメント
+    var noteRow = document.createElement('div');
+    noteRow.style.marginBottom = '14px';
+    noteRow.innerHTML = '<textarea id="modal-note" placeholder="クライアントの感想・次のアクションなど（任意）" style="width:100%;padding:10px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:12px;font-family:Outfit,sans-serif;resize:none;height:68px;outline:none">' + (s.note||'') + '</textarea>';
+    body.appendChild(noteRow);
+
+    // 記録ボタン
+    var recBtn = document.createElement('button');
+    recBtn.style.cssText = 'width:100%;padding:11px;background:var(--navy);color:var(--gold);border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:Outfit,sans-serif';
+    recBtn.textContent = '✅ 結果を記録する';
+    recBtn.onclick = function(){ recordResult(s.id); };
+    body.appendChild(recBtn);
   }
+
+  // フッターボタン（内見依頼書・削除）
+  var foot = document.createElement('div');
+  foot.style.cssText = 'display:flex;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid var(--bd)';
 
   var printBtn = document.createElement('button');
-  printBtn.style.cssText = 'padding:10px 14px;background:transparent;border:1.5px solid var(--bd);border-radius:9px;font-size:12px;color:var(--muted);cursor:pointer;font-family:Outfit,sans-serif';
+  printBtn.style.cssText = 'padding:8px 14px;background:transparent;border:1.5px solid var(--bd);border-radius:8px;font-size:11px;color:var(--muted);cursor:pointer;font-family:Outfit,sans-serif';
   printBtn.textContent = '🖨️ 内見依頼書';
-  printBtn.onclick = function() { printShowingById(s.id); };
-  actions.appendChild(printBtn);
+  printBtn.onclick = function(){ printShowingById(s.id); };
 
-  var cancelBtn = document.createElement('button');
-  cancelBtn.style.cssText = 'padding:10px 14px;background:transparent;border:1.5px solid var(--bd);border-radius:9px;font-size:12px;color:var(--muted);cursor:pointer;font-family:Outfit,sans-serif';
-  cancelBtn.textContent = '✕ 削除';
-  cancelBtn.onclick = function() {
+  var delBtn = document.createElement('button');
+  delBtn.style.cssText = 'padding:8px 14px;background:transparent;border:1.5px solid var(--bd);border-radius:8px;font-size:11px;color:var(--rd);cursor:pointer;font-family:Outfit,sans-serif;margin-left:auto';
+  delBtn.textContent = '削除';
+  delBtn.onclick = function(){
     overlay.remove();
-    coretoConfirm({title:'内見を削除', message:s.prop + ' の内見を削除しますか？', okLabel:'削除する', danger:true, onOk:function(){
+    coretoConfirm({title:'内見を削除', message:s.prop+'の内見記録を削除しますか？', okLabel:'削除する', danger:true, onOk:function(){
       SHOWINGS = SHOWINGS.filter(function(x){ return x.id !== s.id; });
-      saveShowings(SHOWINGS);
-      renderList();
+      saveShowings(SHOWINGS); renderList();
     }});
   };
-  actions.appendChild(cancelBtn);
 
-  body.appendChild(actions);
+  foot.appendChild(printBtn);
+  foot.appendChild(delBtn);
+  body.appendChild(foot);
+
   modal.appendChild(head);
   modal.appendChild(body);
   overlay.appendChild(modal);
   document.body.appendChild(overlay);
 }
 
-function infoItem(label, val, color) {
-  return '<div style="background:var(--cream2);border-radius:8px;padding:10px 14px">' +
+function dItem(label, val, col) {
+  return '<div style="background:var(--cream2);border-radius:8px;padding:10px 14px' + (col ? ';grid-column:' + col : '') + '">' +
     '<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px">' + label + '</div>' +
-    '<div style="font-size:13px;font-weight:600;color:' + (color||'var(--ink)') + '">' + (val||'—') + '</div>' +
+    '<div style="font-size:13px;font-weight:600;color:var(--ink)">' + (val||'—') + '</div>' +
   '</div>';
 }
 
-// ────────────────────────────────────────────────────
+function onModalResultChange(val) {
+  var area = document.getElementById('modal-extra');
+  if (!area) return;
+  if (val === '申込意向あり' || val === '2番手申込') {
+    area.innerHTML =
+      '<div style="background:' + (val==='申込意向あり'?'var(--em-bg)':'var(--am-bg)') + ';border-radius:8px;padding:11px 14px;font-size:11px;color:' + (val==='申込意向あり'?'var(--em)':'var(--am)') + ';line-height:1.7">' +
+      (val==='申込意向あり' ? '✅ 記録後、<strong>書類送付管理</strong>へ移動して申込書を送付してください。' : '⚠️ 1番手キャンセル待ちで申込書を提出します。HQに連絡してください。') + '</div>';
+  } else if (val === '検討中') {
+    area.innerHTML =
+      '<div style="background:var(--sk-bg);border-radius:8px;padding:11px 14px;font-size:11px;color:var(--sk);line-height:1.7">' +
+      'ℹ️ 追加内見が必要な場合は「＋ 内見を登録」から別物件を追加してください。</div>';
+  } else {
+    area.innerHTML = '';
+  }
+}
+
+function recordResult(showingId) {
+  var result = document.getElementById('modal-result')?.value;
+  var note   = document.getElementById('modal-note')?.value || '';
+  if (!result) { showToast('結果を選択してください', 'warn'); return; }
+
+  var idx = SHOWINGS.findIndex(function(x){ return x.id === showingId; });
+  if (idx >= 0) {
+    SHOWINGS[idx].status = '完了';
+    SHOWINGS[idx].result = result;
+    SHOWINGS[idx].note   = note;
+    saveShowings(SHOWINGS);
+  }
+
+  var caseId = SHOWINGS[idx]?.case || _caseIdParam;
+  document.getElementById('sh-overlay')?.remove();
+
+  if ((result === '申込意向あり' || result === '2番手申込') && caseId) {
+    coretoConfirm({
+      title:'結果を記録しました',
+      message:'申込書の送付へ進みますか？',
+      detail:'書類送付管理ページで申込書を送付してください。',
+      okLabel:'書類送付管理へ →',
+      danger:false,
+      onOk: function(){ window.location.href = 'coreto-screening-v2.html?caseId=' + encodeURIComponent(caseId); },
+      onCancel: function(){ renderList(); }
+    });
+  } else {
+    showToast('✅ 内見結果を記録しました', 'em');
+    renderList();
+  }
+}
+
+// ─────────────────────────────────────────────
 // 内見登録フォーム
-// ────────────────────────────────────────────────────
+// ─────────────────────────────────────────────
 function renderNew(prefill) {
   prefill = prefill || {};
-  var p  = new URLSearchParams(location.search);
-  var cid = prefill.case || p.get('caseId') || '';
-  var cli = prefill.client || (p.get('client') ? decodeURIComponent(p.get('client')) : '');
+  var cid = prefill.case || _caseIdParam;
+  var cli = prefill.client || (_clientParam ? decodeURIComponent(_clientParam) : '');
 
-  document.getElementById('pg').innerHTML = '<div class="form-wrap">' +
+  document.getElementById('pg').innerHTML =
+    '<div class="form-wrap">' +
     '<div class="form-card">' +
       '<div class="form-head"><div class="form-head-title">📅 内見登録</div></div>' +
       '<div class="form-body">' +
@@ -412,40 +490,37 @@ function renderNew(prefill) {
           '<div class="field"><label class="required">案件ID</label><input id="sh-case" placeholder="RENT-0000" value="' + cid + '"></div>' +
           '<div class="field"><label class="required">クライアント</label><input id="sh-client" placeholder="田中 優子" value="' + cli + '"></div>' +
         '</div>' +
-        '<div class="field"><label class="required">物件名・部屋番号</label><input id="sh-prop" placeholder="パークタワー三田 302" value="' + (prefill.prop||'') + '"></div>' +
-        '<div class="field"><label class="required">物件住所</label><input id="sh-addr" placeholder="港区三田3丁目XX-XX" value="' + (prefill.addr||'') + '"></div>' +
+        '<div class="field"><label class="required">物件名・部屋番号</label><input id="sh-prop" placeholder="パークタワー三田 302"></div>' +
+        '<div class="field"><label class="required">物件住所</label><input id="sh-addr" placeholder="港区三田3丁目XX-XX"></div>' +
         '<div class="field-row">' +
-          '<div class="field"><label class="required">内見日</label><input id="sh-date" type="date" value="' + (prefill.date||'') + '"></div>' +
-          '<div class="field"><label class="required">時間</label><input id="sh-time" type="time" value="' + (prefill.time||'14:00') + '"></div>' +
+          '<div class="field"><label class="required">内見日</label><input id="sh-date" type="date"></div>' +
+          '<div class="field"><label class="required">時間</label><input id="sh-time" type="time" value="14:00"></div>' +
         '</div>' +
         '<div class="field-row">' +
-          '<div class="field"><label>同行者</label><input id="sh-companion" placeholder="管理会社担当者名など" value="' + (prefill.companion||'') + '"></div>' +
+          '<div class="field"><label>同行者</label><input id="sh-companion" placeholder="管理会社担当者名など"></div>' +
           '<div class="field"><label>内見方法</label>' +
-            '<select id="sh-method">' +
-              '<option>現地案内（AG同行）</option>' +
-              '<option>オンライン内見</option>' +
-            '</select>' +
+            '<select id="sh-method"><option>現地案内（AG同行）</option><option>オンライン内見</option></select>' +
           '</div>' +
         '</div>' +
         '<div style="background:var(--am-bg);border:1px solid rgba(217,119,6,.2);border-radius:7px;padding:9px 13px;font-size:11px;color:var(--am);margin-bottom:14px">' +
           '⚠️ <strong>セルフ内見（鍵貸出）は禁止</strong>です。必ずAGが同行してください。' +
         '</div>' +
-        '<div class="field"><label>備考・メモ</label><textarea id="sh-note" placeholder="集合場所・駐車場の有無・2番手申込みの可能性など" rows="3">' + (prefill.note||'') + '</textarea></div>' +
+        '<div class="field"><label>メモ</label><textarea id="sh-note" placeholder="集合場所・駐車場の有無など" rows="2"></textarea></div>' +
       '</div>' +
     '</div>' +
     '<div style="display:flex;justify-content:flex-end;gap:10px">' +
       '<button class="btn btn-g" onclick="switchTab(\'list\',document.getElementById(\'tab-list\'))">キャンセル</button>' +
       '<button class="btn btn-g" onclick="printShowingFromForm()">🖨️ 内見依頼書を出力</button>' +
-      '<button class="btn btn-p" onclick="registerShowing()">内見を登録する →</button>' +
+      '<button class="btn btn-p" onclick="registerShowing()">登録する →</button>' +
     '</div>' +
-  '</div>';
+    '</div>';
 }
 
 function registerShowing() {
   var caseId    = document.getElementById('sh-case')?.value.trim();
   var client    = document.getElementById('sh-client')?.value.trim();
   var prop      = document.getElementById('sh-prop')?.value.trim();
-  var addr      = document.getElementById('sh-addr')?.value.trim();
+  var addr      = document.getElementById('sh-addr')?.value.trim() || '';
   var date      = document.getElementById('sh-date')?.value;
   var time      = document.getElementById('sh-time')?.value;
   var companion = document.getElementById('sh-companion')?.value.trim() || '';
@@ -453,143 +528,27 @@ function registerShowing() {
   var note      = document.getElementById('sh-note')?.value.trim() || '';
 
   if (!caseId || !client || !prop || !date || !time) {
-    showToast('案件ID・クライアント・物件名・日時は必須です', 'warn');
-    return;
+    showToast('案件ID・クライアント・物件名・日時は必須です', 'warn'); return;
   }
-
-  var newId = 'SH-' + Date.now().toString().slice(-6);
-  var newShowing = { id:newId, case:caseId, client:client, prop:prop, addr:addr||'', date:date, time:time, companion:companion, method:method, status:'確定', result:'', rent:0, movein:'', note:note };
-
-  SHOWINGS.unshift(newShowing);
+  var id = 'SH-' + Date.now().toString().slice(-6);
+  SHOWINGS.unshift({id:id, case:caseId, client:client, prop:prop, addr:addr, date:date, time:time, companion:companion, method:method, status:'確定', result:'', note:note});
   saveShowings(SHOWINGS);
-  showToast('✅ 内見を登録しました。', 'em');
+  showToast('✅ 内見を登録しました', 'em');
   switchTab('list', document.getElementById('tab-list'));
 }
 
-// ────────────────────────────────────────────────────
-// 内見後報告フォーム（showingId で事前入力）
-// ────────────────────────────────────────────────────
-function renderReport(showingId) {
-  var s = showingId ? SHOWINGS.find(function(x){ return x.id === showingId; }) : null;
-
-  document.getElementById('pg').innerHTML = '<div class="form-wrap">' +
-    (s ? '<div style="background:var(--sk-bg);border:1px solid rgba(2,132,199,.2);border-radius:9px;padding:12px 16px;margin-bottom:16px;font-size:12px;color:var(--sk)">' +
-      '📅 <strong>' + s.prop + '</strong>　' + fmtDate(s.date) + ' ' + s.time + '　クライアント：' + s.client +
-    '</div>' : '') +
-    '<div class="form-card">' +
-      '<div class="form-head"><div class="form-head-title">📋 内見後報告</div></div>' +
-      '<div class="form-body">' +
-        '<div class="field-row">' +
-          '<div class="field"><label class="required">案件ID</label><input id="rp-case" placeholder="RENT-0000" value="' + (s?s.case:'') + '" ' + (s?'readonly style="background:var(--cream2)"':'') + '></div>' +
-          '<div class="field"><label class="required">内見した物件</label><input id="rp-prop" placeholder="パークタワー三田 302" value="' + (s?s.prop:'') + '" ' + (s?'readonly style="background:var(--cream2)"':'') + '></div>' +
-        '</div>' +
-        '<div class="field-row">' +
-          '<div class="field"><label class="required">内見日</label><input id="rp-date" type="date" value="' + (s?s.date:'') + '" ' + (s?'readonly style="background:var(--cream2)"':'') + '></div>' +
-          '<div class="field"><label class="required">クライアント</label><input id="rp-client" placeholder="田中 優子" value="' + (s?s.client:'') + '" ' + (s?'readonly style="background:var(--cream2)"':'') + '></div>' +
-        '</div>' +
-        '<div class="field">' +
-          '<label class="required">内見結果</label>' +
-          '<select id="rp-result" onchange="toggleApplyFields(this.value)">' +
-            '<option value="">選択してください</option>' +
-            '<option value="申込意向あり"' + (s&&s.result==='申込意向あり'?' selected':'') + '>✅ 申込意向あり</option>' +
-            '<option value="検討中"'      + (s&&s.result==='検討中'?' selected':'') + '>🤔 検討中（他物件と比較）</option>' +
-            '<option value="2番手申込"'   + (s&&s.result==='2番手申込'?' selected':'') + '>📋 2番手で申込み</option>' +
-            '<option value="見送り"'      + (s&&s.result==='見送り'?' selected':'') + '>❌ 見送り</option>' +
-          '</select>' +
-        '</div>' +
-        '<div id="apply-fields" style="display:none">' +
-          '<div style="background:var(--em-bg);border:1px solid rgba(5,150,105,.2);border-radius:8px;padding:12px 14px;margin:14px 0;font-size:11px;color:var(--em)">✅ 申込みに進みます。書類送付管理で申込書を送付してください。</div>' +
-          '<div class="field-row">' +
-            '<div class="field"><label>申込み家賃（円）</label><input id="rp-rent" type="number" value="' + (s&&s.rent?s.rent:'') + '"></div>' +
-            '<div class="field"><label>入居希望日</label><input id="rp-movein" type="date" value="' + (s&&s.movein?s.movein:'') + '"></div>' +
-          '</div>' +
-        '</div>' +
-        '<div id="secondhand-fields" style="display:none">' +
-          '<div style="background:var(--am-bg);border:1px solid rgba(217,119,6,.2);border-radius:8px;padding:12px 14px;margin:14px 0;font-size:11px;color:var(--am)">⚠️ 2番手申込みです。1番手キャンセル待ち。HQに連絡してください。</div>' +
-        '</div>' +
-        '<div id="compare-fields" style="display:none">' +
-          '<div style="background:var(--sk-bg);border:1px solid rgba(2,132,199,.15);border-radius:8px;padding:12px 14px;margin:14px 0;font-size:11px;color:var(--sk)">ℹ️ 他物件との比較中。追加内見が必要な場合は「内見を登録」から追加してください。</div>' +
-        '</div>' +
-        '<div class="field"><label>コメント・申し送り</label>' +
-          '<textarea id="rp-note" placeholder="クライアントの感想、懸念点、次のアクションなど" rows="3">' + (s?s.note:'') + '</textarea>' +
-        '</div>' +
-      '</div>' +
-    '</div>' +
-    '<input type="hidden" id="rp-showing-id" value="' + (showingId||'') + '">' +
-    '<div style="display:flex;justify-content:flex-end;gap:10px">' +
-      '<button class="btn btn-g" onclick="switchTab(\'list\',document.getElementById(\'tab-list\'))">キャンセル</button>' +
-      '<button class="btn btn-p" onclick="submitReport()">報告を提出 →</button>' +
-    '</div>' +
-  '</div>';
-
-  if (s && s.result) toggleApplyFields(s.result);
-}
-
-function toggleApplyFields(val) {
-  var applyEl   = document.getElementById('apply-fields');
-  var secondEl  = document.getElementById('secondhand-fields');
-  var compareEl = document.getElementById('compare-fields');
-  if (applyEl)   applyEl.style.display   = (val==='申込意向あり'||val==='2番手申込') ? '' : 'none';
-  if (secondEl)  secondEl.style.display  = val==='2番手申込' ? '' : 'none';
-  if (compareEl) compareEl.style.display = val==='検討中' ? '' : 'none';
-}
-
-function submitReport() {
-  var showingId = document.getElementById('rp-showing-id')?.value;
-  var result    = document.getElementById('rp-result')?.value;
-  var note      = document.getElementById('rp-note')?.value || '';
-  var rent      = parseInt(document.getElementById('rp-rent')?.value) || 0;
-  var movein    = document.getElementById('rp-movein')?.value || '';
-  var caseId    = document.getElementById('rp-case')?.value || _caseIdParam;
-
-  if (!result) { showToast('内見結果を選択してください', 'warn'); return; }
-
-  if (showingId) {
-    var idx = SHOWINGS.findIndex(function(x){ return x.id === showingId; });
-    if (idx >= 0) {
-      SHOWINGS[idx].status = '完了';
-      SHOWINGS[idx].result = result;
-      SHOWINGS[idx].note   = note;
-      SHOWINGS[idx].rent   = rent;
-      SHOWINGS[idx].movein = movein;
-      saveShowings(SHOWINGS);
-    }
-  }
-
-  var isApply = result === '申込意向あり' || result === '2番手申込';
-  if (isApply && caseId) {
-    coretoConfirm({title:'報告完了', message:'内見後報告を提出しました。', detail:'申込書の送付へ進みますか？', okLabel:'書類送付管理へ', danger:false, onOk:function(){
-      window.location.href = 'coreto-screening-v2.html?caseId=' + encodeURIComponent(caseId);
-    }, onCancel:function(){
-      switchTab('list', document.getElementById('tab-list'));
-    }});
-  } else {
-    showToast('✅ 内見後報告を提出しました。', 'em');
-    if (caseId) {
-      window.location.href = 'coreto-rental-v2.html?caseId=' + encodeURIComponent(caseId);
-    } else {
-      switchTab('list', document.getElementById('tab-list'));
-    }
-  }
-}
-
-// ────────────────────────────────────────────────────
-// 内見依頼書出力
-// ────────────────────────────────────────────────────
+// ─────────────────────────────────────────────
+// 内見依頼書出力（V1フォーマット）
+// ─────────────────────────────────────────────
 function printShowingById(id) {
   var s = SHOWINGS.find(function(x){ return x.id === id; });
   if (!s) return;
   var mgmt = '';
-  try {
-    var d = JSON.parse(localStorage.getItem('CORETO_CASE_DETAIL_' + s.case) || '{}');
-    mgmt = d.mgmtCo || '';
-  } catch(e) {}
-  buildAndPrint({ prop:s.prop, date:s.date, time:s.time, client:s.client, mgmt:mgmt });
+  try { var d = JSON.parse(localStorage.getItem('CORETO_CASE_DETAIL_'+s.case)||'{}'); mgmt=d.mgmtCo||''; } catch(e){}
+  buildAndPrint({prop:s.prop, date:s.date, time:s.time, client:s.client, mgmt:mgmt});
 }
-
 function printShowingFromForm() {
-  var p    = new URLSearchParams(location.search);
-  var cid  = document.getElementById('sh-case')?.value || p.get('caseId') || '';
+  var cid = document.getElementById('sh-case')?.value || _caseIdParam;
   var mgmt = '';
   try { var d = JSON.parse(localStorage.getItem('CORETO_CASE_DETAIL_'+cid)||'{}'); mgmt=d.mgmtCo||''; } catch(e){}
   buildAndPrint({
@@ -600,90 +559,76 @@ function printShowingFromForm() {
     mgmt:   mgmt
   });
 }
-
 function buildAndPrint(info) {
-  var agName = sessionStorage.getItem('coreto_name') || '担当者名';
-  var agId   = sessionStorage.getItem('coreto_user_id') || '';
-  var agMobile = '', agLicense = '宅地建物取引士証 第XXXXXX号';
-  try {
-    var prof = JSON.parse(localStorage.getItem('CORETO_AG_PROFILE')||'{}');
-    if (prof.phone) agMobile = prof.phone;
-    if (prof.takkenNo) agLicense = '宅地建物取引士証 第' + prof.takkenNo + '号';
-  } catch(e) {}
-  if (!agMobile && agId === 'AG-0042') agMobile = '090-1234-5678';
-
-  var month='　', day='　', hour='　', min2='　';
-  if (info.date) { var dObj=new Date(info.date); month=dObj.getMonth()+1; day=dObj.getDate(); }
-  if (info.time) { var tp=info.time.split(':'); hour=tp[0]||'　'; min2=tp[1]||'　'; }
-
-  var w = window.open('','_blank','width=800,height=1100');
+  var agName='',agId='',agMobile='',agLicense='宅地建物取引士証 第XXXXXX号';
+  agName = sessionStorage.getItem('coreto_name')||'担当者名';
+  agId   = sessionStorage.getItem('coreto_user_id')||'';
+  try { var pr=JSON.parse(localStorage.getItem('CORETO_AG_PROFILE')||'{}'); if(pr.phone) agMobile=pr.phone; if(pr.takkenNo) agLicense='宅地建物取引士証 第'+pr.takkenNo+'号'; } catch(e){}
+  if (!agMobile && agId==='AG-0042') agMobile='090-1234-5678';
+  var mo='　',dy='　',hr='　',mn='　';
+  if(info.date){var dO=new Date(info.date);mo=dO.getMonth()+1;dy=dO.getDate();}
+  if(info.time){var tp=info.time.split(':');hr=tp[0]||'　';mn=tp[1]||'　';}
+  var w=window.open('','_blank','width=800,height=1100');
   w.document.write('<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><style>' +
     '*{box-sizing:border-box;margin:0;padding:0}' +
     "body{font-family:'Noto Sans JP','MS Gothic',sans-serif;background:#fff;color:#000;padding:20mm 18mm}" +
-    '.title{font-size:22px;font-weight:700;text-align:center;border:2px solid #000;padding:8px 0;margin-bottom:24px;letter-spacing:4px}' +
-    '.hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px}' +
-    '.to{font-size:18px;font-weight:700;border-bottom:2px solid #000;padding-bottom:4px;min-width:220px;display:inline-block}' +
-    '.from{font-size:11px;line-height:1.8}' +
-    '.fr{display:flex;align-items:center;margin-bottom:20px;border-bottom:1.5px solid #555;padding-bottom:14px}' +
-    '.fl{font-size:14px;font-weight:700;width:80px}' +
-    '.fv{font-size:20px;font-weight:700;flex:1;padding-left:16px}' +
-    '.bt{font-size:13px;margin-bottom:8px;font-weight:500}' +
-    '.nt{font-size:13px;font-weight:700;margin-top:16px}' +
-    '.card{border:3px solid #1a2744;margin-top:32px;display:flex;width:91mm;height:55mm;overflow:hidden}' +
-    '.cl{background:#1a2744;padding:10px 14px;flex:1;display:flex;flex-direction:column;justify-content:center}' +
-    '.cn{color:#fff;font-size:18px;font-weight:700;letter-spacing:2px;margin-bottom:6px}' +
-    '.ci{color:#d0d8e8;font-size:10px;line-height:1.9}' +
-    '.ci .lb{color:#c9a84c;font-size:9px}' +
-    '.cr{padding:10px 14px;display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;min-width:130px}' +
-    '.clo{font-size:18px;color:#1a2744;font-weight:700;letter-spacing:2px;font-family:monospace}' +
-    '.cm{font-size:12px;font-weight:700;color:#1a2744;font-family:monospace}' +
-    '.lic{font-size:9px;color:#666;text-align:right}' +
+    '.T{font-size:22px;font-weight:700;text-align:center;border:2px solid #000;padding:8px 0;margin-bottom:24px;letter-spacing:4px}' +
+    '.H{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px}' +
+    '.TO{font-size:18px;font-weight:700;border-bottom:2px solid #000;padding-bottom:4px;min-width:220px;display:inline-block}' +
+    '.F{font-size:11px;line-height:1.8}' +
+    '.R{display:flex;align-items:center;margin-bottom:20px;border-bottom:1.5px solid #555;padding-bottom:14px}' +
+    '.RL{font-size:14px;font-weight:700;width:80px}' +
+    '.RV{font-size:20px;font-weight:700;flex:1;padding-left:16px}' +
+    '.B{font-size:13px;margin-bottom:8px;font-weight:500}' +
+    '.N{font-size:13px;font-weight:700;margin-top:16px}' +
+    '.C{border:3px solid #1a2744;margin-top:32px;display:flex;width:91mm;height:55mm;overflow:hidden}' +
+    '.CL{background:#1a2744;padding:10px 14px;flex:1;display:flex;flex-direction:column;justify-content:center}' +
+    '.CN{color:#fff;font-size:18px;font-weight:700;letter-spacing:2px;margin-bottom:6px}' +
+    '.CI{color:#d0d8e8;font-size:10px;line-height:1.9}' +
+    '.CI .lb{color:#c9a84c;font-size:9px}' +
+    '.CR{padding:10px 14px;display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;min-width:130px}' +
+    '.CLo{font-size:18px;color:#1a2744;font-weight:700;letter-spacing:2px;font-family:monospace}' +
+    '.CM{font-size:12px;font-weight:700;color:#1a2744;font-family:monospace}' +
+    '.Li{font-size:9px;color:#666;text-align:right}' +
     '@media print{body{padding:15mm 15mm}}' +
   '</style></head><body>' +
-  '<div class="title">内　見　依　頼　書</div>' +
-  '<div class="hdr"><div><div class="to">' + (info.mgmt||'　　　　　　　　　') + '</div><div style="font-size:13px;font-weight:700;margin-top:4px">御中</div></div>' +
-  '<div class="from"><strong>株式会社CORETO</strong><br>〒150-0000　東京都○○区○○ 1-1-1<br><strong>Tel：03-XXXX-XXXX</strong>　<strong>Fax：03-XXXX-XXXX</strong></div></div>' +
-  '<div class="fr"><div class="fl">物件名</div><div class="fv">' + (info.prop||'　') + '</div></div>' +
-  '<div class="fr"><div class="fl">日時</div><div class="fv" style="font-size:22px">' + month + '　月　' + day + '　日</div></div>' +
-  '<div class="fr"><div class="fl">時間</div><div class="fv" style="font-size:22px">' + hour + '　時　' + min2 + '　分</div></div>' +
-  (info.client ? '<div class="fr"><div class="fl">お客様</div><div class="fv">' + info.client + '　様</div></div>' : '') +
-  '<p class="bt">上記物件を内見させて頂きます。</p><p class="bt">宜しくお願い致します。</p>' +
-  '<p class="nt">※　下記携帯までご連絡下さい</p>' +
-  '<div class="card">' +
-    '<div class="cl"><div class="cn">' + agName + '</div><div class="ci">' +
-      '<div>株式会社CORETO</div><div>〒150-0000　東京都○○区○○ 1-1-1</div>' +
-      '<div><span class="lb">Tel：</span>03-XXXX-XXXX</div>' +
-      '<div><span class="lb">Fax：</span>03-XXXX-XXXX</div>' +
-      '<div><span class="lb" style="color:#f59e0b">携帯：</span><strong style="color:#f0c040;font-size:12px">' + (agMobile||'　　　　　　') + '</strong></div>' +
-    '</div></div>' +
-    '<div class="cr"><div class="clo">CORETO</div><div><div class="cm">' + (agMobile||'') + '</div><div class="lic">' + agLicense + '</div></div></div>' +
-  '</div>' +
-  '</body></html>');
+  '<div class="T">内　見　依　頼　書</div>' +
+  '<div class="H"><div><div class="TO">'+(info.mgmt||'　　　　　　　　　')+'</div><div style="font-size:13px;font-weight:700;margin-top:4px">御中</div></div>' +
+  '<div class="F"><strong>株式会社CORETO</strong><br>〒150-0000　東京都○○区○○ 1-1-1<br><strong>Tel：03-XXXX-XXXX</strong>　<strong>Fax：03-XXXX-XXXX</strong></div></div>' +
+  '<div class="R"><div class="RL">物件名</div><div class="RV">'+(info.prop||'　')+'</div></div>' +
+  '<div class="R"><div class="RL">日時</div><div class="RV" style="font-size:22px">'+mo+'　月　'+dy+'　日</div></div>' +
+  '<div class="R"><div class="RL">時間</div><div class="RV" style="font-size:22px">'+hr+'　時　'+mn+'　分</div></div>' +
+  (info.client?'<div class="R"><div class="RL">お客様</div><div class="RV">'+info.client+'　様</div></div>':'') +
+  '<p class="B">上記物件を内見させて頂きます。</p><p class="B">宜しくお願い致します。</p><p class="N">※　下記携帯までご連絡下さい</p>' +
+  '<div class="C"><div class="CL"><div class="CN">'+agName+'</div><div class="CI">' +
+    '<div>株式会社CORETO</div><div>〒150-0000　東京都○○区○○ 1-1-1</div>' +
+    '<div><span class="lb">Tel：</span>03-XXXX-XXXX</div><div><span class="lb">Fax：</span>03-XXXX-XXXX</div>' +
+    '<div><span class="lb" style="color:#f59e0b">携帯：</span><strong style="color:#f0c040;font-size:12px">'+(agMobile||'　　　　　　')+'</strong></div>' +
+  '</div></div>' +
+  '<div class="CR"><div class="CLo">CORETO</div><div><div class="CM">'+(agMobile||'')+'</div><div class="Li">'+agLicense+'</div></div></div>' +
+  '</div></body></html>');
   w.document.close();
-  w.onload = function(){ w.print(); };
+  w.onload=function(){w.print();};
 }
 
-function cancelShowing(id){ coretoConfirm({title:'内見キャンセル',message:'この内見をキャンセルしますか？',okLabel:'キャンセルする',danger:true,onOk:function(){
-  var idx = SHOWINGS.findIndex(function(x){ return x.id === id; });
-  if (idx>=0) { SHOWINGS[idx].status='キャンセル'; saveShowings(SHOWINGS); }
-  renderList();
-}}); }
-
+// ─────────────────────────────────────────────
+// 初期化
+// ─────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', function(){
   CNAV.init('showing');
   if (_isNew && _caseIdParam) {
     var newTab = document.getElementById('tab-new');
-    if (newTab) { newTab.classList.add('active'); document.getElementById('tab-list').classList.remove('active'); }
-    renderNew({ case:_caseIdParam, client:_clientParam ? decodeURIComponent(_clientParam) : '' });
+    if (newTab) { document.getElementById('tab-list').classList.remove('active'); newTab.classList.add('active'); }
+    renderNew({case:_caseIdParam, client:_clientParam ? decodeURIComponent(_clientParam) : ''});
   } else {
     renderList();
   }
 });
 
 function showToast(msg, type) {
-  var c = {em:['#ECFDF5','#059669','rgba(5,150,105,.2)'],am:['#FFFBEB','#D97706','rgba(217,119,6,.2)'],rd:['#FEF2F2','#DC2626','rgba(220,38,38,.2)'],sk:['#F0F9FF','#0284C7','rgba(2,132,199,.2)'],ok:['#ECFDF5','#059669','rgba(5,150,105,.2)'],warn:['#FFFBEB','#D97706','rgba(217,119,6,.2)'],error:['#FEF2F2','#DC2626','rgba(220,38,38,.2)']}[type]||['#ECFDF5','#059669','rgba(5,150,105,.2)'];
+  var c=({em:['#ECFDF5','#059669','rgba(5,150,105,.2)'],am:['#FFFBEB','#D97706','rgba(217,119,6,.2)'],rd:['#FEF2F2','#DC2626','rgba(220,38,38,.2)'],sk:['#F0F9FF','#0284C7','rgba(2,132,199,.2)'],warn:['#FFFBEB','#D97706','rgba(217,119,6,.2)']})[type]||['#ECFDF5','#059669','rgba(5,150,105,.2)'];
   var t=document.createElement('div'); t.style.cssText='position:fixed;bottom:24px;right:24px;z-index:9999;padding:11px 18px;border-radius:9px;font-size:13px;font-weight:600;font-family:Outfit,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.12);transition:opacity .4s;background:'+c[0]+';color:'+c[1]+';border:1px solid '+c[2]; t.textContent=msg; document.body.appendChild(t);
-  setTimeout(function(){ t.style.opacity='0'; setTimeout(function(){ if(t.parentNode) t.remove(); },400); },3200);
+  setTimeout(function(){t.style.opacity='0';setTimeout(function(){if(t.parentNode)t.remove();},400);},3200);
 }
 
 </script>
