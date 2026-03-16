@@ -461,36 +461,178 @@ function confirmCheck() {
 
 // caseId未指定時: CORETO_INVOICE_CHECKと未処理案件一覧
 function renderSelectCase(el) {
-  el.innerHTML =
-    '<div class="no-data">' +
-      '<div class="icon">🏦</div>' +
-      '<div class="title">案件を選択してください</div>' +
-      '<div class="sub">IT重説完了後、案件IDを指定してアクセスしてください。<br>' +
-        'または <a href="coreto-itsetsu-v2.html" style="color:var(--sk)">IT重説管理</a> から「初期費用確認（HQ）→」をクリック</div>' +
-    '</div>' +
-    '<div id="pending-list"></div>';
+  el.innerHTML = '';
 
-  // CORETO_INVOICE_CHECKから確認待ち案件を表示
+  // CORETO_INVOICE_MEISAI_* キーを収集
+  var meisaiCases = {};
   try {
-    var allChecks = JSON.parse(localStorage.getItem('CORETO_INVOICE_CHECK') || '{}');
-    var pending = Object.values(allChecks).filter(function(c){ return c.status === 'ok'; });
-    if (pending.length) {
-      var listEl = document.getElementById('pending-list');
-      var card = document.createElement('div');
-      card.className = 'card';
-      card.innerHTML = '<div class="card-head"><div class="card-title">✅ 照合完了済み案件</div></div>';
-      var rows = pending.map(function(c) {
-        return '<tr>' +
-          '<td style="padding:10px 14px;font-weight:700;font-family:monospace;color:var(--sk)">' + c.caseId + '</td>' +
-          '<td style="padding:10px 14px;font-size:12px;color:var(--muted)">' + c.checkedAt + '</td>' +
-          '<td style="padding:10px 14px"><span class="badge-ok">照合完了</span></td>' +
-          '<td style="padding:10px 14px"><a href="?caseId=' + encodeURIComponent(c.caseId) + '" class="btn btn-ghost btn-sm">再確認</a></td>' +
-        '</tr>';
-      }).join('');
-      card.innerHTML += '<table style="width:100%;border-collapse:collapse"><tbody>' + rows + '</tbody></table>';
-      listEl.appendChild(card);
+    for (var i = 0; i < localStorage.length; i++) {
+      var key = localStorage.key(i);
+      if (key && key.indexOf('CORETO_INVOICE_MEISAI_') === 0) {
+        var cid = key.replace('CORETO_INVOICE_MEISAI_', '');
+        try { meisaiCases[cid] = JSON.parse(localStorage.getItem(key)); } catch(e2) {}
+      }
     }
   } catch(e) {}
+
+  // CORETO_INVOICE_CHECK 照合済み案件を収集
+  var checkedCases = {};
+  try {
+    var allChecks = JSON.parse(localStorage.getItem('CORETO_INVOICE_CHECK') || '{}');
+    Object.keys(allChecks).forEach(function(cid) { checkedCases[cid] = allChecks[cid]; });
+  } catch(e) {}
+
+  var unverified = Object.keys(meisaiCases).filter(function(cid) { return !checkedCases[cid]; });
+  var verified   = Object.keys(checkedCases);
+
+  // ヘッダー
+  var hdr = document.createElement('div');
+  hdr.style.cssText = 'margin-bottom:20px';
+  var h1 = document.createElement('div');
+  h1.style.cssText = 'font-size:18px;font-weight:700;color:var(--navy);margin-bottom:4px';
+  h1.textContent = '初期費用明細チェック';
+  var h2 = document.createElement('div');
+  h2.style.cssText = 'font-size:12px;color:var(--muted)';
+  h2.textContent = '明細書がアップロードされた案件を一覧表示します。案件をクリックして照合を開始してください。';
+  hdr.appendChild(h1); hdr.appendChild(h2);
+  el.appendChild(hdr);
+
+  // 未照合カード
+  if (unverified.length > 0) {
+    var card1 = document.createElement('div');
+    card1.className = 'card';
+    card1.style.marginBottom = '16px';
+    var head1 = document.createElement('div');
+    head1.className = 'card-head';
+    head1.style.borderLeft = '4px solid var(--am)';
+    var t1 = document.createElement('div');
+    t1.className = 'card-title';
+    t1.style.color = 'var(--am)';
+    t1.textContent = '⚠️ 未照合 — 対応が必要（' + unverified.length + '件）';
+    head1.appendChild(t1); card1.appendChild(head1);
+
+    var tbl1 = buildTable(['案件ID','アップロード元','日時','ファイル名','状態','']);
+    var tbody1 = tbl1.querySelector('tbody');
+    unverified.forEach(function(cid) {
+      var d = meisaiCases[cid];
+      var src = d.source === 'rental-ag' ? '🧑 AGアップロード' : '📷 書類スキャン';
+      var tr = document.createElement('tr');
+      tr.style.cursor = 'pointer';
+      tr.onclick = function() { location.href = '?caseId=' + encodeURIComponent(cid); };
+      addHoverRow(tr);
+      var cells = [
+        {text: cid,              style: 'font-weight:700;font-family:monospace;font-size:13px;color:var(--navy)'},
+        {text: src,              style: 'font-size:11px;color:var(--muted)'},
+        {text: d.savedAt||'—',  style: 'font-size:11px;color:var(--muted)'},
+        {text: d.name||'明細書', style: 'font-size:11px;color:var(--muted)'},
+        {badge: 'ng', text: '未照合'},
+        {actions: [['🤖 照合を開始', 'btn-primary', function(id){ return function(){ location.href='?caseId='+encodeURIComponent(id); }; }(cid)]]},
+      ];
+      buildCells(tr, cells);
+      tbody1.appendChild(tr);
+    });
+    card1.appendChild(tbl1);
+    el.appendChild(card1);
+  }
+
+  // 照合済みカード
+  if (verified.length > 0) {
+    var card2 = document.createElement('div');
+    card2.className = 'card';
+    var head2 = document.createElement('div');
+    head2.className = 'card-head';
+    var t2 = document.createElement('div');
+    t2.className = 'card-title';
+    t2.textContent = '✅ 照合完了済み（' + verified.length + '件）';
+    head2.appendChild(t2); card2.appendChild(head2);
+
+    var tbl2 = buildTable(['案件ID','照合日時','担当者','状態','']);
+    var tbody2 = tbl2.querySelector('tbody');
+    verified.forEach(function(cid) {
+      var c = checkedCases[cid];
+      var tr = document.createElement('tr');
+      tr.style.cursor = 'pointer';
+      tr.onclick = function() { location.href = '?caseId=' + encodeURIComponent(cid); };
+      addHoverRow(tr);
+      var cells = [
+        {text: cid,                style: 'font-weight:700;font-family:monospace;font-size:13px;color:var(--navy)'},
+        {text: c.checkedAt||'—',   style: 'font-size:11px;color:var(--muted)'},
+        {text: c.checkedBy||'HQ',  style: 'font-size:11px;color:var(--muted)'},
+        {badge: 'ok', text: '照合完了' + (c.hasEdit ? '（修正あり）' : '')},
+        {actions: [
+          ['再確認', 'btn-ghost', function(id){ return function(e){ e.stopPropagation(); location.href='?caseId='+encodeURIComponent(id); }; }(cid)],
+          ['🧾 請求書発行', 'btn-ghost', function(id){ return function(e){ e.stopPropagation(); location.href='coreto-hq-receipt-v2.html?caseId='+encodeURIComponent(id); }; }(cid)],
+        ]},
+      ];
+      buildCells(tr, cells);
+      tbody2.appendChild(tr);
+    });
+    card2.appendChild(tbl2);
+    el.appendChild(card2);
+  }
+
+  // データなし
+  if (unverified.length === 0 && verified.length === 0) {
+    var empty = document.createElement('div');
+    empty.className = 'no-data';
+    var icon = document.createElement('div'); icon.className = 'icon'; icon.textContent = '🏦';
+    var title = document.createElement('div'); title.className = 'title'; title.textContent = '明細書がアップロードされた案件がありません';
+    var sub = document.createElement('div'); sub.className = 'sub';
+    sub.innerHTML = '・AGが rental-v2（案件フロー）の「💴 初期費用明細をアップロード」からアップロード<br>・または barcode-scan-v2（書類スキャン）でアップロードしてください';
+    empty.appendChild(icon); empty.appendChild(title); empty.appendChild(sub);
+    el.appendChild(empty);
+  }
+}
+
+function buildTable(headers) {
+  var tbl = document.createElement('table');
+  tbl.style.cssText = 'width:100%;border-collapse:collapse;font-size:12px';
+  var thead = document.createElement('thead');
+  var hrow = document.createElement('tr');
+  hrow.style.background = 'var(--cream)';
+  headers.forEach(function(h) {
+    var th = document.createElement('th');
+    th.style.cssText = 'padding:8px 16px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);border-bottom:1px solid var(--bd)';
+    th.textContent = h;
+    hrow.appendChild(th);
+  });
+  thead.appendChild(hrow);
+  tbl.appendChild(thead);
+  var tbody = document.createElement('tbody');
+  tbl.appendChild(tbody);
+  return tbl;
+}
+
+function buildCells(tr, cells) {
+  cells.forEach(function(c) {
+    var td = document.createElement('td');
+    td.style.padding = '12px 16px';
+    if (c.style) Object.assign(td.style, {cssText: td.style.cssText});
+    if (c.style) { c.style.split(';').forEach(function(s){ var kv=s.trim().split(':'); if(kv[1]) td.style[kv[0].trim().replace(/-([a-z])/g,function(_,l){return l.toUpperCase();})] = kv.slice(1).join(':').trim(); }); }
+    if (c.badge) {
+      var sp = document.createElement('span');
+      sp.className = c.badge === 'ok' ? 'badge-ok' : 'badge-ng';
+      sp.textContent = c.text;
+      td.appendChild(sp);
+    } else if (c.actions) {
+      c.actions.forEach(function(a) {
+        var btn = document.createElement('button');
+        btn.className = 'btn ' + (a[1]||'btn-ghost') + ' btn-sm';
+        btn.textContent = a[0];
+        btn.style.marginRight = '6px';
+        btn.onclick = a[2];
+        td.appendChild(btn);
+      });
+    } else {
+      td.textContent = c.text || '';
+    }
+    tr.appendChild(td);
+  });
+}
+
+function addHoverRow(tr) {
+  tr.onmouseenter = function(){ this.style.background = 'var(--cream)'; };
+  tr.onmouseleave = function(){ this.style.background = ''; };
 }
 
 function printResult() { window.print(); }
