@@ -426,6 +426,7 @@ body, input, select, textarea, button {
 </div>
 <div class="mob-overlay" onclick="toggleSb()"></div>
 <script src="coreto-slack-config-v2.js"></script>
+<script src="coreto-kintone-config-v2.js"></script>
 <script src="coreto-nav-v2.js"></script>
 <script>
 (function(){
@@ -1334,39 +1335,33 @@ function approveReport(id, client, ag, reward, btn) {
     const cell = btn.closest('td');
     cell.innerHTML = '<span class="badge b-em">承認済み</span>';
     // CORETO_REPORTSのstatusを「承認済み」に更新
+    // Kintone連携: KINTONE.approveReport() が localStorage/Kintone両対応で処理
+    // デモ: localStorage更新 / 本番: Kintoneステータス更新 + 確定残高加算
     let approvedReport = null;
     try {
       const reps = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]');
       const idx = reps.findIndex(r => r.id === id);
-      if (idx >= 0) {
-        reps[idx].status = '承認済み';
-        reps[idx].approvedAt = new Date().toISOString();
-        approvedReport = reps[idx];
-      }
-      localStorage.setItem('CORETO_REPORTS', JSON.stringify(reps));
-      // HQタスクから削除
-      const tasks = JSON.parse(localStorage.getItem('CORETO_HQ_TASKS') || '[]');
-      localStorage.setItem('CORETO_HQ_TASKS', JSON.stringify(tasks.filter(t => t.id !== id)));
+      if (idx >= 0) approvedReport = reps[idx];
     } catch(e) {}
 
-    // 確定出金可能残高に加算（複数案件の累積対応）
-    // CORETO_COMPLETED_BALANCE_{agId}: 承認済み案件の出金可能残高
+    if (typeof window.KINTONE !== 'undefined') {
+      // KINTONE.approveReport: localStorage更新 + 確定残高加算 + Kintone更新（設定済み時）
+      KINTONE.approveReport(id, ag, reward);
+    } else {
+      // フォールバック（kintone-config未読み込み時）
+      try {
+        const reps = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]');
+        const idx = reps.findIndex(r => r.id === id);
+        if (idx >= 0) { reps[idx].status = '承認済み'; reps[idx].approvedAt = new Date().toISOString(); }
+        localStorage.setItem('CORETO_REPORTS', JSON.stringify(reps));
+        const tasks = JSON.parse(localStorage.getItem('CORETO_HQ_TASKS') || '[]');
+        localStorage.setItem('CORETO_HQ_TASKS', JSON.stringify(tasks.filter(t => t.id !== id)));
+      } catch(e) {}
+    }
+    // HQタスクから削除（KINTONE.approveReportと重複しないよう別管理）
     try {
-      const agIdKey = (approvedReport?.ag || ag).replace(/\s/g,'_');
-      const balKey  = 'CORETO_COMPLETED_BALANCE_' + agIdKey;
-      const cur     = parseInt(localStorage.getItem(balKey) || '0');
-      const add     = reward;
-      localStorage.setItem(balKey, String(cur + add));
-      // 承認済み案件リストに追加（即時払い申請時に照合できるよう）
-      const completedKey = 'CORETO_COMPLETED_CASES_' + agIdKey;
-      const completed    = JSON.parse(localStorage.getItem(completedKey) || '[]');
-      completed.push({
-        reportId:  id,
-        caseId:    approvedReport?.case || '—',
-        reward,
-        approvedAt: new Date().toISOString(),
-      });
-      localStorage.setItem(completedKey, JSON.stringify(completed));
+      const tasks = JSON.parse(localStorage.getItem('CORETO_HQ_TASKS') || '[]');
+      localStorage.setItem('CORETO_HQ_TASKS', JSON.stringify(tasks.filter(t => t.id !== id)));
     } catch(e) {}
 
     showToast('✅ ' + id + ' を承認しました。' + ag + ' にLINEで通知します。', 'em');

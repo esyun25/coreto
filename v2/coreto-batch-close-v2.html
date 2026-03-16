@@ -319,6 +319,7 @@ html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:
 <div id="bc-toast" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--navy);color:#fff;padding:10px 20px;border-radius:8px;font-size:12px;font-weight:600;opacity:0;transition:.3s;z-index:999;pointer-events:none;white-space:nowrap"></div>
 
 <script src="coreto-slack-config-v2.js"></script>
+<script src="coreto-kintone-config-v2.js"></script>
 <script src="coreto-nav-v2.js"></script>
 <script>
 (function(){
@@ -432,9 +433,19 @@ function onMonthChange() {
   renderAll();
 }
 
-function renderAll() {
+async function renderAll() {
   const month = document.getElementById('target-month').value;
-  currentPayouts = MONTH_PAYOUTS[month] || [];
+  // Kintone連携: KINTONE.getMonthPayouts(month) がデモ/本番を自動切り替え
+  // デモ: MONTH_PAYOUTS[month] を返す / 本番: Kintone成約報告+AGマスターから生成
+  if (typeof window.KINTONE !== 'undefined') {
+    const result = await KINTONE.getMonthPayouts(month);
+    currentPayouts = result.records || [];
+    if (!currentPayouts.length && MONTH_PAYOUTS && MONTH_PAYOUTS[month]) {
+      currentPayouts = MONTH_PAYOUTS[month]; // Kintoneが空の場合もデモデータで表示
+    }
+  } else {
+    currentPayouts = MONTH_PAYOUTS[month] || [];
+  }
 
   // ── 即時払い控除額をlocalStorageから自動取得 ──────────────────────────
   // CORETO_INSTANT_PAY_HISTORY_{agId} に記録された当月の即時払い実績を
