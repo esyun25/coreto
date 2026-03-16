@@ -324,6 +324,7 @@ html,body{background:#FFFFFF !important}
 <div id="ip-toast"></div>
 
 <script src="coreto-slack-config-v2.js"></script>
+<script src="coreto-api-client.js"></script>
 <script src="coreto-nav-v2.js"></script>
 <script>
 (function(){
@@ -842,18 +843,171 @@ function checkOtp() {
 function updateDots() {
   for (let i = 0; i < 3; i++) document.getElementById('dot-'+i).classList.toggle('used', i < tfaAttempts);
 }
-function showSuccess() {
+async function showSuccess() {
   document.getElementById('tfa-screen').style.display = 'none';
-  const ov = document.getElementById('success-overlay');
+
+  // ── AI審査 + 即時振込 ────────────────────────────────
+  const sess     = CNAV.session ? CNAV.session() : null;
+  const agName   = sess?.name   || 'エージェント';
+  const agId     = sess?.userId || 'AG-0042';
+  const agKana   = sess?.nameKana || 'エージェント';
+  const balance  = parseInt(sessionStorage.getItem('coreto_balance') || '726163');
+  const payout   = Math.round(currentNetAmount * (1 - window._currentFee / currentNetAmount || 0.85));
+
+  // 過去申請履歴をlocalStorageから取得
+  var pastRequests = [];
+  try {
+    var all = JSON.parse(localStorage.getItem('CORETO_INSTANT_PAY_HISTORY') || '[]');
+    var cutoff = new Date(Date.now() - 30*24*60*60*1000);
+    pastRequests = all.filter(function(r){ return new Date(r.date) > cutoff; });
+  } catch(e) {}
+
+  // 振込先口座はlocalStorageから取得（account-v2で登録済み）
+  var toBank = null;
+  try {
+    var bankInfo = JSON.parse(localStorage.getItem('CORETO_MY_BANK') || 'null');
+    if (bankInfo) toBank = bankInfo;
+  } catch(e) {}
+
+  // AI審査をリクエスト（APIが設定されていない場合はHQ手動処理へ）
+  if (window.CORETO_API && window.CORETO_API.isConfigured() && toBank) {
+    showAiReviewScreen();
+
+    try {
+      var cfg = window.CORETO_API.getConfig();
+      var baseUrl = (cfg.baseUrl || '').replace(/\/$/, '');
+      var resp = await fetch(baseUrl + '/api/instant-pay/ai-approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-coreto-key': cfg.internalKey || '' },
+        body: JSON.stringify({
+          reqId:        currentReqId,
+          agId,
+          agName,
+          agKana,
+          amount:       currentNetAmount,
+          payoutAmount: window._currentPayoutAmount || payout,
+          balance,
+          pastRequests,
+          toBank,
+        }),
+      });
+      var data = await resp.json();
+
+      if (data.decision === 'approved') {
+        // 今回の申請を履歴に追加
+        try {
+          var hist = JSON.parse(localStorage.getItem('CORETO_INSTANT_PAY_HISTORY') || '[]');
+          hist.unshift({ id: currentReqId, amount: currentNetAmount, date: new Date().toISOString(), status: 'approved' });
+          localStorage.setItem('CORETO_INSTANT_PAY_HISTORY', JSON.stringify(hist));
+        } catch(e) {}
+        showInstantTransferSuccess(data);
+      } else if (data.decision === 'rejected') {
+        showAiRejectedScreen(data.reason);
+      } else {
+        // pending_manual: HQ手動処理
+        showManualProcessScreen(data.reason);
+      }
+      return;
+    } catch(err) {
+      console.error('[ai-approve]', err);
+      // フォールバック: 旧来の「HQが振込」フロー
+    }
+  }
+
+  // フォールバック: API未設定 or 口座未登録 → 旧来の申請完了画面
+  var ov = document.getElementById('success-overlay');
   ov.style.display = 'flex';
   document.getElementById('success-amount').textContent = '振込予定額：¥' + currentNetAmount.toLocaleString();
   document.getElementById('success-id').textContent = currentReqId;
-  // Slack通知
-  const s = CNAV.session ? CNAV.session() : null;
-  const agName = s?.name || 'エージェント';
-  const fee = Math.round(currentNetAmount * 0.025);
-  slackNotifyInstantPay({ reqId:currentReqId, agName, agId:s?.userId||'—', amount:currentNetAmount, fee, payout:currentNetAmount, ts:nowStr() });
+  var fee = Math.round(currentNetAmount * 0.025);
+  slackNotifyInstantPay({ reqId:currentReqId, agName, agId, amount:currentNetAmount, fee, payout:currentNetAmount, ts:nowStr() });
 }
+
+function showAiReviewScreen() {
+  var ov = document.getElementById('success-overlay');
+  ov.style.display = 'flex';
+  ov.innerHTML =
+    '<div style="text-align:center;padding:40px 24px">' +
+    '<div style="font-size:40px;margin-bottom:16px;animation:pulse 1.5s ease-in-out infinite">🤖</div>' +
+    '<div style="font-size:18px;font-weight:600;color:var(--navy);margin-bottom:8px">AI審査中...</div>' +
+    '<div style="font-size:12px;color:var(--muted)">申請内容を審査しています。数秒かかります。</div>' +
+    '</div>';
+}
+
+function showInstantTransferSuccess(data) {
+  var ov = document.getElementById('success-overlay');
+  var payoutAmt = window._currentPayoutAmount || Math.round(currentNetAmount * 0.85);
+  ov.innerHTML =
+    '<div style="text-align:center;padding:40px 24px;max-width:400px">' +
+    '<div style="font-size:48px;margin-bottom:16px">✅</div>' +
+    '<div style="font-size:22px;font-weight:300;color:var(--em);margin-bottom:8px">振込完了</div>' +
+    '<div style="font-size:28px;font-weight:700;color:var(--ink);margin-bottom:4px">¥' + Number(payoutAmt).toLocaleString() + '</div>' +
+    '<div style="font-size:12px;color:var(--muted);margin-bottom:20px">振込ID: ' + (data.remittanceId || currentReqId) + '</div>' +
+    (data._mock ? '<div style="display:inline-block;background:var(--am-bg);color:var(--am);font-size:10px;padding:2px 10px;border-radius:4px;margin-bottom:16px">🔧 モック（テスト）</div>' : '') +
+    '<div style="font-size:11px;color:var(--muted);background:var(--cream2);padding:12px;border-radius:8px;text-align:left;line-height:1.8;margin-bottom:20px">' +
+    'AI審査: 承認<br>リスクスコア: ' + (data.riskScore || 0) + '/100<br>振込日時: ' + new Date().toLocaleString('ja-JP') +
+    '</div>' +
+    '<button onclick="location.reload()" class="btn btn-p" style="width:100%">閉じる</button>' +
+    '</div>';
+}
+
+function showAiRejectedScreen(reason) {
+  var ov = document.getElementById('success-overlay');
+  ov.innerHTML = '';
+  ov.style.display = 'flex';
+  var wrap = document.createElement('div');
+  wrap.style.cssText = 'text-align:center;padding:40px 24px;max-width:400px';
+  var icon = document.createElement('div');
+  icon.style.cssText = 'font-size:48px;margin-bottom:16px';
+  icon.textContent = '❌';
+  var title = document.createElement('div');
+  title.style.cssText = 'font-size:18px;font-weight:600;color:var(--rd);margin-bottom:12px';
+  title.textContent = '申請が却下されました';
+  var body = document.createElement('div');
+  body.style.cssText = 'font-size:13px;color:var(--muted);background:var(--rd-bg);padding:14px;border-radius:8px;margin-bottom:20px;text-align:left;line-height:1.7';
+  body.textContent = reason || '審査基準を満たしませんでした。';
+  var note = document.createElement('div');
+  note.style.cssText = 'font-size:11px;color:var(--muted);margin-bottom:20px';
+  note.textContent = '通常振込（25日）はご利用いただけます。';
+  var btn = document.createElement('button');
+  btn.className = 'btn btn-g';
+  btn.style.width = '100%';
+  btn.textContent = '閉じる';
+  btn.onclick = function(){ ov.style.display = 'none'; };
+  wrap.appendChild(icon); wrap.appendChild(title); wrap.appendChild(body);
+  wrap.appendChild(note); wrap.appendChild(btn);
+  ov.appendChild(wrap);
+}
+
+function showManualProcessScreen(reason) {
+  var ov = document.getElementById('success-overlay');
+  ov.innerHTML = '';
+  ov.style.display = 'flex';
+  var wrap = document.createElement('div');
+  wrap.style.cssText = 'text-align:center;padding:40px 24px;max-width:400px';
+  var icon = document.createElement('div');
+  icon.style.cssText = 'font-size:48px;margin-bottom:16px';
+  icon.textContent = '⏳';
+  var title = document.createElement('div');
+  title.style.cssText = 'font-size:18px;font-weight:600;color:var(--navy);margin-bottom:8px';
+  title.textContent = '申請を受理しました';
+  var body = document.createElement('div');
+  body.style.cssText = 'font-size:13px;color:var(--muted);margin-bottom:16px';
+  body.textContent = reason || 'HQが確認後、振込を行います（通常30分以内）。';
+  var rid = document.createElement('div');
+  rid.style.cssText = 'font-size:11px;color:var(--muted);font-family:monospace;background:var(--cream2);padding:8px;border-radius:6px;margin-bottom:20px';
+  rid.textContent = '申請ＩＤ: ' + currentReqId;
+  var btn = document.createElement('button');
+  btn.className = 'btn btn-p';
+  btn.style.width = '100%';
+  btn.textContent = '閉じる';
+  btn.onclick = function(){ location.reload(); };
+  wrap.appendChild(icon); wrap.appendChild(title); wrap.appendChild(body);
+  wrap.appendChild(rid); wrap.appendChild(btn);
+  ov.appendChild(wrap);
+}
+
+
 function showLock() {
   document.getElementById('tfa-screen').style.display = 'none';
   document.getElementById('lock-screen').style.display = 'flex';

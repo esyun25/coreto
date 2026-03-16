@@ -556,6 +556,7 @@ body, input, select, textarea, button {
       <button class="tab-btn"        id="tab-agents"  onclick="switchTab('agents')">👥 AG / PT</button>
       <button class="tab-btn"        id="tab-mentor"  onclick="switchTab('mentor')">💰 メンターフィー</button>
       <button class="tab-btn"        id="tab-stripe"  onclick="switchTab('stripe')">💳 Stripe管理</button>
+      <button class="tab-btn"        id="tab-api"     onclick="switchTab('api')">⚙️ API設定</button>
     </div>
 
     <div id="tab-content"></div>
@@ -1121,6 +1122,107 @@ var SLACK_CHANNEL_LABELS = {
   RANK:       '#ランク管理',
   HQ_ONBOARD: '#hq-内部（HQ入会）',
 };
+
+// ── API設定 ────────────────────────────────────────────────────
+function renderApiSettings() {
+  var cfg = {};
+  try { cfg = JSON.parse(localStorage.getItem('CORETO_API_CONFIG') || '{}'); } catch(e) {}
+
+  var content = document.getElementById('tab-content');
+  if (!content) return;
+
+  var isMock   = !cfg.baseUrl;
+  var statusBadge = isMock
+    ? '<span style="background:var(--am-bg);color:var(--am);font-size:10px;padding:2px 8px;border-radius:4px;font-weight:700">モード: モック（APIキー未設定）</span>'
+    : '<span style="background:var(--em-bg);color:var(--em);font-size:10px;padding:2px 8px;border-radius:4px;font-weight:700">✅ API接続済み</span>';
+
+  content.innerHTML =
+    '<div style="max-width:600px">' +
+
+    '<div style="background:var(--cream2);border:1px solid var(--bd);border-radius:10px;padding:16px 18px;margin-bottom:20px">' +
+    '<div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:4px">現在の接続状態 ' + statusBadge + '</div>' +
+    '<div style="font-size:11px;color:var(--muted);line-height:1.8">' +
+    'Vercel API URL が設定されるとGMOバーチャル口座発行・入金消し込み・即時払いAI審査が有効になります。<br>' +
+    'APIキー未取得期間はモックモードで動作します。' +
+    '</div></div>' +
+
+    '<div style="display:flex;flex-direction:column;gap:14px">' +
+
+    '<div>' +
+    '<label style="font-size:10px;font-weight:700;color:var(--muted);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px">Vercel API ベースURL</label>' +
+    '<input id="api-base-url" type="url" placeholder="https://coreto-api.vercel.app" value="' + (cfg.baseUrl || '') + '" ' +
+    'style="width:100%;padding:10px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:13px;font-family:Outfit,sans-serif;outline:none;box-sizing:border-box">' +
+    '<div style="font-size:10px;color:var(--muted);margin-top:4px">Vercelのプロジェクト設定画面に表示されているURL</div>' +
+    '</div>' +
+
+    '<div>' +
+    '<label style="font-size:10px;font-weight:700;color:var(--muted);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px">内部APIキー（CORETO_INTERNAL_API_KEY）</label>' +
+    '<input id="api-internal-key" type="password" placeholder="••••••••••••••••" value="' + (cfg.internalKey || '') + '" ' +
+    'style="width:100%;padding:10px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:13px;font-family:Outfit,sans-serif;outline:none;box-sizing:border-box">' +
+    '<div style="font-size:10px;color:var(--muted);margin-top:4px">Vercelの環境変数に設定した CORETO_INTERNAL_API_KEY と同じ値</div>' +
+    '</div>' +
+
+    '</div>' +
+
+    '<div style="display:flex;gap:10px;margin-top:20px">' +
+    '<button onclick="saveApiSettings()" style="flex:2;padding:10px;background:var(--navy);color:var(--gold);border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:Outfit,sans-serif">💾 API設定を保存</button>' +
+    '<button onclick="testApiConnection()" style="flex:1;padding:10px;background:transparent;border:1.5px solid var(--bd);border-radius:8px;font-size:12px;color:var(--muted);cursor:pointer;font-family:Outfit,sans-serif">接続テスト</button>' +
+    '</div>' +
+
+    '<div style="margin-top:24px;background:var(--cream2);border:1px solid var(--bd);border-radius:10px;padding:16px 18px">' +
+    '<div style="font-size:11px;font-weight:700;color:var(--navy);margin-bottom:8px">🔧 モック入金テスト（開発用）</div>' +
+    '<div style="font-size:11px;color:var(--muted);margin-bottom:10px">GMO APIキー未取得期間のテスト。実際の入出金は発生しません。</div>' +
+    '<div style="display:flex;gap:8px">' +
+    '<input id="mock-case-id" placeholder="案件ID（例: RENT-0194）" style="flex:1;padding:8px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:12px;font-family:Outfit,sans-serif;outline:none">' +
+    '<input id="mock-amount"  placeholder="金額（例: 198000）" type="number" style="width:140px;padding:8px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:12px;font-family:Outfit,sans-serif;outline:none">' +
+    '<button onclick="runMockPayment()" style="padding:8px 14px;background:var(--em);color:#fff;border:none;border-radius:8px;font-size:12px;cursor:pointer;font-family:Outfit,sans-serif;white-space:nowrap">入金シミュレート</button>' +
+    '</div>' +
+    '</div>' +
+
+    '</div>';
+}
+
+function saveApiSettings() {
+  var baseUrl    = (document.getElementById('api-base-url')?.value || '').trim().replace(/\/$/, '');
+  var internalKey = document.getElementById('api-internal-key')?.value.trim() || '';
+  var cfg = { baseUrl, internalKey, savedAt: new Date().toLocaleString('ja-JP') };
+  try { localStorage.setItem('CORETO_API_CONFIG', JSON.stringify(cfg)); } catch(e) {}
+  showToast('✅ API設定を保存しました', 'ok');
+  renderApiSettings();
+}
+
+async function testApiConnection() {
+  var cfg = {};
+  try { cfg = JSON.parse(localStorage.getItem('CORETO_API_CONFIG') || '{}'); } catch(e) {}
+  if (!cfg.baseUrl) { showToast('VercelのURLを入力してください', 'warn'); return; }
+  try {
+    var res = await fetch(cfg.baseUrl + '/api/gmo/check-payment?caseId=TEST-0001', {
+      headers: { 'x-coreto-key': cfg.internalKey || '' }
+    });
+    if (res.ok || res.status === 404) {
+      showToast('✅ API接続OK（HTTP ' + res.status + '）', 'ok');
+    } else if (res.status === 401) {
+      showToast('❌ APIキーが正しくありません（401）', 'error');
+    } else {
+      showToast('⚠️ HTTP ' + res.status, 'warn');
+    }
+  } catch(err) {
+    showToast('❌ 接続失敗: ' + err.message, 'error');
+  }
+}
+
+async function runMockPayment() {
+  var caseId = document.getElementById('mock-case-id')?.value.trim();
+  var amount = document.getElementById('mock-amount')?.value;
+  if (!caseId || !amount) { showToast('案件IDと金額を入力してください', 'warn'); return; }
+  if (!window.CORETO_API?.isConfigured()) { showToast('API設定を先に保存してください', 'warn'); return; }
+  try {
+    var data = await window.CORETO_API.mockSimulatePayment(caseId, Number(amount));
+    showToast('✅ モック入金完了: ' + caseId + ' ¥' + Number(amount).toLocaleString(), 'ok');
+  } catch(err) {
+    showToast('❌ ' + err.message, 'error');
+  }
+}
 
 function renderSlackSettings() {
   if (typeof window.SLACK === 'undefined') {
