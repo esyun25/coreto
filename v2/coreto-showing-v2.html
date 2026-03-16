@@ -191,11 +191,9 @@ body, input, select, textarea, button { font-family:'Outfit','Noto Sans JP',sans
 function toggleSb(){document.querySelector('.sb').classList.toggle('open');document.querySelector('.mob-overlay').classList.toggle('show');}
 
 const SHOWINGS = [
-  {id:'SHW-0021', case:'RENT-0194', client:'田中 優子', prop:'パークタワー三田 302', addr:'港区三田3丁目', date:'3/12', dateNum:12, time:'14:00', ag:(sessionStorage.getItem('coreto_name')||'山田 誠'), status:'確定', result:null},
-  {id:'SHW-0022', case:'RENT-0201', client:'鈴木 健太', prop:'白金ハウス 201',     addr:'港区白金1丁目', date:'3/13', dateNum:13, time:'11:00', ag:(sessionStorage.getItem('coreto_name')||'山田 誠'), status:'確定', result:null},
-  {id:'SHW-0020', case:'RENT-0188', client:'渡辺 誠',   prop:'品川フラッツ 501',   addr:'品川区大崎2丁目', date:'3/08', dateNum:8, time:'15:30', ag:(sessionStorage.getItem('coreto_name')||'山田 誠'), status:'完了', result:'申込意向あり'},
-  {id:'SHW-0019', case:'RENT-0182', client:'伊藤 花子', prop:'目黒レジデンス 103',  addr:'目黒区目黒3丁目', date:'3/05', dateNum:5, time:'10:00', ag:(sessionStorage.getItem('coreto_name')||'山田 誠'), status:'完了', result:'検討中'},
-  {id:'SHW-0018', case:'RENT-0175', client:'高橋 美咲', prop:'恵比寿ガーデン 401',  addr:'渋谷区恵比寿1丁目', date:'2/28', dateNum:28, time:'13:00', ag:(sessionStorage.getItem('coreto_name')||'山田 誠'), status:'完了', result:'見送り'},
+  {id:'SH-001', case:'RENT-0194', client:'田中 優子', prop:'パークタワー三田 302', addr:'港区三田3丁目', dateNum:'14', time:'14:00', status:'完了', result:'申込意向あり', note:'2LDKを気に入った。他に1LDKも比較検討中'},
+  {id:'SH-002', case:'RENT-0194', client:'田中 優子', prop:'グランドメゾン赤坂 805', addr:'港区赤坂2丁目', dateNum:'14', time:'16:00', status:'完了', result:'見送り', note:'家賃が予算オーバー'},
+  {id:'SH-003', case:'RENT-0194', client:'田中 優子', prop:'リバーサイド麻布 1204', addr:'港区麻布十番1丁目', dateNum:'21', time:'13:00', status:'確定', result:'', note:'2番手での申込み可能性あり'},
 ];
 
 let selectedResult = '';
@@ -279,16 +277,22 @@ function renderNew(){
           <div class="field"><label class="required">時間</label><input type="time" value="14:00"></div>
         </div>
         <div class="field-row">
-          <div class="field"><label>同行者</label><input placeholder="なし / 管理会社担当など"></div>
+          <div class="field"><label>同行者</label><input id="sh-companion" placeholder="管理会社担当者名など"></div>
           <div class="field"><label>内見方法</label>
-            <select>
+            <select id="sh-method">
               <option>現地案内（AG同行）</option>
-              <option>セルフ内見（鍵貸出）</option>
               <option>オンライン内見</option>
             </select>
           </div>
         </div>
-        <div class="field"><label>備考</label><textarea placeholder="駐車場の有無、集合場所など"></textarea></div>
+        <div style="background:var(--am-bg);border:1px solid rgba(217,119,6,.2);border-radius:7px;padding:9px 13px;font-size:11px;color:var(--am);margin-bottom:14px">
+          ⚠️ <strong>セルフ内見（鍵貸出）は禁止</strong>です。必ずAGが同行してください。
+        </div>
+        <div class="field-row">
+          <div class="field"><label>AG携帯番号</label><input id="sh-mobile" type="tel" placeholder="090-XXXX-XXXX（内見依頼書に印刷）"></div>
+          <div class="field"><label>AG宅建士証番号</label><input id="sh-license" placeholder="第XXXXXX号（任意）"></div>
+        </div>
+        <div class="field"><label>備考</label><textarea id="sh-note" placeholder="集合場所、駐車場の有無、２番手での申込みの可能性など"></textarea></div>
       </div>
     </div>
     <div style="display:flex;justify-content:flex-end;gap:10px">
@@ -323,8 +327,9 @@ function printShowingRequest() {
 
   var agName    = sessionStorage.getItem('coreto_name') || '担当者名';
   var agId      = sessionStorage.getItem('coreto_user_id') || '';
-  var agMobile  = ''; // Kintone連携後にAGマスターから取得
-  var agLicense = '宅地建物取引士証 第XXXXXX号';
+  // 内見登録フォームのAG携帯番号欄から取得（入力済みの場合）
+  var agMobile  = document.getElementById('sh-mobile')?.value.trim() || '';
+  var agLicense = (document.getElementById('sh-license')?.value.trim() || '') || '宅地建物取引士証 第XXXXXX号';
 
   // 日付パース
   var month = '　', day = '　';
@@ -346,12 +351,12 @@ function printShowingRequest() {
   w.document.write('.field-value{font-size:20px;font-weight:700;flex:1;padding-left:16px}');
   w.document.write('.body-text{font-size:13px;margin-bottom:8px;font-weight:500}');
   w.document.write('.note{font-size:13px;font-weight:700;margin-top:16px}');
-  w.document.write('.card{border:3px solid #1a2744;margin-top:32px;display:flex;min-height:110px}');
-  w.document.write('.card-left{background:#1a2744;padding:16px 20px;flex:1}');
-  w.document.write('.card-name{color:#fff;font-size:28px;font-weight:700;letter-spacing:3px;margin-bottom:8px}');
+  w.document.write('.card{border:3px solid #1a2744;margin-top:32px;display:flex;width:91mm;height:55mm;overflow:hidden}');
+  w.document.write('.card-left{background:#1a2744;padding:10px 14px;flex:1;display:flex;flex-direction:column;justify-content:center}');
+  w.document.write('.card-name{color:#fff;font-size:18px;font-weight:700;letter-spacing:2px;margin-bottom:6px}');
   w.document.write('.card-info{color:#d0d8e8;font-size:11px;line-height:1.9}');
   w.document.write('.card-info .lbl{color:#c9a84c;font-size:10px}');
-  w.document.write('.card-right{padding:16px 20px;display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;min-width:160px}');
+  w.document.write('.card-right{padding:10px 14px;display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;min-width:130px}');
   w.document.write('.card-logo{font-size:22px;color:#1a2744;font-weight:700;letter-spacing:2px;font-family:monospace}');
   w.document.write('.card-mobile{font-size:13px;font-weight:700;color:#1a2744;font-family:monospace}');
   w.document.write('.card-license{font-size:10px;color:#666;text-align:right}');
@@ -381,12 +386,12 @@ function printShowingRequest() {
   w.document.write('      <div>〒150-0000　東京都○○区○○ 1-1-1</div>');
   w.document.write('      <div><span class="lbl">Tel：</span>03-XXXX-XXXX</div>');
   w.document.write('      <div><span class="lbl">Fax：</span>03-XXXX-XXXX</div>');
-  w.document.write('      <div><span class="lbl" style="color:#f59e0b">携帯：</span><strong style="color:#f0c040;font-size:13px">' + (agMobile || agId) + '</strong></div>');
+  w.document.write('      <div><span class="lbl" style="color:#f59e0b">携帯：</span><strong style="color:#f0c040;font-size:12px">' + (agMobile || '　　　　　　') + '</strong></div>');
   w.document.write('    </div>');
   w.document.write('  </div>');
   w.document.write('  <div class="card-right">');
   w.document.write('    <div class="card-logo">CORETO</div>');
-  w.document.write('    <div><div class="card-mobile">' + (agMobile || '') + '</div>');
+  w.document.write('    <div><div class="card-mobile">' + (agMobile || '　　　　　　　') + '</div>');
   w.document.write('    <div class="card-license">' + agLicense + '</div></div>');
   w.document.write('  </div>');
   w.document.write('</div>');
@@ -404,62 +409,81 @@ function renderReport(){
   document.getElementById('pg').innerHTML = `
   <div class="form-wrap">
     <div class="form-card">
-      <div class="form-head"><div class="form-head-title">📝 内見後報告</div></div>
+      <div class="form-head"><div class="form-head-title">📋 内見後報告</div></div>
       <div class="form-body">
         <div class="field-row">
-          <div class="field"><label class="required">内見ID</label>
-            <select>
-              <option>SHW-0021 — 田中 優子 / パークタワー三田 3/12</option>
-              <option>SHW-0022 — 鈴木 健太 / 白金ハウス 3/13</option>
-            </select>
-          </div>
-          <div class="field"><label class="required">内見日</label><input type="date" value="2026-03-12"></div>
+          <div class="field"><label class="required">案件ID</label><input id="rp-case" placeholder="RENT-0000"></div>
+          <div class="field"><label class="required">内見した物件</label><input id="rp-prop" placeholder="パークタワー三田 302"></div>
         </div>
-
+        <div class="field-row">
+          <div class="field"><label class="required">内見日</label><input id="rp-date" type="date"></div>
+          <div class="field"><label class="required">クライアント</label><input id="rp-client" placeholder="田中 優子"></div>
+        </div>
         <div class="field">
           <label class="required">内見結果</label>
-          <div class="result-options" style="margin-top:6px">
-            <div class="result-opt" onclick="selectResult('interested',this)">申込意向あり</div>
-            <div class="result-opt" onclick="selectResult('considering',this)">検討中</div>
-            <div class="result-opt" onclick="selectResult('pass',this)">見送り</div>
-            <div class="result-opt" onclick="selectResult('rescheduled',this)">再内見希望</div>
+          <select id="rp-result" onchange="toggleApplyFields(this.value)">
+            <option value="">選択してください</option>
+            <option value="申込意向あり">✅ 申込意向あり</option>
+            <option value="検討中">🤔 検討中（他物件と比較）</option>
+            <option value="2番手申込">📋 2番手で申込み</option>
+            <option value="見送り">❌ 見送り</option>
+          </select>
+        </div>
+
+        <!-- 申込意向あり・2番手の場合 -->
+        <div id="apply-fields" style="display:none">
+          <div style="background:var(--em-bg);border:1px solid rgba(5,150,105,.2);border-radius:8px;padding:12px 14px;margin:14px 0;font-size:11px;color:var(--em)">
+            ✅ 申込みに進みます。書類送付管理で申込書を送付してください。
+          </div>
+          <div class="field-row">
+            <div class="field"><label>申込み家賃</label><input id="rp-rent" placeholder="165,000" type="number"></div>
+            <div class="field"><label>入居希望日</label><input id="rp-movein" type="date"></div>
           </div>
         </div>
 
-        <div class="field">
-          <label>クライアントの反応・コメント</label>
-          <textarea placeholder="「日当たりが良くて気に入っています。収納が少し心配です。」など"></textarea>
-        </div>
-
-        <div class="field-row">
-          <div class="field">
-            <label>次のアクション</label>
-            <select>
-              <option>申込書を送付する</option>
-              <option>別物件を提案する</option>
-              <option>再内見を設定する</option>
-              <option>条件交渉を行う</option>
-              <option>様子を見る</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>フォローアップ予定日</label>
-            <input type="date" value="2026-03-14">
+        <!-- 2番手の場合 -->
+        <div id="secondhand-fields" style="display:none">
+          <div style="background:var(--am-bg);border:1px solid rgba(217,119,6,.2);border-radius:8px;padding:12px 14px;margin:14px 0;font-size:11px;color:var(--am)">
+            ⚠️ 2番手申込みです。1番手キャンセル待ちで申込書を提出します。HQに連絡してください。
           </div>
         </div>
 
-        <div class="field">
-          <label>物件の印象メモ（内部用）</label>
-          <textarea placeholder="クライアントが特に気に入った点、懸念点など（HQとの共有用）"></textarea>
+        <!-- 検討中・他物件比較の場合 -->
+        <div id="compare-fields" style="display:none">
+          <div style="background:var(--sk-bg);border:1px solid rgba(2,132,199,.15);border-radius:8px;padding:12px 14px;margin:14px 0;font-size:11px;color:var(--sk)">
+            ℹ️ 他物件との比較中です。追加内見が必要な場合は「内見登録」から新たに登録してください。
+          </div>
+          <div class="field"><label>比較検討中の物件</label><input id="rp-compare" placeholder="他に検討中の物件名（任意）"></div>
+        </div>
+
+        <div class="field"><label>コメント・申し送り</label>
+          <textarea id="rp-note" placeholder="クライアントの感想、懸念点、次のアクションなど"></textarea>
         </div>
       </div>
     </div>
     <div style="display:flex;justify-content:flex-end;gap:10px">
       <button class="btn btn-g" onclick="switchTab('list',document.getElementById('tab-list'))">キャンセル</button>
-      <button class="btn btn-p" onclick="submitReport()">報告を提出する →</button>
+      <button class="btn btn-p" onclick="submitReport()">報告を提出 →</button>
     </div>
   </div>`;
+  // 今日の日付を自動入力
+  var dateEl = document.getElementById('rp-date');
+  if (dateEl) dateEl.value = new Date().toISOString().slice(0,10);
+  // URLパラメータから案件情報を自動入力
+  var p = new URLSearchParams(location.search);
+  var cid = p.get('caseId');
+  if (cid) { var el = document.getElementById('rp-case'); if(el) el.value = cid; }
 }
+
+function toggleApplyFields(val) {
+  var applyEl   = document.getElementById('apply-fields');
+  var secondEl  = document.getElementById('secondhand-fields');
+  var compareEl = document.getElementById('compare-fields');
+  if (applyEl)   applyEl.style.display   = (val === '申込意向あり' || val === '2番手申込') ? '' : 'none';
+  if (secondEl)  secondEl.style.display  = val === '2番手申込' ? '' : 'none';
+  if (compareEl) compareEl.style.display = val === '検討中' ? '' : 'none';
+}
+
 
 function submitReport(){
   // 内見結果を取得
