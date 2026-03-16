@@ -564,10 +564,10 @@ body, input, select, textarea, button {
 
     <div class="tab-bar">
       <button class="tab-btn active" id="tab-dashboard" onclick="switchTab('dashboard')">📋 ダッシュボード</button>
-      <button class="tab-btn"        id="tab-flowA"     onclick="switchTab('flowA')">📮 A: HQ→クライアント</button>
-      <button class="tab-btn"        id="tab-flowB"     onclick="switchTab('flowB')">🔄 B: クライアント→管理会社</button>
-      <button class="tab-btn"        id="tab-flowC"     onclick="switchTab('flowC')">🔑 C: 管理会社→鍵</button>
-      <button class="tab-btn"        id="tab-flowD"     onclick="switchTab('flowD')">⚠️ D: 追加捺印</button>
+      <button class="tab-btn" id="tab-flowA" onclick="switchTab('flowA')">📮 書類スキャン登録</button>
+      <button class="tab-btn hq-only-tab" id="tab-flowB" onclick="switchTab('flowB')">🔄 B: クライアント→管理会社</button>
+      <button class="tab-btn hq-only-tab" id="tab-flowC" onclick="switchTab('flowC')">🔑 C: 管理会社→鍵</button>
+      <button class="tab-btn hq-only-tab" id="tab-flowD" onclick="switchTab('flowD')">⚠️ D: 追加捺印</button>
     </div>
     <div id="tab-content"></div>
   </div>
@@ -603,6 +603,7 @@ body, input, select, textarea, button {
 (function(){
   var _role = sessionStorage.getItem('coreto_role') || '';
   var _allowed = ["hq", "re_ag"];
+  var IS_HQ_SCAN = _role === 'hq'; // フローB/C/DはHQ専用
   if (_allowed.length && !_allowed.includes(_role)) {
     location.replace('coreto-hub-v2.html?unauthorized=1');
   }
@@ -2555,6 +2556,13 @@ function refreshCurrentTab(){
 // ══════════════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', ()=>{
   CNAV.init('barcode_scan');
+
+  // AGはフローB/C/D（返送・受付はHQ事務所が行う）を非表示
+  if (!IS_HQ_SCAN) {
+    document.querySelectorAll('.hq-only-tab').forEach(function(el) {
+      el.style.display = 'none';
+    });
+  }
 
   // 🔴-4: AGアクセス時は発送スキャン（BフローBC登録）のみ表示
   const role = sessionStorage.getItem('coreto_role') || 'hq';
