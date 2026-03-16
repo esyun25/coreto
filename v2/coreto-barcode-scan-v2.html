@@ -554,8 +554,8 @@ body, input, select, textarea, button {
   <div class="topbar">
     <button class="mob-ham" onclick="toggleSb()"><span></span><span></span><span></span></button>
     <div>
-      <div class="tb-title">書類郵送フロー管理</div>
-      <div class="tb-crumb"><a href="coreto-hub-v2.html">COREBLDG</a> › <span>書類郵送</span></div>
+      <div class="tb-title" id="page-tb-title">書類郵送フロー管理</div>
+      <div class="tb-crumb"><a href="coreto-hub-v2.html">COREBLDG</a> › <span id="page-tb-crumb">書類郵送</span></div>
     </div>
   </div>
   <div class="page">
@@ -563,8 +563,8 @@ body, input, select, textarea, button {
     <div class="stat-grid" id="stat-grid"></div>
 
     <div class="tab-bar">
-      <button class="tab-btn active" id="tab-dashboard" onclick="switchTab('dashboard')">📋 ダッシュボード</button>
-      <button class="tab-btn" id="tab-flowA" onclick="switchTab('flowA')">📮 書類スキャン登録</button>
+      <button class="tab-btn active hq-only-tab" id="tab-dashboard" onclick="switchTab('dashboard')">📋 ダッシュボード</button>
+      <button class="tab-btn" id="tab-flowA" onclick="switchTab('flowA')">📷 書類スキャン登録</button>
       <button class="tab-btn hq-only-tab" id="tab-flowB" onclick="switchTab('flowB')">🔄 B: クライアント→管理会社</button>
       <button class="tab-btn hq-only-tab" id="tab-flowC" onclick="switchTab('flowC')">🔑 C: 管理会社→鍵</button>
       <button class="tab-btn hq-only-tab" id="tab-flowD" onclick="switchTab('flowD')">⚠️ D: 追加捺印</button>
@@ -2557,11 +2557,29 @@ function refreshCurrentTab(){
 window.addEventListener('DOMContentLoaded', ()=>{
   CNAV.init('barcode_scan');
 
-  // AGはフローB/C/D（返送・受付はHQ事務所が行う）を非表示
+  // AGはフローB/C/D・ダッシュボード（返送・受付はHQ事務所が行う）を非表示
   if (!IS_HQ_SCAN) {
     document.querySelectorAll('.hq-only-tab').forEach(function(el) {
       el.style.display = 'none';
     });
+    // タイトルをAG向けに変更
+    var titleEl = document.getElementById('page-tb-title');
+    if (titleEl) titleEl.textContent = '書類スキャン登録';
+    var crumbEl = document.getElementById('page-tb-crumb');
+    if (crumbEl) crumbEl.textContent = '書類スキャン登録';
+    document.title = '書類スキャン登録 — COREBLDG';
+    // AGはフローAをデフォルト表示
+    switchTab('flowA');
+    // URLにcaseIdがある場合はそのまま引き継ぐ
+    var _cid = new URLSearchParams(location.search).get('caseId');
+    if (_cid) {
+      var crumbBase = document.querySelector('.tb-crumb');
+      if (crumbBase) {
+        var back = document.createElement('span');
+        back.innerHTML = ' › <a href="coreto-rental-v2.html?caseId=' + encodeURIComponent(_cid) + '" style="color:var(--sk)">案件詳細に戻る</a>';
+        crumbBase.appendChild(back);
+      }
+    }
   }
 
   // 🔴-4: AGアクセス時は発送スキャン（BフローBC登録）のみ表示
