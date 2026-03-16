@@ -1337,6 +1337,15 @@ function approveAi(docId){
         data.confirmedAt = new Date().toLocaleString('ja-JP').slice(0,-3);
         localStorage.setItem('CORETO_SCAN_'+doc.caseId, JSON.stringify(data));
         localStorage.removeItem(pendingKey);
+        // 初期費用明細書がある場合は CORETO_INVOICE_MEISAI_{caseId} にも保存
+        if (data.meisai && data.meisai.dataUrl) {
+          localStorage.setItem('CORETO_INVOICE_MEISAI_'+doc.caseId, JSON.stringify({
+            dataUrl: data.meisai.dataUrl,
+            name:    data.meisai.name,
+            source:  'barcode-scan',
+            savedAt: new Date().toLocaleString('ja-JP'),
+          }));
+        }
       }
     } catch(e){}
     const bc = doc.caseId.replace('-','') + Date.now().toString().slice(-6);
@@ -2287,6 +2296,30 @@ function startNewFlow(){
       </label>
     </div>
 
+    <!-- 初期費用明細書（任意） -->
+    <div style="margin-bottom:14px">
+      <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:6px;letter-spacing:.4px;display:flex;align-items:center;gap:6px">
+        💴 初期費用明細書
+        <span style="font-size:9px;font-weight:400;color:var(--faint);background:var(--cream2);border:1px solid var(--bd);border-radius:4px;padding:1px 7px">任意</span>
+      </div>
+      <div style="font-size:10px;color:var(--faint);margin-bottom:6px;line-height:1.6">
+        契約書に同封されていた初期費用明細書をアップロードしてください。<br>
+        HQがAI照合を行い、管理会社への送金処理を行います。
+      </div>
+      <label id="upload-label-meisai"
+        style="display:block;border:2px dashed var(--bd2);border-radius:10px;
+        padding:14px;text-align:center;cursor:pointer;transition:.2s;background:#F8F9FA;min-height:70px"
+        onmouseenter="this.style.borderColor='var(--navy)'"
+        onmouseleave="if(!_uploadFiles.meisai)this.style.borderColor='var(--bd2)'">
+        <input type="file" accept="application/pdf,image/*" style="display:none"
+          onchange="handleFileSelect(event,'meisai')">
+        <div id="upload-status-meisai" style="font-size:11px;color:var(--muted)">
+          <div style="font-size:18px;margin-bottom:3px">💴</div>
+          クリックして選択（PDF または 画像）
+        </div>
+      </label>
+    </div>
+
     <div style="font-size:10px;color:var(--faint);margin-bottom:10px;text-align:center">
       ⚠️ PDFサイズの合計は10MB以内を推奨。本番ではGoogle Driveに保存されます。
     </div>
@@ -2304,8 +2337,8 @@ function startNewFlow(){
 }
 
 // ── ファイルアップロード管理 ────────────────────────────
-let _uploadFiles = {contract: null, jusetsu: null, returnlist: null};
-let _uploadDataUrls = {contract: null, jusetsu: null, returnlist: null};
+let _uploadFiles = {contract: null, jusetsu: null, returnlist: null, meisai: null};
+let _uploadDataUrls = {contract: null, jusetsu: null, returnlist: null, meisai: null};
 
 function handleFileSelect(event, type){
   const file = event.target.files[0];
@@ -2367,6 +2400,11 @@ function submitNewUpload(){
       dataUrl: _uploadDataUrls.jusetsu,
       size: _uploadFiles.jusetsu.size,
     } : null,
+    meisai: _uploadDataUrls.meisai ? {
+      name: _uploadFiles.meisai.name,
+      dataUrl: _uploadDataUrls.meisai,
+      size: _uploadFiles.meisai.size,
+    } : null,
   };
   try {
     localStorage.setItem('CORETO_SCAN_PENDING_'+newDoc.id, JSON.stringify(pendingData));
@@ -2377,8 +2415,8 @@ function submitNewUpload(){
   const returnlistFile    = _uploadFiles.returnlist;
 
   renderStats();
-  _uploadFiles    = {contract:null, jusetsu:null, returnlist:null};
-  _uploadDataUrls = {contract:null, jusetsu:null, returnlist:null};
+  _uploadFiles    = {contract:null, jusetsu:null, returnlist:null, meisai:null};
+  _uploadDataUrls = {contract:null, jusetsu:null, returnlist:null, meisai:null};
   refreshCurrentTab();
 
   if (returnlistDataUrl) {

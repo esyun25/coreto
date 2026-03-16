@@ -525,6 +525,11 @@ html, body { background:#FFFFFF !important; }
           <button class="action-btn secondary" onclick="document.getElementById('remit-section').scrollIntoView({behavior:'smooth'})">💰 送金情報を入力</button>
           <button class="action-btn secondary" onclick="(function(){ var p=new URLSearchParams(location.search); var cid=p.get('caseId')||'RENT-0194'; window.location.href='coreto-itsetsu-booking-v2.html?caseId='+cid; })()">📅 IT重説を予約する</button>
           <button class="action-btn secondary" onclick="(function(){ var p=new URLSearchParams(location.search); var cid=p.get('caseId')||'RENT-0194'; window.location.href='coreto-barcode-scan-v2.html?caseId='+cid; })()">📷 書類スキャン登録</button>
+          <button class="action-btn secondary" id="meisai-upload-btn"
+            onclick="openMeisaiUpload()">
+            💴 初期費用明細をアップロード
+          </button>
+          <div id="meisai-status" style="display:none;font-size:10px;color:var(--em);padding:4px 8px;background:var(--em-bg);border-radius:5px;margin-top:2px">✅ 明細書アップロード済み</div>
           <!-- 初期費用明細チェックはHQ専用のためAGナビから削除 -->
           <button class="action-btn warn" onclick="(function(){ var p=new URLSearchParams(location.search); var cid=p.get('caseId')||'RENT-0194'; var cn=p.get('clientName')||''; window.location.href='coreto-contract-report-v2.html?caseId='+cid+(cn?'&clientName='+cn:''); })()">🏆 成約を報告する</button>
           <button class="action-btn secondary" onclick="(function(){ var p=new URLSearchParams(location.search); var cid=p.get('caseId')||'RENT-0194'; window.location.href='coreto-screening-v2.html?caseId='+cid; })()">📋 書類送付管理</button>
@@ -918,5 +923,119 @@ window.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 <div class="mob-overlay" onclick="toggleSb()"></div>
+
+<!-- ══ 初期費用明細アップロードモーダル ══ -->
+<div id="meisai-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#fff;border-radius:14px;width:100%;max-width:480px;font-family:'Outfit','Noto Sans JP',sans-serif">
+    <div style="padding:16px 22px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between">
+      <div style="font-size:14px;font-weight:700;color:var(--navy)">💴 初期費用明細書のアップロード</div>
+      <button onclick="closeMeisaiModal()" style="background:none;border:none;font-size:16px;cursor:pointer;color:var(--muted)">✕</button>
+    </div>
+    <div style="padding:20px 22px">
+      <div style="background:var(--sk-bg);border:1px solid rgba(2,132,199,.15);border-radius:8px;padding:10px 13px;margin-bottom:14px;font-size:11px;color:var(--sk);line-height:1.6">
+        ℹ️ AGに直接届いた初期費用明細書をアップロードしてください。<br>
+        契約書に同封されていた場合は「書類スキャン登録」からアップロードできます。
+      </div>
+      <label id="meisai-upload-label"
+        style="display:block;border:2px dashed var(--bd2);border-radius:10px;padding:24px;text-align:center;cursor:pointer;transition:.2s;background:#F8F9FA">
+        <input type="file" id="meisai-file-input" accept="application/pdf,image/*" style="display:none"
+          onchange="handleMeisaiSelect(event)">
+        <div id="meisai-upload-icon" style="font-size:32px;margin-bottom:8px">💴</div>
+        <div id="meisai-upload-text" style="font-size:12px;color:var(--muted)">クリックして明細書を選択<br><span style="font-size:10px">PDF・JPG・PNG・HEIC 対応</span></div>
+      </label>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button id="meisai-submit-btn" onclick="submitMeisai()" disabled
+          style="flex:1;padding:10px;background:var(--navy);color:var(--gold);border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;opacity:.45;font-family:'Outfit',sans-serif">
+          💾 アップロード
+        </button>
+        <button onclick="closeMeisaiModal()"
+          style="padding:10px 18px;background:transparent;border:1.5px solid var(--bd);border-radius:9px;font-size:12px;color:var(--muted);cursor:pointer;font-family:'Outfit',sans-serif">
+          キャンセル
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var _meisaiFile = null, _meisaiDataUrl = null;
+
+function openMeisaiUpload() {
+  var p = new URLSearchParams(location.search);
+  var cid = p.get('caseId') || 'RENT-0194';
+  // 既存データ確認
+  try {
+    var existing = localStorage.getItem('CORETO_INVOICE_MEISAI_' + cid);
+    if (existing) {
+      var d = JSON.parse(existing);
+      var t = document.getElementById('meisai-upload-text');
+      if (t) t.innerHTML = '✅ アップロード済み: ' + (d.name||'明細書') + '<br><span style="font-size:10px;color:var(--em)">' + (d.savedAt||'') + ' 保存</span>';
+    }
+  } catch(e) {}
+  document.getElementById('meisai-modal').style.display = 'flex';
+}
+
+function closeMeisaiModal() {
+  document.getElementById('meisai-modal').style.display = 'none';
+  _meisaiFile = null; _meisaiDataUrl = null;
+}
+
+function handleMeisaiSelect(e) {
+  var file = e.target.files[0];
+  if (!file) return;
+  _meisaiFile = file;
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    _meisaiDataUrl = ev.target.result;
+    document.getElementById('meisai-upload-icon').textContent = '✅';
+    document.getElementById('meisai-upload-text').innerHTML = file.name + '<br><span style="font-size:10px;color:var(--em)">' + (file.size/1024).toFixed(0) + 'KB</span>';
+    var btn = document.getElementById('meisai-submit-btn');
+    btn.disabled = false; btn.style.opacity = '1';
+  };
+  reader.readAsDataURL(file);
+}
+
+function submitMeisai() {
+  if (!_meisaiFile || !_meisaiDataUrl) return;
+  var p = new URLSearchParams(location.search);
+  var cid = p.get('caseId') || 'RENT-0194';
+  var now = new Date().toLocaleString('ja-JP');
+  try {
+    localStorage.setItem('CORETO_INVOICE_MEISAI_' + cid, JSON.stringify({
+      dataUrl:  _meisaiDataUrl,
+      name:     _meisaiFile.name,
+      source:   'rental-ag',
+      caseId:   cid,
+      savedAt:  now,
+    }));
+  } catch(e) { alert('保存に失敗しました（容量不足の可能性）'); return; }
+  // ステータス表示
+  var statusEl = document.getElementById('meisai-status');
+  if (statusEl) statusEl.style.display = '';
+  var btnEl = document.getElementById('meisai-upload-btn');
+  if (btnEl) btnEl.textContent = '💴 初期費用明細 ✅ 済み';
+  closeMeisaiModal();
+  if (typeof showToast === 'function') showToast('✅ 初期費用明細書をアップロードしました', 'em');
+  else alert('✅ 初期費用明細書をアップロードしました');
+}
+
+// ページ読み込み時: 既存アップロード済みなら表示
+(function() {
+  window.addEventListener('DOMContentLoaded', function() {
+    var p = new URLSearchParams(location.search);
+    var cid = p.get('caseId') || 'RENT-0194';
+    try {
+      var existing = localStorage.getItem('CORETO_INVOICE_MEISAI_' + cid);
+      if (existing) {
+        var statusEl = document.getElementById('meisai-status');
+        var btnEl = document.getElementById('meisai-upload-btn');
+        if (statusEl) statusEl.style.display = '';
+        if (btnEl) btnEl.textContent = '💴 初期費用明細 ✅ 済み';
+      }
+    } catch(e) {}
+  });
+})();
+</script>
+
 </body>
 </html>

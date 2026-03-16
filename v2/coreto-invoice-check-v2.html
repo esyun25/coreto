@@ -152,10 +152,19 @@ html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:
 var params  = new URLSearchParams(location.search);
 var caseId  = params.get('caseId') || '';
 
-// ── CORETO_SCAN_{caseId}からスキャンデータを取得 ──────
+// ── 明細書データを取得（2つのソースに対応）──────────
+// ① rental-v2からAGが直接アップロード → CORETO_INVOICE_MEISAI_{caseId}
+// ② barcode-scan-v2からスキャン時にアップロード → CORETO_INVOICE_MEISAI_{caseId}
 function getScanData(cid) {
   try {
     var raw = localStorage.getItem('CORETO_SCAN_' + cid);
+    return raw ? JSON.parse(raw) : null;
+  } catch(e) { return null; }
+}
+
+function getMeisaiData(cid) {
+  try {
+    var raw = localStorage.getItem('CORETO_INVOICE_MEISAI_' + cid);
     return raw ? JSON.parse(raw) : null;
   } catch(e) { return null; }
 }
@@ -200,12 +209,22 @@ function render() {
   var scanData = getScanData(caseId);
   var aiResult = getAiResult(scanData, caseId);
 
-  // スキャン画像の取得
-  var scanImage = null;
-  if (scanData && scanData.jusetsu && scanData.jusetsu.dataUrl) {
-    scanImage = scanData.jusetsu.dataUrl;
+  // 明細書画像の取得（優先順位: ① 直接アップロード → ② barcode-scanのメイサイ → ③ 重説書 → ④ 契約書）
+  var meisaiData = getMeisaiData(caseId);
+  var scanImage  = null;
+  var imageSource = '';
+  if (meisaiData && meisaiData.dataUrl) {
+    scanImage   = meisaiData.dataUrl;
+    imageSource = meisaiData.source === 'rental-ag' ? 'AGが直接アップロード' : '書類スキャンから取得';
+  } else if (scanData && scanData.meisai && scanData.meisai.dataUrl) {
+    scanImage   = scanData.meisai.dataUrl;
+    imageSource = '書類スキャンから取得';
+  } else if (scanData && scanData.jusetsu && scanData.jusetsu.dataUrl) {
+    scanImage   = scanData.jusetsu.dataUrl;
+    imageSource = '重説書（明細書未添付）';
   } else if (scanData && scanData.contract && scanData.contract.dataUrl) {
-    scanImage = scanData.contract.dataUrl;
+    scanImage   = scanData.contract.dataUrl;
+    imageSource = '契約書（明細書未添付）';
   }
 
   el.innerHTML = '';
@@ -245,7 +264,7 @@ function render() {
   imgCard.className = 'card';
   imgCard.innerHTML =
     '<div class="card-head"><div class="card-title">📄 スキャン済み明細書</div>' +
-    (scanImage ? '<span style="font-size:10px;color:var(--em)">✅ 取得済み</span>' : '<span style="font-size:10px;color:var(--am)">⚠️ 画像未取得</span>') +
+    (scanImage ? '<span style="font-size:10px;color:var(--em)">✅ ' + imageSource + '</span>' : '<span style="font-size:10px;color:var(--am)">⚠️ 未アップロード — rental-v2またはbarcode-scanからアップロードしてください</span>') +
     '</div>' +
     '<div class="card-body">' +
       '<div class="scan-preview">' +
