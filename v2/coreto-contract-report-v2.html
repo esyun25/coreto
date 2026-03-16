@@ -723,7 +723,8 @@ function renderHistory(){
                  onclick="forceEditReport('${r.id}')">✏️ HQ修正</button>
              </td>`)
       : `<td style="padding:10px 12px"><span class="badge ${stCls}">${r.status}</span></td>`;
-    return `<tr>
+    return `<tr style="cursor:pointer" onclick="showReportDetail('${r.id}')"
+        onmouseenter="this.style.background='var(--cream)'" onmouseleave="this.style.background=''">
       <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--faint)">${r.id}</td>
       <td style="font-family:'DM Mono',monospace;font-size:11px">${r.case}</td>
       <td style="font-size:12px">${r.client}</td>
@@ -732,7 +733,7 @@ function renderHistory(){
       <td style="text-align:right;font-size:12px">¥${r.fee.toLocaleString()}</td>
       <td style="text-align:right;font-size:12px;font-weight:700;color:var(--ink)">¥${r.reward.toLocaleString()}</td>
       <td style="font-size:11px;color:var(--muted)">${r.date}</td>
-      ${actionCell}
+      <td onclick="event.stopPropagation()">${actionCell.replace(/^<td[^>]*>|<\/td>$/g,'')}</td>
     </tr>`;
   }).join('');
 
@@ -752,6 +753,172 @@ function renderHistory(){
     </tr></thead>
     <tbody>${rows}</tbody></table>
   </div>`;
+}
+
+// ─────────────────────────────────────────────────────
+// 成約報告 詳細ドロワー（HQ向け）
+// ─────────────────────────────────────────────────────
+function showReportDetail(id) {
+  var reps = [];
+  try { reps = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]'); } catch(e) {}
+  var demo = [
+    {id:'RPT-20260310-001', case:'RENT-0194', client:'田中 優子', type:'賃貸', fee:198000, reward:158400, date:'2026/03/10', ag:'山田 誠（AG-0042）', agId:'AG-0042', status:'承認待ち', addr:'港区三田3丁目XX-XX', rent:165000, mgmt:'東京不動産管理', memo:''},
+    {id:'RPT-20260228-003', case:'RENT-0180', client:'高橋 美咲', type:'賃貸', fee:380000, reward:304000, date:'2026/02/28', ag:'山田 誠（AG-0042）', agId:'AG-0042', status:'承認済み', approvedAt:'2026/03/01'},
+    {id:'RPT-20260215-001', case:'UTL-0071',  client:'田中 優子', type:'光通信', fee:180000, reward:144000, date:'2026/02/15', ag:'大橋 幸代（AG-0055）', agId:'AG-0055', status:'承認済み'},
+    {id:'RPT-20260110-002', case:'RENT-0162', client:'渡辺 誠',   type:'賃貸', fee:420000, reward:336000, date:'2026/01/10', ag:'大橋 幸代（AG-0055）', agId:'AG-0055', status:'承認済み'},
+    {id:'RPT-20251220-001', case:'RENT-0145', client:'伊藤 花子', type:'賃貸', fee:510000, reward:408000, date:'2025/12/20', ag:'山田 誠（AG-0042）', agId:'AG-0042', status:'修正依頼', fixReason:'仲介料の金額が実際と異なります'},
+  ];
+  var storedIds = new Set(reps.map(function(r){ return r.id; }));
+  var all = reps.concat(demo.filter(function(r){ return !storedIds.has(r.id); }));
+  var r = all.find(function(x){ return x.id === id; });
+  if (!r) return;
+
+  // 既存ドロワーを削除
+  var existing = document.getElementById('report-detail-drawer');
+  if (existing) existing.remove();
+
+  var isHQ = sessionStorage.getItem('coreto_role') === 'hq';
+  var stCls = r.status === '承認済み' ? 'b-em' : r.status === '承認待ち' ? 'b-am' : 'b-rd';
+
+  var drawer = document.createElement('div');
+  drawer.id = 'report-detail-drawer';
+  drawer.style.cssText = 'position:fixed;top:0;right:0;width:420px;max-width:100%;height:100vh;background:#fff;box-shadow:-4px 0 24px rgba(0,0,0,.15);z-index:9998;display:flex;flex-direction:column;overflow:hidden;font-family:Outfit,sans-serif';
+
+  // ヘッダー
+  var head = document.createElement('div');
+  head.style.cssText = 'padding:16px 20px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;background:var(--navy);flex-shrink:0';
+  var headLeft = document.createElement('div');
+  var headTitle = document.createElement('div');
+  headTitle.style.cssText = 'font-size:13px;font-weight:700;color:#fff;font-family:DM Mono,monospace';
+  headTitle.textContent = id;
+  var headBadge = document.createElement('span');
+  headBadge.className = 'badge ' + stCls;
+  headBadge.style.marginTop = '4px';
+  headBadge.textContent = r.status;
+  headLeft.appendChild(headTitle); headLeft.appendChild(headBadge);
+  var closeBtn = document.createElement('button');
+  closeBtn.style.cssText = 'background:none;border:none;color:rgba(255,255,255,.6);font-size:18px;cursor:pointer;padding:4px';
+  closeBtn.textContent = '✕';
+  closeBtn.onclick = function() { drawer.remove(); if(overlay) overlay.remove(); };
+  head.appendChild(headLeft); head.appendChild(closeBtn);
+  drawer.appendChild(head);
+
+  // 本体
+  var body = document.createElement('div');
+  body.style.cssText = 'flex:1;overflow-y:auto;padding:20px';
+
+  function addSection(title, rows) {
+    var sec = document.createElement('div');
+    sec.style.marginBottom = '18px';
+    var secTitle = document.createElement('div');
+    secTitle.style.cssText = 'font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--bd)';
+    secTitle.textContent = title;
+    sec.appendChild(secTitle);
+    rows.forEach(function(row) {
+      if (!row[1] && row[1] !== 0) return;
+      var item = document.createElement('div');
+      item.style.cssText = 'display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--bd)';
+      var lbl = document.createElement('span');
+      lbl.style.cssText = 'font-size:11px;color:var(--muted)';
+      lbl.textContent = row[0];
+      var val = document.createElement('span');
+      val.style.cssText = 'font-size:12px;font-weight:' + (row[2]||'500') + ';color:var(--ink);text-align:right;max-width:240px';
+      if (row[3] === 'mono') val.style.fontFamily = 'DM Mono,monospace';
+      if (row[3] === 'money') { val.style.color = 'var(--navy)'; val.style.fontFamily = 'DM Mono,monospace'; }
+      val.textContent = row[1];
+      item.appendChild(lbl); item.appendChild(val);
+      sec.appendChild(item);
+    });
+    body.appendChild(sec);
+  }
+
+  // 基本情報
+  addSection('基本情報', [
+    ['報告ID',     id,           '400', 'mono'],
+    ['成約日',     r.date        || '—'],
+    ['種別',       r.type        || '—'],
+    ['クライアント', r.client    || '—', '600'],
+    ['案件ID',     r.case        || '—', '400', 'mono'],
+    ['担当AG',     r.ag          || '—'],
+  ]);
+
+  // 物件情報（賃貸・売買のみ）
+  if (r.addr || r.rent || r.mgmt || r.propName) {
+    addSection('物件情報', [
+      ['物件住所', r.addr    || '—'],
+      ['物件名',   r.propName || '—'],
+      ['月額家賃', r.rent ? '¥' + Number(r.rent).toLocaleString() : null, '400', 'money'],
+      ['管理会社', r.mgmt    || '—'],
+    ]);
+  }
+
+  // 報酬情報
+  addSection('報酬情報', [
+    ['仲介料（税抜）', '¥' + Number(r.fee).toLocaleString(),    '700', 'money'],
+    ['報酬額',         '¥' + Number(r.reward).toLocaleString(), '700', 'money'],
+    ['PT紹介',         r.pt ? 'あり' : 'なし'],
+  ]);
+
+  // 承認・修正情報
+  var statusRows = [
+    ['ステータス', r.status],
+    ['提出日',     r.submittedAt || r.date || '—'],
+    ['承認日',     r.approvedAt  || null],
+    ['修正依頼理由', r.fixReason || null],
+    ['HQ修正者',   r.hqEditedBy  || null],
+    ['HQ修正日時', r.hqEditedAt  || null],
+    ['HQ修正理由', r.hqEditReason|| null],
+  ].filter(function(row){ return row[1]; });
+  addSection('承認・修正履歴', statusRows);
+
+  // 備考
+  if (r.memo) {
+    addSection('備考', [['内容', r.memo]]);
+  }
+
+  drawer.appendChild(body);
+
+  // フッター（HQ操作ボタン）
+  if (isHQ) {
+    var foot = document.createElement('div');
+    foot.style.cssText = 'padding:14px 20px;border-top:1px solid var(--bd);display:flex;gap:8px;flex-shrink:0;background:var(--cream)';
+    var btns = [];
+    if (r.status === '承認待ち') {
+      btns.push(['✅ 承認', 'var(--em)', '#fff', function() {
+        drawer.remove(); if(overlay) overlay.remove();
+        approveReport(r.id, r.client, r.ag, r.reward, {closest:function(){ return {innerHTML:''}; }});
+      }]);
+      btns.push(['修正依頼', 'var(--rd-bg)', 'var(--rd)', function() {
+        drawer.remove(); if(overlay) overlay.remove();
+        requestFix(r.id, r.ag, {closest:function(){ return {innerHTML:''}; }});
+      }]);
+    }
+    btns.push(['✏️ HQ修正', 'var(--am-bg)', 'var(--am)', function() {
+      drawer.remove(); if(overlay) overlay.remove();
+      forceEditReport(r.id);
+    }]);
+    btns.forEach(function(b) {
+      var btn = document.createElement('button');
+      btn.style.cssText = 'flex:1;padding:9px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:Outfit,sans-serif;border:1px solid rgba(0,0,0,.1);background:' + b[1] + ';color:' + b[2];
+      btn.textContent = b[0];
+      btn.onclick = b[3];
+      foot.appendChild(btn);
+    });
+    drawer.appendChild(foot);
+  }
+
+  // オーバーレイ
+  var overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.25);z-index:9997';
+  overlay.onclick = function() { drawer.remove(); overlay.remove(); };
+
+  document.body.appendChild(overlay);
+  document.body.appendChild(drawer);
+
+  // スライドイン
+  drawer.style.transform = 'translateX(100%)';
+  drawer.style.transition = 'transform .25s ease';
+  setTimeout(function() { drawer.style.transform = 'translateX(0)'; }, 10);
 }
 
 // ─────────────────────────────────────────────────────
