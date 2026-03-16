@@ -723,7 +723,50 @@ function showToast(msg,type){
 document.addEventListener('DOMContentLoaded',()=>{
   renderBookings();
   const tomorrow=new Date(); tomorrow.setDate(tomorrow.getDate()+1);
-  document.querySelector('.req-date').value=tomorrow.toISOString().slice(0,10);
+  var reqDate = document.querySelector('.req-date');
+  if (reqDate) reqDate.value=tomorrow.toISOString().slice(0,10);
+
+  // URLパラメータにcaseIdがあれば自動入力して新規フォームを開く
+  var p = new URLSearchParams(location.search);
+  var cid = p.get('caseId');
+  if (cid) {
+    // フォームを表示
+    document.getElementById('view-list').style.display = 'none';
+    document.getElementById('view-new').style.display  = 'block';
+
+    // 案件IDを自動入力
+    var caseInput = document.getElementById('bk-case-id');
+    if (caseInput) {
+      caseInput.value = cid;
+      // CORETO_CASE_DETAILから情報を取得
+      try {
+        var detail = JSON.parse(localStorage.getItem('CORETO_CASE_DETAIL_' + cid) || '{}');
+        var agInput = document.getElementById('bk-ag');
+        if (agInput) agInput.value = detail.agName || sessionStorage.getItem('coreto_name') || '';
+        var contactInput = document.getElementById('bk-client-contact');
+        if (contactInput && detail.client) {
+          // クライアント名を表示（メールは未取得のため名前のみ）
+          contactInput.placeholder = detail.client + ' 様の連絡先（任意）';
+        }
+        // case-info-boxに物件情報を表示
+        var infoBox = document.getElementById('case-info-box');
+        var infoText = document.getElementById('case-info-text');
+        if (infoBox && infoText && (detail.client || detail.propName)) {
+          infoText.innerHTML =
+            '<strong>' + (detail.client||'') + '</strong>' +
+            (detail.propName ? ' ／ ' + detail.propName : '') +
+            (detail.propAddr ? '<br>' + detail.propAddr : '');
+          infoBox.style.display = 'block';
+        }
+      } catch(e) {}
+      // CASES配列にもフォールバック検索
+      if (typeof lookupCase === 'function') lookupCase();
+    }
+    // タブのアクティブ切り替え
+    document.querySelectorAll('.tab-item').forEach(function(t){ t.classList.remove('active'); });
+    var newTab = document.querySelector('[onclick*="new"]');
+    if (newTab) newTab.classList.add('active');
+  }
 });
 </script>
 <script src="coreto-nav-v2.js"></script>
