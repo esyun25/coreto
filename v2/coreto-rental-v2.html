@@ -365,24 +365,26 @@ html, body { background:#FFFFFF !important; }
       </div>
 
       <!-- Case info -->
-      <div class="info-grid">
+      <div class="info-grid" id="info-grid-display">
         <div class="info-card">
-          <div class="ic-title">物件情報</div>
-          <div class="ic-row"><div class="ic-label">物件名</div><div class="ic-val">三田ガーデンハウス 802</div></div>
-          <div class="ic-row"><div class="ic-label">所在地</div><div class="ic-val">港区三田3丁目</div></div>
-          <div class="ic-row"><div class="ic-label">間取り</div><div class="ic-val">2LDK / 65.4㎡</div></div>
-          <div class="ic-row"><div class="ic-label">家賃</div><div class="ic-val em">¥198,000/月</div></div>
-          <div class="ic-row"><div class="ic-label">管理会社</div><div class="ic-val">三田不動産管理（株）</div></div>
-          <div class="ic-row"><div class="ic-label">入居予定日</div><div class="ic-val">2026/05/01</div></div>
+          <div class="ic-title">物件情報 <button onclick="openCaseDetailEdit()" style="font-size:10px;padding:2px 8px;border-radius:4px;border:1px solid var(--bd);background:var(--cream2);color:var(--muted);cursor:pointer;font-family:'Outfit',sans-serif;margin-left:6px">✏️ 編集</button></div>
+          <div class="ic-row"><div class="ic-label">物件名</div><div class="ic-val" id="disp-propName">三田ガーデンハウス 802</div></div>
+          <div class="ic-row"><div class="ic-label">所在地</div><div class="ic-val" id="disp-propAddr">港区三田3丁目</div></div>
+          <div class="ic-row"><div class="ic-label">家賃</div><div class="ic-val em" id="disp-monthlyRent">¥198,000/月</div></div>
+          <div class="ic-row"><div class="ic-label">敷金</div><div class="ic-val" id="disp-shikikin">—</div></div>
+          <div class="ic-row"><div class="ic-label">礼金</div><div class="ic-val" id="disp-reikin">—</div></div>
+          <div class="ic-row"><div class="ic-label">管理費</div><div class="ic-val" id="disp-mgmtFee">—</div></div>
+          <div class="ic-row"><div class="ic-label">AD</div><div class="ic-val" id="disp-adFee">—</div></div>
+          <div class="ic-row"><div class="ic-label">保証会社</div><div class="ic-val" id="disp-hosho">—</div></div>
+          <div class="ic-row"><div class="ic-label">管理会社</div><div class="ic-val" id="disp-mgmtCo">三田不動産管理（株）</div></div>
         </div>
         <div class="info-card">
           <div class="ic-title">案件情報</div>
-          <div class="ic-row"><div class="ic-label">案件番号</div><div class="ic-val mono">RENT-0194</div></div>
-          <div class="ic-row"><div class="ic-label">クライアント</div><div class="ic-val">田中 優子 様</div></div>
+          <div class="ic-row"><div class="ic-label">案件番号</div><div class="ic-val mono" id="disp-caseId">RENT-0194</div></div>
+          <div class="ic-row"><div class="ic-label">クライアント</div><div class="ic-val" id="disp-client">田中 優子 様</div></div>
           <div class="ic-row"><div class="ic-label">担当AG</div><div class="ic-val mono">AG-0042 山田 誠</div></div>
-          <div class="ic-row"><div class="ic-label">紹介者</div><div class="ic-val mono">PT-0015 佐藤</div></div>
-          <div class="ic-row"><div class="ic-label">仲介手数料</div><div class="ic-val em">¥198,000（税別）</div></div>
-          <div class="ic-row"><div class="ic-label">AG報酬（70%）</div><div class="ic-val em">¥138,600</div></div>
+          <div class="ic-row"><div class="ic-label">仲介手数料</div><div class="ic-val em" id="disp-fee">¥198,000（税別）</div></div>
+          <div class="ic-row"><div class="ic-label">入居予定日</div><div class="ic-val" id="disp-moveIn">2026/05/01</div></div>
         </div>
       </div>
 
@@ -1044,6 +1046,120 @@ function submitMeisai() {
         var receiptBtn = document.getElementById('receipt-view-btn');
         if (receiptBtn) receiptBtn.style.display = '';
       }
+    } catch(e) {}
+  });
+})();
+</script>
+
+
+<!-- ══ 案件詳細編集モーダル ══ -->
+<div id="case-detail-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#fff;border-radius:14px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;font-family:'Outfit','Noto Sans JP',sans-serif">
+    <div style="padding:16px 22px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff">
+      <div style="font-size:14px;font-weight:700;color:var(--navy)">📝 案件詳細の編集・確認</div>
+      <button onclick="document.getElementById('case-detail-modal').style.display='none'" style="background:none;border:none;font-size:16px;cursor:pointer;color:var(--muted)">✕</button>
+    </div>
+    <div style="padding:20px 22px">
+      <div style="background:var(--sk-bg);border:1px solid rgba(2,132,199,.15);border-radius:8px;padding:10px 13px;margin-bottom:16px;font-size:11px;color:var(--sk);line-height:1.6">
+        ℹ️ ここで入力した情報は成約報告に自動入力されます。内容を確認・修正してから保存してください。
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div><label style="font-size:10px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px">物件名</label><input id="cd-propName" class="form-input" placeholder="三田ガーデンハウス 802"></div>
+        <div><label style="font-size:10px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px">物件住所</label><input id="cd-propAddr" class="form-input" placeholder="港区三田3丁目"></div>
+        <div><label style="font-size:10px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px">月額家賃（円）</label><input id="cd-monthlyRent" class="form-input" placeholder="198000" type="number"></div>
+        <div><label style="font-size:10px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px">管理費（円）</label><input id="cd-mgmtFee" class="form-input" placeholder="10000" type="number"></div>
+        <div><label style="font-size:10px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px">敷金（ヶ月）</label><input id="cd-shikikin" class="form-input" placeholder="1" type="number" step="0.5"></div>
+        <div><label style="font-size:10px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px">礼金（ヶ月）</label><input id="cd-reikin" class="form-input" placeholder="1" type="number" step="0.5"></div>
+        <div><label style="font-size:10px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px">仲介手数料（税抜・円）</label><input id="cd-fee" class="form-input" placeholder="198000" type="number"></div>
+        <div><label style="font-size:10px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px">AD（広告料・税抜・円）</label><input id="cd-adFee" class="form-input" placeholder="0（なければ0）" type="number"></div>
+        <div><label style="font-size:10px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px">保証会社</label><input id="cd-hosho" class="form-input" placeholder="日本賃貸保証（JID）等"></div>
+        <div><label style="font-size:10px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px">管理会社</label><input id="cd-mgmtCo" class="form-input" placeholder="三田不動産管理（株）"></div>
+        <div><label style="font-size:10px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px">クライアント名</label><input id="cd-client" class="form-input" placeholder="田中 優子"></div>
+        <div><label style="font-size:10px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px">入居予定日</label><input id="cd-moveIn" class="form-input" type="date"></div>
+      </div>
+      <div style="margin-top:16px;display:flex;gap:10px">
+        <button onclick="saveCaseDetail()" style="flex:1;padding:10px;background:var(--navy);color:var(--gold);border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif">💾 保存する</button>
+        <button onclick="document.getElementById('case-detail-modal').style.display='none'" style="padding:10px 18px;background:transparent;border:1.5px solid var(--bd);border-radius:9px;font-size:12px;color:var(--muted);cursor:pointer;font-family:'Outfit',sans-serif">キャンセル</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var _caseDetailKey = '';
+
+function openCaseDetailEdit() {
+  var p = new URLSearchParams(location.search);
+  var cid = p.get('caseId') || 'RENT-0194';
+  _caseDetailKey = 'CORETO_CASE_DETAIL_' + cid;
+  var d = {};
+  try { d = JSON.parse(localStorage.getItem(_caseDetailKey) || '{}'); } catch(e) {}
+  var fields = ['propName','propAddr','monthlyRent','mgmtFee','shikikin','reikin','fee','adFee','hosho','mgmtCo','client','moveIn'];
+  fields.forEach(function(k) {
+    var el = document.getElementById('cd-' + k);
+    if (el) el.value = d[k] !== undefined ? d[k] : '';
+  });
+  document.getElementById('case-detail-modal').style.display = 'flex';
+}
+
+function saveCaseDetail() {
+  var p = new URLSearchParams(location.search);
+  var cid = p.get('caseId') || 'RENT-0194';
+  var d = {
+    caseId:      cid,
+    propName:    document.getElementById('cd-propName')?.value    || '',
+    propAddr:    document.getElementById('cd-propAddr')?.value    || '',
+    monthlyRent: parseInt(document.getElementById('cd-monthlyRent')?.value) || 0,
+    mgmtFee:     parseInt(document.getElementById('cd-mgmtFee')?.value)     || 0,
+    shikikin:    parseFloat(document.getElementById('cd-shikikin')?.value)  || 0,
+    reikin:      parseFloat(document.getElementById('cd-reikin')?.value)    || 0,
+    fee:         parseInt(document.getElementById('cd-fee')?.value)         || 0,
+    adFee:       parseInt(document.getElementById('cd-adFee')?.value)       || 0,
+    hosho:       document.getElementById('cd-hosho')?.value    || '',
+    mgmtCo:      document.getElementById('cd-mgmtCo')?.value   || '',
+    client:      document.getElementById('cd-client')?.value   || '',
+    moveIn:      document.getElementById('cd-moveIn')?.value   || '',
+    savedAt:     new Date().toLocaleString('ja-JP'),
+    agId:        sessionStorage.getItem('coreto_user_id') || '',
+    agName:      sessionStorage.getItem('coreto_name') || '',
+  };
+  localStorage.setItem('CORETO_CASE_DETAIL_' + cid, JSON.stringify(d));
+  refreshCaseDetailDisplay(d);
+  document.getElementById('case-detail-modal').style.display = 'none';
+  if (typeof showToast === 'function') showToast('✅ 案件詳細を保存しました。成約報告で自動入力されます。', 'em');
+}
+
+function refreshCaseDetailDisplay(d) {
+  var fmt = function(n) { return n ? '¥' + Number(n).toLocaleString() : '—'; };
+  var fmtM = function(n, rent) { return n ? n + 'ヶ月（' + fmt(Math.round(Number(rent||0)*n)) + '）' : '—'; };
+  var ids = {
+    'disp-propName':    d.propName   || '—',
+    'disp-propAddr':    d.propAddr   || '—',
+    'disp-monthlyRent': d.monthlyRent ? fmt(d.monthlyRent) + '/月' : '—',
+    'disp-shikikin':    fmtM(d.shikikin, d.monthlyRent),
+    'disp-reikin':      fmtM(d.reikin,   d.monthlyRent),
+    'disp-mgmtFee':     d.mgmtFee ? fmt(d.mgmtFee) : '—',
+    'disp-adFee':       d.adFee   ? fmt(d.adFee)   : '—',
+    'disp-hosho':       d.hosho   || '—',
+    'disp-mgmtCo':      d.mgmtCo  || '—',
+    'disp-fee':         d.fee     ? fmt(d.fee) + '（税別）' : '—',
+    'disp-client':      d.client  ? d.client + ' 様' : '—',
+    'disp-moveIn':      d.moveIn  || '—',
+  };
+  Object.keys(ids).forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.textContent = ids[id];
+  });
+}
+
+// ページロード時に保存済みデータを表示
+(function() {
+  window.addEventListener('DOMContentLoaded', function() {
+    var p = new URLSearchParams(location.search);
+    var cid = p.get('caseId') || 'RENT-0194';
+    try {
+      var d = JSON.parse(localStorage.getItem('CORETO_CASE_DETAIL_' + cid) || '{}');
+      if (Object.keys(d).length > 0) refreshCaseDetailDisplay(d);
     } catch(e) {}
   });
 })();

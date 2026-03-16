@@ -1454,18 +1454,95 @@ window.addEventListener('DOMContentLoaded', ()=>{
       if (typeof onBizChange === 'function') onBizChange(bizSel.value);
     }
   }
-  if (p.get('caseId')) {
-    const el = document.getElementById('case-id');
-    if (el) el.value = decodeURIComponent(p.get('caseId'));
-  }
-  if (p.get('clientName')) {
+  // ── CORETO_CASE_DETAILから全自動入力（rental-v2で保存済みのデータ）──
+  const _cid = p.get('caseId') ? decodeURIComponent(p.get('caseId')) : '';
+  if (_cid) {
+    // case-idを自動入力
+    const caseEl = document.getElementById('case-id');
+    if (caseEl) caseEl.value = _cid;
+
+    // CORETO_CASE_DETAILから物件詳細を取得
+    let caseDetail = {};
+    try { caseDetail = JSON.parse(localStorage.getItem('CORETO_CASE_DETAIL_' + _cid) || '{}'); } catch(e) {}
+
+    // クライアント名
+    const clientEl = document.getElementById('client-name');
+    if (clientEl) {
+      const cn = p.get('clientName') ? decodeURIComponent(p.get('clientName')) : (caseDetail.client || '');
+      if (cn) clientEl.value = cn;
+    }
+
+    // 入居予定日 → 成約日として自動入力
+    const dateEl2 = document.getElementById('closed-at');
+    if (dateEl2 && !dateEl2.value) {
+      dateEl2.value = caseDetail.moveIn || new Date().toISOString().slice(0, 10);
+    }
+
+    // 物件情報フィールドを自動入力
+    if (caseDetail.propAddr) {
+      const addrEl = document.getElementById('prop-addr');
+      if (addrEl) addrEl.value = caseDetail.propAddr;
+    }
+    if (caseDetail.propName) {
+      const nameEl = document.getElementById('prop-name');
+      if (nameEl) nameEl.value = caseDetail.propName;
+    }
+    if (caseDetail.monthlyRent) {
+      const rentEl = document.getElementById('monthly-rent');
+      if (rentEl) rentEl.value = caseDetail.monthlyRent;
+    }
+    if (caseDetail.mgmtFee !== undefined) {
+      const mfEl = document.getElementById('mgmt-fee');
+      if (mfEl) mfEl.value = caseDetail.mgmtFee;
+    }
+    if (caseDetail.shikikin !== undefined) {
+      const skEl = document.getElementById('shikikin');
+      if (skEl) skEl.value = caseDetail.shikikin;
+    }
+    if (caseDetail.reikin !== undefined) {
+      const rkEl = document.getElementById('reikin');
+      if (rkEl) rkEl.value = caseDetail.reikin;
+    }
+    if (caseDetail.hosho) {
+      const hEl = document.getElementById('hosho-company');
+      if (hEl) hEl.value = caseDetail.hosho;
+    }
+    if (caseDetail.mgmtCo) {
+      const mcEl = document.getElementById('mgmt-company');
+      if (mcEl) mcEl.value = caseDetail.mgmtCo;
+    }
+
+    // 仲介手数料・ADを自動入力
+    // 優先: CORETO_INVOICE_CHECK（HQ照合済み）→ なければCORETO_CASE_DETAIL
+    let feeFromInvoice = 0;
+    let adFromDetail   = caseDetail.adFee || 0;
+    try {
+      const checks = JSON.parse(localStorage.getItem('CORETO_INVOICE_CHECK') || '{}');
+      const check = checks[_cid];
+      if (check && check.finalValues && check.finalValues.amount) {
+        feeFromInvoice = parseInt(check.finalValues.amount) || 0;
+      }
+    } catch(e) {}
+
+    const feeEl = document.getElementById('fee-input');
+    if (feeEl) feeEl.value = feeFromInvoice || caseDetail.fee || '';
+    const adEl = document.getElementById('ad-input');
+    if (adEl) adEl.value = adFromDetail;
+    if (typeof calcReward === 'function') calcReward();
+
+    // 自動入力完了のトースト
+    if (Object.keys(caseDetail).length > 0) {
+      setTimeout(function() {
+        if (typeof showToast === 'function') showToast('✅ 案件 ' + _cid + ' の情報を自動入力しました。内容を確認して提出してください。', 'em');
+      }, 300);
+    }
+  } else if (p.get('clientName')) {
     const el = document.getElementById('client-name');
     if (el) el.value = decodeURIComponent(p.get('clientName'));
   }
-  // 成約日を今日に自動設定
-  const dateEl = document.getElementById('closed-at');
-  if (dateEl && !dateEl.value) {
-    dateEl.value = new Date().toISOString().slice(0, 10);
+  if (!p.get('caseId')) {
+    const dateEl = document.getElementById('closed-at');
+    if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().slice(0, 10);
   }
   renderNew();
 });
