@@ -707,13 +707,21 @@ function renderHistory(){
                  : r.status === '承認待ち' ? 'b-am'
                  : 'b-rd';
     // 🟠-6: HQのみ承認・修正依頼ボタンを表示
-    const actionCell = isHQ && r.status === '承認待ち'
-      ? `<td style="display:flex;gap:6px;padding:10px 12px">
-           <button class="btn btn-sm" style="background:var(--em-bg);color:var(--em);border:1px solid rgba(5,150,105,.2)"
-             onclick="approveReport('${r.id}','${r.client}','${r.ag}',${r.reward},this)">✅ 承認</button>
-           <button class="btn btn-sm" style="background:var(--rd-bg);color:var(--rd);border:1px solid rgba(220,38,38,.2)"
-             onclick="requestFix('${r.id}','${r.ag}',this)">✏️ 修正依頼</button>
-         </td>`
+    const actionCell = isHQ
+      ? (r.status === '承認待ち'
+          ? `<td style="display:flex;gap:5px;padding:10px 12px;flex-wrap:wrap">
+               <button class="btn btn-sm" style="background:var(--em-bg);color:var(--em);border:1px solid rgba(5,150,105,.2)"
+                 onclick="approveReport('${r.id}','${r.client}','${r.ag}',${r.reward},this)">✅ 承認</button>
+               <button class="btn btn-sm" style="background:var(--rd-bg);color:var(--rd);border:1px solid rgba(220,38,38,.2)"
+                 onclick="requestFix('${r.id}','${r.ag}',this)">修正依頼</button>
+               <button class="btn btn-sm" style="background:var(--am-bg);color:var(--am);border:1px solid rgba(217,119,6,.2)"
+                 onclick="forceEditReport('${r.id}')">✏️ HQ修正</button>
+             </td>`
+          : `<td style="display:flex;gap:5px;padding:10px 12px;flex-wrap:wrap">
+               <span class="badge ${stCls}">${r.status}</span>
+               <button class="btn btn-sm" style="background:var(--am-bg);color:var(--am);border:1px solid rgba(217,119,6,.2)"
+                 onclick="forceEditReport('${r.id}')">✏️ HQ修正</button>
+             </td>`)
       : `<td style="padding:10px 12px"><span class="badge ${stCls}">${r.status}</span></td>`;
     return `<tr>
       <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--faint)">${r.id}</td>
@@ -745,6 +753,164 @@ function renderHistory(){
     <tbody>${rows}</tbody></table>
   </div>`;
 }
+
+// ─────────────────────────────────────────────────────
+// HQ強制修正モーダル
+// ─────────────────────────────────────────────────────
+function forceEditReport(id) {
+  // CORETO_REPORTSから対象レコードを取得
+  var reps = [];
+  try { reps = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]'); } catch(e) {}
+  var demo = [
+    {id:'RPT-20260310-001', case:'RENT-0194', client:'田中 優子', type:'賃貸', fee:198000, reward:158400, date:'2026/03/10', ag:'山田 誠（AG-0042）', agId:'AG-0042', status:'承認待ち'},
+    {id:'RPT-20260228-003', case:'RENT-0180', client:'高橋 美咲', type:'賃貸', fee:380000, reward:304000, date:'2026/02/28', ag:'山田 誠（AG-0042）', agId:'AG-0042', status:'承認済み'},
+    {id:'RPT-20251220-001', case:'RENT-0145', client:'伊藤 花子', type:'賃貸', fee:510000, reward:408000, date:'2025/12/20', ag:'山田 誠（AG-0042）', agId:'AG-0042', status:'修正依頼'},
+  ];
+  var storedIds = new Set(reps.map(function(r){ return r.id; }));
+  var all = reps.concat(demo.filter(function(r){ return !storedIds.has(r.id); }));
+  var rep = all.find(function(r){ return r.id === id; });
+  if (!rep) { showToast('⚠️ 報告データが見つかりません', 'warn'); return; }
+
+  // モーダルを生成
+  var overlay = document.createElement('div');
+  overlay.id = 'force-edit-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+
+  var modal = document.createElement('div');
+  modal.style.cssText = 'background:#fff;border-radius:14px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;font-family:Outfit,sans-serif';
+
+  // ヘッダー
+  var mHead = document.createElement('div');
+  mHead.style.cssText = 'padding:16px 22px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff;z-index:1';
+  var mhLeft = document.createElement('div');
+  var mhTitle = document.createElement('div');
+  mhTitle.style.cssText = 'font-size:14px;font-weight:700;color:var(--navy)';
+  mhTitle.textContent = '✏️ HQ強制修正 — ' + id;
+  var mhSub = document.createElement('div');
+  mhSub.style.cssText = 'font-size:11px;color:var(--am);margin-top:2px';
+  mhSub.textContent = '⚠️ HQによる直接修正。AGへの修正依頼なしに内容を変更します。';
+  mhLeft.appendChild(mhTitle); mhLeft.appendChild(mhSub);
+  var mhClose = document.createElement('button');
+  mhClose.style.cssText = 'background:none;border:none;font-size:16px;cursor:pointer;color:var(--muted)';
+  mhClose.textContent = '✕';
+  mhClose.onclick = function() { overlay.remove(); };
+  mHead.appendChild(mhLeft); mHead.appendChild(mhClose);
+  modal.appendChild(mHead);
+
+  // フォーム
+  var mBody = document.createElement('div');
+  mBody.style.cssText = 'padding:20px 22px';
+
+  var fields = [
+    { key:'client', label:'クライアント名', val: rep.client || '' },
+    { key:'case',   label:'案件ID',         val: rep.case   || '' },
+    { key:'type',   label:'種別',           val: rep.type   || '賃貸', type:'select', opts:['賃貸','売買','三為','HR','光通信'] },
+    { key:'fee',    label:'仲介料（税抜）', val: rep.fee    || 0,  type:'number' },
+    { key:'date',   label:'成約日',         val: rep.date   || '', type:'date' },
+    { key:'status', label:'ステータス',     val: rep.status || '承認待ち', type:'select', opts:['承認待ち','承認済み','修正依頼','差し戻し'] },
+  ];
+
+  fields.forEach(function(fi) {
+    var row = document.createElement('div');
+    row.style.cssText = 'margin-bottom:14px';
+    var lbl = document.createElement('label');
+    lbl.style.cssText = 'font-size:10px;font-weight:700;color:var(--muted);display:block;margin-bottom:5px;letter-spacing:.3px;text-transform:uppercase';
+    lbl.textContent = fi.label;
+    var inp;
+    if (fi.type === 'select') {
+      inp = document.createElement('select');
+      fi.opts.forEach(function(o) {
+        var opt = document.createElement('option');
+        opt.value = o; opt.textContent = o;
+        if (o === fi.val) opt.selected = true;
+        inp.appendChild(opt);
+      });
+    } else {
+      inp = document.createElement('input');
+      inp.type = fi.type || 'text';
+      inp.value = fi.val;
+    }
+    inp.id = 'fe-' + fi.key;
+    inp.style.cssText = 'width:100%;padding:9px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:13px;font-family:Outfit,sans-serif;outline:none;box-sizing:border-box';
+    row.appendChild(lbl); row.appendChild(inp);
+    mBody.appendChild(row);
+  });
+
+  // 修正理由
+  var memoRow = document.createElement('div');
+  memoRow.style.marginBottom = '16px';
+  var memoLbl = document.createElement('label');
+  memoLbl.style.cssText = 'font-size:10px;font-weight:700;color:var(--muted);display:block;margin-bottom:5px;letter-spacing:.3px;text-transform:uppercase';
+  memoLbl.textContent = 'HQ修正理由（必須）';
+  var memoTa = document.createElement('textarea');
+  memoTa.id = 'fe-reason';
+  memoTa.placeholder = '修正理由を記入してください（AGへの通知に使用）';
+  memoTa.style.cssText = 'width:100%;padding:9px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:12px;font-family:Outfit,sans-serif;resize:none;height:70px;outline:none;box-sizing:border-box';
+  memoRow.appendChild(memoLbl); memoRow.appendChild(memoTa);
+  mBody.appendChild(memoRow);
+
+  // 保存ボタン
+  var btnRow = document.createElement('div');
+  btnRow.style.cssText = 'display:flex;gap:10px';
+  var saveBtn = document.createElement('button');
+  saveBtn.style.cssText = 'flex:1;padding:10px;background:var(--navy);color:var(--gold);border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:Outfit,sans-serif';
+  saveBtn.textContent = '💾 強制修正を保存';
+  saveBtn.onclick = function() { saveForceEdit(id, rep); };
+  var cancelBtn = document.createElement('button');
+  cancelBtn.style.cssText = 'padding:10px 18px;background:transparent;border:1.5px solid var(--bd);border-radius:9px;font-size:12px;color:var(--muted);cursor:pointer;font-family:Outfit,sans-serif';
+  cancelBtn.textContent = 'キャンセル';
+  cancelBtn.onclick = function() { overlay.remove(); };
+  btnRow.appendChild(saveBtn); btnRow.appendChild(cancelBtn);
+  mBody.appendChild(btnRow);
+
+  modal.appendChild(mBody);
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+  overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+}
+
+function saveForceEdit(id, original) {
+  var reason = document.getElementById('fe-reason')?.value.trim();
+  if (!reason) { showToast('⚠️ 修正理由を入力してください', 'warn'); return; }
+
+  var updated = {
+    id:       id,
+    client:   document.getElementById('fe-client')?.value.trim() || original.client,
+    case:     document.getElementById('fe-case')?.value.trim()   || original.case,
+    type:     document.getElementById('fe-type')?.value          || original.type,
+    fee:      parseInt(document.getElementById('fe-fee')?.value) || original.fee,
+    date:     document.getElementById('fe-date')?.value          || original.date,
+    status:   document.getElementById('fe-status')?.value        || original.status,
+    ag:       original.ag,
+    agId:     original.agId,
+    hqEditedAt: new Date().toLocaleString('ja-JP'),
+    hqEditedBy: sessionStorage.getItem('coreto_name') || 'HQ',
+    hqEditReason: reason,
+  };
+  // 報酬額を再計算（簡易: 70%で計算。実際はランクに応じて変動）
+  updated.reward = Math.floor(updated.fee * 0.7);
+
+  // CORETO_REPORTSに保存
+  try {
+    var reps = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]');
+    var idx = reps.findIndex(function(r){ return r.id === id; });
+    if (idx >= 0) { reps[idx] = Object.assign(reps[idx], updated); }
+    else { reps.push(updated); }
+    localStorage.setItem('CORETO_REPORTS', JSON.stringify(reps));
+  } catch(e) {}
+
+  document.getElementById('force-edit-overlay').remove();
+  showToast('✅ ' + id + ' をHQが強制修正しました（理由: ' + reason.slice(0,20) + '）', 'em');
+
+  // Slack通知
+  if (typeof window.slackNotifyContractApprove === 'function') {
+    slackNotifyContractApprove({ caseId: id, clientName: updated.client, fee: updated.fee, agName: updated.ag, reviewer: sessionStorage.getItem('coreto_name') || 'HQ（強制修正）' });
+  }
+
+  // 一覧を再描画
+  setTimeout(function() { renderHistory(); }, 200);
+}
+
 
 function approveReport(id, client, ag, reward, btn) {
   coretoConfirm({title:'成約報告 承認',message:'以下の成約報告を承認しますか？',detail:'報告ID: '+id+'<br>クライアント: '+client+'<br>報酬額: ¥'+reward.toLocaleString()+'<br>承認後、報酬が確定されAGにLINEで通知されます。',okLabel:'承認する',onOk:function(){
