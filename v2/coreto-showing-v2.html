@@ -301,27 +301,98 @@ function renderNew(){
 
 
 function printShowingRequest() {
-  // フォーム内の値を取得
-  var inputs = document.querySelectorAll('.form-wrap input, .form-wrap textarea, .form-wrap select');
+  // フォームから値を取得
+  var inputs = document.querySelectorAll('.form-wrap input, .form-wrap select, .form-wrap textarea');
   var vals = {};
-  ['案件ID','クライアント','物件名・部屋番号','物件住所','内見日','時間','同行者','内見方法','備考'].forEach(function(k,i) {
-    vals[k] = inputs[i] ? inputs[i].value : '';
-  });
-  var win = window.open('','_blank','width=600,height=800');
-  win.document.write('<html><head><title>内見依頼書</title><style>body{font-family:serif;padding:40px;color:#000}h2{text-align:center;letter-spacing:4px;margin-bottom:24px}table{width:100%;border-collapse:collapse;margin-bottom:16px}td{padding:8px 12px;border:1px solid #999;font-size:13px}td:first-child{width:140px;background:#f5f5f5;font-weight:bold}.sign{margin-top:40px;display:flex;gap:40px;justify-content:flex-end}.sign-box{border:1px solid #999;width:120px;height:60px;text-align:center;padding-top:38px;font-size:11px;color:#999}@media print{body{padding:20px}}</style></head><body>');
-  win.document.write('<h2>内　見　依　頼　書</h2>');
-  win.document.write('<p style="text-align:right;font-size:12px">発行日: ' + new Date().toLocaleDateString('ja-JP') + '</p>');
-  win.document.write('<table>');
-  Object.keys(vals).forEach(function(k) {
-    if (k !== '備考') win.document.write('<tr><td>' + k + '</td><td>' + (vals[k]||'　') + '</td></tr>');
-  });
-  win.document.write('</table>');
-  if (vals['備考']) win.document.write('<p style="font-size:12px"><strong>備考：</strong>' + vals['備考'] + '</p>');
-  win.document.write('<div style="margin-top:32px;font-size:12px;color:#666;border-top:1px solid #ccc;padding-top:12px">発行：株式会社CORETO　COREBLDG管理システム</div>');
-  win.document.write('<div class="sign"><div class="sign-box">担当AG印</div><div class="sign-box">HQ確認印</div></div>');
-  win.document.write('</body></html>');
-  win.document.close();
-  win.print();
+  var labels = ['案件ID','クライアント','物件名・部屋番号','物件住所','内見日','時間','同行者','内見方法','備考'];
+  labels.forEach(function(k, i) { vals[k] = inputs[i] ? inputs[i].value : ''; });
+
+  var prop   = vals['物件名・部屋番号'] || '（物件名）';
+  var dateV  = vals['内見日'] || '';
+  var timeV  = vals['時間'] || '';
+  var mgmt   = ''; // 管理会社はCORETIO_CASE_DETAILから取得
+  try {
+    var p = new URLSearchParams(location.search);
+    var cid = p.get('caseId') || '';
+    if (cid) {
+      var d = JSON.parse(localStorage.getItem('CORETO_CASE_DETAIL_' + cid) || '{}');
+      mgmt = d.mgmtCo || '';
+      if (!prop || prop === '（物件名）') prop = (d.propName || '') + (d.propAddr ? '　' + d.propAddr : '');
+    }
+  } catch(e) {}
+
+  var agName    = sessionStorage.getItem('coreto_name') || '担当者名';
+  var agId      = sessionStorage.getItem('coreto_user_id') || '';
+  var agMobile  = ''; // Kintone連携後にAGマスターから取得
+  var agLicense = '宅地建物取引士証 第XXXXXX号';
+
+  // 日付パース
+  var month = '　', day = '　';
+  if (dateV) { var d = new Date(dateV); month = d.getMonth()+1; day = d.getDate(); }
+  var hour = '　', min = '　';
+  if (timeV) { var parts = timeV.split(':'); hour = parts[0]||'　'; min = parts[1]||'　'; }
+
+  var w = window.open('', '_blank', 'width=800,height=1100');
+  w.document.write('<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8">');
+  w.document.write('<style>');
+  w.document.write('*{box-sizing:border-box;margin:0;padding:0}');
+  w.document.write("body{font-family:'Noto Sans JP','MS Gothic',sans-serif;background:#fff;color:#000;padding:20mm 18mm}");
+  w.document.write('.title{font-size:22px;font-weight:700;text-align:center;border:2px solid #000;padding:8px 0;margin-bottom:24px;letter-spacing:4px}');
+  w.document.write('.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px}');
+  w.document.write('.to-company{font-size:18px;font-weight:700;border-bottom:2px solid #000;padding-bottom:4px;min-width:220px;display:inline-block}');
+  w.document.write('.from{font-size:11px;line-height:1.8}');
+  w.document.write('.field-row{display:flex;align-items:center;margin-bottom:20px;border-bottom:1.5px solid #555;padding-bottom:14px}');
+  w.document.write('.field-label{font-size:14px;font-weight:700;width:80px}');
+  w.document.write('.field-value{font-size:20px;font-weight:700;flex:1;padding-left:16px}');
+  w.document.write('.body-text{font-size:13px;margin-bottom:8px;font-weight:500}');
+  w.document.write('.note{font-size:13px;font-weight:700;margin-top:16px}');
+  w.document.write('.card{border:3px solid #1a2744;margin-top:32px;display:flex;min-height:110px}');
+  w.document.write('.card-left{background:#1a2744;padding:16px 20px;flex:1}');
+  w.document.write('.card-name{color:#fff;font-size:28px;font-weight:700;letter-spacing:3px;margin-bottom:8px}');
+  w.document.write('.card-info{color:#d0d8e8;font-size:11px;line-height:1.9}');
+  w.document.write('.card-info .lbl{color:#c9a84c;font-size:10px}');
+  w.document.write('.card-right{padding:16px 20px;display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;min-width:160px}');
+  w.document.write('.card-logo{font-size:22px;color:#1a2744;font-weight:700;letter-spacing:2px;font-family:monospace}');
+  w.document.write('.card-mobile{font-size:13px;font-weight:700;color:#1a2744;font-family:monospace}');
+  w.document.write('.card-license{font-size:10px;color:#666;text-align:right}');
+  w.document.write('@media print{body{padding:15mm 15mm}}');
+  w.document.write('</style></head><body>');
+  w.document.write('<div class="title">内　見　依　頼　書</div>');
+  w.document.write('<div class="header">');
+  w.document.write('  <div><div class="to-company">' + (mgmt || '　　　　　　　　　') + '</div>');
+  w.document.write('  <div style="font-size:13px;font-weight:700;margin-top:4px">御中</div></div>');
+  w.document.write('  <div class="from"><strong>株式会社CORETO</strong><br>〒150-0000　東京都○○区○○ 1-1-1<br>');
+  w.document.write('  <strong>Tel：03-XXXX-XXXX</strong>　<strong>Fax：03-XXXX-XXXX</strong></div>');
+  w.document.write('</div>');
+  w.document.write('<div class="field-row"><div class="field-label">物件名</div><div class="field-value">' + prop + '</div></div>');
+  w.document.write('<div class="field-row"><div class="field-label">日時</div><div class="field-value" style="font-size:22px">' + month + '　月　' + day + '　日</div></div>');
+  w.document.write('<div class="field-row"><div class="field-label">時間</div><div class="field-value" style="font-size:22px">' + hour + '　時　' + min + '　分</div></div>');
+  if (vals['クライアント']) {
+    w.document.write('<div class="field-row"><div class="field-label">お客様</div><div class="field-value">' + vals['クライアント'] + '　様</div></div>');
+  }
+  w.document.write('<p class="body-text">上記物件を内見させて頂きます。</p>');
+  w.document.write('<p class="body-text">宜しくお願い致します。</p>');
+  w.document.write('<p class="note">※　下記携帯までご連絡下さい</p>');
+  w.document.write('<div class="card">');
+  w.document.write('  <div class="card-left">');
+  w.document.write('    <div class="card-name">' + agName + '</div>');
+  w.document.write('    <div class="card-info">');
+  w.document.write('      <div>株式会社CORETO</div>');
+  w.document.write('      <div>〒150-0000　東京都○○区○○ 1-1-1</div>');
+  w.document.write('      <div><span class="lbl">Tel：</span>03-XXXX-XXXX</div>');
+  w.document.write('      <div><span class="lbl">Fax：</span>03-XXXX-XXXX</div>');
+  w.document.write('      <div><span class="lbl" style="color:#f59e0b">携帯：</span><strong style="color:#f0c040;font-size:13px">' + (agMobile || agId) + '</strong></div>');
+  w.document.write('    </div>');
+  w.document.write('  </div>');
+  w.document.write('  <div class="card-right">');
+  w.document.write('    <div class="card-logo">CORETO</div>');
+  w.document.write('    <div><div class="card-mobile">' + (agMobile || '') + '</div>');
+  w.document.write('    <div class="card-license">' + agLicense + '</div></div>');
+  w.document.write('  </div>');
+  w.document.write('</div>');
+  w.document.write('</body></html>');
+  w.document.close();
+  w.onload = function() { w.print(); };
 }
 
 function registerShowing(){
