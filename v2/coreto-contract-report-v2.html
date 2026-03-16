@@ -441,6 +441,10 @@ function toggleSb(){document.querySelector('.sb').classList.toggle('open');docum
 let bizType = 'rental';
 
 function showTab(t, el){
+  // HQは「新規成約報告」タブを開けない
+  if (t === 'new' && sessionStorage.getItem('coreto_role') === 'hq') {
+    renderHistory(); return;
+  }
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
   document.getElementById('tab-'+t)?.classList.add('active');
   if(t==='new') renderNew();
@@ -852,7 +856,20 @@ function completeHQTask(taskId) {
 }
 window.addEventListener('DOMContentLoaded', ()=>{
   CNAV.init('contract_report');
-  // HQタスクから遷移した場合は履歴タブを自動表示
+  const _role = sessionStorage.getItem('coreto_role') || '';
+  // HQは「成約報告一覧（承認）」タブをデフォルト表示
+  // 「新規成約報告」タブはHQには非表示
+  if (_role === 'hq') {
+    var tabNew = document.getElementById('tab-new');
+    if (tabNew) tabNew.style.display = 'none';
+    var tabHist = document.getElementById('tab-history');
+    if (tabHist) {
+      tabHist.classList.add('active');
+      tabHist.textContent = '成約報告一覧（承認）';
+    }
+    setTimeout(function() { renderHistory(); }, 50);
+  }
+  // HQタスクから遷移した場合は履歴タブを自動表示（AGも考慮）
   if (new URLSearchParams(location.search).get('tab') === 'history') {
     setTimeout(function() {
       var histBtn = document.querySelector('[onclick*="renderHistory"]');
