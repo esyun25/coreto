@@ -876,7 +876,7 @@ async function showSuccess() {
     try {
       var cfg = window.CORETO_API.getConfig();
       var baseUrl = (cfg.baseUrl || '').replace(/\/$/, '');
-      var resp = await fetch(baseUrl + '/api/instant-pay/ai-approve', {
+      var resp = await fetch(baseUrl + '/api/instant-pay/verify-and-pay', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-coreto-key': cfg.internalKey || '' },
         body: JSON.stringify({
@@ -886,8 +886,6 @@ async function showSuccess() {
           agKana,
           amount:       currentNetAmount,
           payoutAmount: window._currentPayoutAmount || payout,
-          balance,
-          pastRequests,
           toBank,
         }),
       });
@@ -902,7 +900,7 @@ async function showSuccess() {
         } catch(e) {}
         showInstantTransferSuccess(data);
       } else if (data.decision === 'rejected') {
-        showAiRejectedScreen(data.reason);
+        showAiRejectedScreen(data.reason, data);
       } else {
         // pending_manual: HQ手動処理
         showManualProcessScreen(data.reason);
@@ -945,13 +943,13 @@ function showInstantTransferSuccess(data) {
     '<div style="font-size:12px;color:var(--muted);margin-bottom:20px">振込ID: ' + (data.remittanceId || currentReqId) + '</div>' +
     (data._mock ? '<div style="display:inline-block;background:var(--am-bg);color:var(--am);font-size:10px;padding:2px 10px;border-radius:4px;margin-bottom:16px">🔧 モック（テスト）</div>' : '') +
     '<div style="font-size:11px;color:var(--muted);background:var(--cream2);padding:12px;border-radius:8px;text-align:left;line-height:1.8;margin-bottom:20px">' +
-    'AI審査: 承認<br>リスクスコア: ' + (data.riskScore || 0) + '/100<br>振込日時: ' + new Date().toLocaleString('ja-JP') +
+    '入金確認: ✅<br>残高検証: ✅' + (data.checks && data.checks.calculatedBalance ? '<br>確定出金可能額: ¥' + Number(data.checks.calculatedBalance).toLocaleString() : '') + '<br>振込日時: ' + new Date().toLocaleString('ja-JP') +
     '</div>' +
     '<button onclick="location.reload()" class="btn btn-p" style="width:100%">閉じる</button>' +
     '</div>';
 }
 
-function showAiRejectedScreen(reason) {
+function showAiRejectedScreen(reason, data) {
   var ov = document.getElementById('success-overlay');
   ov.innerHTML = '';
   ov.style.display = 'flex';
