@@ -566,12 +566,11 @@ html, body { background:#FFFFFF !important; }
           <!-- ── ③ 書類 ── -->
           <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;padding:10px 2px 2px">③ 書類</div>
           <button class="action-btn secondary" onclick="(function(){ var p=new URLSearchParams(location.search); var cid=p.get('caseId')||'RENT-0194'; window.location.href='coreto-screening-v2.html?caseId='+cid; })()">📋 書類送付管理</button>
-          <button class="action-btn secondary" onclick="(function(){ var p=new URLSearchParams(location.search); var cid=p.get('caseId')||'RENT-0194'; window.location.href='coreto-barcode-scan-v2.html?caseId='+cid; })()">📷 書類スキャン登録</button>
+          <button class="action-btn secondary" onclick="openDocUpload()" id="doc-upload-btn">📎 書類をアップロード</button>
+          <div id="doc-upload-status" style="display:none;font-size:10px;color:var(--em);padding:4px 8px;background:var(--em-bg);border-radius:5px;margin-top:2px"></div>
 
           <!-- ── ④ 入金・送金（管理会社送金→IT重説が基本。スケジュールにより前後する場合あり）── -->
           <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;padding:10px 2px 2px">④ 入金・送金</div>
-          <button class="action-btn secondary" id="meisai-upload-btn" onclick="openMeisaiUpload()">💴 初期費用明細をアップロード</button>
-          <div id="meisai-status" style="display:none;font-size:10px;color:var(--em);padding:4px 8px;background:var(--em-bg);border-radius:5px;margin-top:2px">✅ 明細書アップロード済み</div>
           <button class="action-btn secondary" onclick="document.getElementById('remit-section').scrollIntoView({behavior:'smooth'})">💰 送金情報を入力・確認</button>
 
           <!-- ── ⑤ IT重説（送金後が基本。前後する場合あり）── -->
@@ -1213,6 +1212,165 @@ function refreshCaseDetailDisplay(d) {
     } catch(e) {}
   });
 })();
+</script>
+
+<!-- ══ 書類アップロードモーダル（統合）══ -->
+<div id="doc-upload-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#fff;border-radius:14px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;font-family:'Outfit','Noto Sans JP',sans-serif">
+    <div style="padding:16px 22px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff">
+      <div>
+        <div style="font-size:14px;font-weight:700;color:var(--navy)">📎 書類アップロード</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">アップロードした書類はHQが確認します</div>
+      </div>
+      <button onclick="closeDocUpload()" style="background:none;border:none;font-size:16px;cursor:pointer;color:var(--muted)">✕</button>
+    </div>
+    <div style="padding:20px 22px">
+
+      <!-- 契約書 -->
+      <div style="margin-bottom:14px">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:6px;display:flex;align-items:center;gap:6px">
+          📄 契約書 <span style="color:var(--rd);font-size:10px">*</span>
+        </div>
+        <label id="doc-label-contract" style="display:block;border:2px dashed var(--bd2);border-radius:9px;padding:16px;text-align:center;cursor:pointer;background:#F8F9FA;transition:.2s" onmouseenter="this.style.borderColor='var(--navy)'" onmouseleave="if(!_docFiles.contract)this.style.borderColor='var(--bd2)'">
+          <input type="file" accept="application/pdf,image/*" style="display:none" onchange="handleDocSelect(event,'contract')">
+          <div id="doc-status-contract" style="font-size:12px;color:var(--muted)">📁 クリックして選択（PDF・画像）</div>
+        </label>
+      </div>
+
+      <!-- 重要事項説明書 -->
+      <div style="margin-bottom:14px">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:6px;display:flex;align-items:center;gap:6px">
+          📋 重要事項説明書 <span style="color:var(--rd);font-size:10px">*</span>
+        </div>
+        <label id="doc-label-jusetsu" style="display:block;border:2px dashed var(--bd2);border-radius:9px;padding:16px;text-align:center;cursor:pointer;background:#F8F9FA;transition:.2s" onmouseenter="this.style.borderColor='var(--navy)'" onmouseleave="if(!_docFiles.jusetsu)this.style.borderColor='var(--bd2)'">
+          <input type="file" accept="application/pdf,image/*" style="display:none" onchange="handleDocSelect(event,'jusetsu')">
+          <div id="doc-status-jusetsu" style="font-size:12px;color:var(--muted)">📁 クリックして選択（PDF・画像）</div>
+        </label>
+      </div>
+
+      <!-- 初期費用明細 -->
+      <div style="margin-bottom:14px">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:6px;display:flex;align-items:center;gap:6px">
+          💴 初期費用明細書
+          <span style="font-size:9px;font-weight:400;background:var(--cream2);border:1px solid var(--bd);border-radius:4px;padding:1px 7px;color:var(--faint)">任意</span>
+        </div>
+        <label id="doc-label-meisai" style="display:block;border:2px dashed var(--bd2);border-radius:9px;padding:14px;text-align:center;cursor:pointer;background:#F8F9FA;transition:.2s" onmouseenter="this.style.borderColor='var(--navy)'" onmouseleave="if(!_docFiles.meisai)this.style.borderColor='var(--bd2)'">
+          <input type="file" accept="application/pdf,image/*" style="display:none" onchange="handleDocSelect(event,'meisai')">
+          <div id="doc-status-meisai" style="font-size:12px;color:var(--muted)">📁 クリックして選択（PDF・画像）</div>
+        </label>
+      </div>
+
+      <!-- その他 -->
+      <div style="margin-bottom:16px">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:6px;display:flex;align-items:center;gap:6px">
+          📂 その他
+          <span style="font-size:9px;font-weight:400;background:var(--cream2);border:1px solid var(--bd);border-radius:4px;padding:1px 7px;color:var(--faint)">任意</span>
+        </div>
+        <label id="doc-label-other" style="display:block;border:2px dashed var(--bd2);border-radius:9px;padding:14px;text-align:center;cursor:pointer;background:#F8F9FA;transition:.2s" onmouseenter="this.style.borderColor='var(--navy)'" onmouseleave="if(!_docFiles.other)this.style.borderColor='var(--bd2)'">
+          <input type="file" accept="application/pdf,image/*" style="display:none" onchange="handleDocSelect(event,'other')">
+          <div id="doc-status-other" style="font-size:12px;color:var(--muted)">📁 クリックして選択（PDF・画像）</div>
+        </label>
+      </div>
+
+      <div style="display:flex;gap:10px">
+        <button id="doc-submit-btn" onclick="submitDocUpload()" disabled
+          style="flex:1;padding:10px;background:var(--navy);color:var(--gold);border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;opacity:.4;font-family:'Outfit',sans-serif">
+          💾 アップロード
+        </button>
+        <button onclick="closeDocUpload()" style="padding:10px 18px;background:transparent;border:1.5px solid var(--bd);border-radius:9px;font-size:12px;color:var(--muted);cursor:pointer;font-family:'Outfit',sans-serif">キャンセル</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var _docFiles = { contract: null, jusetsu: null, meisai: null, other: null };
+var _docDataUrls = { contract: null, jusetsu: null, meisai: null, other: null };
+
+function openDocUpload() {
+  var p = new URLSearchParams(location.search);
+  var cid = p.get('caseId') || 'RENT-0194';
+  // 既存アップロード済みを確認して表示
+  ['contract','jusetsu','meisai','other'].forEach(function(key) {
+    var existing = null;
+    try {
+      var raw = localStorage.getItem('CORETO_DOC_' + key + '_' + cid);
+      if (raw) existing = JSON.parse(raw);
+    } catch(e) {}
+    if (existing && existing.name) {
+      var el = document.getElementById('doc-status-' + key);
+      if (el) el.innerHTML = '✅ ' + existing.name + ' <span style="color:var(--faint);font-size:10px">（アップロード済み）</span>';
+    }
+  });
+  document.getElementById('doc-upload-modal').style.display = 'flex';
+}
+
+function closeDocUpload() {
+  document.getElementById('doc-upload-modal').style.display = 'none';
+  _docFiles = { contract: null, jusetsu: null, meisai: null, other: null };
+  _docDataUrls = { contract: null, jusetsu: null, meisai: null, other: null };
+}
+
+function handleDocSelect(e, key) {
+  var file = e.target.files[0];
+  if (!file) return;
+  _docFiles[key] = file;
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    _docDataUrls[key] = ev.target.result;
+    var el = document.getElementById('doc-status-' + key);
+    if (el) el.innerHTML = '✅ ' + file.name + ' <span style="color:var(--em);font-size:10px">(' + (file.size/1024).toFixed(0) + 'KB)</span>';
+    // 契約書か重説どちらかがあればアップロード可能
+    var hasRequired = _docFiles.contract || _docFiles.jusetsu;
+    var btn = document.getElementById('doc-submit-btn');
+    if (btn) { btn.disabled = !hasRequired; btn.style.opacity = hasRequired ? '1' : '0.4'; }
+  };
+  reader.readAsDataURL(file);
+}
+
+function submitDocUpload() {
+  var p = new URLSearchParams(location.search);
+  var cid = p.get('caseId') || 'RENT-0194';
+  var now = new Date().toLocaleString('ja-JP');
+  var uploaded = [];
+  ['contract','jusetsu','meisai','other'].forEach(function(key) {
+    if (_docFiles[key] && _docDataUrls[key]) {
+      var data = { dataUrl: _docDataUrls[key], name: _docFiles[key].name, size: _docFiles[key].size, caseId: cid, savedAt: now, source: 'rental-ag' };
+      try { localStorage.setItem('CORETO_DOC_' + key + '_' + cid, JSON.stringify(data)); } catch(e) {}
+      // 初期費用明細はCORETO_INVOICE_MEISAIにも保存（invoice-check-v2が参照）
+      if (key === 'meisai') {
+        try { localStorage.setItem('CORETO_INVOICE_MEISAI_' + cid, JSON.stringify(data)); } catch(e) {}
+      }
+      uploaded.push(key === 'contract' ? '契約書' : key === 'jusetsu' ? '重説' : key === 'meisai' ? '明細' : 'その他');
+    }
+  });
+  // アップロード済みステータス更新
+  var statusEl = document.getElementById('doc-upload-status');
+  if (statusEl) { statusEl.style.display = ''; statusEl.textContent = '✅ ' + uploaded.join('・') + ' アップロード済み'; }
+  var btnEl = document.getElementById('doc-upload-btn');
+  if (btnEl) btnEl.textContent = '📎 書類 ✅ ' + uploaded.length + '件';
+  closeDocUpload();
+  if (typeof showToast === 'function') showToast('✅ 書類（' + uploaded.join('・') + '）をアップロードしました', 'em');
+}
+
+// ページロード時に既存アップロード済みを確認
+window.addEventListener('DOMContentLoaded', function() {
+  var p = new URLSearchParams(location.search);
+  var cid = p.get('caseId') || 'RENT-0194';
+  var count = 0;
+  ['contract','jusetsu','meisai','other'].forEach(function(key) {
+    try {
+      var raw = localStorage.getItem('CORETO_DOC_' + key + '_' + cid);
+      if (raw) count++;
+    } catch(e) {}
+  });
+  if (count > 0) {
+    var btnEl = document.getElementById('doc-upload-btn');
+    var statusEl = document.getElementById('doc-upload-status');
+    if (btnEl) btnEl.textContent = '📎 書類 ✅ ' + count + '件アップロード済み';
+    if (statusEl) { statusEl.style.display = ''; statusEl.textContent = '✅ ' + count + '件アップロード済み'; }
+  }
+});
 </script>
 
 </body>
