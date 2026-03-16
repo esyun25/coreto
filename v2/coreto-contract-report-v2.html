@@ -924,6 +924,172 @@ function showReportDetail(id) {
 // ─────────────────────────────────────────────────────
 // HQ強制修正モーダル
 // ─────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────
+// 成約報告 詳細モーダル（HQ向け）
+// ─────────────────────────────────────────────────────
+function showReportDetail(id) {
+  // データ取得
+  var reps = [];
+  try { reps = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]'); } catch(e) {}
+  var demo = [
+    {id:'RPT-20260310-001', case:'RENT-0194', client:'田中 優子', type:'賃貸', fee:198000, reward:158400, date:'2026/03/10', ag:'山田 誠（AG-0042）', agId:'AG-0042', status:'承認待ち'},
+    {id:'RPT-20260228-003', case:'RENT-0180', client:'高橋 美咲', type:'賃貸', fee:380000, reward:304000, date:'2026/02/28', ag:'山田 誠（AG-0042）', agId:'AG-0042', status:'承認済み'},
+    {id:'RPT-20260215-001', case:'UTL-0071',  client:'田中 優子', type:'光通信', fee:180000, reward:144000, date:'2026/02/15', ag:'大橋 幸代（AG-0055）', agId:'AG-0055', status:'承認済み'},
+    {id:'RPT-20260110-002', case:'RENT-0162', client:'渡辺 誠',   type:'賃貸', fee:420000, reward:336000, date:'2026/01/10', ag:'大橋 幸代（AG-0055）', agId:'AG-0055', status:'承認済み'},
+    {id:'RPT-20251220-001', case:'RENT-0145', client:'伊藤 花子', type:'賃貸', fee:510000, reward:408000, date:'2025/12/20', ag:'山田 誠（AG-0042）', agId:'AG-0042', status:'修正依頼'},
+  ];
+  var storedIds = new Set(reps.map(function(r){ return r.id; }));
+  var all = reps.concat(demo.filter(function(r){ return !storedIds.has(r.id); }));
+  var r = all.find(function(x){ return x.id === id; });
+  if (!r) { showToast('⚠️ 詳細データが見つかりません', 'warn'); return; }
+
+  var stCls  = r.status === '承認済み' ? 'b-em' : r.status === '承認待ち' ? 'b-am' : 'b-rd';
+  var typCls = r.type === '賃貸' ? 'b-em' : r.type === '光通信' ? 'b-sk' : 'b-vt';
+
+  var overlay = document.createElement('div');
+  overlay.id = 'report-detail-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9998;display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+
+  var modal = document.createElement('div');
+  modal.style.cssText = 'background:#fff;border-radius:14px;width:100%;max-width:600px;max-height:90vh;overflow-y:auto;font-family:Outfit,sans-serif';
+
+  // ヘッダー
+  var mHead = document.createElement('div');
+  mHead.style.cssText = 'padding:16px 22px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff;z-index:1';
+  var mhLeft = document.createElement('div');
+  var mhTitle = document.createElement('div');
+  mhTitle.style.cssText = 'font-size:15px;font-weight:700;color:var(--navy)';
+  mhTitle.textContent = '成約報告 詳細';
+  var mhId = document.createElement('div');
+  mhId.style.cssText = 'font-size:11px;color:var(--muted);font-family:monospace;margin-top:2px';
+  mhId.textContent = id;
+  mhLeft.appendChild(mhTitle); mhLeft.appendChild(mhId);
+  var mhClose = document.createElement('button');
+  mhClose.style.cssText = 'background:none;border:none;font-size:18px;cursor:pointer;color:var(--muted)';
+  mhClose.textContent = '✕';
+  mhClose.onclick = function() { overlay.remove(); };
+  mHead.appendChild(mhLeft); mHead.appendChild(mhClose);
+  modal.appendChild(mHead);
+
+  // ボディ
+  var mBody = document.createElement('div');
+  mBody.style.cssText = 'padding:20px 22px';
+
+  // ステータスバッジ + 種別バッジ
+  var badgeRow = document.createElement('div');
+  badgeRow.style.cssText = 'display:flex;gap:8px;margin-bottom:16px';
+  var stBadge = document.createElement('span');
+  stBadge.className = 'badge ' + stCls;
+  stBadge.textContent = r.status;
+  var typBadge = document.createElement('span');
+  typBadge.className = 'badge ' + typCls;
+  typBadge.textContent = r.type;
+  badgeRow.appendChild(stBadge); badgeRow.appendChild(typBadge);
+  mBody.appendChild(badgeRow);
+
+  // 詳細情報グリッド
+  var grid = document.createElement('div');
+  grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px';
+
+  var infoFields = [
+    ['クライアント名', r.client || '—'],
+    ['案件ID',         r.case   || '—'],
+    ['成約日',         r.date   || '—'],
+    ['担当AG',         r.ag     || '—'],
+    ['仲介料（税抜）', '¥' + (r.fee||0).toLocaleString()],
+    ['報酬額',         '¥' + (r.reward||0).toLocaleString()],
+  ];
+
+  infoFields.forEach(function(fi) {
+    var item = document.createElement('div');
+    item.style.cssText = 'background:var(--cream);border-radius:8px;padding:12px 14px';
+    var lbl = document.createElement('div');
+    lbl.style.cssText = 'font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px';
+    lbl.textContent = fi[0];
+    var val = document.createElement('div');
+    val.style.cssText = 'font-size:13px;font-weight:600;color:var(--ink)';
+    val.textContent = fi[1];
+    item.appendChild(lbl); item.appendChild(val);
+    grid.appendChild(item);
+  });
+  mBody.appendChild(grid);
+
+  // 修正履歴（HQ強制修正があれば表示）
+  if (r.hqEditedAt) {
+    var editBox = document.createElement('div');
+    editBox.style.cssText = 'background:var(--am-bg);border:1px solid rgba(217,119,6,.2);border-radius:8px;padding:12px 14px;margin-bottom:16px';
+    var editTitle = document.createElement('div');
+    editTitle.style.cssText = 'font-size:11px;font-weight:700;color:var(--am);margin-bottom:6px';
+    editTitle.textContent = '✏️ HQ強制修正履歴';
+    var editDetail = document.createElement('div');
+    editDetail.style.cssText = 'font-size:11px;color:var(--ink);line-height:1.7';
+    editDetail.innerHTML =
+      '修正者: ' + (r.hqEditedBy||'HQ') + '<br>' +
+      '修正日時: ' + (r.hqEditedAt||'—') + '<br>' +
+      '修正理由: ' + (r.hqEditReason||'—');
+    editBox.appendChild(editTitle); editBox.appendChild(editDetail);
+    mBody.appendChild(editBox);
+  }
+
+  // 修正依頼理由（あれば表示）
+  if (r.fixReason) {
+    var fixBox = document.createElement('div');
+    fixBox.style.cssText = 'background:var(--rd-bg);border:1px solid rgba(220,38,38,.15);border-radius:8px;padding:12px 14px;margin-bottom:16px';
+    var fixTitle = document.createElement('div');
+    fixTitle.style.cssText = 'font-size:11px;font-weight:700;color:var(--rd);margin-bottom:4px';
+    fixTitle.textContent = '修正依頼の理由';
+    var fixText = document.createElement('div');
+    fixText.style.cssText = 'font-size:12px;color:var(--ink)';
+    fixText.textContent = r.fixReason;
+    fixBox.appendChild(fixTitle); fixBox.appendChild(fixText);
+    mBody.appendChild(fixBox);
+  }
+
+  // アクションボタン（承認待ちのみ）
+  if (r.status === '承認待ち') {
+    var actRow = document.createElement('div');
+    actRow.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-top:8px';
+
+    var approveBtn = document.createElement('button');
+    approveBtn.style.cssText = 'padding:9px 18px;background:var(--em);color:#fff;border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:Outfit,sans-serif';
+    approveBtn.textContent = '✅ 承認する';
+    approveBtn.onclick = function() {
+      overlay.remove();
+      // ダミーbtnオブジェクトでapproveReportを呼ぶ
+      var dummyBtn = { closest: function() { return { innerHTML: '' }; } };
+      approveReport(r.id, r.client, r.ag, r.reward, dummyBtn);
+    };
+
+    var fixBtn = document.createElement('button');
+    fixBtn.style.cssText = 'padding:9px 18px;background:var(--rd-bg);color:var(--rd);border:1px solid rgba(220,38,38,.2);border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:Outfit,sans-serif';
+    fixBtn.textContent = '修正依頼';
+    fixBtn.onclick = function() {
+      overlay.remove();
+      var dummyBtn2 = { closest: function() { return { innerHTML: '' }; } };
+      requestFix(r.id, r.ag, dummyBtn2);
+    };
+
+    var editBtn = document.createElement('button');
+    editBtn.style.cssText = 'padding:9px 18px;background:var(--am-bg);color:var(--am);border:1px solid rgba(217,119,6,.2);border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:Outfit,sans-serif';
+    editBtn.textContent = '✏️ HQ修正';
+    editBtn.onclick = function() { overlay.remove(); forceEditReport(r.id); };
+
+    actRow.appendChild(approveBtn); actRow.appendChild(fixBtn); actRow.appendChild(editBtn);
+    mBody.appendChild(actRow);
+  } else {
+    var editOnlyBtn = document.createElement('button');
+    editOnlyBtn.style.cssText = 'margin-top:8px;padding:9px 18px;background:var(--am-bg);color:var(--am);border:1px solid rgba(217,119,6,.2);border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:Outfit,sans-serif';
+    editOnlyBtn.textContent = '✏️ HQ修正';
+    editOnlyBtn.onclick = function() { overlay.remove(); forceEditReport(r.id); };
+    mBody.appendChild(editOnlyBtn);
+  }
+
+  modal.appendChild(mBody);
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+}
+
 function forceEditReport(id) {
   // CORETO_REPORTSから対象レコードを取得
   var reps = [];
