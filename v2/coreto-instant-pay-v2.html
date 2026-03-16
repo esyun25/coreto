@@ -852,10 +852,28 @@ async function showSuccess() {
   const agId     = sess?.userId || 'AG-0042';
   const agKana   = sess?.nameKana || 'エージェント';
   // 確定出金可能残高: 成約報告がHQに承認済みの案件の合計
-  // CORETO_COMPLETED_BALANCE_{agId} に蓄積されている
-  const agIdKey = agId.replace(/\s/g, '_');
-  const completedBalance = parseInt(localStorage.getItem('CORETO_COMPLETED_BALANCE_' + agIdKey) || '0');
-  // フォールバック: 旧来のセッション残高（Kintone連携前の仮対応）
+  var agIdKey = agId.replace(/[^A-Za-z0-9\-]/g, '_');
+  var balKey  = 'CORETO_COMPLETED_BALANCE_' + agIdKey;
+  var completedBalance = parseInt(localStorage.getItem(balKey) || '0');
+
+  // 2回目以降: 前回の即時払いが残高から控除済みか確認
+  var histKey = 'CORETO_INSTANT_PAY_HISTORY_' + agId;
+  var payHist = [];
+  try { payHist = JSON.parse(localStorage.getItem(histKey) || '[]'); } catch(e) {}
+  // 当月の即時払い合計
+  var thisMonth = new Date().toISOString().slice(0,7);
+  var thisMonthPaid = payHist.filter(function(h){
+    return h.date && h.date.startsWith(thisMonth) && h.status === 'completed';
+  }).reduce(function(s,h){ return s + (Number(h.amount)||0); }, 0);
+  // 残高が即時払い済み分を正しく控除しているかチェック
+  var balanceIsCorrect = completedBalance >= 0; // 負の残高は異常
+  if (!balanceIsCorrect) {
+    if (typeof showToast === 'function') showToast('⚠️ 残高計算に問題があります。HQに連絡してください。', 'warn');
+    if (btn) btn.textContent = '🏦 バーチャル口座を発行';
+    return;
+  }
+
+  // フォールバック: 残高0の場合は旧来のセッション残高
   const balance = completedBalance > 0
     ? completedBalance
     : parseInt(sessionStorage.getItem('coreto_balance') || '726163');
@@ -900,11 +918,25 @@ async function showSuccess() {
       var data = await resp.json();
 
       if (data.decision === 'approved') {
-        // 今回の申請を履歴に追加
+        // 即時払い履歴をAG別キーで記録
         try {
-          var hist = JSON.parse(localStorage.getItem('CORETO_INSTANT_PAY_HISTORY') || '[]');
-          hist.unshift({ id: currentReqId, amount: currentNetAmount, date: new Date().toISOString(), status: 'approved' });
-          localStorage.setItem('CORETO_INSTANT_PAY_HISTORY', JSON.stringify(hist));
+          var histKey = 'CORETO_INSTANT_PAY_HISTORY_' + agId;
+          var hist = JSON.parse(localStorage.getItem(histKey) || '[]');
+          var paidNow = window._currentPayoutAmount || Math.round(currentNetAmount * 0.85);
+          hist.unshift({
+            id:          currentReqId,
+            amount:      currentNetAmount,
+            payout:      paidNow,
+            date:        new Date().toISOString(),
+            status:      'completed',
+            remittanceId: data.remittanceId || null,
+          });
+          localStorage.setItem(histKey, JSON.stringify(hist));
+          // 確定出金可能残高から控除
+          var agIdKey3 = agId.replace(/[^A-Za-z0-9\-]/g, '_');
+          var balKey3  = 'CORETO_COMPLETED_BALANCE_' + agIdKey3;
+          var curBal3  = parseInt(localStorage.getItem(balKey3) || '0');
+          localStorage.setItem(balKey3, String(Math.max(0, curBal3 - currentNetAmount)));
         } catch(e) {}
         showInstantTransferSuccess(data);
       } else if (data.decision === 'rejected') {

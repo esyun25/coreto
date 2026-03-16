@@ -435,6 +435,20 @@ function renderAll() {
   const month = document.getElementById('target-month').value;
   currentPayouts = MONTH_PAYOUTS[month] || [];
 
+  // ── 即時払い控除額をlocalStorageから自動取得 ──────────────────────────
+  // CORETO_INSTANT_PAY_HISTORY_{agId} に記録された当月の即時払い実績を
+  // 各AGのinstantPayに自動反映する（ハードコードを上書き）
+  currentPayouts.forEach(function(p) {
+    var histKey = 'CORETO_INSTANT_PAY_HISTORY_' + p.id;
+    var hist = [];
+    try { hist = JSON.parse(localStorage.getItem(histKey) || '[]'); } catch(e) {}
+    // 対象月（YYYY-MM）の完了済み即時払いを合計
+    var monthTotal = hist
+      .filter(function(h){ return h.date && h.date.startsWith(month) && h.status === 'completed'; })
+      .reduce(function(s,h){ return s + (Number(h.amount) || 0); }, 0);
+    if (monthTotal > 0) p.instantPay = monthTotal;
+  });
+
   if (!currentPayouts.length) {
     document.getElementById('pay-tbody').innerHTML =
       `<tr><td colspan="14" style="text-align:center;padding:24px;color:var(--muted);font-size:12px">
@@ -556,6 +570,20 @@ function runBatchCheck() {
 
   // ⑤ 即時払い超過（instantPay > taxable）
   const instantOverList = allCalc.filter(p => p.instantPay > p.calc.taxable);
+
+  // ⑤-B 即時払い控除額と履歴の照合（当月分の実績と一致するか）
+  // monthは冒頭で宣言済み
+  const instantMismatchList = allCalc.filter(function(p) {
+    if (p.instantPay === 0) return false;
+    var histKey = 'CORETO_INSTANT_PAY_HISTORY_' + p.id;
+    var hist = [];
+    try { hist = JSON.parse(localStorage.getItem(histKey) || '[]'); } catch(e) {}
+    var histTotal = hist
+      .filter(function(h){ return h.date && h.date.startsWith(month) && h.status === 'completed'; })
+      .reduce(function(s,h){ return s + (Number(h.amount)||0); }, 0);
+    // 履歴があるのに控除額と一致しない場合は不一致
+    return histTotal > 0 && p.instantPay !== histTotal;
+  });
 
   // ⑥ 重複案件（AG同士・PT同士の同一種別内のみチェック。AG×PTの共有は正常のため除外）
   const agCaseIds = currentPayouts
@@ -899,4 +927,19 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 </body>
-</html>
+</html>no:\'⑤\', label:\'即時払い控除額の確認（履歴照合）\',
+      pass: instantOverList.length === 0 && instantMismatchList.length === 0,
+      detail: (function() {
+        if (instantOverList.length > 0)
+          return \'<div style="font-size:11px;color:var(--rd);margin-top:4px">即時払い控除額が課税額を超えています。</div>\'
+            + errList(instantOverList, function(p){ return errRow(p.id + \'\\u3000\' + p.name, \'課税額 \' + fmt(p.calc.taxable) + \' ＜ 即時払 \' + fmt(p.instantPay)); });
+        if (instantMismatchList.length > 0)
+          return \'<div style="font-size:11px;color:var(--rd);margin-top:4px">⚠️ 控除額と即時払い履歴が一致しません。全銀出力前に確認してください。</div>\'
+            + errList(instantMismatchList, function(p) {
+                var hist = []; try { hist = JSON.parse(localStorage.getItem(\'CORETO_INSTANT_PAY_HISTORY_\' + p.id) || \'[]\'); } catch(e) {}
+                var hTotal = hist.filter(function(h){ return h.date && h.date.startsWith(month) && h.status === \'completed\'; }).reduce(function(s,h){ return s+(Number(h.amount)||0); },0);
+                return errRow(p.id + \'\\u3000\' + p.name, \'控除額 ¥\' + fmt(p.instantPay) + \' ≠ 履歴合計 ¥\' + fmt(hTotal));
+              });
+        return okDetail(\'即時払い控除額と履歴が一致しています\');
+      })() },
+    
