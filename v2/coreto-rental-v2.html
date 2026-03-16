@@ -395,7 +395,7 @@ html, body { background:#FFFFFF !important; }
           <span class="badge badge-am">入力待ち</span>
         </div>
         <div class="remit-body">
-          <div class="alert-banner warn">⚠️ 審査通過後の必須対応 ― 入居日（5/1）の14日前までに送金情報を入力してください。送金期限：2026/04/17</div>
+          <div class="alert-banner warn" id="remit-deadline-banner">⚠️ 審査通過後の必須対応 ― 送金期限は明細書に記載された日付をご確認ください。明細アップロード後に自動反映されます。</div>
 
           <!-- Bank info -->
           <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:12px">管理会社 送金先口座</div>
@@ -437,7 +437,7 @@ html, body { background:#FFFFFF !important; }
 
           <!-- Deadline -->
           <div class="form-grid" style="grid-template-columns:1fr 1fr;margin-bottom:0">
-            <div class="form-row"><label class="form-label">送金期限日</label><input class="form-input" type="date" value="2026-04-17" id="deadline"></div>
+            <div class="form-row"><label class="form-label">送金期限日</label><input class="form-input" type="date" id="deadline" placeholder="明細から自動入力されます"></div>
             <div class="form-row"><label class="form-label">決済方法</label>
               <select class="form-select" id="payment-method" onchange="toggleOtherPayment(this.value)">
                 <option value="bank">銀行振込</option>
@@ -1016,6 +1016,39 @@ window.addEventListener('DOMContentLoaded', function() {
   const caseStatus = getCaseStatus(caseId);
   renderPipeline(caseId, caseStatus.step);
 
+  // 送金期限を自動設定（明細 or 入居予定日から計算）
+  (function() {
+    var deadlineEl = document.getElementById('deadline');
+    var bannerEl   = document.getElementById('remit-deadline-banner');
+    if (!deadlineEl) return;
+
+    // ① CORETO_INVOICE_MEISAI に送金期限が記録されていれば使う
+    var deadline = '';
+    try {
+      var meisai = JSON.parse(localStorage.getItem('CORETO_INVOICE_MEISAI_' + caseId) || '{}');
+      if (meisai.deadline) deadline = meisai.deadline;
+    } catch(e) {}
+
+    // ② なければ CORETO_CASE_DETAIL の入居予定日から14日前を計算
+    if (!deadline) {
+      try {
+        var detail = JSON.parse(localStorage.getItem('CORETO_CASE_DETAIL_' + caseId) || '{}');
+        if (detail.moveIn) {
+          var moveInDate = new Date(detail.moveIn);
+          moveInDate.setDate(moveInDate.getDate() - 14);
+          deadline = moveInDate.toISOString().slice(0, 10);
+        }
+      } catch(e) {}
+    }
+
+    if (deadline) {
+      deadlineEl.value = deadline;
+      var d = new Date(deadline);
+      var label = d.toLocaleDateString('ja-JP', {month:'long', day:'numeric'});
+      if (bannerEl) bannerEl.textContent = '⚠️ 審査通過後の必須対応 ― 送金期限は ' + label + ' です（明細書の期日をご確認ください）';
+    }
+  })();
+
   // ステップ進捗ボタンをクイックアクションに追加（該当ステップが未完了の場合）
   if (caseStatus.step < PIPELINE_STEPS.length - 1) {
     const actionList = document.querySelector('.action-list');
@@ -1355,6 +1388,16 @@ function refreshCaseDetailDisplay(d) {
         </label>
       </div>
 
+      <!-- 送金期限 -->
+      <div style="margin-bottom:14px">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:6px;display:flex;align-items:center;gap:6px">
+          📅 送金期限日（明細書に記載されている場合）
+          <span style="font-size:9px;font-weight:400;background:var(--cream2);border:1px solid var(--bd);border-radius:4px;padding:1px 7px;color:var(--faint)">任意</span>
+        </div>
+        <input type="date" id="doc-deadline" style="width:100%;padding:9px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:13px;font-family:'Outfit',sans-serif;outline:none;box-sizing:border-box">
+        <div style="font-size:10px;color:var(--faint);margin-top:4px">入力すると送金情報入力エリアに自動反映されます</div>
+      </div>
+
       <!-- その他 -->
       <div style="margin-bottom:16px">
         <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:6px;display:flex;align-items:center;gap:6px">
@@ -1427,6 +1470,7 @@ function submitDocUpload() {
   var p = new URLSearchParams(location.search);
   var cid = p.get('caseId') || 'RENT-0194';
   var now = new Date().toLocaleString('ja-JP');
+  var docDeadline = document.getElementById('doc-deadline')?.value || '';
   var uploaded = [];
   ['contract','jusetsu','meisai','other'].forEach(function(key) {
     if (_docFiles[key] && _docDataUrls[key]) {
@@ -1434,7 +1478,14 @@ function submitDocUpload() {
       try { localStorage.setItem('CORETO_DOC_' + key + '_' + cid, JSON.stringify(data)); } catch(e) {}
       // 初期費用明細はCORETO_INVOICE_MEISAIにも保存（invoice-check-v2が参照）
       if (key === 'meisai') {
-        try { localStorage.setItem('CORETO_INVOICE_MEISAI_' + cid, JSON.stringify(data)); } catch(e) {}
+        var meisaiData = Object.assign({}, data);
+        if (docDeadline) meisaiData.deadline = docDeadline;
+        try { localStorage.setItem('CORETO_INVOICE_MEISAI_' + cid, JSON.stringify(meisaiData)); } catch(e) {}
+        // 送金期限をデッドラインフィールドに反映
+        if (docDeadline) {
+          var dlEl = document.getElementById('deadline');
+          if (dlEl) dlEl.value = docDeadline;
+        }
       }
       uploaded.push(key === 'contract' ? '契約書' : key === 'jusetsu' ? '重説' : key === 'meisai' ? '明細' : 'その他');
     }
