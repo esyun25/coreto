@@ -684,16 +684,16 @@ function submitReport(){
       if (reps.length > 0) {
         reps[0].paymentConfirmed = isPaymentConfirmed;
         reps[0].caseId = caseIdForReport;
-        window.KV.set('CORETO_REPORTS', reps); localStorage.setItem('CORETO_REPORTS', JSON.stringify(reps));
+        localStorage.setItem('CORETO_REPORTS', JSON.stringify(reps));
       }
     } catch(e) {}
   } catch(e) {}
 
   // HQ用タスクを追加
   try {
-    const tasks = (function(){try{return JSON.parse(localStorage.getItem('CORETO_HQ_TASKS')||'[]');}catch(e){return [];}}());
+    const tasks = JSON.parse(localStorage.getItem('CORETO_HQ_TASKS') || '[]');
     tasks.unshift({ assignee: null, assigneeName: '未割当', id: rptId, type:'contract_report', title:'成約報告承認 — ' + agName + ' / ' + rptId, createdAt: now });
-    window.KV.set('CORETO_HQ_TASKS', tasks);
+    localStorage.setItem('CORETO_HQ_TASKS', JSON.stringify(tasks));
   } catch(e) {}
 
   document.getElementById('pg').innerHTML = `
@@ -1315,7 +1315,7 @@ function saveForceEdit(id, original) {
     var idx = reps.findIndex(function(r){ return r.id === id; });
     if (idx >= 0) { reps[idx] = Object.assign(reps[idx], updated); }
     else { reps.push(updated); }
-    window.KV.set('CORETO_REPORTS', reps); localStorage.setItem('CORETO_REPORTS', JSON.stringify(reps));
+    localStorage.setItem('CORETO_REPORTS', JSON.stringify(reps));
   } catch(e) {}
 
   document.getElementById('force-edit-overlay').remove();
@@ -1354,15 +1354,15 @@ function approveReport(id, client, ag, reward, btn) {
         const reps = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]');
         const idx = reps.findIndex(r => r.id === id);
         if (idx >= 0) { reps[idx].status = '承認済み'; reps[idx].approvedAt = new Date().toISOString(); }
-        window.KV.set('CORETO_REPORTS', reps); localStorage.setItem('CORETO_REPORTS', JSON.stringify(reps));
-        const tasks = (function(){try{return JSON.parse(localStorage.getItem('CORETO_HQ_TASKS')||'[]');}catch(e){return [];}}());
-        window.KV.set('CORETO_HQ_TASKS', tasks.filter(t => t.id !== id));
+        localStorage.setItem('CORETO_REPORTS', JSON.stringify(reps));
+        const tasks = JSON.parse(localStorage.getItem('CORETO_HQ_TASKS') || '[]');
+        localStorage.setItem('CORETO_HQ_TASKS', JSON.stringify(tasks.filter(t => t.id !== id)));
       } catch(e) {}
     }
     // HQタスクから削除（KINTONE.approveReportと重複しないよう別管理）
     try {
-      const tasks = (function(){try{return JSON.parse(localStorage.getItem('CORETO_HQ_TASKS')||'[]');}catch(e){return [];}}());
-      window.KV.set('CORETO_HQ_TASKS', tasks.filter(t => t.id !== id));
+      const tasks = JSON.parse(localStorage.getItem('CORETO_HQ_TASKS') || '[]');
+      localStorage.setItem('CORETO_HQ_TASKS', JSON.stringify(tasks.filter(t => t.id !== id)));
     } catch(e) {}
 
     showToast('✅ ' + id + ' を承認しました。' + ag + ' にLINEで通知します。', 'em');
@@ -1399,7 +1399,7 @@ function requestFix(id, ag, btn) {
         const reps = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]');
         const idx = reps.findIndex(r => r.id === id);
         if (idx >= 0) { reps[idx].status = '修正依頼'; reps[idx].fixReason = reason; }
-        window.KV.set('CORETO_REPORTS', reps); localStorage.setItem('CORETO_REPORTS', JSON.stringify(reps));
+        localStorage.setItem('CORETO_REPORTS', JSON.stringify(reps));
       } catch(e) {}
       showToast('✏️ ' + id + ' に修正依頼を送信しました。' + ag + ' にLINEで通知します。', 'am');
     }
@@ -1455,7 +1455,7 @@ function showToast(msg, type) {
 
 function completeHQTask(taskId) {
   try {
-    var tasks = (function(){try{return JSON.parse(localStorage.getItem('CORETO_HQ_TASKS')||'[]');}catch(e){return [];}}());
+    var tasks = JSON.parse(localStorage.getItem('CORETO_HQ_TASKS') || '[]');
     localStorage.setItem('CORETO_HQ_TASKS', JSON.stringify(tasks.filter(function(t){return t.id!==taskId;})));
   } catch(e) {}
 }

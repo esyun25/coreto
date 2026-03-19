@@ -734,15 +734,10 @@ function exportCSV() {
   showToast('CSVをエクスポートしました');
 }
 
-window.addEventListener('DOMContentLoaded', async () => {
-  // KV対応: CORETO_REPORTSをKV（またはlocalStorage）から取得して案件をCASESに追加
+window.addEventListener('DOMContentLoaded', () => {
+  // KV透過パッチによりlocalStorage.getItemがKV値を返す（KV設定済み時）
   try {
-    let reports = [];
-    if (window.KV && window.KV.isRemote()) {
-      reports = (await window.KV.get('CORETO_REPORTS')) || [];
-    } else {
-      reports = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]');
-    }
+    const reports = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]');
     const existIds = new Set(CASES.map(c=>c.id));
     reports.forEach(r => {
       if (!r.case || existIds.has(r.case)) return;
@@ -751,36 +746,37 @@ window.addEventListener('DOMContentLoaded', async () => {
         sub:r.type+' / ¥'+((r.fee||0).toLocaleString()), ag:r.ag||'—', fee:r.fee||0, step:8, pt:'', daysOld:0 });
       existIds.add(r.case);
     });
-  } catch(e) {
-    // フォールバック: localStorageから取得
+  } catch(e) {}
+
+  CASES.forEach(cas => {
     try {
-      const reports = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]');
+      const saved = localStorage.getItem('CORETO_CASE_STATUS_' + cas.id);
+      if (saved) {
+        const status = JSON.parse(saved);
+        if (typeof status.step === 'number') cas.step = status.step;
+      }
+    } catch(e) {}
+  });
+
+  renderAll();
+
+  // KVプリフェッチ後に再描画（KV設定済み時のみ）
+  if (window.KV && window.KV.isRemote()) {
+    window.KV.get('CORETO_REPORTS').then(function(reports) {
+      if (!Array.isArray(reports) || !reports.length) return;
       const existIds = new Set(CASES.map(c=>c.id));
+      let added = 0;
       reports.forEach(r => {
         if (!r.case || existIds.has(r.case)) return;
         const typeMap = {'賃貸':'rental','売買':'sale','三為':'sannai','人材':'hr','光通信':'util'};
         CASES.push({ id:r.case, type:typeMap[r.type]||'rental', name:(r.client||'—')+' 様',
           sub:r.type+' / ¥'+((r.fee||0).toLocaleString()), ag:r.ag||'—', fee:r.fee||0, step:8, pt:'', daysOld:0 });
-        existIds.add(r.case);
+        existIds.add(r.case); added++;
       });
-    } catch(e2) {}
+      if (added > 0) renderAll();
+    }).catch(function(){});
   }
 
-  // CORETO_CASE_STATUS のKV対応
-  await Promise.all(CASES.map(async cas => {
-    try {
-      let status = null;
-      if (window.KV && window.KV.isRemote()) {
-        status = await window.KV.get('CORETO_CASE_STATUS_' + cas.id);
-      } else {
-        const saved = localStorage.getItem('CORETO_CASE_STATUS_' + cas.id);
-        if (saved) status = JSON.parse(saved);
-      }
-      if (status && typeof status.step === 'number') cas.step = status.step;
-    } catch(e) {}
-  }));
-
-  renderAll();
   window.toggleSb = ()=>{ document.querySelector('.sb').classList.toggle('open'); document.getElementById('mob-overlay')?.classList.toggle('show'); };
   window.closeSb  = ()=>{ document.querySelector('.sb').classList.remove('open');  document.getElementById('mob-overlay')?.classList.remove('show'); };
 });

@@ -3600,17 +3600,11 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // #29修正: HQダッシュのKPIをKV（またはlocalStorage）から動的更新
-  setTimeout(async function() {
+  // KV透過パッチによりlocalStorage.getItemがKV値を返す
+  setTimeout(function() {
     try {
-      var reports = [], tasks = [];
-      if (window.KV && window.KV.isRemote()) {
-        reports = (await window.KV.get('CORETO_REPORTS'))  || [];
-        tasks   = (await window.KV.get('CORETO_HQ_TASKS')) || [];
-      } else {
-        reports = JSON.parse(localStorage.getItem('CORETO_REPORTS')  || '[]');
-        tasks   = JSON.parse(localStorage.getItem('CORETO_HQ_TASKS') || '[]');
-      }
+      var reports = JSON.parse(localStorage.getItem('CORETO_REPORTS')  || '[]');
+      var tasks   = JSON.parse(localStorage.getItem('CORETO_HQ_TASKS') || '[]');
       var pending = reports.filter(function(r){return r.status==='承認待ち';}).length;
       var monthly = reports.filter(function(r){
         var now = new Date(); var d = new Date(r.date||'');
