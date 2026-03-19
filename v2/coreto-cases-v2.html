@@ -745,59 +745,51 @@ window.addEventListener('DOMContentLoaded', function() {
     } catch(e) {}
   }
 
-  loadAndRenderCases();
-
-  // KV設定済みの場合、KVから最新を取得してマージ
-  if (window.KV && window.KV.isRemote()) {
-    setTimeout(function() {
-      window.KV.get('CORETO_REPORTS').then(function(kvReports) {
-        if (!Array.isArray(kvReports) || !kvReports.length) return;
-        // KVのデータをlocalStorageにマージ
-        try {
-          var ls = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]');
-          var lsIds = new Set(ls.map(function(r){ return r.id; }));
-          var added = kvReports.filter(function(r){ return r.id && !lsIds.has(r.id); });
-          if (added.length > 0) {
-            localStorage.setItem('CORETO_REPORTS', JSON.stringify(ls.concat(added)));
-            loadAndRenderCases(); // 再描画
-          }
-        } catch(e) {}
-      }).catch(function(){});
-    }, 600);
-  }
-
   CNAV.init('cases');
 
-  // ── ロール別 案件フィルタ ──
+  // ── ロール別 案件フィルタ（ハードコード行のみ対象）──
   const _s = CNAV.session ? CNAV.session() : null;
   const _role = (_s && _s.type) || sessionStorage.getItem('coreto_role') || 'hq';
   const _myId = _s ? _s.userId : null;  // 例: 'AG-0042'
 
   if (_role !== 'hq') {
-    // HQ以外: 自分が担当する案件のみ表示
+    // HQ以外: 自分が担当する案件のみ表示（ハードコード行）
     const allRows = document.querySelectorAll('.case-row[data-ag]');
-    let visibleCount = 0;
     allRows.forEach(row => {
-      if (row.getAttribute('data-ag') === _myId) {
-        visibleCount++;
-      } else {
+      // dynamic-cases-listの行は後で追加するのでここでは触らない
+      if (row.closest('#dynamic-cases-list')) return;
+      if (row.getAttribute('data-ag') !== _myId) {
         row.style.display = 'none';
       }
     });
-    // カンバン列も自分の案件のみ表示（data-ag属性があるカードのみ）
     document.querySelectorAll('.kanban-card[data-ag]').forEach(card => {
       if (card.getAttribute('data-ag') !== _myId) card.style.display = 'none';
     });
-    // 「新規案件」ボタンはAGも使用可
-    // ヘッダーにフィルタ中の旨を表示
     const tb = document.querySelector('.top-bar .tb-title');
     if (tb) tb.textContent = '担当案件一覧';
-    // 担当者フィルタセレクトを非表示
     const agFilter = document.querySelector('select');
     if (agFilter && agFilter.innerHTML.includes('AG-')) agFilter.closest('.filter-group, .filter-wrap, div').style.display = 'none';
-    // 件数バッジを更新
-    const badge = document.querySelector('.badge-count, .tb-badge');
-    if (badge) badge.textContent = visibleCount + '件';
+  }
+
+  // ── 動的案件追加（ロール別フィルタの後に実行）──────────────
+  loadAndRenderCases();
+
+  // KV設定済みの場合、KVから最新を取得してマージ後に再描画
+  if (window.KV && window.KV.isRemote()) {
+    setTimeout(function() {
+      window.KV.get('CORETO_REPORTS').then(function(kvReports) {
+        if (!Array.isArray(kvReports) || !kvReports.length) return;
+        try {
+          var ls = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]');
+          var lsIds = new Set(ls.map(function(r){ return r.id; }));
+          var toAdd = kvReports.filter(function(r){ return r.id && !lsIds.has(r.id); });
+          if (toAdd.length > 0) {
+            localStorage.setItem('CORETO_REPORTS', JSON.stringify(ls.concat(toAdd)));
+            loadAndRenderCases();
+          }
+        } catch(e) {}
+      }).catch(function(){});
+    }, 700);
   }
 
   // URLパラメータでタブ自動切替（?type=hr など）
