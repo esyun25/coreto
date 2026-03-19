@@ -734,10 +734,15 @@ function exportCSV() {
   showToast('CSVをエクスポートしました');
 }
 
-window.addEventListener('DOMContentLoaded', () => {
-  // #7修正: localStorageのCORETO_REPORTSから新規案件をCASESに追加
+window.addEventListener('DOMContentLoaded', async () => {
+  // KV対応: CORETO_REPORTSをKV（またはlocalStorage）から取得して案件をCASESに追加
   try {
-    const reports = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]');
+    let reports = [];
+    if (window.KV && window.KV.isRemote()) {
+      reports = (await window.KV.get('CORETO_REPORTS')) || [];
+    } else {
+      reports = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]');
+    }
     const existIds = new Set(CASES.map(c=>c.id));
     reports.forEach(r => {
       if (!r.case || existIds.has(r.case)) return;
@@ -746,18 +751,35 @@ window.addEventListener('DOMContentLoaded', () => {
         sub:r.type+' / ¥'+((r.fee||0).toLocaleString()), ag:r.ag||'—', fee:r.fee||0, step:8, pt:'', daysOld:0 });
       existIds.add(r.case);
     });
-  } catch(e) {}
-
-  // 残-4: localStorageのCORETO_CASE_STATUS_{id}でCASESのstepを上書き
-  CASES.forEach(cas => {
+  } catch(e) {
+    // フォールバック: localStorageから取得
     try {
-      const saved = localStorage.getItem('CORETO_CASE_STATUS_' + cas.id);
-      if (saved) {
-        const status = JSON.parse(saved);
-        if (typeof status.step === 'number') cas.step = status.step;
+      const reports = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]');
+      const existIds = new Set(CASES.map(c=>c.id));
+      reports.forEach(r => {
+        if (!r.case || existIds.has(r.case)) return;
+        const typeMap = {'賃貸':'rental','売買':'sale','三為':'sannai','人材':'hr','光通信':'util'};
+        CASES.push({ id:r.case, type:typeMap[r.type]||'rental', name:(r.client||'—')+' 様',
+          sub:r.type+' / ¥'+((r.fee||0).toLocaleString()), ag:r.ag||'—', fee:r.fee||0, step:8, pt:'', daysOld:0 });
+        existIds.add(r.case);
+      });
+    } catch(e2) {}
+  }
+
+  // CORETO_CASE_STATUS のKV対応
+  await Promise.all(CASES.map(async cas => {
+    try {
+      let status = null;
+      if (window.KV && window.KV.isRemote()) {
+        status = await window.KV.get('CORETO_CASE_STATUS_' + cas.id);
+      } else {
+        const saved = localStorage.getItem('CORETO_CASE_STATUS_' + cas.id);
+        if (saved) status = JSON.parse(saved);
       }
+      if (status && typeof status.step === 'number') cas.step = status.step;
     } catch(e) {}
-  });
+  }));
+
   renderAll();
   window.toggleSb = ()=>{ document.querySelector('.sb').classList.toggle('open'); document.getElementById('mob-overlay')?.classList.toggle('show'); };
   window.closeSb  = ()=>{ document.querySelector('.sb').classList.remove('open');  document.getElementById('mob-overlay')?.classList.remove('show'); };

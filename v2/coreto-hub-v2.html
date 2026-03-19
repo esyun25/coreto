@@ -2879,7 +2879,7 @@ function renderREAgDash() {
   document.getElementById('crumb-cur').textContent = 'ダッシュボード';
   document.getElementById('topbar-actions').innerHTML = `
     <button class="topbar-btn ghost">📋 日報提出</button>
-    <button class="topbar-btn primary">＋ 新規顧客登録</button>`;
+    <button class="topbar-btn primary" onclick="window.location.href='coreto-pipeline-v2.html'">＋ 案件登録</button>`;
 
   document.getElementById('page-content').innerHTML = `
     <div class="kpi-grid">
@@ -3600,20 +3600,24 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // #29修正: HQダッシュのKPIをlocalStorageから動的更新
-  setTimeout(function() {
+  // #29修正: HQダッシュのKPIをKV（またはlocalStorage）から動的更新
+  setTimeout(async function() {
     try {
-      var reports = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]');
-      var tasks   = JSON.parse(localStorage.getItem('CORETO_HQ_TASKS') || '[]');
+      var reports = [], tasks = [];
+      if (window.KV && window.KV.isRemote()) {
+        reports = (await window.KV.get('CORETO_REPORTS'))  || [];
+        tasks   = (await window.KV.get('CORETO_HQ_TASKS')) || [];
+      } else {
+        reports = JSON.parse(localStorage.getItem('CORETO_REPORTS')  || '[]');
+        tasks   = JSON.parse(localStorage.getItem('CORETO_HQ_TASKS') || '[]');
+      }
       var pending = reports.filter(function(r){return r.status==='承認待ち';}).length;
       var monthly = reports.filter(function(r){
         var now = new Date(); var d = new Date(r.date||'');
         return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth();
       }).length;
-      // 承認待ち件数バッジを更新
       var kpiEl = document.querySelector('[data-kpi="pending"]');
       if (kpiEl && pending > 0) kpiEl.textContent = pending + '件 承認待ち';
-      // 今月成約件数を更新
       var cntEl = document.querySelector('[data-kpi="monthly-contracts"]');
       if (cntEl && monthly > 0) cntEl.textContent = monthly + '件';
     } catch(e) {}
@@ -3702,6 +3706,11 @@ JSONのみ（前置き不要）:
 </script>
 <script src="coreto-kv-client.js"></script>
 <script src="coreto-nav-v2.js"></script>
-<script>window.addEventListener("DOMContentLoaded",function(){CNAV.init("hub");});</script>
+<script>window.addEventListener("DOMContentLoaded",function(){
+  // sessionStorageにroleがある場合はloginAs内でrenderNavが呼ばれるのでCNAV.initをスキップ
+  if (!sessionStorage.getItem('coreto_role')) {
+    CNAV.init("hub");
+  }
+});</script>
 </body>
 </html>
