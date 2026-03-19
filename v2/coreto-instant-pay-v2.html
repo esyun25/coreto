@@ -326,6 +326,7 @@ html,body{background:#FFFFFF !important}
 <script src="coreto-slack-config-v2.js"></script>
 <script src="coreto-api-client.js"></script>
 <script src="coreto-kintone-config-v2.js"></script>
+<script src="coreto-kv-client.js"></script>
 <script src="coreto-nav-v2.js"></script>
 <script>
 (function(){
@@ -969,7 +970,7 @@ async function showSuccess() {
   // 2回目以降: 前回の即時払いが残高から控除済みか確認
   var histKey = 'CORETO_INSTANT_PAY_HISTORY_' + agId;
   var payHist = [];
-  try { payHist = JSON.parse(localStorage.getItem(histKey) || '[]'); } catch(e) {}
+  try { payHist = (function(){try{return JSON.parse(localStorage.getItem(histKey)||'[]');}catch(e){return[];}}()); } catch(e) {}
   // 当月の即時払い合計
   var thisMonth = new Date().toISOString().slice(0,7);
   var thisMonthPaid = payHist.filter(function(h){
@@ -1044,13 +1045,13 @@ async function showSuccess() {
           // フォールバック（kintone-config未読み込み時）
           try {
             var histKey = 'CORETO_INSTANT_PAY_HISTORY_' + agId;
-            var hist = JSON.parse(localStorage.getItem(histKey) || '[]');
+            var hist = (function(){try{return JSON.parse(localStorage.getItem(histKey)||'[]');}catch(e){return[];}}());
             hist.unshift({ id: currentReqId, amount: currentNetAmount, payout: paidNow, date: new Date().toISOString(), status: 'completed', remittanceId: data.remittanceId || null });
-            localStorage.setItem(histKey, JSON.stringify(hist));
+            localStorage.setItem(histKey,JSON.stringify(hist)); window.KV.set(histKey,hist);
             var agIdKey3 = agId.replace(/[^A-Za-z0-9]/g, '_');
             var balKey3 = 'CORETO_COMPLETED_BALANCE_' + agIdKey3;
             var curBal3 = parseInt(localStorage.getItem(balKey3) || '0');
-            localStorage.setItem(balKey3, String(Math.max(0, curBal3 - currentNetAmount)));
+            var _nb3=Math.max(0,curBal3-currentNetAmount); localStorage.setItem(balKey3,String(_nb3)); window.KV.set(balKey3,_nb3);
           } catch(e) {}
         }
         showInstantTransferSuccess(data);
