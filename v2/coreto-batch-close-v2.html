@@ -355,46 +355,63 @@ const RANKS = {
   founder: { label:'FOUNDER',  rate:.90,  ratePT:.25, fee:0   },
 };
 
-// 対象月ごとのデータ（実運用: Kintone APIから取得）
-const MONTH_PAYOUTS = {
-  '2026-02': [
-    { id:'AG-0042', name:'中村 陽子', kana:'ナカムラヨウコ', rank:'platinum', type:'RE', legal:true,
-      cases:[{id:'RENT-0188',label:'賃貸',fee:900000,sys:20000,pt:false},{id:'RENT-0181',label:'賃貸',fee:450000,sys:20000,pt:true}],
-      instantPay:0,
-      bank:{ bankCode:'0310', bankName:'GMOアオゾラ', branchCode:'101', branchName:'ホンテン', accountType:1, accountNo:'2000001' } },
-    { id:'AG-0038', name:'田中 誠一', kana:'タナカセイイチ', rank:'gold', type:'RE', legal:true,
-      cases:[{id:'RENT-0185',label:'賃貸',fee:335000,sys:20000,pt:false},{id:'RENT-0179',label:'賃貸',fee:198000,sys:10000,pt:false}],
-      instantPay:80000,
-      bank:{ bankCode:'0001', bankName:'みずほ', branchCode:'212', branchName:'シンジュクシテン', accountType:1, accountNo:'3456789' } },
-    { id:'AG-0021', name:'鈴木 健太', kana:'スズキケンタ', rank:'silver', type:'RE', legal:true,
-      cases:[{id:'RENT-0183',label:'賃貸',fee:175000,sys:10000,pt:false}],
-      instantPay:0,
-      bank:{ bankCode:'0005', bankName:'三菱UFJ', branchCode:'333', branchName:'シブヤシテン', accountType:1, accountNo:'7654321' } },
-    { id:'AG-0055', name:'伊藤 真理', kana:'イトウマリ', rank:'bronze', type:'HR', legal:true,
-      cases:[{id:'HR-0095',label:'人材',fee:693000,sys:0,pt:false,hrSplit:0.5}],
-      instantPay:0,
-      bank:{ bankCode:'0009', bankName:'三井住友', branchCode:'040', branchName:'ホンテン', accountType:1, accountNo:'1122334' } },
-    { id:'PT-0015', name:'佐藤 美咲', kana:'サトウミサキ', rank:'gold', type:'PT', legal:false,
-      cases:[{id:'RENT-0185',label:'賃貸',fee:335000,ptShare:0.25,sys:10000}],
-      instantPay:0,
-      bank:{ bankCode:'0310', bankName:'GMOアオゾラ', branchCode:'101', branchName:'ホンテン', accountType:1, accountNo:'3000015' } },
-    { id:'PT-0007', name:'林 浩二', kana:'ハヤシコウジ', rank:'silver', type:'PT-corp', legal:true,
-      cases:[{id:'RENT-0179',label:'賃貸',fee:450000,ptShare:0.25,sys:20000}],
-      instantPay:0,
-      bank:{ bankCode:'0001', bankName:'みずほ', branchCode:'100', branchName:'マルノウチシテン', accountType:1, accountNo:'9988776' } },
-  ],
-  '2026-01': [
-    { id:'AG-0042', name:'中村 陽子', kana:'ナカムラヨウコ', rank:'platinum', type:'RE', legal:true,
-      cases:[{id:'RENT-0171',label:'賃貸',fee:750000,sys:20000,pt:false}],
-      instantPay:0,
-      bank:{ bankCode:'0310', bankName:'GMOアオゾラ', branchCode:'101', branchName:'ホンテン', accountType:1, accountNo:'2000001' } },
-    { id:'AG-0038', name:'田中 誠一', kana:'タナカセイイチ', rank:'gold', type:'RE', legal:true,
-      cases:[{id:'RENT-0168',label:'賃貸',fee:280000,sys:15000,pt:false}],
-      instantPay:0,
-      bank:{ bankCode:'0001', bankName:'みずほ', branchCode:'212', branchName:'シンジュクシテン', accountType:1, accountNo:'3456789' } },
-  ],
-  '2026-03': [],
-};
+// 対象月ごとのデータ: CORETO_REPORTSから動的生成
+function buildMonthPayouts(targetMonth) {
+  var reports = [];
+  try { reports = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]'); } catch(e) {}
+
+  // 対象月の承認済み報告を抽出
+  var monthly = reports.filter(function(r) {
+    if (r.status !== '承認済み') return false;
+    if (!targetMonth) return true;
+    var d = r.date || '';
+    // 日付フォーマット: YYYY/MM/DD or YYYY-MM-DD
+    var ym = d.replace(/\//g,'-').slice(0,7);
+    return ym === targetMonth;
+  });
+
+  // AG/PTごとにグループ化
+  var grouped = {};
+  monthly.forEach(function(r) {
+    var id = r.agId || r.ag || 'UNKNOWN';
+    if (!grouped[id]) {
+      grouped[id] = {
+        id: id,
+        name: r.ag || id,
+        kana: '',
+        rank: (sessionStorage.getItem('coreto_rank') || 'gold').toLowerCase(),
+        type: r.type === '人材' ? 'HR' : 'RE',
+        legal: true,
+        cases: [],
+        instantPay: 0,
+        bank: null,
+      };
+      // 登録済み銀行口座を取得
+      try {
+        var bankInfo = JSON.parse(localStorage.getItem('CORETO_MY_BANK') || 'null');
+        if (bankInfo) grouped[id].bank = bankInfo;
+      } catch(e) {}
+    }
+    grouped[id].cases.push({
+      id: r.case || r.id,
+      label: r.type || '賃貸',
+      fee: r.fee || 0,
+      sys: 0,
+      pt: false,
+    });
+    // 即時払い履歴を取得
+    try {
+      var hist = JSON.parse(localStorage.getItem('CORETO_INSTANT_PAY_HISTORY_' + id) || '[]');
+      var monthHist = hist.filter(function(h) {
+        return (h.date||'').replace(/\//g,'-').slice(0,7) === targetMonth;
+      });
+      grouped[id].instantPay = monthHist.reduce(function(s,h){ return s+(h.gross||0); },0);
+    } catch(e) {}
+  });
+
+  return Object.values(grouped);
+}
+const MONTH_PAYOUTS = {}; // 動的生成に移行（buildMonthPayouts()を使用）
 
 // ── 計算ロジック ──────────────────────────────────────────
 function calcPayout(p) {

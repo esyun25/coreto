@@ -397,8 +397,8 @@ body, input, select, textarea, button {
   <div class="sb-user">
     <div class="sb-av" id="sb-av">AG</div>
     <div>
-      <div class="sb-un" id="sb-un">山田 誠</div>
-      <div class="sb-ur" id="sb-ur">AG-0042 / Gold</div>
+      <div class="sb-un" id="sb-un">—</div>
+      <div class="sb-ur" id="sb-ur">—</div>
     </div>
   </div>
   <div class="sb-nav" id="sb-nav"></div>
@@ -451,6 +451,21 @@ function toggleSb(){document.querySelector('.sb').classList.toggle('open');docum
 
 let currentMonth = 3, currentYear = 2026;
 const MONTHS = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+</script>
+<script src="coreto-nav-v2.js"></script>
+<script>
+(function(){
+  var _role = sessionStorage.getItem('coreto_role') || '';
+  var _allowed = ["hq"];
+  if (_allowed.length && !_allowed.includes(_role)) {
+    location.replace('coreto-hub-v2.html?unauthorized=1');
+  }
+})();
+
+function toggleSb(){document.querySelector('.sb').classList.toggle('open');document.querySelector('.mob-overlay').classList.toggle('show');}
+
+let currentMonth = 3, currentYear = 2026;
+const MONTHS = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
 
 function changeMonth(d){
   currentMonth += d;
@@ -460,26 +475,34 @@ function changeMonth(d){
   renderTab(currentTab);
 }
 
-// ── DATA ────────────────────────────────────────
-const DATA = {
-  summary: {
-    total: 748000,
-    re_rental: 396000,
-    re_sale: 0,
-    hr: 0,
-    util: 192000,
-    pt_bonus: 160000,
-    cases: 4,
-    rank: 'Gold',
-    rate: 80,
-    paid: true
-  },
-  cases: [
-    {id:'RENT-0194', client:'田中 優子', type:'賃貸', fee:495000, rate:80, reward:396000, status:'支払済み', date:'2026/03/15'},
-    {id:'UTL-0088',  client:'田中 優子', type:'光通信', fee:240000, rate:80, reward:192000, status:'支払済み', date:'2026/03/20'},
-    {id:'PT-REF-022',client:'（PT紹介案件）', type:'PT紹介ボーナス', fee:'-', rate:'-', reward:160000, status:'支払済み', date:'2026/03/25'},
-  ]
-};
+// ── DATA: CORETO_REPORTSから動的生成 ──────────────────
+function buildMonthData(year, month) {
+  var reports = [];
+  try { reports = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]'); } catch(e) {}
+  var myId = sessionStorage.getItem('coreto_user_id') || '';
+  var ym = year + '/' + String(month).padStart(2,'0');
+  var monthly = reports.filter(function(r) {
+    var d = (r.date||'').slice(0,7);
+    return d === ym && (!myId || !r.agId || r.agId === myId);
+  });
+  var total = monthly.reduce(function(s,r){ return s+(r.reward||0); },0);
+  return {
+    summary: {
+      total: total,
+      re_rental: monthly.filter(function(r){return r.type==='賃貸';}).reduce(function(s,r){return s+(r.reward||0);},0),
+      hr: monthly.filter(function(r){return r.type==='人材';}).reduce(function(s,r){return s+(r.reward||0);},0),
+      util: monthly.filter(function(r){return r.type==='光通信';}).reduce(function(s,r){return s+(r.reward||0);},0),
+      cases: monthly.length,
+      rank: sessionStorage.getItem('coreto_rank') || '—',
+      paid: false
+    },
+    cases: monthly.map(function(r) {
+      return { id:r.case||r.id, client:r.client||'—', type:r.type||'—',
+               fee:r.fee||0, reward:r.reward||0, status:r.status||'—', date:r.date||'—' };
+    })
+  };
+}
+const DATA = buildMonthData(currentYear, currentMonth);
 
 // ── TABS ────────────────────────────────────────
 let currentTab = 'summary';
@@ -662,6 +685,12 @@ function loadReportsData() {
   } catch(e) {}
 }
 window.addEventListener('DOMContentLoaded', ()=>{
+  
+  // セッション情報を表示
+  var unEl = document.getElementById('sb-un');
+  var urEl = document.getElementById('sb-ur');
+  if (unEl) unEl.textContent = sessionStorage.getItem('coreto_name') || '—';
+  if (urEl) urEl.textContent = (sessionStorage.getItem('coreto_user_id')||'—') + ' / ' + (sessionStorage.getItem('coreto_rank')||'—');
   CNAV.init('monthly_report');
   renderTab('summary');
 });
