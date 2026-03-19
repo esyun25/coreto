@@ -734,47 +734,64 @@ function exportCSV() {
   showToast('CSVをエクスポートしました');
 }
 
-window.addEventListener('DOMContentLoaded', () => {
-  // KV透過パッチによりlocalStorage.getItemがKV値を返す（KV設定済み時）
+// CORETO_REPORTSからパイプラインにケースを追加するヘルパー
+function mergeReportsToCases(reports) {
+  if (!Array.isArray(reports)) return 0;
+  const existIds = new Set(CASES.map(c=>c.id));
+  let added = 0;
+  reports.forEach(r => {
+    if (!r.case || existIds.has(r.case)) return;
+    const typeMap = {'賃貸':'rental','売買':'sale','三為':'sannai','人材':'hr','光通信':'util'};
+    CASES.push({ id:r.case, type:typeMap[r.type]||'rental', name:(r.client||'—')+' 様',
+      sub:r.type+' / ¥'+((r.fee||0).toLocaleString()), ag:r.ag||'—',
+      agId:r.agId||r.ag||'—', fee:r.fee||0, step:8, pt:'', daysOld:0 });
+    existIds.add(r.case);
+    added++;
+  });
+  return added;
+}
+
+window.addEventListener('DOMContentLoaded', function() {
+  // ① まずlocalStorageから同期的に読み込んで即時描画
   try {
-    const reports = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]');
-    const existIds = new Set(CASES.map(c=>c.id));
-    reports.forEach(r => {
-      if (!r.case || existIds.has(r.case)) return;
-      const typeMap = {'賃貸':'rental','売買':'sale','三為':'sannai','人材':'hr','光通信':'util'};
-      CASES.push({ id:r.case, type:typeMap[r.type]||'rental', name:(r.client||'—')+' 様',
-        sub:r.type+' / ¥'+((r.fee||0).toLocaleString()), ag:r.ag||'—', fee:r.fee||0, step:8, pt:'', daysOld:0 });
-      existIds.add(r.case);
-    });
+    const lsReports = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]');
+    mergeReportsToCases(lsReports);
   } catch(e) {}
 
   CASES.forEach(cas => {
     try {
       const saved = localStorage.getItem('CORETO_CASE_STATUS_' + cas.id);
       if (saved) {
-        const status = JSON.parse(saved);
-        if (typeof status.step === 'number') cas.step = status.step;
+        const st = JSON.parse(saved);
+        if (typeof st.step === 'number') cas.step = st.step;
       }
     } catch(e) {}
   });
 
   renderAll();
 
-  // KVプリフェッチ後に再描画（KV設定済み時のみ）
+  // ② KV設定済みの場合、500ms後にKVから最新を取得してマージ
+  // kv-client v3のsyncFromKVが自動的にmergeKVToLocalを呼ぶが
+  // pipelineはCASESへの反映が必要なので明示的に処理する
   if (window.KV && window.KV.isRemote()) {
-    window.KV.get('CORETO_REPORTS').then(function(reports) {
-      if (!Array.isArray(reports) || !reports.length) return;
-      const existIds = new Set(CASES.map(c=>c.id));
-      let added = 0;
-      reports.forEach(r => {
-        if (!r.case || existIds.has(r.case)) return;
-        const typeMap = {'賃貸':'rental','売買':'sale','三為':'sannai','人材':'hr','光通信':'util'};
-        CASES.push({ id:r.case, type:typeMap[r.type]||'rental', name:(r.client||'—')+' 様',
-          sub:r.type+' / ¥'+((r.fee||0).toLocaleString()), ag:r.ag||'—', fee:r.fee||0, step:8, pt:'', daysOld:0 });
-        existIds.add(r.case); added++;
-      });
-      if (added > 0) renderAll();
-    }).catch(function(){});
+    setTimeout(function() {
+      window.KV.get('CORETO_REPORTS').then(function(kvReports) {
+        if (!Array.isArray(kvReports)) return;
+        const added = mergeReportsToCases(kvReports);
+        if (added > 0) {
+          renderAll();
+          // KVにあってlocalStorageになかった分をlocalStorageにも保存
+          try {
+            const existing = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]');
+            const existIds = new Set(existing.map(r=>r.id));
+            const toAdd = kvReports.filter(r=>r.id && !existIds.has(r.id));
+            if (toAdd.length > 0) {
+              localStorage.setItem('CORETO_REPORTS', JSON.stringify(existing.concat(toAdd)));
+            }
+          } catch(e) {}
+        }
+      }).catch(function(){});
+    }, 600);
   }
 
   window.toggleSb = ()=>{ document.querySelector('.sb').classList.toggle('open'); document.getElementById('mob-overlay')?.classList.toggle('show'); };

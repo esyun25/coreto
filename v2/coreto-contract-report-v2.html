@@ -740,9 +740,12 @@ function renderHistory(){
     {id:'RPT-20260110-002', case:'RENT-0162', client:'渡辺 誠',   type:'賃貸', fee:420000, reward:336000, date:'2026/01/10', ag:'大橋 幸代（AG-0055）', agId:'AG-0055', status:'承認済み'},
     {id:'RPT-20251220-001', case:'RENT-0145', client:'伊藤 花子', type:'賃貸', fee:510000, reward:408000, date:'2025/12/20', ag:'山田 誠（AG-0042）', agId:'AG-0042', status:'修正依頼', adFee:420000, monthlyRent:420000, mgmtFee:0, shikikin:2, reikin:2, hosho:'', propAddr:'目黒区青葉台1丁目', propName:'ブリリア目黒 1204号', mgmtCo:'目黒不動産'},
   ];
-  // storedにdemoを末尾にマージ（重複除外）
+  // localStorageにデータがある場合はデモを使わない（テスト環境での混在防止）
+  // localStorageが空の場合のみdemoをフォールバックとして使用
   const storedIds = new Set(stored.map(r=>r.id));
-  const reports = [...stored, ...demo.filter(r=>!storedIds.has(r.id))];
+  const reports = stored.length > 0
+    ? [...stored, ...demo.filter(r=>!storedIds.has(r.id))]
+    : demo;
 
   // AG権限の場合は自分の成約報告のみ表示
   const filtered = isHQ ? reports : reports.filter(r => !r.agId || r.agId === myId || !myId);

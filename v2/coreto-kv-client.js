@@ -1,32 +1,23 @@
 // ============================================================
-//  CORETO KV クライアント v2
+//  CORETO KV クライアント v3
 //  coreto-kv-client.js
 //
-//  【動作原理】
-//  CORETO_API_CONFIG が設定済みの場合、
-//  localStorage の CORETO_* キーへの getItem/setItem を
-//  透過的に Upstash KV と同期する。
+//  【設計方針】
+//  - localStorage を単一の真実の源（Source of Truth）として維持
+//  - KVはlocalStorageのリモートミラー（マルチデバイス同期用）
+//  - setItem: localStorage書き込み → KV書き込み（非同期）
+//  - getItem: localStorageを返す（同期・信頼できる）
+//            + バックグラウンドでKVと同期（マージ方式・上書きなし）
 //
-//  各ページのコードを変更せずに全ページがKV共有になる。
-//
-//  ┌────────────────────────────────────────┐
-//  │  localStorage.setItem('CORETO_REPORTS', ...)
-//  │    → localStorage に書く（即時）
-//  │    → KV にも書く（非同期・fire-and-forget）
-//  │
-//  │  localStorage.getItem('CORETO_REPORTS')
-//  │    → KV キャッシュがあればそちらを返す
-//  │    → なければ localStorage の値を返す
-//  └────────────────────────────────────────┘
-//
-//  使い方: 各ページの <head> に読み込むだけでOK
-//    <script src="coreto-kv-client.js"></script>
+//  【Race Condition 対策】
+//  - KVから取得したデータでlocalStorageを上書きしない
+//  - KVデータはlocalStorageにない新規アイテムのみをマージ
+//  - ペンディング書き込みタイムスタンプで競合を回避
 // ============================================================
 
 (function () {
   'use strict';
 
-  // KV同期対象のキープレフィックス
   var KV_PREFIXES = [
     'CORETO_REPORTS',
     'CORETO_HQ_TASKS',
@@ -43,7 +34,6 @@
     return KV_PREFIXES.some(function(p){ return key && key.indexOf(p) === 0; });
   }
 
-  // ── 設定読み込み ────────────────────────────────────────────
   function loadConfig() {
     try { return JSON.parse(localStorage.getItem('CORETO_API_CONFIG') || '{}'); }
     catch(e) { return {}; }
@@ -54,37 +44,56 @@
     return !!(c.baseUrl && c.internalKey);
   }
 
-  // ── インメモリKVキャッシュ ──────────────────────────────────
-  // KVから取得した最新値をキャッシュし、getItemで即座に返す
-  var _cache = {};
-  var _fetching = {};
+  // ── ペンディング書き込みの管理 ────────────────────────────
+  // setItemで書き込んだキーのタイムスタンプを記録
+  // このキーについてはKV取得結果でlocalStorageを上書きしない
+  var _pendingWrites = {};
+  var PENDING_TTL = 10000; // 10秒間はKVの古いデータで上書きしない
+
+  function markPending(key) {
+    _pendingWrites[key] = Date.now();
+  }
+
+  function isPending(key) {
+    var ts = _pendingWrites[key];
+    if (!ts) return false;
+    if (Date.now() - ts > PENDING_TTL) {
+      delete _pendingWrites[key];
+      return false;
+    }
+    return true;
+  }
 
   // ── Vercel API 呼び出し ──────────────────────────────────────
+  function parseKVValue(raw) {
+    if (raw === null || raw === undefined) return null;
+    if (typeof raw === 'string') {
+      try { return JSON.parse(raw); } catch(e) { return raw; }
+    }
+    return raw;
+  }
+
   function apiGet(key, cb) {
-    if (_fetching[key]) return;
-    _fetching[key] = true;
     var cfg = loadConfig();
+    if (!cfg.baseUrl || !cfg.internalKey) return;
     fetch(cfg.baseUrl + '/api/kv/get?key=' + encodeURIComponent(key), {
       headers: { 'x-coreto-key': cfg.internalKey }
     })
     .then(function(r){ return r.json(); })
     .then(function(data){
-      _fetching[key] = false;
-      if (data.ok && data.value !== null && data.value !== undefined) {
-        var val = typeof data.value === 'string' ? data.value : JSON.stringify(data.value);
-        _cache[key] = val;
-        // localStorageにも同期して次回の同期的getItemでも取得できるようにする
-        try { _origSetItem.call(localStorage, key, val); } catch(e) {}
-        if (cb) cb(val);
-      }
+      if (!data.ok || data.value === null || data.value === undefined) return;
+      var parsed = parseKVValue(data.value);
+      if (cb) cb(parsed);
     })
-    .catch(function(){ _fetching[key] = false; });
+    .catch(function(e){ console.warn('[KV] get失敗:', key, e.message); });
   }
 
   function apiSet(key, value) {
     var cfg = loadConfig();
+    if (!cfg.baseUrl || !cfg.internalKey) return;
     var parsed;
-    try { parsed = JSON.parse(value); } catch(e) { parsed = value; }
+    try { parsed = typeof value === 'string' ? JSON.parse(value) : value; }
+    catch(e) { parsed = value; }
     fetch(cfg.baseUrl + '/api/kv/set', {
       method: 'POST',
       headers: {
@@ -92,96 +101,151 @@
         'x-coreto-key': cfg.internalKey,
       },
       body: JSON.stringify({ key: key, value: parsed }),
-    }).catch(function(e){ console.warn('[KV] set失敗:', e.message); });
+    })
+    .then(function(){ delete _pendingWrites[key]; }) // 書き込み完了でペンディング解除
+    .catch(function(e){ console.warn('[KV] set失敗:', e.message); });
+  }
+
+  // ── KVとlocalStorageのマージ（上書きしない・新規アイテムのみ追加）──
+  function mergeKVToLocal(key, kvData) {
+    if (!kvData) return false;
+
+    // ペンディング中のキーは上書き禁止
+    if (isPending(key)) return false;
+
+    var lsRaw = _origGetItem.call(localStorage, key);
+
+    // 配列の場合: IDベースでマージ（localStorageにないものだけ追加）
+    if (Array.isArray(kvData)) {
+      var lsData = [];
+      try { lsData = lsRaw ? JSON.parse(lsRaw) : []; } catch(e) {}
+      if (!Array.isArray(lsData)) return false;
+
+      var lsIds = new Set();
+      lsData.forEach(function(item){
+        if (item && item.id) lsIds.add(item.id);
+      });
+
+      var toAdd = kvData.filter(function(item){
+        return item && item.id && !lsIds.has(item.id);
+      });
+
+      if (toAdd.length === 0) return false; // 追加するものがない
+
+      // KVにあってlocalStorageにない新規アイテムを末尾に追加
+      var merged = lsData.concat(toAdd);
+      _origSetItem.call(localStorage, key, JSON.stringify(merged));
+      return true;
+    }
+
+    // 文字列・数値・オブジェクトの場合: localStorageが空の場合のみ上書き
+    if (lsRaw === null || lsRaw === undefined || lsRaw === '') {
+      _origSetItem.call(localStorage, key, JSON.stringify(kvData));
+      return true;
+    }
+
+    return false;
   }
 
   // ── localStorage モンキーパッチ ──────────────────────────────
-  var _origGetItem = localStorage.getItem.bind(localStorage);
-  var _origSetItem = localStorage.setItem.bind(localStorage);
+  var _origGetItem = Storage.prototype.getItem;
+  var _origSetItem = Storage.prototype.setItem;
 
-  localStorage.getItem = function(key) {
-    var lsVal = _origGetItem(key);
-    if (!isConfigured() || !isKVKey(key)) return lsVal;
-
-    // キャッシュがあればキャッシュを返す（最新のKV値）
-    if (_cache[key] !== undefined) return _cache[key];
-
-    // バックグラウンドでKVから取得してキャッシュを更新
-    apiGet(key, function(val) {
-      // 取得完了後にページを再描画（renderAll等が定義されていれば呼ぶ）
-      if (val !== lsVal) {
-        try { if (typeof renderAll === 'function') renderAll(); } catch(e) {}
-        try { if (typeof renderPage === 'function') renderPage(); } catch(e) {}
-      }
-    });
-
-    return lsVal;
+  Storage.prototype.getItem = function(key) {
+    // localStorage以外（sessionStorageなど）はそのまま通す
+    if (this !== localStorage) return _origGetItem.call(this, key);
+    return _origGetItem.call(this, key);
   };
 
-  localStorage.setItem = function(key, value) {
-    _origSetItem(key, value);
+  Storage.prototype.setItem = function(key, value) {
+    _origSetItem.call(this, key, value);
+    // localStorage以外（sessionStorageなど）はKV同期しない
+    if (this !== localStorage) return;
     if (!isConfigured() || !isKVKey(key)) return;
-    // キャッシュを即時更新
-    _cache[key] = value;
-    // KVに非同期書き込み
+    // ペンディングを記録してKVに非同期書き込み
+    markPending(key);
     apiSet(key, value);
   };
 
-  // ── ページロード時にKVから一括プリフェッチ ────────────────────
-  // 重要キーを事前取得してキャッシュに入れることで
-  // getItemが即座に最新値を返せるようにする
-  var PREFETCH_KEYS = ['CORETO_REPORTS', 'CORETO_HQ_TASKS'];
+  // ── ページロード時のKV同期（マージ方式）─────────────────────
+  var SYNC_KEYS = ['CORETO_REPORTS', 'CORETO_HQ_TASKS'];
 
-  function prefetch() {
+  function syncFromKV() {
     if (!isConfigured()) return;
-    PREFETCH_KEYS.forEach(function(key) {
-      apiGet(key, function(val) {
-        try { if (typeof renderAll === 'function') renderAll(); } catch(e) {}
+
+    SYNC_KEYS.forEach(function(key) {
+      apiGet(key, function(kvData) {
+        var changed = mergeKVToLocal(key, kvData);
+        if (changed) {
+          // 新規アイテムが追加された場合のみ再描画
+          try { if (typeof renderAll === 'function') renderAll(); } catch(e) {}
+          try { if (typeof renderHistory === 'function') renderHistory(); } catch(e) {}
+          try { if (typeof renderPage === 'function') renderPage(); } catch(e) {}
+        }
       });
     });
-    // AGごとの残高も取得
+
+    // AGの残高キーも同期
     var agId = sessionStorage.getItem('coreto_user_id');
     if (agId) {
       var balKey = 'CORETO_COMPLETED_BALANCE_' + agId.replace(/[^A-Za-z0-9\-]/g,'_');
-      apiGet(balKey);
-      apiGet('CORETO_INSTANT_PAY_HISTORY_' + agId);
+      apiGet(balKey, function(val) {
+        if (val !== null && !isPending(balKey)) {
+          var lsVal = _origGetItem.call(localStorage, balKey);
+          if (!lsVal) {
+            _origSetItem.call(localStorage, balKey, String(val));
+          }
+        }
+      });
     }
   }
 
-  // ── 公開API ─────────────────────────────────────────────────
+  // ── 公開API (window.KV) ──────────────────────────────────────
   window.KV = {
     isRemote: isConfigured,
+
     get: function(key) {
       if (!isConfigured()) {
-        try { var v = _origGetItem(key); return Promise.resolve(v ? JSON.parse(v) : null); }
-        catch(e) { return Promise.resolve(null); }
+        try {
+          var v = _origGetItem.call(localStorage, key);
+          return Promise.resolve(v ? JSON.parse(v) : null);
+        } catch(e) { return Promise.resolve(null); }
       }
+      // KVから直接取得（localStorageよりKVが最新の場合に使用）
       var cfg = loadConfig();
       return fetch(cfg.baseUrl + '/api/kv/get?key=' + encodeURIComponent(key), {
         headers: { 'x-coreto-key': cfg.internalKey }
       })
       .then(function(r){ return r.json(); })
       .then(function(data){
-        if (!data.ok || data.value === null) return null;
-        var val = typeof data.value === 'string' ? data.value : JSON.stringify(data.value);
-        _cache[key] = val;
-        try { _origSetItem.call(localStorage, key, val); } catch(e) {}
-        try { return JSON.parse(val); } catch(e) { return val; }
+        if (!data.ok || data.value === null) {
+          // KVにない場合はlocalStorageを返す
+          try {
+            var v = _origGetItem.call(localStorage, key);
+            return v ? JSON.parse(v) : null;
+          } catch(e) { return null; }
+        }
+        return parseKVValue(data.value);
       })
       .catch(function(){
-        try { var v = _origGetItem(key); return v ? JSON.parse(v) : null; }
-        catch(e) { return null; }
+        try {
+          var v = _origGetItem.call(localStorage, key);
+          return v ? JSON.parse(v) : null;
+        } catch(e) { return null; }
       });
     },
+
     set: function(key, value) {
       var str = JSON.stringify(value);
-      _cache[key] = str;
-      try { _origSetItem(key, str); } catch(e) {}
-      if (isConfigured()) apiSet(key, str);
+      try { _origSetItem.call(localStorage, key, str); } catch(e) {}
+      if (isConfigured()) {
+        markPending(key);
+        apiSet(key, str);
+      }
       return Promise.resolve();
     },
+
     del: function(key) {
-      delete _cache[key];
       try { localStorage.removeItem(key); } catch(e) {}
       if (!isConfigured()) return Promise.resolve();
       var cfg = loadConfig();
@@ -190,19 +254,24 @@
         headers: { 'x-coreto-key': cfg.internalKey },
       }).catch(function(){});
     },
-    prefetch: prefetch,
-    cache: _cache,
+
+    // 強制的にKVからマージ同期（手動呼び出し用）
+    sync: syncFromKV,
   };
 
-  // DOMContentLoaded後にプリフェッチ実行
+  // ── 初期同期 ────────────────────────────────────────────────
+  // DOMContentLoaded後に少し遅延させてから同期
+  // （ページのDOMContentLoadedハンドラが先に走るように）
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function() {
-      setTimeout(prefetch, 100);
+      setTimeout(syncFromKV, 500);
     });
   } else {
-    setTimeout(prefetch, 100);
+    setTimeout(syncFromKV, 500);
   }
 
-  var mode = isConfigured() ? 'Vercel KV（リモート・localStorage透過パッチ）' : 'localStorage（ローカルのみ）';
-  console.info('[KV] モード:', mode);
+  var mode = isConfigured()
+    ? 'Vercel KV（リモート同期・マージ方式）'
+    : 'localStorage（ローカルのみ）';
+  console.info('[KV v3] モード:', mode);
 })();
