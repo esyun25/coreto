@@ -275,10 +275,10 @@ body, input, select, textarea, button { font-family:'Outfit','Noto Sans JP',sans
 
   <!-- Tabs -->
   <div class="tab-bar">
-    <div class="tab active" onclick="switchTab('all',this)">すべて<span class="tab-count">41</span></div>
-    <div class="tab" onclick="switchTab('rental',this)">🏠 賃貸<span class="tab-count">28</span></div>
-    <div class="tab" onclick="switchTab('sale',this)">🏢 売買<span class="tab-count">9</span></div>
-    <div class="tab" onclick="switchTab('utility',this)">⚡ 光通信<span class="tab-count">4</span></div>
+    <div class="tab active" onclick="switchTab('all',this)">すべて<span class="tab-count" id="count-all">0</span></div>
+    <div class="tab" onclick="switchTab('rental',this)">🏠 賃貸<span class="tab-count" id="count-rental">0</span></div>
+    <div class="tab" onclick="switchTab('sale',this)">🏢 売買<span class="tab-count" id="count-sale">0</span></div>
+    <div class="tab" onclick="switchTab('utility',this)">⚡ 光通信<span class="tab-count" id="count-utility">0</span></div>
     <div class="view-toggle">
       <div class="view-btn active" id="btn-list" onclick="switchView('list')" title="リスト">☰</div>
       <div class="view-btn" id="btn-kanban" onclick="switchView('kanban')" title="カンバン">⊞</div>
@@ -574,10 +574,20 @@ window.addEventListener('DOMContentLoaded', function() {
 
     container.innerHTML = newRows.join('');
 
-    // フィルタ・表示件数を更新
-    var totalVisible = document.querySelectorAll('#list-view .case-row:not([style*="display: none"])').length;
+    // タブカウントを動的更新
+    var allRows = document.querySelectorAll('#list-view .case-row');
+    var counts = {all:0, rental:0, sale:0, hr:0, utility:0};
+    allRows.forEach(function(row){
+      var t = row.getAttribute('data-type') || '';
+      counts.all++;
+      if(counts[t] !== undefined) counts[t]++;
+    });
+    ['all','rental','sale','utility'].forEach(function(k){
+      var el = document.getElementById('count-'+k);
+      if(el) el.textContent = counts[k] || 0;
+    });
     var badge = document.querySelector('.tb-badge, .badge-count');
-    if (badge) badge.textContent = totalVisible + '件';
+    if(badge) badge.textContent = counts.all + '件';
   }
 
   // CORETO_REPORTSから案件を読み込み・表示

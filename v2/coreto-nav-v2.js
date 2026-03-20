@@ -187,7 +187,7 @@ const NAV = {
     {
       section: 'マイページ',
       items: [
-        { icon:'🏠', label:'ダッシュボード',       href:'coreto-hub-v2.html',             key:'dashboard'       },
+        { icon:'🏠', label:'マイダッシュボード',    href:'coreto-hub-v2.html',             key:'dashboard'       },
         { icon:'🏅', label:'ランク・コミッション', href:'coreto-rank-v2.html',            key:'rank'            },
         { icon:'💴', label:'報酬明細',             href:'coreto-payment-v2.html',         key:'payment'         },
       ],
@@ -253,7 +253,7 @@ const NAV = {
     {
       section: 'マイページ',
       items: [
-        { icon:'🏠', label:'ダッシュボード',       href:'coreto-hub-v2.html',             key:'dashboard'       },
+        { icon:'🏠', label:'マイダッシュボード',    href:'coreto-hub-v2.html',             key:'dashboard'       },
         { icon:'🏅', label:'ランク・コミッション', href:'coreto-rank-v2.html',            key:'rank'            },
         { icon:'💴', label:'報酬明細',             href:'coreto-payment-v2.html',         key:'payment'         },
       ],
@@ -313,7 +313,7 @@ const NAV = {
     {
       section: 'マイページ',
       items: [
-        { icon:'🏠', label:'ダッシュボード',       href:'coreto-hub-v2.html',             key:'dashboard'       },
+        { icon:'🏠', label:'マイダッシュボード',    href:'coreto-hub-v2.html',             key:'dashboard'       },
         { icon:'🏅', label:'ランク・コミッション', href:'coreto-rank-v2.html',            key:'rank'            },
         { icon:'💴', label:'報酬明細',             href:'coreto-payment-v2.html',         key:'payment'         },
       ],
