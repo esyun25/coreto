@@ -12,6 +12,20 @@
 const CNAV = (() => {
 
 const INJECT_CSS = `
+/* ── サイドバー共通スタイル (全ページ統一) ── */
+.sb{width:var(--sw,240px);background:#0D1A2D;display:flex;flex-direction:column;flex-shrink:0;position:relative;height:100vh}
+.sb::after{content:'';position:absolute;top:0;right:0;width:1px;height:100%;background:linear-gradient(180deg,rgba(200,169,81,.25) 0%,rgba(200,169,81,.06) 50%,transparent 100%)}
+.sb-head{padding:24px 20px 18px;border-bottom:1px solid rgba(255,255,255,.06)}
+.sb-logo{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;letter-spacing:5px;color:#C8A951}
+.sb-ver{font-size:9px;letter-spacing:2px;color:rgba(200,169,81,.3);font-family:'DM Mono',monospace;margin-top:2px}
+.sb-user{margin:14px 14px 10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:9px 11px;display:flex;align-items:center;gap:9px}
+.sb-av{width:28px;height:28px;border-radius:50%;background:rgba(200,169,81,.15);border:1px solid rgba(200,169,81,.25);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#C8A951;flex-shrink:0}
+.sb-uname{font-size:11px;font-weight:600;color:rgba(255,255,255,.8)}
+.sb-ur{font-size:9px;color:rgba(255,255,255,.3);font-family:'DM Mono',monospace}
+.sb-nav{flex:1;overflow-y:auto;padding:6px 10px}
+.sb-nav::-webkit-scrollbar{width:3px}
+.sb-nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px}
+
 .cnav-section { margin-bottom:2px; }
 .cnav-section-label {
   font-size:9px; font-weight:600; letter-spacing:2px; text-transform:uppercase;
@@ -547,13 +561,13 @@ function init(activeKey) {
   const role = sessionStorage.getItem('coreto_role') || 'hq';
   const user = USERS[role] || USERS.hq;
   const sections = NAV[role] || NAV.hq;
-  ['sb-av','sb-name','sb-role','sb-un','sb-ur'].forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    if (id === 'sb-av') el.textContent = user.av;
-    else if (id === 'sb-name' || id === 'sb-un') el.textContent = user.name;
-    else el.textContent = user.role;
-  });
+  // サイドバーユーザー情報を設定（全ページ統一）
+  const avEl = document.getElementById('sb-av');
+  if (avEl) avEl.textContent = user.av;
+  const nameEl = document.getElementById('sb-name');
+  if (nameEl) nameEl.textContent = user.name;
+  const roleEl = document.getElementById('sb-role');
+  if (roleEl) roleEl.textContent = user.role;
   const navEl = document.getElementById('sb-nav');
   if (!navEl) return;
   navEl.innerHTML = sections.map(sec => `
