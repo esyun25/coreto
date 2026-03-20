@@ -202,8 +202,7 @@ const NAV = {
       section: 'マイページ',
       items: [
         { icon:'🏠', label:'マイダッシュボード',    href:'coreto-hub-v2.html',             key:'dashboard'       },
-        { icon:'🏅', label:'ランク・コミッション', href:'coreto-rank-v2.html',            key:'rank'            },
-        { icon:'💴', label:'報酬明細',             href:'coreto-payment-v2.html',         key:'payment'         },
+        { icon:'🏅', label:'ランク・報酬明細',     href:'coreto-rank-v2.html',            key:'rank'            },
       ],
     },
     {
@@ -268,8 +267,7 @@ const NAV = {
       section: 'マイページ',
       items: [
         { icon:'🏠', label:'マイダッシュボード',    href:'coreto-hub-v2.html',             key:'dashboard'       },
-        { icon:'🏅', label:'ランク・コミッション', href:'coreto-rank-v2.html',            key:'rank'            },
-        { icon:'💴', label:'報酬明細',             href:'coreto-payment-v2.html',         key:'payment'         },
+        { icon:'🏅', label:'ランク・報酬明細',     href:'coreto-rank-v2.html',            key:'rank'            },
       ],
     },
     {
@@ -328,8 +326,7 @@ const NAV = {
       section: 'マイページ',
       items: [
         { icon:'🏠', label:'マイダッシュボード',    href:'coreto-hub-v2.html',             key:'dashboard'       },
-        { icon:'🏅', label:'ランク・コミッション', href:'coreto-rank-v2.html',            key:'rank'            },
-        { icon:'💴', label:'報酬明細',             href:'coreto-payment-v2.html',         key:'payment'         },
+        { icon:'🏅', label:'ランク・報酬明細',     href:'coreto-rank-v2.html',            key:'rank'            },
       ],
     },
     {
@@ -383,7 +380,7 @@ const NAV = {
       items: [
         { icon:'🏠', label:'PTポータル',           href:'coreto-hub-v2.html',               key:'dashboard'    },
         { icon:'🔑', label:'紹介コード・QR',       href:'coreto-hub-v2.html#code',          key:'code'         },
-        { icon:'💴', label:'報酬明細',             href:'coreto-payment-v2.html',           key:'payment'      },
+        { icon:'🏅', label:'ランク・報酬明細',     href:'coreto-rank-v2.html',              key:'rank'         },
         { icon:'📊', label:'紹介案件の進捗',       href:'coreto-pt-portal-v2.html#progress',key:'progress'     },
       ],
     },
