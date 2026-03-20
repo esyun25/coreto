@@ -159,7 +159,7 @@ html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:
     <div class="sb-head"><div class="sb-logo">CORETO</div><div class="sb-ver">COREBLDG v2.0</div></div>
     <div class="sb-user">
       <div class="sb-av" id="sb-av">HQ</div>
-      <div><div class="sb-un" id="sb-name">田中 誠一</div><div class="sb-ur" id="sb-role">HQ / exec</div></div>
+      <div><div class="sb-un" id="sb-name"><script>document.write(sessionStorage.getItem('coreto_name')||'—')</script></div><div class="sb-ur" id="sb-role">HQ / exec</div></div>
     </div>
     <div class="sb-nav" id="sb-nav"></div>
     <div class="sb-foot">
@@ -335,12 +335,7 @@ function updateTabLocks() {
 // ══════════════════════════════════════════════
 // hqRoleはIDの数値範囲から自動決定（getHQRoleFromId関数）
 // 実運用ではKintoneのマスターデータから取得
-const HQ_USERS_RAW = [
-  {id:'HQ-00001',name:'田中 誠一', email:'tanaka@coreto.jp',    tel:'090-1234-0001',status:'active', reg:'2025/10/01',last:'本日' },
-  {id:'HQ-00100',name:'佐藤 理恵', email:'sato.r@coreto.jp',    tel:'090-1234-0002',status:'active', reg:'2025/10/15',last:'本日' },
-  {id:'HQ-00500',name:'小林 健二', email:'kobayashi@coreto.jp', tel:'090-1234-0003',status:'active', reg:'2025/11/01',last:'昨日' },
-  {id:'HQ-05000',name:'加藤 美咲', email:'kato@coreto.jp',       tel:'090-1234-0004',status:'active', reg:'2026/01/10',last:'3日前'},
-];
+const HQ_USERS_RAW = []; /* CORETO_REPORTSから動的生成 */
 function _hqRoleFromId(id) {
   var m = String(id).match(/^HQ-0*(\d+)$/);
   if (!m) return 'staff';
@@ -362,65 +357,11 @@ const HQ_USERS = HQ_USERS_RAW.map(function(u){
   return Object.assign({}, u, { hqRole: r, cls: _hqAvCls(r), av: _hqAv(r) });
 });
 
-const AG_USERS = [
-  {id:'AG-0042',name:'山田 誠',   roleKey:'re_ag',    roleLabel:'不動産AG', rank:'Gold',  rankPts:8420,status:'active', email:'yamada@coreto.jp',   tel:'090-2001-0042',reg:'2025/11/15',last:'本日',  kyc:'済',monthlyAmt:280000,monthlyContracts:4,totalContracts:23,activeCase:6,tenure:'4ヶ月',cls:'av-re',av:'RE',note:'',hqRole:''},
-  {id:'AG-0088',name:'鈴木 花子', roleKey:'hr_ag',    roleLabel:'人材AG',   rank:'Silver',rankPts:5210,status:'active', email:'suzuki@coreto.jp',   tel:'090-2001-0088',reg:'2025/12/01',last:'昨日', kyc:'済',monthlyAmt:185000,monthlyContracts:2,totalContracts:11,activeCase:4,tenure:'3ヶ月',cls:'av-hr',av:'HR',note:'',hqRole:''},
-  {id:'AG-0103',name:'山田 光太', roleKey:'hikari_ag',roleLabel:'光通信AG', rank:'Bronze',rankPts:2180,status:'active', email:'yamada.k@coreto.jp', tel:'090-2001-0103',reg:'2026/01/10',last:'2日前',kyc:'済',monthlyAmt:92000, monthlyContracts:3,totalContracts:7, activeCase:5,tenure:'2ヶ月',cls:'av-hk',av:'HK',note:'',hqRole:''},
-  {id:'AG-0071',name:'中村 義雄', roleKey:'re_ag',    roleLabel:'不動産AG', rank:'Bronze',rankPts:1640,status:'active', email:'nakamura@coreto.jp', tel:'090-2001-0071',reg:'2025/12/20',last:'3日前',kyc:'済',monthlyAmt:64000, monthlyContracts:1,totalContracts:5, activeCase:3,tenure:'3ヶ月',cls:'av-re',av:'RE',note:'',hqRole:''},
-  {id:'AG-0073',name:'佐藤 純平', roleKey:'re_ag',    roleLabel:'不動産AG', rank:'Bronze',rankPts:820, status:'inactive',email:'sato@coreto.jp',      tel:'090-2001-0073',reg:'2025/11/30',last:'14日前',kyc:'済',monthlyAmt:0,    monthlyContracts:0,totalContracts:3, activeCase:0,tenure:'3ヶ月',cls:'av-re',av:'RE',note:'活動停止中',hqRole:''},
-  {id:'AG-0105',name:'田村 春香', roleKey:'re_ag',    roleLabel:'不動産AG', rank:'—',     rankPts:0,   status:'pending', email:'tamura@example.com', tel:'090-2001-0105',reg:'2026/03/12',last:'—',   kyc:'未審査',monthlyAmt:0,monthlyContracts:0,totalContracts:0,activeCase:0,tenure:'—',cls:'av-re',av:'RE',note:'KYC審査中',hqRole:''},
-];
+const AG_USERS = []; /* CORETO_REPORTSから動的生成 */
 
-const PT_DATA = [
-  {id:'PT-0001',name:'株式会社ネクスト不動産',type:'corporate',typeLabel:'法人',status:'active', refMonth:12,refTotal:38,reward:850000,code:'PT-0001',reg:'2025/10/15',ag:'山田 AG',email:'next@example.com',tel:'03-0001-0001'},
-  {id:'PT-0008',name:'佐藤 建設 合同会社',    type:'corporate',typeLabel:'法人',status:'active', refMonth:7, refTotal:21,reward:420000,code:'PT-0008',reg:'2025/11/01',ag:'直接',   email:'sato@example.com',  tel:'03-0001-0008'},
-  {id:'PT-0015',name:'佐藤 健一',             type:'individual',typeLabel:'個人',status:'active', refMonth:3, refTotal:9, reward:147000,code:'PT-0015',reg:'2026/01/05',ag:'鈴木 AG',email:'sato.k@gmail.com',  tel:'090-3001-0015'},
-  {id:'PT-0023',name:'木村 産業 株式会社',    type:'corporate',typeLabel:'法人',status:'active', refMonth:5, refTotal:14,reward:310000,code:'PT-0023',reg:'2026/02/01',ag:'山田 AG',email:'info@kimura.co.jp',  tel:'03-0001-0023'},
-  {id:'PT-0031',name:'渡辺 聡',               type:'individual',typeLabel:'個人',status:'active', refMonth:1, refTotal:3, reward:52000, code:'PT-0031',reg:'2026/02/20',ag:'直接',   email:'watanabe@gmail.com', tel:'090-3001-0031'},
-  {id:'PT-0038',name:'ライフサポート株式会社',type:'corporate',typeLabel:'法人',status:'inactive',refMonth:0, refTotal:6, reward:88000, code:'PT-0038',reg:'2025/12/10',ag:'直接',   email:'life@example.com',   tel:'03-0001-0038'},
-  {id:'PT-0042',name:'高橋 由紀',             type:'individual',typeLabel:'個人',status:'pending', refMonth:0, refTotal:0, reward:0,     code:'—',       reg:'2026/03/12',ag:'中村 AG',email:'takahashi@gmail.com',tel:'090-3001-0042'},
-]
+const PT_DATA = []; /* CORETO_REPORTSから動的生成 */
 
-const REF_DATA = [
-  {id:'RENT-0201',ptId:'PT-0015',ptName:'佐藤 健一',       biz:'re',  bizLabel:'不動産',client:'田中 一郎',status:'active',statusLabel:'IT重説待ち',  reward:30000, ag:'山田 AG',date:'2026/03/10'},
-  {id:'HR-0025',  ptId:'PT-0001',ptName:'株式会社ネクスト',biz:'hr',  bizLabel:'人材',  client:'鈴木 花子',status:'active',statusLabel:'書類審査中',  reward:45000, ag:'鈴木 AG',date:'2026/03/09'},
-  {id:'UTL-0201', ptId:'PT-0031',ptName:'渡辺 聡',         biz:'util',bizLabel:'光通信',client:'山本 健一',status:'active',statusLabel:'申込処理中',  reward:12000, ag:'光太 AG',date:'2026/03/11'},
-  {id:'RENT-0181',ptId:'PT-0008',ptName:'佐藤 建設',       biz:'re',  bizLabel:'不動産',client:'木村 麻衣',status:'done',  statusLabel:'成約済み',    reward:380000,ag:'山田 AG',date:'2026/02/28'},
-  {id:'HR-0017',  ptId:'PT-0015',ptName:'佐藤 健一',       biz:'hr',  bizLabel:'人材',  client:'渡辺 健二',status:'done',  statusLabel:'内定承諾済み',reward:75000, ag:'鈴木 AG',date:'2026/02/20'},
-  {id:'UTL-0175', ptId:'PT-0023',ptName:'木村 産業',       biz:'util',bizLabel:'光通信',client:'高橋 M',   status:'done',  statusLabel:'開通済み',    reward:144000,ag:'光太 AG',date:'2026/03/01'},
-];
-
-const INTERNS = [
-  {id:'INT-0007',name:'渡辺 大輝',email:'watanabe@coreto.jp',tel:'090-4001-0007',reg:'2026/01/20',last:'本日',  status:'active', visits:38,leads:14,area:'渋谷・新宿',university:'○○大学3年',note:'優秀。早期AG転換候補'},
-  {id:'INT-0012',name:'田中 莉子',email:'tanaka.r@coreto.jp',tel:'090-4001-0012',reg:'2026/02/01',last:'昨日',  status:'active', visits:22,leads:7, area:'港区・品川',university:'△△大学2年',note:''},
-  {id:'INT-0018',name:'木村 大地',email:'kimura.d@coreto.jp',tel:'090-4001-0018',reg:'2026/02/15',last:'5日前',  status:'active', visits:10,leads:3, area:'豊島・北区',university:'□□大学4年',note:'活動頻度低下気味'},
-  {id:'INT-0022',name:'高橋 あい',email:'takahashi.a@coreto.jp',tel:'090-4001-0022',reg:'2026/03/01',last:'本日',status:'active',visits:5, leads:1, area:'世田谷',university:'★★大学1年',note:'研修中'},
-]
-
-// ══════════════════════════════════════════════
-// BADGE HELPERS
-// ══════════════════════════════════════════════
-const RANK_B  = {Gold:'b-gd',Silver:'b-sk',Bronze:'b-am',Platinum:'b-vt','—':'b-mu'};
-const STAT_B  = {active:'b-em',inactive:'b-mu',pending:'b-am',suspended:'b-am'};
-const STAT_L  = {active:'アクティブ',inactive:'停止中',pending:'審査中',suspended:'停止中'};
-const BIZ_B   = {re:'b-sk',hr:'b-vt',util:'b-gd'};
-const REF_SB  = {active:'b-am',done:'b-em',cancel:'b-mu'};
-const HQ_ROLE_B = {exec:'b-gd',manager:'b-sk',staff:'b-mu',part:'b-am'};
-const HQ_ROLE_L = {exec:'経営陣',manager:'マネージャー',staff:'社員',part:'パート'};
-const KYC_B   = {済:'b-em','未審査':'b-am','審査中':'b-sk'};
-
-function pchk(t){ return `<div class="pchk ${t}">${t==='allow'?'✓':t==='partial'?'△':'✕'}</div>`; }
-function tgl(id,on){ return `<div class="toggle ${on?'on':''}" id="tgl-${id}" onclick="this.classList.toggle('on')"></div>`; }
-function av(cls,text,size=30){ return `<div class="av ${cls}" style="width:${size}px;height:${size}px;font-size:${Math.round(size*10/30)}px">${text}</div>`; }
-function copyCode(code){
-  navigator.clipboard?.writeText(code).then(()=>toast('コピー: '+code)).catch(()=>toast('コード: '+code));
-}
-
-// ══════════════════════════════════════════════
-// TAB SWITCHER
-// ══════════════════════════════════════════════
-let currentTab = 'account';
-const ALL_TABS = ['account','ag','pt','intern','perms','settings','logs'];
+const INTERNS = []; /* CORETO_REPORTSから動的生成 */
 
 function switchTab(t) {
   if (!CAN['view'+t.charAt(0).toUpperCase()+t.slice(1)]?.(HQ_ROLE) === false) {
@@ -983,18 +924,7 @@ function renderSettings() {
 // ⑦ 操作ログ
 // ══════════════════════════════════════════════
 function renderLogs() {
-  const logs = [
-    {time:'2026/03/12 11:42',user:'HQ-00001 田中 誠一（exec）',  action:'AI育成FB生成',     target:'AG-0042 山田 誠',        level:'info'},
-    {time:'2026/03/11 16:20',user:'HQ-00001 田中 誠一（exec）',  action:'アカウント停止',   target:'AG-0073 佐藤 純平',      level:'warn'},
-    {time:'2026/03/11 14:32',user:'HQ-00001 田中 誠一（exec）',  action:'ユーザー招待',     target:'AG-0105 田村 春香',      level:'info'},
-    {time:'2026/03/11 13:15',user:'HQ-00100 佐藤 理恵（manager）',action:'送金承認',       target:'RENT-0194 / ¥495,000',  level:'info'},
-    {time:'2026/03/10 11:42',user:'AG-0042 山田 誠',           action:'書類アップロード', target:'CLI-0001 田中 優子',     level:'info'},
-    {time:'2026/03/09 15:08',user:'AG-0088 鈴木 花子',         action:'パスワード変更',   target:'自アカウント',           level:'info'},
-    {time:'2026/03/09 10:55',user:'HQ-00001 田中 誠一（exec）',  action:'全銀ファイル出力', target:'2026年3月分 8件',        level:'info'},
-    {time:'2026/03/08 09:10',user:'不明',                      action:'ログイン失敗（3回）',target:'AG-0055',              level:'error'},
-    {time:'2026/03/07 18:30',user:'HQ-00100 佐藤 理恵（manager）',action:'PT招待発行',     target:'高橋 由紀（PT-0042）',   level:'info'},
-    {time:'2026/03/07 14:22',user:'HQ-00001 田中 誠一（exec）',  action:'HQロール変更',     target:'HQ-00500 小林 → staff',   level:'warn'},
-  ];
+  const logs = [];
   const rows = logs.map(l => `
     <tr>
       <td class="mono" style="white-space:nowrap">${l.time}</td>

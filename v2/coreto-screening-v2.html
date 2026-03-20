@@ -232,56 +232,20 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--em);cursor:pointe
 </div>
 
 <script>
-// ══ データ（デモ）════════════════════════════════════
-// 実運用では案件DBから取得する
-let CASES = [
-  {
-    id:'CASE-2024-0412',
-    name:'田中 優子',
-    kana:'タナカ ユウコ',
-    property:'港区三田3丁目 ライオンズマンション',
-    mgmt:'東急住宅リース株式会社',
-    ag:'山田 誠（AG-0042）',
-    memo:'管理会社担当：鈴木様（03-XXXX-XXXX）',
-    docs:[
-      { id:'d1', name:'運転免許証（両面）',      received:true,  sent:true  },
-      { id:'d2', name:'健康保険証',              received:true,  sent:true  },
-      { id:'d3', name:'源泉徴収票（直近1年分）', received:true,  sent:false },
-      { id:'d4', name:'入居申込書',              received:false, sent:false },
-      { id:'d5', name:'連帯保証人の身分証',      received:false, sent:false },
-    ],
-  },
-  {
-    id:'CASE-2024-0389',
-    name:'鈴木 健太',
-    kana:'スズキ ケンタ',
-    property:'新宿区四谷2丁目 プレミアレジデンス',
-    mgmt:'三井不動産リアルティ',
-    ag:'山田 誠（AG-0042）',
-    memo:'在職証明書も必要と言われたため追加',
-    docs:[
-      { id:'d1', name:'パスポート（顔写真ページ）', received:true,  sent:true  },
-      { id:'d2', name:'住民票（3ヶ月以内）',        received:true,  sent:true  },
-      { id:'d3', name:'給与明細（直近3ヶ月分）',    received:true,  sent:true  },
-      { id:'d4', name:'在職証明書',                 received:true,  sent:true  },
-      { id:'d5', name:'入居申込書',                 received:true,  sent:true  },
-    ],
-  },
-  {
-    id:'CASE-2024-0401',
-    name:'佐藤 明',
-    kana:'サトウ アキラ',
-    property:'渋谷区恵比寿1丁目 グランドコート',
-    mgmt:'野村不動産パートナーズ',
-    ag:'山田 誠（AG-0042）',
-    memo:'',
-    docs:[
-      { id:'d1', name:'身分証明書',              received:false, sent:false },
-      { id:'d2', name:'収入証明書',              received:false, sent:false },
-      { id:'d3', name:'入居申込書',              received:false, sent:false },
-    ],
-  },
-];
+// CORETO_REPORTSから動的生成
+function buildScreeningCases() {
+  var reports = [];
+  try { reports = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]'); } catch(e) {}
+  var myId = sessionStorage.getItem('coreto_user_id') || '';
+  var isHQ = sessionStorage.getItem('coreto_role') === 'hq';
+  return reports
+    .filter(function(r){ return r.type === '賃貸' && (isHQ || !myId || !r.agId || r.agId === myId); })
+    .map(function(r){
+      return { id: r.case||r.id, name: r.client||'—', kana:'', property: r.propAddr||'—',
+               mgmt: r.mgmtCo||'—', ag: r.ag||'—', memo:'', docs:[], status: r.status||'—', date: r.date||'—' };
+    });
+}
+let CASES = buildScreeningCases();
 
 let isHQ   = false;
 let isAG   = false;
@@ -602,10 +566,10 @@ function refreshCard(caseId) {
 window.addEventListener('DOMContentLoaded', () => {
   CNAV.init('screening');
   // AGのデモデータを自分の情報に更新
-  const _myId   = sessionStorage.getItem('coreto_user_id') || 'AG-0042';
-  const _myName = sessionStorage.getItem('coreto_name')    || '山田 誠';
+  const _myId   = sessionStorage.getItem('coreto_user_id') || '';
+  const _myName = sessionStorage.getItem('coreto_name')    || '';
   CASES.forEach(function(c) {
-    if (c.ag && c.ag.includes('AG-0042')) {
+    if (c.ag && c.ag.includes(sessionStorage.getItem('coreto_user_id')||'__NONE__')) {
       c.ag = _myName + '（' + _myId + '）';
     }
   });
@@ -620,7 +584,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (backEl) backEl.innerHTML = '';
   } else {
     // AG: 担当案件のみ
-    const myUserId = sessionStorage.getItem('coreto_user_id') || 'AG-0042';
+    const myUserId = sessionStorage.getItem('coreto_user_id') || '';
     CASES = CASES.filter(c => c.ag.includes(myUserId));
     document.getElementById('tb-actions').innerHTML = '';
   }

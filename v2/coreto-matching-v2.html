@@ -278,70 +278,13 @@ function saveAgents(v) { lsSet(LS_AGENTS, v); }
 // DEMO DATA
 // ══════════════════════════════════════════════════════════════
 function initDemoAgents(){
-  var agents = [
-    {id:'AG-0042',name:'中村 陽子',rank:'Platinum',type:'RE',
-     elo:1680,closedCases:94,totalCases:102,activeCases:6,avgRating:4.85,
-     completionRate:0.97,avgResponseMin:8,daysRegistered:540,status:'active',
-     recentConversionRate:0.91,areas:['渋谷','目黒','港','世田谷'],
-     specialties:['外国人対応','ペット可物件','高級賃貸']},
-    {id:'AG-0038',name:'田中 誠一',rank:'Gold',type:'RE',
-     elo:1520,closedCases:58,totalCases:64,activeCases:4,avgRating:4.70,
-     completionRate:0.94,avgResponseMin:15,daysRegistered:380,status:'active',
-     recentConversionRate:0.82,areas:['渋谷','目黒','港'],
-     specialties:['売買','タワーマンション']},
-    {id:'AG-0055',name:'鈴木 健太',rank:'Silver',type:'RE',
-     elo:1340,closedCases:23,totalCases:28,activeCases:3,avgRating:4.45,
-     completionRate:0.89,avgResponseMin:25,daysRegistered:180,status:'active',
-     recentConversionRate:0.71,areas:['新宿','渋谷','中野'],
-     specialties:['単身者','学生対応']},
-    {id:'AG-0061',name:'山田 花子',rank:'Bronze',type:'RE',
-     elo:1180,closedCases:8,totalCases:11,activeCases:2,avgRating:4.20,
-     completionRate:0.85,avgResponseMin:40,daysRegistered:60,status:'active',
-     recentConversionRate:0.62,areas:['杉並','世田谷'],
-     specialties:['ファミリー向け']},
-  ];
+const agents = []; /* 動的生成 */
   lsSet(LS_AGENTS, agents);
   return agents;
 }
 
 function initDemoLeads(){
-  var leads = [
-    {id:'LD-001',ptId:'PT-30007',ptName:'佐藤 美咲',
-     type:'rental',area:'渋谷',budget:180000,
-     title:'渋谷区 2LDK 外国人ファミリー',
-     description:'外国人ファミリー（夫婦+子供2人）。英語対応必須。ペット（小型犬）可物件。3月末入居希望。',
-     method:'board',minRank:'Silver',
-     status:'pending_ai',createdAt:'2026-03-11 09:30',
-     _aiAnalysis:null,_algoResult:null,_aiRanking:null},
-    {id:'LD-002',ptId:'PT-30015',ptName:'林 浩二',
-     type:'rental',area:'新宿',budget:120000,
-     title:'新宿区 1K 単身外国人',
-     description:'中国人男性・会社員。日本語不可。保証会社審査懸念あり。入居急ぎ。',
-     method:'board',minRank:'Bronze',
-     status:'unmatched',createdAt:'2026-03-10 14:20',
-     _aiAnalysis:{estimatedDifficulty:7,urgencyLevel:8,summary:'審査難易度高・急ぎ案件'},
-     _algoResult:null,_aiRanking:null},
-    {id:'LD-003',ptId:'PT-30007',ptName:'佐藤 美咲',
-     type:'rental',area:'目黒',budget:200000,
-     title:'目黒区 3LDK 富裕層夫婦',
-     description:'外資系勤務夫婦。高級物件希望。予算応相談。こだわり多め。',
-     method:'direct',targetAgId:'AG-0042',minRank:'Gold',
-     status:'matched',assignedAgId:'AG-0042',assignedAgName:'中村 陽子',
-     matchedAt:'2026-03-09 16:30',
-     _aiAnalysis:{estimatedDifficulty:6,urgencyLevel:4,summary:'高単価・こだわり強め'},
-     _algoResult:null,
-     _aiRanking:{summary:'中村陽子AGが最適。外国人・高級賃貸の実績多数。',matchConfidence:0.92,
-       selected:[{agentId:'AG-0042',agentName:'中村 陽子',rank:'Platinum',score:97,
-         reason:'外国人対応・高級賃貸の専門家。ELO最高値。',expectedOutcome:'成約率91%・高満足度'}],
-       hqAlertNeeded:false}},
-    {id:'LD-004',ptId:'PT-30022',ptName:'木村 健',
-     type:'rental',area:'世田谷',budget:150000,
-     title:'世田谷区 2LDK ファミリー',
-     description:'日本人ファミリー。学校区希望。ペット可。駐車場必須。',
-     method:'board',minRank:'Bronze',
-     status:'analyzing',createdAt:'2026-03-11 10:15',
-     _aiAnalysis:null,_algoResult:null,_aiRanking:null},
-  ];
+const leads = []; /* 動的生成 */
   lsSet(LS_LEADS, leads);
   return leads;
 }
@@ -528,7 +471,7 @@ function renderMonitor(){
 // ══════════════════════════════════════════════════════════════
 function renderAG(){
   var leads  = getLeads();
-  var myId   = 'AG-0042';
+  var myId = sessionStorage.getItem('coreto_user_id') || '';
   var board  = leads.filter(function(l){ return (l.status==='unmatched')&&l.method==='board'; });
   var direct = leads.filter(function(l){ return l.targetAgId===myId&&l.status!=='matched'; });
 
@@ -690,8 +633,8 @@ function agAccept(leadId){
   var lead  = leads.find(function(l){ return l.id===leadId; });
   if(!lead) return;
   lead.status         = 'matched';
-  lead.assignedAgId   = 'AG-0042';
-  lead.assignedAgName = '中村 陽子';
+  lead.assignedAgId = sessionStorage.getItem('coreto_user_id') || '';
+  lead.assignedAgName = sessionStorage.getItem('coreto_name') || '';
   lead.matchedAt      = new Date().toLocaleString('ja-JP');
   saveLeads(leads);
   showToast('✅ 対応を承諾しました。クライアント情報が開示されます。');

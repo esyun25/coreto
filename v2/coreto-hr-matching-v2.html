@@ -242,7 +242,7 @@ html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:
       <div class="field"><label>スキル・経験（カンマ区切り）</label><input id="add-skills" placeholder="SaaS営業, 法人営業, マネジメント"></div>
       <div class="field-row">
         <div class="field"><label>経験年数</label><input id="add-exp" placeholder="8年"></div>
-        <div class="field"><label>PT紹介コード（任意）</label><input id="add-pt" placeholder="PT-0015"></div>
+        <div class="field"><label>PT紹介コード（任意）</label><input id="add-pt" placeholder="PT紹介コード"></div>
       </div>
       <div class="field"><label>備考・転職理由</label><textarea id="add-note" placeholder="転職理由・希望条件・NG条件など" style="height:60px;resize:none"></textarea></div>
     </div>
@@ -680,7 +680,7 @@ function addCase() {
     email, tel, currentJob:cj, currentSalary:cs,
     targetJob:tj, targetSalary:ts, skills, experience:exp,
     step:0, status:'active', ptCode:pt||null, ptName:null,
-    ag:'鈴木 花子（HR-AG）', agId:'AG-0088',
+    ag: sessionStorage.getItem('coreto_name')||'', agId: sessionStorage.getItem('coreto_user_id')||'',
     reg:today(), lastUpdate:today(), note, companies:[],
     timeline:[{date:today(), step:'受付', note:`案件登録。${pt?'PT: '+pt+' 経由。':'直接登録。'}`, type:'em'}],
   });
@@ -1005,41 +1005,7 @@ const HR_AGENTS = []; /* CORETO_REPORTSから動的生成 */
 // ═══════════════════════════════════════════
 // PT 投稿データストア（インメモリ）
 // ═══════════════════════════════════════════
-let HR_LEADS = [
-  {id:'HRL-001',ptCode:'PT-0015',ptName:'佐藤 健一',
-   name:'田中 智也',age:32,currentJob:'SaaS営業',currentSalary:520,
-   targetJob:'営業マネージャー',targetSalary:700,
-   skills:'SaaS営業、法人営業、マネジメント、英語',experience:'8年',
-   note:'リモート必須。3月末に決めたい。',
-   status:'matched',
-   assignedAgId:'HR-0012',assignedAgName:'吉田 さくら',
-   matchScore:94, matchReason:'SaaS営業・外資系転職の専門性が高く最適',
-   createdAt:'2026/02/15', matchedAt:'2026/02/15',
-   _aiAnalysis:{urgencyLevel:8,clientDifficulty:5,summary:'転職意欲高い。リモート・年収が主要条件。',optimalAgProfile:'IT営業系に強いAG'},
-  },
-  {id:'HRL-002',ptCode:'PT-0015',ptName:'佐藤 健一',
-   name:'橋本 陽子',age:35,currentJob:'マーケティング',currentSalary:600,
-   targetJob:'マーケティングマネージャー',targetSalary:750,
-   skills:'デジタルマーケ、SEO/SEM、MA、データ分析',experience:'10年',
-   note:'複数社比較中。3/20回答期限あり。',
-   status:'matched',
-   assignedAgId:'HR-0021',assignedAgName:'山田 理恵',
-   matchScore:91, matchReason:'マーケティング職専門性とスキル整合性が高い',
-   createdAt:'2026/01/20', matchedAt:'2026/01/20',
-   _aiAnalysis:{urgencyLevel:9,clientDifficulty:4,summary:'優秀な候補者。期限が近く緊急度高い。',optimalAgProfile:'マーケ系に強いAG'},
-  },
-  {id:'HRL-003',ptCode:'PT-0001',ptName:'株式会社ネクスト不動産',
-   name:'松本 浩二',age:38,currentJob:'エンジニアリングMGR',currentSalary:850,
-   targetJob:'VPoE / CTO',targetSalary:1000,
-   skills:'Python、AWS、チームマネジメント、アジャイル',experience:'15年',
-   note:'ストック必須。Series C以上希望。',
-   status:'pending_ai',
-   assignedAgId:null,assignedAgName:null,
-   matchScore:null, matchReason:null,
-   createdAt:'2026/03/12', matchedAt:null,
-   _aiAnalysis:null,
-  },
-];
+let HR_LEADS = [];
 
 // ═══════════════════════════════════════════
 // AI Phase 1: 案件解析
@@ -1280,7 +1246,7 @@ function hrAgAccept(leadId) {
   if (!lead || lead.status !== 'waiting_ag') return;
 
   // デモ: ロールがAGなので現在のAGがアサインされる
-  const currentAg = HR_AGENTS.find(a=>a.id==='HR-0012') || HR_AGENTS[0];
+  const currentAg = HR_AGENTS[0] || {id: sessionStorage.getItem('coreto_user_id')||'', name: sessionStorage.getItem('coreto_name')||''};
   // 通知済みAGでなければ拒否
   if (lead._notifiedAgIds && !lead._notifiedAgIds.includes(currentAg.id)) {
     toast('この案件の通知を受けていません', 'warn'); return;
@@ -1355,7 +1321,7 @@ function submitPTCase() {
 
   const id = 'HRL-' + String(HR_LEADS.length+1).padStart(3,'0');
   const lead = {
-    id, ptCode:'PT-0015', ptName:'佐藤 健一',
+    id, ptCode:'', ptName:'',
     name, age:Number(age)||0, currentJob:cj, currentSalary:cs,
     targetJob:tj, targetSalary:ts, skills, experience:exp, note,
     status:'pending_ai', assignedAgId:null, assignedAgName:null,
@@ -1463,7 +1429,7 @@ function renderHQView() {
 
 function renderAGNotifications() {
   // AG視点: 自分に通知されている waiting_ag 案件を掲示板として表示
-  const currentAgId = 'HR-0012'; // デモ: 吉田 さくら
+  const currentAgId = sessionStorage.getItem('coreto_user_id') || '';
   const notified = HR_LEADS.filter(l =>
     l.status === 'waiting_ag' &&
     l._notifiedAgIds?.includes(currentAgId)
@@ -1518,7 +1484,7 @@ window.addEventListener('DOMContentLoaded', () => {
       CASES.push({ id:caseId, name:l.name||'—', status:'active', step:0,
         targetJob:l.job||'—', targetSalary:l.salary||0, companies:[], timeline:[
           { date:l.date||new Date().toLocaleDateString('ja-JP'), step:'受付', note:'PT紹介経由で登録', type:'em' }
-        ], source:'PT', ag: sessionStorage.getItem('coreto_user_id')||'AG-0088',
+        ], source:'PT', ag: sessionStorage.getItem('coreto_user_id')|| '',
         lastUpdate:l.date||new Date().toLocaleDateString('ja-JP') });
       existIds.add(caseId);
     });
