@@ -428,13 +428,23 @@ const NAV = {
   ],
 };
 
+// USERSはsessionStorageから動的取得
+function getUser(role) {
+  var name   = sessionStorage.getItem('coreto_name')    || '—';
+  var userId = sessionStorage.getItem('coreto_user_id') || '—';
+  var rank   = sessionStorage.getItem('coreto_rank')    || '';
+  var avMap  = { hq:'HQ', re_ag:'AG', hr_ag:'AG', hikari_ag:'AG', pt:'PT', intern:'IN' };
+  var av     = avMap[role] || 'AG';
+  var roleLabel = userId + (rank ? ' / ' + rank.charAt(0).toUpperCase() + rank.slice(1) : '');
+  return { name: name, role: roleLabel, av: av };
+}
 const USERS = {
-  hq:        { name:'田中 誠一（統括）',       role:'CORETO / exec',      av:'HQ' },
-  re_ag:     { name:'山田 誠（RE-AG）',        role:'AG-0042 / Gold',     av:'AG' },
-  hr_ag:     { name:'鈴木 花子（HR-AG）',      role:'AG-0088 / Silver',   av:'AG' },
-  hikari_ag: { name:'山田 光太（光通信AG）',   role:'AG-0103 / Bronze',   av:'AG' },
-  pt:        { name:'佐藤 健一（PT）',         role:'PT-0015 / active',   av:'PT' },
-  intern:    { name:'渡辺 大輝（インターン）', role:'INT-0007 / active',  av:'IN' },
+  hq:        { get name(){ return getUser('hq').name; },        get role(){ return getUser('hq').role; },        av:'HQ' },
+  re_ag:     { get name(){ return getUser('re_ag').name; },     get role(){ return getUser('re_ag').role; },     av:'AG' },
+  hr_ag:     { get name(){ return getUser('hr_ag').name; },     get role(){ return getUser('hr_ag').role; },     av:'AG' },
+  hikari_ag: { get name(){ return getUser('hikari_ag').name; }, get role(){ return getUser('hikari_ag').role; }, av:'AG' },
+  pt:        { get name(){ return getUser('pt').name; },        get role(){ return getUser('pt').role; },        av:'PT' },
+  intern:    { get name(){ return getUser('intern').name; },    get role(){ return getUser('intern').role; },    av:'IN' },
 };
 
 function openSettings() {
