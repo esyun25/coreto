@@ -286,14 +286,8 @@ body {
 
 
 
-.nav-section { margin-bottom: 4px; }
-.nav-section-label {
-  font-size: 9px; font-weight: 600;
-  letter-spacing: 2px; text-transform: uppercase;
-  color: rgba(255,255,255,.18);
-  padding: 10px 8px 4px;
-  font-family: 'DM Mono', monospace;
-}
+.nav-section { margin-bottom: 2px; }  /* cnav-sectionと統一 */
+.nav-section-label { font-size:9px; font-weight:600; letter-spacing:2px; text-transform:uppercase; color:rgba(255,255,255,.18); padding:10px 8px 4px; font-family:'DM Mono',monospace; }
 .nav-item {
   display:flex; align-items:center; gap:9px; padding:7px 9px;
   border-radius:7px; cursor:pointer; transition:all .13s;
@@ -305,11 +299,7 @@ body {
   content:''; position:absolute; left:0; top:50%; transform:translateY(-50%);
   width:3px; height:16px; background:#C8A951; border-radius:0 2px 2px 0;
 }
-.nav-icon {
-  width:26px; height:26px; display:flex; align-items:center; justify-content:center;
-  font-size:13px; border-radius:6px; flex-shrink:0;
-  background:rgba(255,255,255,.04);
-}
+.nav-icon { width:26px; height:26px; display:flex; align-items:center; justify-content:center; font-size:13px; border-radius:6px; flex-shrink:0; background:rgba(255,255,255,.04); }
 .nav-item.active .nav-icon { background:rgba(200,169,81,.12); }
 .nav-text { font-size:11px; font-weight:500; color:rgba(255,255,255,.55); flex:1; }
 .nav-item.active .nav-text { color:#C8A951; }
@@ -736,47 +726,6 @@ html, body { background:#FFFFFF !important; }
 .delta-dn,.kpi-delta.dn { color:var(--rd) !important; }
 
 
-/* ── Hub sidebar → CNAV統一 ── */
-.nav-item {
-  display:flex; align-items:center; gap:9px; padding:7px 9px;
-  border-radius:7px; cursor:pointer; transition:all .13s;
-  text-decoration:none; color:inherit; position:relative; margin-bottom:1px;
-}
-.nav-item:hover { background:rgba(255,255,255,.06); }
-.nav-item.active { background:rgba(200,169,81,.1); }
-.nav-item.active::before {
-  content:''; position:absolute; left:0; top:50%; transform:translateY(-50%);
-  width:3px; height:16px; background:#C8A951; border-radius:0 2px 2px 0;
-}
-.nav-icon {
-  width:26px; height:26px; display:flex; align-items:center; justify-content:center;
-  font-size:13px; border-radius:6px; flex-shrink:0;
-  background:rgba(255,255,255,.04);
-}
-.nav-item.active .nav-icon { background:rgba(200,169,81,.12); }
-.nav-text { font-size:11px; font-weight:500; color:rgba(255,255,255,.55); flex:1; }
-.nav-item.active .nav-text { color:#C8A951; }
-.nav-item:hover .nav-text { color:rgba(255,255,255,.82); }
-.nav-badge {
-  font-size:9px; font-weight:700; padding:1px 6px; border-radius:10px;
-  background:#DC2626; color:#fff;
-  font-family:'Outfit',sans-serif; font-variant-numeric:tabular-nums;
-}
-.nav-badge.amber { background:#D97706; }
-.nav-badge.gold  { background:#C8A951; color:#0D1A2D; }
-.nav-section-label {
-  font-size:9px; font-weight:600; letter-spacing:2px; text-transform:uppercase;
-  color:rgba(255,255,255,.18); padding:10px 8px 4px;
-  font-family:'DM Mono',monospace;
-}
-
-
-
-
-
-
-
-
 
 /* ── Google-style 数値原則 (DS v2.3) ── */
 .kpi-value, .kpi-vl, .kpi-val,
@@ -1083,7 +1032,6 @@ function doLogin() {
 }
 
 function loginAs(role, user) {
-  // userが渡されない場合（デモ切替ボタン）はCREDENTIALSから検索
   if (!user) {
     const uid = Object.keys(USER_CREDENTIALS).find(k => USER_CREDENTIALS[k].role === role);
     user = uid ? USER_CREDENTIALS[uid] : { role, name: role, userId: role, rank: null };
@@ -1095,40 +1043,15 @@ function loginAs(role, user) {
   currentRole = role;
 
   document.getElementById('login-screen').style.display = 'none';
-  const appEl = document.getElementById('app'); appEl.style.display = 'flex';
+  document.getElementById('app').style.display = 'flex';
 
+  // ナビ描画はCNAVに完全委譲（sessionStorage設定後に呼ぶ）
+  CNAV.init('dashboard');
+  setTimeout(hubOverrideCNAV, 30);
+
+  // ダッシュボード描画
   const r = ROLES[role];
-  document.getElementById('sb-av').textContent = r.av;
-  // sessionStorageから実際のユーザー名を表示
-  document.getElementById('sb-name').textContent = user.name || sessionStorage.getItem('coreto_name') || r.label;
-  const uid   = user.userId || sessionStorage.getItem('coreto_user_id') || '';
-  const rank  = user.rank   || sessionStorage.getItem('coreto_rank')    || '';
-  var hqRole = sessionStorage.getItem('coreto_hq_role') || '';
-  var hqLabel = hqRole && typeof getHQRoleLabel === 'function' ? ' / ' + getHQRoleLabel(hqRole) : '';
-  document.getElementById('sb-role').textContent = uid + hqLabel || r.label;
-
-  // CNAVでナビを描画（nav-v2.jsのNAV定義を使用）
-  // sb-avのアバター文字をロールに応じて設定
-  const avMap = {hq:'HQ', re_ag:'AG', hr_ag:'AG', hikari_ag:'AG', pt:'PT', intern:'IN'};
-  const avEl = document.getElementById('sb-av');
-  if (avEl) avEl.textContent = avMap[role] || 'AG';
-  // sb-name, sb-roleをsessionStorageから設定
-  const nameEl = document.getElementById('sb-name');
-  if (nameEl) nameEl.textContent = user.name || sessionStorage.getItem('coreto_name') || '—';
-  const roleEl = document.getElementById('sb-role');
-  if (roleEl) {
-    const uid = user.userId || sessionStorage.getItem('coreto_user_id') || '';
-    const rank = user.rank || sessionStorage.getItem('coreto_rank') || '';
-    roleEl.textContent = uid + (rank ? ' / ' + rank.charAt(0).toUpperCase() + rank.slice(1) : '');
-  }
-  // CNAVのナビを描画（nav-v2.jsのNAV定義使用 → 権限統一）
-  if (typeof CNAV !== 'undefined' && CNAV.init) {
-    CNAV.init('dashboard');
-    setTimeout(hubOverrideCNAV, 10);
-  } else {
-    renderNav(r.nav());
-  }
-  r.page();
+  if (r && r.page) r.page();
 }
 
 // ハッシュ遷移はDOMContentLoadedで処理
