@@ -313,7 +313,7 @@ function renderTab(t){
 // ── HQ SUMMARY ──
 function hqSummary(){return`
   <div class="kpi-row">
-    <div class="kpi gd"><div class="kpi-lb">AG報酬総額（今月）</div><div class="kpi-vl">¥2,140,000</div><div class="kpi-sb">47名分・支払済み</div></div>
+    <div class="kpi gd"><div class="kpi-lb">AG報酬総額（今月）</div><div class="kpi-vl"><span data-kpi="total-reward">—</span></div><div class="kpi-sb">47名分・支払済み</div></div>
     <div class="kpi em"><div class="kpi-lb">PT紹介報酬（今月）</div><div class="kpi-vl">¥428,000</div><div class="kpi-sb">22件成約</div></div>
     <div class="kpi sk"><div class="kpi-lb">光通信ボーナス計</div><div class="kpi-vl">¥312,000</div><div class="kpi-sb">38件成約</div></div>
     <div class="kpi vt"><div class="kpi-lb">未払い残高</div><div class="kpi-vl" style="color:var(--ink)">¥0</div><div class="kpi-sb">全員支払済み</div></div>
@@ -604,17 +604,7 @@ function slipPage(){return`
     <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:18px">宛先：<strong id="slip-to-name">—</strong>　AG-0042　🥇 Gold</div>
     <table class="slip-tbl">
       <thead><tr><th>区分</th><th>案件番号</th><th>詳細</th><th>基本報酬</th><th>率</th><th style="text-align:right">AG報酬</th></tr></thead>
-      <tbody>
-        <tr><td>賃貸仲介</td><td style="font-family:'DM Mono',monospace;font-size:10px">—</td><td>中村 麻衣様 ― 港区麻布</td><td>¥110,000</td><td>70%</td><td class="num">¥77,000</td></tr>
-        <tr><td>賃貸仲介</td><td style="font-family:'DM Mono',monospace;font-size:10px">—</td><td>山田 花子様 ― 渋谷区恵比寿</td><td>¥155,000</td><td>80%</td><td class="num">¥124,000</td></tr>
-        <tr class="sub"><td colspan="5">不動産仲介 小計</td><td class="num">—</td></tr>
-        <tr><td>光通信</td><td style="font-family:'DM Mono',monospace;font-size:10px">UTL-0080</td><td>電力 鈴木様</td><td>¥25,800</td><td>87%</td><td class="num">¥22,500</td></tr>
-        <tr><td>光通信</td><td style="font-family:'DM Mono',monospace;font-size:10px">UTL-0081</td><td>電力+回線 渡辺様</td><td>¥51,700</td><td>87%</td><td class="num">¥45,000</td></tr>
-        <tr class="sub"><td colspan="5">光通信 小計</td><td class="num">—</td></tr>
-        <tr><td>PT紹介報酬</td><td style="font-family:'DM Mono',monospace;font-size:10px">—</td><td>田中 優子様（PT担当</td><td>¥198,000</td><td>25%</td><td class="num">—</td></tr>
-        <tr class="sub"><td colspan="5">PT紹介報酬 小計</td><td class="num">—</td></tr>
-        <tr class="tot"><td colspan="5" style="font-size:13px;letter-spacing:1px">合　計</td><td class="num">¥329,000</td></tr>
-      </tbody>
+      <tbody id="slip-tbody"><tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px">CORETO_REPORTSから動的生成されます</td></tr></tbody>
     </table>
     <div style="font-size:10px;color:var(--faint);line-height:1.7;margin-top:14px;padding-top:14px;border-top:1px solid var(--bd)">
       ※ 報酬は毎月末締め・翌月10日前後に振込みいたします。<br>
@@ -631,12 +621,7 @@ function histPage(){return`
     <div class="card-head"><div class="card-title">📅 支払履歴</div><button class="btn btn-g btn-sm" onclick="alert('CSV出力')">📤 CSV出力</button></div>
     <table><thead><tr><th>対象月</th><th>AG</th><th>不動産</th><th>人材</th><th>光通信</th><th>PT報酬</th><th>合計</th><th>出金方法</th><th>振込日</th><th>状態</th></tr></thead>
     <tbody>${[
-      ['2026年4月','AG-0042 山田','—','—','—','—','¥329,000','2026/05/10','em','支払済み'],
-      ['2026年3月','AG-0042 山田','¥198,000','—','¥45,000','¥27,500','¥270,500','2026/04/10','em','支払済み'],
-      ['2026年4月','AG-0088 田中','¥154,000','¥84,500','¥42,000','—','¥280,500','2026/05/10','em','支払済み'],
-      ['2026年4月','AG-0055 井上','¥112,000','¥130,000','¥35,500','¥27,500','¥305,000','2026/05/10','am','処理中'],
-      ['2026年2月','AG-0042 山田','¥176,000','—','¥32,000','—','¥208,000','2026/03/10','em','支払済み'],
-    ].map(r=>`<tr>
+                                  ].map(r=>`<tr>
       <td>${r[0]}</td>
       <td style="font-family:'DM Mono',monospace;font-size:11px">${r[1]}</td>
       <td class="td-amt">${r[2]}</td>
@@ -740,7 +725,7 @@ window.addEventListener('DOMContentLoaded', function() {
     });
     // サイドバーをAG情報に更新
     const name = sessionStorage.getItem('coreto_name') || '—';
-    const id   = sRole === 'hr_ag' ? 'AG-0088 / Gold' : sRole === 'pt' ? 'PT-0010 / —' : 'AG-0042 / Gold';
+    const id   = (sessionStorage.getItem('coreto_user_id') || '—') + ' / ' + (sessionStorage.getItem('coreto_rank') || '—');
     const av   = sRole === 'pt' ? 'PT' : 'AG';
     const el = document.getElementById('sb-av'); if(el) el.textContent = av;
     const un = document.getElementById('sb-un'); if(un) un.textContent = name;

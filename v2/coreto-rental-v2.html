@@ -382,7 +382,7 @@ html, body { background:#FFFFFF !important; }
           <div class="ic-title">案件情報</div>
           <div class="ic-row"><div class="ic-label">案件番号</div><div class="ic-val mono" id="disp-caseId"><span id="ic-case-id">—</span></div></div>
           <div class="ic-row"><div class="ic-label">クライアント</div><div class="ic-val" id="disp-client"><span id="ic-client">—</span></div></div>
-          <div class="ic-row"><div class="ic-label">担当AG</div><div class="ic-val mono">AG-0042 山田 誠</div></div>
+          <div class="ic-row"><div class="ic-label">担当AG</div><div class="ic-val mono"><span id="ic-ag-id">—</span></div></div>
           <div class="ic-row"><div class="ic-label">仲介手数料</div><div class="ic-val em" id="disp-fee">¥198,000（税別）</div></div>
           <div class="ic-row"><div class="ic-label">入居予定日</div><div class="ic-val" id="disp-moveIn">2026/05/01</div></div>
         </div>
@@ -781,7 +781,7 @@ JSONのみ（前置き不要）:
 function closeCase() {
   const _p = new URLSearchParams(location.search);
   const _caseId = _p.get('caseId') || '';
-  const _clientName = _p.get('clientName') ? decodeURIComponent(_p.get('clientName')) : '田中 優子';
+  const _clientName = _p.get('clientName') ? decodeURIComponent(_p.get('clientName')) : '';
   const _agName = sessionStorage.getItem('coreto_name') || '担当AG';
 
   // prompt()の代替: セレクトボックス付きモーダルで選択
@@ -1028,7 +1028,7 @@ window.addEventListener('DOMContentLoaded', function() {
   }
 
   // タイトル・パンくずを更新
-  if (caseId !== 'RENT-0194' || clientName) {
+  if (caseId || clientName) {
     const displayName = clientName || caseId;
     if (document.querySelector('.tb-title'))
       document.querySelector('.tb-title').textContent = displayName + ' 様 ― 案件詳細';
@@ -1038,7 +1038,7 @@ window.addEventListener('DOMContentLoaded', function() {
         '<span class="mono">' + caseId + '</span> › <span>賃貸案件詳細</span>';
     if (clientName) {
       document.querySelectorAll('.ic-val').forEach(el => {
-        if (el.textContent === '田中 優子 様') el.textContent = clientName + ' 様';
+        if (clientName && el.textContent !== clientName + ' 様') el.textContent = clientName + ' 様';
       });
     }
   }
@@ -1740,15 +1740,8 @@ function loadShowingsInline() {
     if (raw) list = JSON.parse(raw);
   } catch(e) {}
 
-  // デモデータ（初回のみ）
-  if (!list.length && cid === 'RENT-0194') {
-    list = [
-      {id:'SH-001', case:cid, client:'田中 優子', prop:'パークタワー三田 302',   addr:'港区三田3丁目',     date:'2026-03-14', time:'14:00', method:'現地案内（AG同行）', companion:'管理会社 田村様', status:'完了', result:'申込意向あり', note:'2LDKを大変気に入っていただいた。'},
-      {id:'SH-002', case:cid, client:'田中 優子', prop:'グランドメゾン赤坂 805', addr:'港区赤坂2丁目',     date:'2026-03-14', time:'16:00', method:'現地案内（AG同行）', companion:'',              status:'完了', result:'見送り',       note:'家賃が予算オーバー。'},
-      {id:'SH-003', case:cid, client:'田中 優子', prop:'リバーサイド麻布 1204',  addr:'港区麻布十番1丁目', date:'2026-03-21', time:'13:00', method:'現地案内（AG同行）', companion:'管理会社 山田様', status:'確定', result:'',            note:'2番手申込みの可能性あり。'},
-    ];
+  // デモデータ削除済み
     try { localStorage.setItem(key, JSON.stringify(list)); } catch(e) {}
-  }
 
   var badge = document.getElementById('showing-badge');
   var upcoming = list.filter(function(s){ return s.status === '確定'; });
