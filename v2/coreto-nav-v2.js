@@ -13,7 +13,7 @@ const CNAV = (() => {
 
 const INJECT_CSS = `
 /* ── サイドバー共通スタイル (全ページ統一) ── */
-.sb{width:var(--sw,240px);background:#0D1A2D;display:flex;flex-direction:column;flex-shrink:0;position:relative;height:100vh}
+.sb{width:var(--sw,240px);background:#0D1A2D;display:flex;flex-direction:column;flex-shrink:0;position:relative;height:100%}
 .sb::after{content:'';position:absolute;top:0;right:0;width:1px;height:100%;background:linear-gradient(180deg,rgba(200,169,81,.25) 0%,rgba(200,169,81,.06) 50%,transparent 100%)}
 .sb-head{padding:24px 20px 18px;border-bottom:1px solid rgba(255,255,255,.06)}
 .sb-logo{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;letter-spacing:5px;color:#C8A951}
