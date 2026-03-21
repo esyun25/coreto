@@ -1,3 +1,30 @@
+// ── デモデータ自動クリア（v2.1以降） ──────────────────────────
+// 以前のバージョンでlocalStorageに保存されたハードコードデモデータを削除
+(function clearOldDemoData() {
+  try {
+    if (localStorage.getItem('DEMO_DATA_CLEARED_v21')) return;
+    var keysToReset = [
+      'CORETO_ITSETSU_BOOKINGS',
+      'CORETO_ITSETSU_LINKS',
+      'CORETO_CRM_CLIENTS',
+      'CORETO_CASE_DB_LOCAL',
+      'CORETO_BARCODE_SCAN',
+    ];
+    keysToReset.forEach(function(k) { localStorage.removeItem(k); });
+    // CORETO_REPORTSにRC-10xxx等のデモIDが含まれていたら削除
+    try {
+      var reports = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]');
+      var cleaned = reports.filter(function(r) {
+        return !r.case || !r.case.match(/^RC-10\d{3}$/);
+      });
+      if (cleaned.length !== reports.length) {
+        localStorage.setItem('CORETO_REPORTS', JSON.stringify(cleaned));
+      }
+    } catch(e) {}
+    localStorage.setItem('DEMO_DATA_CLEARED_v21', '1');
+  } catch(e) {}
+})();
+
 // ============================================================
 //  CORETO KV クライアント v3
 //  coreto-kv-client.js

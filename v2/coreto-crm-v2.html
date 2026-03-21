@@ -38,18 +38,18 @@ html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:
 
 
 .nav-sec-label{font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.18);padding:10px 8px 4px;font-family:'DM Mono',monospace}
-.nav-item{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:7px;cursor:pointer;transition:all .13s;text-decoration:none;position:relative;margin-bottom:1px}
-.nav-item:hover{background:rgba(255,255,255,.06)}
-.nav-item.active{background:rgba(200,169,81,.1)}
-.nav-item.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:16px;background:var(--gold);border-radius:0 2px 2px 0}
-.nav-icon{width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:13px;border-radius:6px;background:rgba(255,255,255,.04);flex-shrink:0}
-.nav-item.active .nav-icon{background:rgba(200,169,81,.12)}
+
+
+
+
+
+.nav-item.active 
 .nav-label{font-size:11px;font-weight:500;color:rgba(255,255,255,.55);flex:1}
 .nav-item.active .nav-label{color:var(--gold)}
 .nav-item:hover .nav-label{color:rgba(255,255,255,.82)}
-.nav-badge{font-size:9px;font-weight:700;padding:1px 6px;border-radius:10px;background:var(--rd);color:#fff;font-family:'Outfit',sans-serif}
-.nav-badge.amber{background:var(--am)}
-.nav-badge.gold{background:var(--gold);color:var(--navy)}
+
+
+
 .sb-foot{padding:10px 14px 18px;border-top:1px solid rgba(255,255,255,.05)}
 .sb-foot-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;cursor:pointer;font-size:11px;color:rgba(255,255,255,.3);transition:.13s}
 .sb-foot-item:hover{background:rgba(255,255,255,.05);color:rgba(255,255,255,.6)}
@@ -314,8 +314,8 @@ body, input, select, textarea, button { font-family:'Outfit','Noto Sans JP',sans
     <div class="qs-row">
       <div class="qs-card c1">
         <div class="qs-label">総クライアント数</div>
-        <div class="qs-val">284</div>
-        <div class="qs-sub">今月 +18名 登録</div>
+        <div class="qs-val" id="crm-total-count">—</div>
+        <div class="qs-sub" id="crm-monthly-new">今月登録</div>
       </div>
       <div class="qs-card c2">
         <div class="qs-label">商談中</div>
@@ -362,7 +362,7 @@ body, input, select, textarea, button { font-family:'Outfit','Noto Sans JP',sans
 <!-- removed dummy data -->
       </select>
       <div class="filter-divider"></div>
-      <div class="filter-count" id="count-label">284件表示中</div>
+      <div class="filter-count" id="count-label">0件表示中</div>
     </div>
 
     <!-- Table -->
@@ -623,6 +623,22 @@ function showToast(msg, type) {
 
 window.addEventListener('DOMContentLoaded', function() {
   CNAV.init('crm');
+  // CRMカウントをlocalStorageの実データから更新
+  try {
+    var reports = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]');
+    var clients = JSON.parse(localStorage.getItem('CORETO_CRM_CLIENTS') || '[]');
+    var total = reports.length + clients.length;
+    var cntEl = document.getElementById('crm-total-count');
+    if (cntEl) cntEl.textContent = total || '0';
+    var lbl = document.getElementById('count-label');
+    if (lbl) lbl.textContent = (total || '0') + '件表示中';
+    // 今月登録
+    var now = new Date();
+    var thisYM = now.getFullYear() + '/' + String(now.getMonth()+1).padStart(2,'0');
+    var monthly = reports.filter(function(r){ return (r.date||'').slice(0,7).replace('-','/') === thisYM; }).length;
+    var newEl = document.getElementById('crm-monthly-new');
+    if (newEl) newEl.textContent = '今月 +' + monthly + '名 登録';
+  } catch(e) {}
   document.getElementById('modal').addEventListener('click', e => { if(e.target===document.getElementById('modal')) closeModal(); });
   // ── ロール別クライアントフィルタ ──
   const _s = CNAV.session ? CNAV.session() : null;
