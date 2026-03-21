@@ -2004,58 +2004,16 @@ function renderHQDash() {
           </div>
           <div class="card" style="margin-top:14px">
             <div class="task-list" id="hq-task-list">
-              <div class="task-item">
-                <div class="task-prio high"></div>
-                <div class="task-main">
-                  <div class="task-name">🏛️ 宅建業免許 更新期限まで87日 ― 次回更新：2026/06/09</div>
-                  <div class="task-meta">東京都知事免許（3）第XXXXX号 ／ <a href="coreto-takken-v2.html" style="color:var(--sk);text-decoration:none">宅建業者管理で確認 →</a></div>
-                </div>
+              
                 <span class="badge red">要対応</span>
               </div>
-              <div class="task-item">
-                <div class="task-prio high"></div>
-                <div class="task-main">
-                  
-                  <div class="task-meta">入金確認済み ／ 管理会社：三田不動産管理（株）</div>
-                </div>
-                <span class="badge red">緊急</span>
-              </div>
-              <div class="task-item">
-                <div class="task-prio high"></div>
-                <div class="task-main">
-                  
-                                  </div>
-                <span class="badge amber">審査中</span>
-              </div>
-              <div class="task-item">
-                <div class="task-prio high"></div>
-                <div class="task-main">
-                  <div class="task-name">IT重説 宅建士割当 ― 佐藤様・渡辺様（2件同日）</div>
-                  <div class="task-meta">今後7日以内に予定あり</div>
-                </div>
+              
                 <span class="badge amber">割当待ち</span>
               </div>
-              <div class="task-item">
-                <div class="task-prio mid"></div>
-                <div class="task-main">
-                  
-                                  </div>
-                <span class="badge sky">承認待ち</span>
-              </div>
-              <div class="task-item">
-                <div class="task-prio mid"></div>
-                <div class="task-main">
-                  <div class="task-name">HR成約 在籍確認（30日）― 中村様 勤務先：株式会社ABC</div>
-                  <div class="task-meta">入社日：2026/3/1 ／ 担当AG</div>
-                </div>
+              
                 <span class="badge violet">在籍確認</span>
               </div>
-              <div class="task-item">
-                <div class="task-prio low"></div>
-                <div class="task-main">
-                  <div class="task-name">月次報酬明細書 発行・送付（4月分）</div>
-                  <div class="task-meta">対象：<span data-kpi="agent-count">—</span></div>
-                </div>
+              
                 <span class="badge muted">定期</span>
               </div>
             </div>
@@ -2275,6 +2233,52 @@ function renderHQDash() {
       </div>
     </div>
   `;
+
+  // ── HQタスクを動的生成 ─────────────────────────────────
+  (function buildHQTasks() {
+    try {
+      var reports = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]');
+      var tasks   = JSON.parse(localStorage.getItem('CORETO_HQ_TASKS') || '[]');
+      var listEl  = document.getElementById('hq-task-list');
+      var emptyEl = document.getElementById('hq-task-empty');
+      if (!listEl) return;
+
+      var items = [];
+      // 承認待ち成約報告
+      var pending = reports.filter(function(r){ return r.status === '承認待ち'; });
+      pending.slice(0, 5).forEach(function(r) {
+        items.push({
+          prio: 'rd', icon: '✅',
+          name: '成約承認待ち ― ' + (r.clientName || r.agId || '—') + ' （' + (r.type || '—') + '）',
+          meta: r.agId + ' ／ ' + (r.date || '—'),
+        });
+      });
+      // HQタスク
+      tasks.slice(0, 5).forEach(function(t) {
+        items.push({
+          prio: t.priority || 'am', icon: '📋',
+          name: t.title || t.name || '—',
+          meta: t.meta || t.date || '—',
+        });
+      });
+
+      if (items.length === 0) {
+        if (emptyEl) emptyEl.style.display = '';
+        return;
+      }
+      if (emptyEl) emptyEl.style.display = 'none';
+
+      listEl.innerHTML = items.map(function(it) {
+        return '<div class="task-item">'
+          + '<div class="task-prio ' + it.prio + '"></div>'
+          + '<div class="task-main">'
+          + '<div class="task-name">' + it.icon + ' ' + it.name + '</div>'
+          + '<div class="task-meta">' + it.meta + '</div>'
+          + '</div></div>';
+      }).join('');
+    } catch(e) { console.warn('buildHQTasks:', e); }
+  })();
+
 }
 
 // ═══════════════════════════════════════════

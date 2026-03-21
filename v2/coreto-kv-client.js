@@ -252,7 +252,11 @@
           return Promise.resolve(v ? JSON.parse(v) : null);
         } catch(e) { return Promise.resolve(null); }
       }
-      // KVから直接取得（localStorageよりKVが最新の場合に使用）
+      // KVから直接取得（設定済みの場合のみ）
+      if (!isConfigured()) {
+        var fallbackVal = _origGetItem.call(localStorage, key);
+        return Promise.resolve(fallbackVal !== null ? { ok:true, value:fallbackVal } : null);
+      }
       var cfg = loadConfig();
       return fetch(cfg.baseUrl + '/api/kv/get?key=' + encodeURIComponent(key), {
         headers: { 'x-coreto-key': cfg.internalKey }

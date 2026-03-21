@@ -111,12 +111,33 @@ class HQAgent extends BaseAgent {
   }
 
   // 全体フロー確認
+  async checkInstantPayAdmin() {
+    this.log('即時払い審査ページ確認中...');
+    await this.goto('coreto-instant-pay-v2.html');
+    await this.checkCurrentPage();
+    await this.checkForHardcodedData();
+    // 全社KPIの確認
+    const locked = await this.page.locator('#ip-kpi-locked').textContent().catch(()=>null);
+    const done   = await this.page.locator('#ip-kpi-done').textContent().catch(()=>null);
+    const total  = await this.page.locator('#ip-kpi-total').textContent().catch(()=>null);
+    this.log(`即時払いKPI: ロック=${locked} 完了=${done} 総額=${total}`);
+  }
+
+  async checkPayroll() {
+    this.log('給与明細ページ確認中...');
+    await this.goto('coreto-payroll-v2.html');
+    await this.checkCurrentPage();
+    await this.checkForHardcodedData();
+  }
+
   async runFullCheck() {
     await this.checkDashboard();
     await this.checkPendingApprovals();
     await this.checkRemittance();
+    await this.checkInstantPayAdmin();
     await this.checkCRM();
     await this.checkUserManagement();
+    await this.checkPayroll();
   }
 }
 

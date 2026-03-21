@@ -144,7 +144,7 @@ class AGAgent extends BaseAgent {
 
     const filled = {
       client:   await tryFill(['#client-name','#clientName','[name="clientName"]'], data.clientName || 'テスト 太郎'),
-      amount:   await tryFill(['#amount','#fee','[name="amount"]'], String(data.amount || 150000)),
+      amount:   await tryFill(['#fee-input','[data-field="amount"]','#monthly-rent','#amount'], String(data.amount || 150000)),
       caseType: false,
     };
 
