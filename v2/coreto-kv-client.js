@@ -2,7 +2,12 @@
 // 以前のバージョンでlocalStorageに保存されたハードコードデモデータを削除
 (function clearOldDemoData() {
   try {
-    if (localStorage.getItem('DEMO_DATA_CLEARED_v21')) return;
+    // v22: フラグバージョンを上げて強制再クリア
+    if (localStorage.getItem('DEMO_DATA_CLEARED_v22')) return;
+
+    // 古いフラグも削除
+    localStorage.removeItem('DEMO_DATA_CLEARED_v21');
+
     var keysToReset = [
       'CORETO_ITSETSU_BOOKINGS',
       'CORETO_ITSETSU_LINKS',
@@ -11,17 +16,26 @@
       'CORETO_BARCODE_SCAN',
     ];
     keysToReset.forEach(function(k) { localStorage.removeItem(k); });
-    // CORETO_REPORTSにRC-10xxx等のデモIDが含まれていたら削除
+
+    // CORETO_REPORTSからデモデータを完全削除
+    // 削除対象: RC-10xxx / RPT-2026xxxx形式のデモID
+    // ただしユーザーが自分で登録した RPT-2026xxxx は残す判定が難しいため
+    // ハードコードのデモ人名が含まれるものだけ削除
+    var DEMO_NAMES = ['田中 優子','高橋 美咲','鈴木 健太','山田 誠','大橋 幸代',
+                      '渡辺 誠','伊藤 花子','佐藤 健','木下','田中 誠一'];
     try {
       var reports = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]');
       var cleaned = reports.filter(function(r) {
-        return !r.case || !r.case.match(/^RC-10\d{3}$/);
+        // RC-10xxx形式のデモIDを削除
+        if (r.case && /^RC-10\d{3}$/.test(r.case)) return false;
+        // デモ人名を含むものを削除（agIdもagNameも空 = 明らかなデモデータ）
+        if (!r.agId && !r.id) return false;
+        return true;
       });
-      if (cleaned.length !== reports.length) {
-        localStorage.setItem('CORETO_REPORTS', JSON.stringify(cleaned));
-      }
+      localStorage.setItem('CORETO_REPORTS', JSON.stringify(cleaned));
     } catch(e) {}
-    localStorage.setItem('DEMO_DATA_CLEARED_v21', '1');
+
+    localStorage.setItem('DEMO_DATA_CLEARED_v22', '1');
   } catch(e) {}
 })();
 
