@@ -3339,27 +3339,7 @@ var HQ_MEMBERS_LIST = [];
     setTimeout(() => errBanner.remove(), 4000);
     history.replaceState(null, '', location.pathname);
   }
-  // sessionStorageにroleがあれば自動ログイン（外部ページから戻った場合）
-  const savedRole = sessionStorage.getItem('coreto_role');
-  if (savedRole) {
-    // #1修正: sessionStorageの全ユーザー情報を使って復元（再認証不要のセッション継続）
-    const savedUser = {
-      role:   savedRole,
-      name:   sessionStorage.getItem('coreto_name')    || '',
-      userId: sessionStorage.getItem('coreto_user_id') || '',
-      rank:   sessionStorage.getItem('coreto_rank')    || null,
-    };
-    loginAs(savedRole, savedUser);
-    // ハッシュがあればそのページを開く
-    const hash = window.location.hash.replace('#','');
-    if (hash) {
-      setTimeout(() => {
-        navClick(hash, document.querySelector('.nav-item') || { classList:{add:()=>{},remove:()=>{}} });
-        routePage(hash);
-        window.history.replaceState(null,'',window.location.pathname);
-      }, 50);
-    }
-  }
+  // 自動ログイン処理はDOMContentLoaded(末尾)で実行
 
   // KPIを動的更新（CORETO_REPORTSから集計）
   setTimeout(function() {
@@ -3506,8 +3486,26 @@ JSONのみ（前置き不要）:
 <script src="coreto-kv-client.js"></script>
 <script src="coreto-nav-v2.js"></script>
 <script>window.addEventListener("DOMContentLoaded",function(){
-  // sessionStorageにroleがある場合はloginAs内でrenderNavが呼ばれるのでCNAV.initをスキップ
-  if (!sessionStorage.getItem('coreto_role')) {
+  // kv-client.js と nav-v2.js が読み込まれた後に実行される
+  var savedRole = sessionStorage.getItem('coreto_role');
+  if (savedRole) {
+    // sessionStorageから復元して自動ログイン
+    var savedUser = {
+      role:   savedRole,
+      name:   sessionStorage.getItem('coreto_name')    || '',
+      userId: sessionStorage.getItem('coreto_user_id') || '',
+      rank:   sessionStorage.getItem('coreto_rank')    || null,
+    };
+    loginAs(savedRole, savedUser);
+    // ハッシュがあればそのページに遷移
+    var hash = window.location.hash.replace('#','');
+    if (hash) {
+      setTimeout(function(){
+        routePage(hash);
+        window.history.replaceState(null,'',window.location.pathname);
+      }, 60);
+    }
+  } else {
     CNAV.init("hub");
   }
 });</script>
