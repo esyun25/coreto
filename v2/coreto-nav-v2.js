@@ -111,10 +111,10 @@ const NAV = {
       // 不動産業務：案件受付 → 書類審査 → IT重説 → 初期費用確認 → 成約報告
       section: '不動産業務',
       items: [
-        { icon:'🏘️', label:'不動産案件（全体）',  href:'coreto-cases-v2.html',           key:'cases',           badge:'8'           },
+        { icon:'🏘️', label:'不動産案件（全体）',  href:'coreto-cases-v2.html',           key:'cases',           badge:0           },
         { icon:'🏠', label:'内見管理（全体）',     href:'coreto-showing-v2.html',         key:'showing_hq'      },
-        { icon:'📋', label:'申込書類管理',     href:'coreto-screening-v2.html',       key:'screening',       badge:'5', badgeColor:'amber' },
-        { icon:'🔑', label:'IT重説管理（全体）',   href:'coreto-itsetsu-v2.html',         key:'itsetsu',         badge:'2', badgeColor:'amber' },
+        { icon:'📋', label:'申込書類管理',     href:'coreto-screening-v2.html',       key:'screening',       badge:0, badgeColor:'amber' },
+        { icon:'🔑', label:'IT重説管理（全体）',   href:'coreto-itsetsu-v2.html',         key:'itsetsu',         badge:0, badgeColor:'amber' },
         { icon:'🏦', label:'初期費用明細チェック', href:'coreto-invoice-check-v2.html',   key:'invoice_check'   },
         { icon:'📷', label:'バーコードスキャン',   href:'coreto-barcode-scan-v2.html',    key:'barcode_scan'    },
         { icon:'📝', label:'成約報告一覧',         href:'coreto-contract-report-v2.html', key:'contract_report' },
@@ -125,8 +125,8 @@ const NAV = {
       // 人材業務：案件受付 → マッチング → 成約
       section: '人材業務',
       items: [
-        { icon:'👤', label:'人材案件（全体）',     href:'coreto-hr-matching-v2.html',     key:'hr_cases_all',    badge:'4'           },
-        { icon:'🔗', label:'PTマッチング',         href:'coreto-matching-v2.html',        key:'matching',        badge:'3', badgeColor:'red' },
+        { icon:'👤', label:'人材案件（全体）',     href:'coreto-hr-matching-v2.html',     key:'hr_cases_all',    badge:0           },
+        { icon:'🔗', label:'PTマッチング',         href:'coreto-matching-v2.html',        key:'matching',        badge:0, badgeColor:'red' },
       ],
     },
     {
@@ -148,8 +148,8 @@ const NAV = {
       // 財務・入金：入金確認 → 即時払い審査 → 月次報酬 → 締め → CSV出力
       section: '財務・入金',
       items: [
-        { icon:'💰', label:'入金監視',             href:'coreto-remittance-v2.html',      key:'remit',           badge:'3', badgeColor:'amber' },
-        { icon:'⚡', label:'即時払い審査',          href:'coreto-instant-pay-v2.html',     key:'instant_pay',     badge:'1', badgeColor:'amber' },
+        { icon:'💰', label:'入金監視',             href:'coreto-remittance-v2.html',      key:'remit',           badge:0, badgeColor:'amber' },
+        { icon:'⚡', label:'即時払い審査',          href:'coreto-instant-pay-v2.html',     key:'instant_pay',     badge:0, badgeColor:'amber' },
         { icon:'💴', label:'月次報酬確定・振込',   href:'coreto-payroll-v2.html',         key:'payroll'         },
         { icon:'🏦', label:'月次締め・全銀出力',   href:'coreto-batch-close-v2.html',     key:'batch_close'     },
         { icon:'📋', label:'月次報酬レポート',     href:'coreto-monthly-report-v2.html',  key:'monthly_report'  },
@@ -209,7 +209,7 @@ const NAV = {
       // 不動産AG業務：案件受付から成約・入金まで一連のフロー
       section: '不動産業務（AG権限）',
       items: [
-        { icon:'🏘️', label:'担当案件一覧',         href:'coreto-cases-v2.html',           key:'cases',          badge:'4'            },
+        { icon:'🏘️', label:'担当案件一覧',         href:'coreto-cases-v2.html',           key:'cases',          badge:0            },
         { icon:'👥', label:'クライアント管理',     href:'coreto-crm-v2.html',             key:'crm'             },
         { icon:'🏠', label:'内見管理',             href:'coreto-showing-v2.html',         key:'showing'         },
         { icon:'📋', label:'申込書類管理',         href:'coreto-screening-v2.html',       key:'screening'       },
@@ -229,7 +229,7 @@ const NAV = {
       // 光通信：RE-AGもAG権限で案件入力・成約報告が可能
       section: '光通信業務（AG権限）',
       items: [
-        { icon:'⚡', label:'担当案件（光通信）',   href:'coreto-utility-v2.html',         key:'utility',         badge:'2', badgeColor:'gold' },
+        { icon:'⚡', label:'担当案件（光通信）',   href:'coreto-utility-v2.html',         key:'utility',         badge:0, badgeColor:'gold' },
       ],
     },
     {
@@ -274,7 +274,7 @@ const NAV = {
       // 人材AG業務：求人受付・候補者マッチング（成約報告は案件フロー内）
       section: '人材業務（AG権限）',
       items: [
-        { icon:'👤', label:'担当案件一覧',         href:'coreto-hr-matching-v2.html',     key:'hr_matching',     badge:'3', badgeColor:'amber' },
+        { icon:'👤', label:'担当案件一覧',         href:'coreto-hr-matching-v2.html',     key:'hr_matching',     badge:0, badgeColor:'amber' },
         { icon:'👥', label:'クライアント管理',     href:'coreto-crm-v2.html',             key:'crm'             },
         { icon:'🏆', label:'成約報告（人材）',      href:'coreto-contract-report-v2.html?biz=hr', key:'contract_report' },
       ],
@@ -289,7 +289,7 @@ const NAV = {
       // 光通信：HR-AGもAG権限で案件入力が可能
       section: '光通信業務（AG権限）',
       items: [
-        { icon:'⚡', label:'担当案件（光通信）',   href:'coreto-utility-v2.html',         key:'utility',         badge:'1', badgeColor:'gold' },
+        { icon:'⚡', label:'担当案件（光通信）',   href:'coreto-utility-v2.html',         key:'utility',         badge:0, badgeColor:'gold' },
       ],
     },
     {
@@ -333,7 +333,7 @@ const NAV = {
       // 光通信AG業務：案件入力・フォロー（成約報告は案件フロー内）
       section: '光通信業務（AG権限）',
       items: [
-        { icon:'⚡', label:'担当案件一覧',         href:'coreto-utility-v2.html',         key:'utility',         badge:'3', badgeColor:'gold' },
+        { icon:'⚡', label:'担当案件一覧',         href:'coreto-utility-v2.html',         key:'utility',         badge:0, badgeColor:'gold' },
         { icon:'👥', label:'クライアント管理',     href:'coreto-crm-v2.html',             key:'crm'             },
         { icon:'🏆', label:'成約報告（光通信）',    href:'coreto-contract-report-v2.html?biz=util', key:'contract_report' },
       ],
@@ -601,7 +601,7 @@ function session() {
   return { name, type: role, userId, rank };
 }
 
-return { init, openSettings, closeSettings, logout, session };
+return { init, openSettings, closeSettings, logout, session, updateBadges: updateNavBadges };
 })();
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -686,43 +686,71 @@ if (typeof CNAV !== 'undefined') CNAV.confirm = coretoConfirm;
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function updateNavBadges() {
   try {
-    // HQタスク（承認待ち）
-    var hqTasks = JSON.parse(localStorage.getItem('CORETO_HQ_TASKS') || '[]');
-    var pendingTasks = hqTasks.length;
-    
+    var reports  = JSON.parse(localStorage.getItem('CORETO_REPORTS')  || '[]');
+    var hqTasks  = JSON.parse(localStorage.getItem('CORETO_HQ_TASKS') || '[]');
+    var myId     = sessionStorage.getItem('coreto_user_id') || '';
+    var myRole   = sessionStorage.getItem('coreto_role')    || 'hq';
+    var isHQ     = myRole === 'hq';
+
+    // ── ロール別フィルタ ──
+    var myReports = isHQ
+      ? reports
+      : reports.filter(function(r){ return !r.agId || r.agId === myId; });
+
+    // ── カウント計算 ──
+    // 進行中案件（承認待ち・未承認）
+    var activeCases  = myReports.filter(function(r){ return r.status !== '承認済み'; });
+    // タイプ別
+    var reActive     = activeCases.filter(function(r){ return r.type === '賃貸' || r.type === '売買'; });
+    var hrActive     = activeCases.filter(function(r){ return r.type === '人材'; });
+    var utilActive   = activeCases.filter(function(r){ return r.type === '光通信'; });
+    // HQ承認待ち
+    var pendingApproval = reports.filter(function(r){ return r.status === '承認待ち'; });
     // 即時払い申請待ち
-    var pendingInstant = 0;
-    try {
-      var ikey = localStorage.getItem('CORETO_INSTANT_PAY_PENDING');
-      if (ikey) pendingInstant = 1;
-    } catch(e) {}
-    
-    // HR在籍確認リマインダー
-    var reminders = JSON.parse(localStorage.getItem('CORETO_HR_REMINDERS') || '[]');
-    var dueReminders = reminders.filter(function(r) { return r.status === 'pending'; }).length;
-    
-    // 成約報告（承認待ち）
-    var reports = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]');
-    var pendingReports = reports.filter(function(r) { return r.status === '承認待ち'; }).length;
-    
-    // ナビの各バッジ要素を更新
+    var pendingInstant  = localStorage.getItem('CORETO_INSTANT_PAY_PENDING') ? 1 : 0;
+    // IT重説待ち
+    var itsetsuPending  = reports.filter(function(r){
+      return r.status === 'IT重説待ち' || (r.itsetsuStatus && r.itsetsuStatus === 'pending');
+    });
+    // 書類審査待ち
+    var screeningPending = reports.filter(function(r){
+      return r.status === '書類審査中' || r.status === '書類待ち';
+    });
+
+    // ── バッジ定義（key → count） ──
     var badges = {
+      // HQ共通
+      'cases':       isHQ ? reports.filter(function(r){return r.type!=='光通信'&&r.type!=='人材';}).length : reActive.length,
+      'hr_cases_all':isHQ ? reports.filter(function(r){return r.type==='人材';}).length : hrActive.length,
+      'utility':     isHQ ? reports.filter(function(r){return r.type==='光通信';}).length : utilActive.length,
+      'screening':   screeningPending.length,
+      'itsetsu':     itsetsuPending.length,
+      'itsetsu_booking': itsetsuPending.length,
+      'remit':       pendingApproval.length,
       'instant_pay': pendingInstant,
-      'hr_matching': dueReminders || undefined,
-      'remit': pendingTasks || undefined,
+      'matching':    reports.filter(function(r){return r.ptId && r.status === '承認待ち';}).length,
+      // AG個別
+      're_cases':    reActive.length,
+      'hr_matching': hrActive.length,
+      'hr_cases':    hrActive.length,
+      'util_cases':  utilActive.length,
     };
-    
-    // ナビアイテムのbadgeを更新
-    document.querySelectorAll('.cnav-badge').forEach(function(el) {
-      var item = el.closest('[data-key]');
-      if (!item) return;
-      var key = item.dataset.key;
-      if (badges[key] !== undefined) {
-        el.textContent = badges[key];
-        el.style.display = badges[key] > 0 ? '' : 'none';
+
+    // ── DOM更新 ──
+    document.querySelectorAll('.cnav-item[data-key]').forEach(function(item) {
+      var key   = item.dataset.key;
+      var badge = item.querySelector('.cnav-badge');
+      if (!badge) return;
+      var count = badges[key];
+      if (count === undefined) return; // 定義なし → 変更しない
+      if (count === 0 || count === '') {
+        badge.style.display = 'none';
+      } else {
+        badge.textContent = count;
+        badge.style.display = '';
       }
     });
-  } catch(e) {}
+  } catch(e) { console.warn('updateNavBadges:', e); }
 }
 
 // CNAV.init後にバッジ更新

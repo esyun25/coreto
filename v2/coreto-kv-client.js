@@ -302,3 +302,18 @@
     : 'localStorage（ローカルのみ）';
   console.info('[KV v3] モード:', mode);
 })();
+
+// ── CORETO_REPORTS更新時にnavバッジを自動更新 ──────────
+(function() {
+  var _origSet = Storage.prototype.setItem;
+  Storage.prototype.setItem = function(key, value) {
+    _origSet.call(this, key, value);
+    if (this === localStorage && (key === 'CORETO_REPORTS' || key === 'CORETO_HQ_TASKS')) {
+      if (typeof updateNavBadges === 'function') {
+        setTimeout(updateNavBadges, 100);
+      } else if (typeof CNAV !== 'undefined' && CNAV.updateBadges) {
+        setTimeout(CNAV.updateBadges, 100);
+      }
+    }
+  };
+})();
