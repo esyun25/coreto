@@ -338,6 +338,36 @@ html,body{background:#FFFFFF !important}
 // ══════════════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', () => {
   CNAV.init('instant_pay');
+// ── 即時払い KPI動的更新 ──────────────────────────────
+(function updateIPKPI() {
+  try {
+    var history  = JSON.parse(localStorage.getItem('CORETO_INSTANT_PAY_HISTORY_ALL') || '[]');
+    var now      = new Date();
+    var thisYM   = now.toISOString().slice(0,7);
+    var fmt      = function(n){ return '¥'+n.toLocaleString(); };
+
+    // 今月振込完了
+    var doneThisMonth = history.filter(function(r){
+      return r.status === '振込済み' && (r.date||'').slice(0,7) === thisYM;
+    });
+    var totalAmt = doneThisMonth.reduce(function(s,r){ return s+(r.amount||0); }, 0);
+
+    // ロック中（簡易：localStorage確認）
+    var locked = localStorage.getItem('CORETO_ACCOUNT_LOCKED') ? 1 : 0;
+
+    function set(id, val){ var el=document.getElementById(id); if(el) el.textContent=val; }
+    set('ip-kpi-locked', locked || '0');
+    set('ip-kpi-done',   doneThisMonth.length || '0');
+    set('ip-kpi-total',  totalAmt ? fmt(totalAmt) : '¥0');
+
+    // 全社承認待ち一覧（ZG集計）
+    var allPending = JSON.parse(localStorage.getItem('CORETO_INSTANT_PAY_QUEUE') || '[]');
+    var pendingAmt = allPending.reduce(function(s,r){ return s+(r.amount||0); }, 0);
+    set('zg-pending-count', allPending.length || '0');
+    set('zg-total-amt',     pendingAmt ? fmt(pendingAmt) : '¥0');
+  } catch(e) { console.warn('ipKPI:', e); }
+})();
+
   const s = CNAV.session();
   if (s) {
     document.getElementById('sb-name').textContent = s.name || s.userId || '—';
@@ -626,9 +656,9 @@ function renderHQ() {
   <div style="max-width:1100px">
     <div class="kpi-grid">
       <div class="kpi-card"><div class="kpi-icon">⏳</div><div class="kpi-val amber">${pending.length}</div><div class="kpi-lbl">振込待ち（2FA済み）</div></div>
-      <div class="kpi-card"><div class="kpi-icon">🔒</div><div class="kpi-val red">1</div><div class="kpi-lbl">アカウントロック中</div></div>
-      <div class="kpi-card"><div class="kpi-icon">✅</div><div class="kpi-val green">12</div><div class="kpi-lbl">今月振込完了</div></div>
-      <div class="kpi-card"><div class="kpi-icon">💰</div><div class="kpi-val gold">¥3,200,000</div><div class="kpi-lbl">今月即時払い総額</div></div>
+      <div class="kpi-card"><div class="kpi-icon">🔒</div><div class="kpi-val red" id="ip-kpi-locked">—</div><div class="kpi-lbl">アカウントロック中</div></div>
+      <div class="kpi-card"><div class="kpi-icon">✅</div><div class="kpi-val green" id="ip-kpi-done">—</div><div class="kpi-lbl">今月振込完了</div></div>
+      <div class="kpi-card"><div class="kpi-icon">💰</div><div class="kpi-val gold" id="ip-kpi-total">—</div><div class="kpi-lbl">今月即時払い総額</div></div>
     </div>
 
 
@@ -681,8 +711,8 @@ function renderHQ() {
       </div>
       <div class="card-body">
         <div class="kpi-grid" style="margin-bottom:14px">
-          <div class="kpi-card"><div class="kpi-val amber" id="zg-pending-count">3</div><div class="kpi-lbl">未処理件数</div></div>
-          <div class="kpi-card"><div class="kpi-val gold" id="zg-total-amt">¥926,250</div><div class="kpi-lbl">合計振込額</div></div>
+          <div class="kpi-card"><div class="kpi-val amber" id="zg-pending-count">—</div><div class="kpi-lbl">未処理件数</div></div>
+          <div class="kpi-card"><div class="kpi-val gold" id="zg-total-amt">—</div><div class="kpi-lbl">合計振込額</div></div>
           <div class="kpi-card"><div class="kpi-val green" id="zg-done-today">0</div><div class="kpi-lbl">本日出力済み</div></div>
           <div class="kpi-card"><div class="kpi-val" id="zg-last-export" style="font-size:16px">—</div><div class="kpi-lbl">前回出力</div></div>
         </div>

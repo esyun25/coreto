@@ -197,23 +197,23 @@ html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:
     <div class="kpi-row">
       <div class="kpi rd">
         <div class="kpi-label">入金期限超過</div>
-        <div class="kpi-val">1件</div>
-        <div class="kpi-sub">¥195,000 至急確認</div>
+        <div class="kpi-val" id="rm-kpi-overdue">—</div>
+        <div class="kpi-sub" id="rm-kpi-overdue-amt">—</div>
       </div>
       <div class="kpi am">
         <div class="kpi-label">本日・明日期限</div>
-        <div class="kpi-val">2件</div>
-        <div class="kpi-sub">¥543,000 入金待ち</div>
+        <div class="kpi-val" id="rm-kpi-soon">—</div>
+        <div class="kpi-sub" id="rm-kpi-soon-amt">—</div>
       </div>
       <div class="kpi em">
         <div class="kpi-label">今月 入金確認済み</div>
-        <div class="kpi-val">22件</div>
-        <div class="kpi-sub">¥6,820,000 受領</div>
+        <div class="kpi-val" id="rm-kpi-done">—</div>
+        <div class="kpi-sub" id="rm-kpi-done-amt">—</div>
       </div>
       <div class="kpi sk">
         <div class="kpi-label">入金確認待ち（全体）</div>
-        <div class="kpi-val">3件</div>
-        <div class="kpi-sub">¥758,000 未確認</div>
+        <div class="kpi-val" id="rm-kpi-pending">—</div>
+        <div class="kpi-sub" id="rm-kpi-pending-amt">—</div>
       </div>
     </div>
 
@@ -260,6 +260,42 @@ function loadReportIncomes() {
 }
 window.addEventListener('DOMContentLoaded', function() {
   CNAV.init('remit');
+// ── 入金確認 KPI動的更新 ──────────────────────────────
+(function updateRemitKPI() {
+  try {
+    var reports = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]');
+    var now = new Date();
+    var today = now.toISOString().slice(0,10);
+    var tomorrow = new Date(now.getTime()+86400000).toISOString().slice(0,10);
+    var thisYM = today.slice(0,7);
+
+    // 承認済み（送金待ち）案件
+    var approved = reports.filter(function(r){ return r.status === '承認済み'; });
+
+    // 期限超過（送金期限を過ぎている）
+    var overdue = approved.filter(function(r){ return r.remitDue && r.remitDue < today && !r.remitted; });
+    // 本日・明日期限
+    var soon    = approved.filter(function(r){ return r.remitDue && (r.remitDue === today || r.remitDue === tomorrow) && !r.remitted; });
+    // 今月確認済み
+    var done    = reports.filter(function(r){ return r.remitted && (r.remitDate||'').slice(0,7) === thisYM; });
+    // 全体待ち
+    var pending = approved.filter(function(r){ return !r.remitted; });
+
+    var fmt = function(n){ return '¥'+n.toLocaleString(); };
+    var sum = function(arr){ return arr.reduce(function(s,r){return s+(r.reward||0);},0); };
+
+    function set(id, val) { var el=document.getElementById(id); if(el) el.textContent=val; }
+    set('rm-kpi-overdue',     overdue.length+'件');
+    set('rm-kpi-overdue-amt', overdue.length ? fmt(sum(overdue))+' 至急確認' : '—');
+    set('rm-kpi-soon',        soon.length+'件');
+    set('rm-kpi-soon-amt',    soon.length ? fmt(sum(soon))+' 入金待ち' : '—');
+    set('rm-kpi-done',        done.length+'件');
+    set('rm-kpi-done-amt',    done.length ? fmt(sum(done))+' 受領' : '—');
+    set('rm-kpi-pending',     pending.length+'件');
+    set('rm-kpi-pending-amt', pending.length ? fmt(sum(pending))+' 未確認' : '—');
+  } catch(e) { console.warn('remitKPI:', e); }
+})();
+
   window.toggleSb = () => { document.querySelector('.sb').classList.toggle('open'); document.getElementById('mob-overlay').classList.toggle('show'); };
   window.closeSb  = () => { document.querySelector('.sb').classList.remove('open');  document.getElementById('mob-overlay').classList.remove('show'); };
 
