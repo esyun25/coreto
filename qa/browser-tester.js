@@ -7,7 +7,11 @@ const { chromium } = require('playwright');
 const path = require('path');
 const fs   = require('fs');
 
-const BASE_URL = 'https://esyun25.github.io/coreto/v2';
+// 環境変数またはコマンドライン引数でURLを上書き可能
+// 例: BASE_URL=http://localhost:8765 node browser-tester.js
+const BASE_URL = process.env.BASE_URL
+  || process.argv.find(a => a.startsWith('--url='))?.split('=')[1]
+  || 'https://esyun25.github.io/coreto/v2';
 
 // ────────────────────────────────────────────────────────────
 // カラー出力
