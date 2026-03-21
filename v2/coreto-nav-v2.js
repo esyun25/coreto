@@ -381,7 +381,7 @@ const NAV = {
         { icon:'🏠', label:'PTポータル',           href:'coreto-hub-v2.html',               key:'dashboard'    },
         { icon:'🔑', label:'紹介コード・QR',       href:'coreto-hub-v2.html#code',          key:'code'         },
         { icon:'🏅', label:'ランク・報酬明細',     href:'coreto-rank-v2.html',              key:'rank'         },
-        { icon:'📊', label:'紹介案件の進捗',       href:'coreto-pt-portal-v2.html#progress',key:'progress'     },
+        { icon:'📊', label:'紹介案件の進捗',       href:'coreto-pt-portal-v2.html#progress',key:'progress',     badge:0 },
       ],
     },
     {
@@ -691,19 +691,27 @@ function updateNavBadges() {
     var myId     = sessionStorage.getItem('coreto_user_id') || '';
     var myRole   = sessionStorage.getItem('coreto_role')    || 'hq';
     var isHQ     = myRole === 'hq';
+    var isPT     = myRole === 'pt';
+    var isIntern = myRole === 'intern';
 
     // ── ロール別フィルタ ──
-    var myReports = isHQ
-      ? reports
-      : reports.filter(function(r){ return !r.agId || r.agId === myId; });
+    var myReports;
+    if (isHQ) {
+      myReports = reports;
+    } else if (isPT) {
+      // PTは自分が紹介した案件（ptId === myId）
+      myReports = reports.filter(function(r){ return r.ptId === myId; });
+    } else {
+      // AG・インターン
+      myReports = reports.filter(function(r){ return !r.agId || r.agId === myId; });
+    }
 
-    // ── カウント計算 ──
-    // 進行中案件（承認待ち・未承認）
-    var activeCases  = myReports.filter(function(r){ return r.status !== '承認済み'; });
-    // タイプ別
-    var reActive     = activeCases.filter(function(r){ return r.type === '賃貸' || r.type === '売買'; });
-    var hrActive     = activeCases.filter(function(r){ return r.type === '人材'; });
-    var utilActive   = activeCases.filter(function(r){ return r.type === '光通信'; });
+    // ── 進行中案件（承認待ち・未承認）──
+    var activeCases   = myReports.filter(function(r){ return r.status !== '承認済み'; });
+    var reActive      = activeCases.filter(function(r){ return r.type === '賃貸' || r.type === '売買'; });
+    var hrActive      = activeCases.filter(function(r){ return r.type === '人材'; });
+    var utilActive    = activeCases.filter(function(r){ return r.type === '光通信'; });
+
     // HQ承認待ち
     var pendingApproval = reports.filter(function(r){ return r.status === '承認待ち'; });
     // 即時払い申請待ち
@@ -717,23 +725,34 @@ function updateNavBadges() {
       return r.status === '書類審査中' || r.status === '書類待ち';
     });
 
+    // PT向け: 紹介中の全案件数
+    var ptActiveRe   = reActive.length;
+    var ptActiveHR   = hrActive.length;
+    var ptActiveUtil = utilActive.length;
+    var ptTotal      = activeCases.length;
+
     // ── バッジ定義（key → count） ──
     var badges = {
-      // HQ共通
-      'cases':       isHQ ? reports.filter(function(r){return r.type!=='光通信'&&r.type!=='人材';}).length : reActive.length,
-      'hr_cases_all':isHQ ? reports.filter(function(r){return r.type==='人材';}).length : hrActive.length,
-      'utility':     isHQ ? reports.filter(function(r){return r.type==='光通信';}).length : utilActive.length,
-      'screening':   screeningPending.length,
-      'itsetsu':     itsetsuPending.length,
+      // HQ
+      'cases':        isHQ ? reports.filter(function(r){return r.type!=='光通信'&&r.type!=='人材';}).length : reActive.length,
+      'hr_cases_all': isHQ ? reports.filter(function(r){return r.type==='人材';}).length : hrActive.length,
+      'utility':      isHQ ? reports.filter(function(r){return r.type==='光通信';}).length : utilActive.length,
+      'screening':    screeningPending.length,
+      'itsetsu':      itsetsuPending.length,
       'itsetsu_booking': itsetsuPending.length,
-      'remit':       pendingApproval.length,
-      'instant_pay': pendingInstant,
-      'matching':    reports.filter(function(r){return r.ptId && r.status === '承認待ち';}).length,
+      'remit':        pendingApproval.length,
+      'instant_pay':  pendingInstant,
+      'matching':     reports.filter(function(r){return r.ptId && r.status === '承認待ち';}).length,
       // AG個別
-      're_cases':    reActive.length,
-      'hr_matching': hrActive.length,
-      'hr_cases':    hrActive.length,
-      'util_cases':  utilActive.length,
+      're_cases':     reActive.length,
+      'hr_matching':  hrActive.length,
+      'hr_cases':     hrActive.length,
+      'util_cases':   utilActive.length,
+      // PT向け（紹介中案件数）
+      'progress':     isPT ? ptTotal : undefined,
+      're_refer':     isPT ? ptActiveRe   : undefined,
+      'hr_refer':     isPT ? ptActiveHR   : undefined,
+      'util_submit':  isPT ? ptActiveUtil : undefined,
     };
 
     // ── DOM更新 ──
@@ -742,8 +761,10 @@ function updateNavBadges() {
       var badge = item.querySelector('.cnav-badge');
       if (!badge) return;
       var count = badges[key];
-      if (count === undefined) return; // 定義なし → 変更しない
-      if (count === 0 || count === '') {
+      if (count === undefined) return;
+      if (!count || count === 0) {
+        // 'NEW'バッジはそのまま維持
+        if (badge.textContent === 'NEW') return;
         badge.style.display = 'none';
       } else {
         badge.textContent = count;
@@ -751,6 +772,7 @@ function updateNavBadges() {
       }
     });
   } catch(e) { console.warn('updateNavBadges:', e); }
+
 }
 
 // CNAV.init後にバッジ更新
