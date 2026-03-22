@@ -2794,6 +2794,54 @@ function renderREAgDash() {
     <button class="topbar-btn ghost">📋 日報提出</button>
     <button class="topbar-btn primary" onclick="window.location.href='coreto-pipeline-v2.html'">＋ 案件登録</button>`;
 
+  // Today's tasks for AG
+  var todayHtml = '';
+  try {
+    var reports = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]');
+    var myId = sessionStorage.getItem('coreto_user_id') || '';
+    var today = new Date().toISOString().slice(0, 10);
+    var myReports = reports.filter(function(r) { return r.agId === myId; });
+
+    var tasks = [];
+    // Pending contract reports
+    var pending = myReports.filter(function(r) { return r.status === '承認待ち'; });
+    if (pending.length) tasks.push({ icon: '🏆', text: '成約報告: ' + pending.length + '件承認待ち', type: 'info' });
+
+    // AD payment waiting
+    var adWait = myReports.filter(function(r) { return r.feeAD > 0 && !r.adPaid; });
+    if (adWait.length) tasks.push({ icon: '💰', text: 'AD入金待ち: ' + adWait.length + '件', type: 'warning' });
+
+    // Reports needing fix
+    var fixes = myReports.filter(function(r) { return r.status === '修正依頼'; });
+    if (fixes.length) tasks.push({ icon: '⚠️', text: '修正依頼: ' + fixes.length + '件', type: 'danger' });
+
+    if (tasks.length === 0) {
+      tasks.push({ icon: '✅', text: '現在タスクはありません', type: 'success' });
+    }
+
+    todayHtml = '<div style="background:var(--bg-card,#fff);border:1px solid var(--bd);border-radius:var(--r,12px);padding:16px 20px;margin-bottom:16px">' +
+      '<div style="font-size:13px;font-weight:700;color:var(--navy,#0D1A2D);margin-bottom:12px">📅 今日やるべきこと</div>' +
+      tasks.map(function(t) {
+        var bg = t.type === 'warning' ? 'var(--warning-bg,#FFFBEB)' : t.type === 'danger' ? 'var(--danger-bg,#FEF2F2)' : t.type === 'success' ? 'var(--success-bg,#ECFDF5)' : 'var(--info-bg,#F0F9FF)';
+        return '<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:' + bg + ';border-radius:8px;margin-bottom:6px;font-size:12px;color:var(--ink,#111827)">' +
+          '<span>' + t.icon + '</span><span>' + t.text + '</span></div>';
+      }).join('') +
+    '</div>';
+  } catch(e) {}
+
+  // Property search tool shortcuts
+  var searchToolsHtml = '<div style="background:var(--bg-card,#fff);border:1px solid var(--bd);border-radius:var(--r,12px);padding:16px 20px;margin-bottom:16px">' +
+    '<div style="font-size:13px;font-weight:700;color:var(--navy,#0D1A2D);margin-bottom:12px">🔍 物件検索ツール</div>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:8px">' +
+      '<a href="https://atbb.jp" target="_blank" rel="noopener" style="padding:6px 14px;background:var(--surface,#F3F4F6);border:1px solid var(--bd);border-radius:6px;font-size:11px;font-weight:600;color:var(--ink,#111827);text-decoration:none;font-family:inherit">ATBB</a>' +
+      '<a href="https://itandibb.com" target="_blank" rel="noopener" style="padding:6px 14px;background:var(--surface,#F3F4F6);border:1px solid var(--bd);border-radius:6px;font-size:11px;font-weight:600;color:var(--ink,#111827);text-decoration:none;font-family:inherit">イタンジBB</a>' +
+      '<a href="https://system.reins.or.jp" target="_blank" rel="noopener" style="padding:6px 14px;background:var(--surface,#F3F4F6);border:1px solid var(--bd);border-radius:6px;font-size:11px;font-weight:600;color:var(--ink,#111827);text-decoration:none;font-family:inherit">REINS</a>' +
+      '<a href="https://suumo.jp" target="_blank" rel="noopener" style="padding:6px 14px;background:var(--surface,#F3F4F6);border:1px solid var(--bd);border-radius:6px;font-size:11px;font-weight:600;color:var(--ink,#111827);text-decoration:none;font-family:inherit">SUUMO</a>' +
+      '<a href="https://www.homes.co.jp" target="_blank" rel="noopener" style="padding:6px 14px;background:var(--surface,#F3F4F6);border:1px solid var(--bd);border-radius:6px;font-size:11px;font-weight:600;color:var(--ink,#111827);text-decoration:none;font-family:inherit">HOME\'S</a>' +
+      '<a href="https://www.athome.co.jp" target="_blank" rel="noopener" style="padding:6px 14px;background:var(--surface,#F3F4F6);border:1px solid var(--bd);border-radius:6px;font-size:11px;font-weight:600;color:var(--ink,#111827);text-decoration:none;font-family:inherit">アットホーム</a>' +
+    '</div>' +
+  '</div>';
+
   document.getElementById('page-content').innerHTML = `
     <div class="kpi-grid">
       <div class="kpi-card gold">
@@ -2817,6 +2865,9 @@ function renderREAgDash() {
         <div class="kpi-sub">光通信成約</div>
       </div>
     </div>
+
+    ${todayHtml}
+    ${searchToolsHtml}
 
     <!-- 権限区分バッジ -->
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px">
@@ -3468,6 +3519,7 @@ JSONのみ（前置き不要）:
 }
 </script>
 <script src="coreto-kv-client.js"></script>
+<script src="icons.js"></script>
 <script src="coreto-nav-v2.js"></script>
 <script>window.addEventListener("DOMContentLoaded",function(){
   // kv-client.js と nav-v2.js が読み込まれた後に実行される

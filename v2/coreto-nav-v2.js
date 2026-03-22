@@ -43,12 +43,8 @@ const INJECT_CSS = `
   content:''; position:absolute; left:0; top:50%; transform:translateY(-50%);
   width:3px; height:16px; background:#C8A951; border-radius:0 2px 2px 0;
 }
-.cnav-icon {
-  width:26px; height:26px; display:flex; align-items:center; justify-content:center;
-  font-size:13px; border-radius:6px; flex-shrink:0;
-  background:rgba(255,255,255,.04);
-}
-.cnav-item.active .cnav-icon { background:rgba(200,169,81,.12); }
+.cnav-icon { width:18px; height:18px; display:flex; align-items:center; justify-content:center; flex-shrink:0; opacity:.75; }
+.cnav-item:hover .cnav-icon, .cnav-item.active .cnav-icon { opacity:1; }
 .cnav-label { font-size:11px; font-weight:500; color:rgba(255,255,255,.55); flex:1; }
 .cnav-item.active .cnav-label { color:#C8A951; }
 .cnav-item:hover .cnav-label { color:rgba(255,255,255,.82); }
@@ -90,6 +86,22 @@ const INJECT_CSS = `
 .bc-item:hover { color: var(--ink, #111827); }
 .bc-sep { color: var(--faint, #9CA3AF); }
 .bc-current { color: var(--ink, #111827); font-weight: 600; }
+.cnav-section { cursor:pointer; user-select:none; display:flex; align-items:center; justify-content:space-between; }
+.cnav-section::after { content:'▾'; font-size:10px; color:rgba(255,255,255,.3); transition:transform .2s; }
+.cnav-section.collapsed::after { transform:rotate(-90deg); }
+.cnav-section-items.collapsed { max-height:0 !important; overflow:hidden; }
+.cmd-overlay { position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:9000; display:flex; align-items:flex-start; justify-content:center; padding-top:15vh; backdrop-filter:blur(2px); }
+.cmd-palette { width:min(560px,90vw); background:#fff; border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,.25); overflow:hidden; }
+.cmd-input-wrap { display:flex; align-items:center; padding:14px 16px; border-bottom:1px solid #E5E7EB; gap:10px; }
+.cmd-input { flex:1; border:none; outline:none; font-size:16px; font-family:'Outfit','Noto Sans JP',sans-serif; background:transparent; color:#111827; }
+.cmd-results { max-height:360px; overflow-y:auto; padding:6px; }
+.cmd-item { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px; cursor:pointer; transition:background .1s; }
+.cmd-item:hover, .cmd-item.selected { background:rgba(200,169,81,.12); }
+.cmd-item-label { font-size:14px; font-weight:500; color:#111827; }
+.cmd-item-section { font-size:11px; color:#6B7280; margin-left:auto; }
+.cmd-empty { padding:24px; text-align:center; color:#6B7280; font-size:13px; }
+.cmd-footer { padding:8px 14px; border-top:1px solid #E5E7EB; display:flex; gap:12px; font-size:11px; color:#6B7280; }
+.cmd-key { background:#F3F4F6; border:1px solid #E5E7EB; border-radius:4px; padding:1px 5px; font-family:'DM Mono',monospace; font-size:10px; }
 `;
 
 function injectCSS() {
@@ -119,33 +131,33 @@ const NAV = {
     {
       section: '概要',
       items: [
-        { icon:'🏠', label:'HQダッシュボード',    href:'coreto-hub-v2.html',             key:'dashboard'       },
-        { icon:'📊', label:'経営ダッシュボード',   href:'coreto-dashboard-exec-v2.html',  key:'exec_dash'       },
+        { icon:'🏠', label:'HQダッシュボード',    href:'coreto-hub-v2.html',             key:'dashboard',      iconKey:'home' },
+        { icon:'📊', label:'経営ダッシュボード',   href:'coreto-dashboard-exec-v2.html',  key:'exec_dash',      iconKey:'exec_dash' },
       ],
     },
     {
       section: '案件管理',
       items: [
-        { icon:'📋', label:'案件一覧',             href:'coreto-cases-v2.html',           key:'cases',           badge:0 },
-        { icon:'📈', label:'パイプライン',          href:'coreto-pipeline-v2.html',        key:'pipeline'        },
-        { icon:'🔑', label:'IT重説管理',            href:'coreto-itsetsu-mgmt-v2.html',    key:'itsetsu_mgmt'    },
-        { icon:'👥', label:'CRM',                   href:'coreto-crm-v2.html',             key:'crm'             },
+        { icon:'📋', label:'案件一覧',             href:'coreto-cases-v2.html',           key:'cases',           badge:0, iconKey:'cases' },
+        { icon:'📈', label:'パイプライン',          href:'coreto-pipeline-v2.html',        key:'pipeline',       iconKey:'pipeline' },
+        { icon:'🔑', label:'IT重説管理',            href:'coreto-itsetsu-mgmt-v2.html',    key:'itsetsu_mgmt',   iconKey:'itsetsu' },
+        { icon:'👥', label:'CRM',                   href:'coreto-crm-v2.html',             key:'crm',            iconKey:'crm' },
       ],
     },
     {
       section: '財務・人事',
       items: [
-        { icon:'💰', label:'財務管理',             href:'coreto-remittance-v2.html',      key:'finance'         },
-        { icon:'👔', label:'AG管理',               href:'coreto-rank-dashboard-v2.html',  key:'ag_mgmt'         },
-        { icon:'🔐', label:'ユーザー・権限',       href:'coreto-user-mgmt-v2.html',       key:'user_mgmt'       },
+        { icon:'💰', label:'財務管理',             href:'coreto-remittance-v2.html',      key:'finance',        iconKey:'finance' },
+        { icon:'👔', label:'AG管理',               href:'coreto-rank-dashboard-v2.html',  key:'ag_mgmt',        iconKey:'ag_mgmt' },
+        { icon:'🔐', label:'ユーザー・権限',       href:'coreto-user-mgmt-v2.html',       key:'user_mgmt',      iconKey:'users' },
       ],
     },
     {
       section: 'ツール',
       items: [
-        { icon:'📚', label:'研修管理',             href:'coreto-training-mgmt-v2.html',   key:'training'        },
-        { icon:'🔔', label:'通知・LINE連携',       href:'coreto-notification-v2.html',    key:'notification'    },
-        { icon:'⚙️', label:'システム設定',          href:'coreto-takken-v2.html',          key:'system'          },
+        { icon:'📚', label:'研修管理',             href:'coreto-training-mgmt-v2.html',   key:'training',       iconKey:'training' },
+        { icon:'🔔', label:'通知・LINE連携',       href:'coreto-notification-v2.html',    key:'notification',   iconKey:'notification' },
+        { icon:'⚙️', label:'システム設定',          href:'coreto-takken-v2.html',          key:'system',         iconKey:'settings' },
       ],
     },
   ],
@@ -156,29 +168,29 @@ const NAV = {
     {
       section: 'マイページ',
       items: [
-        { icon:'🏠', label:'マイダッシュボード',    href:'coreto-hub-v2.html',             key:'dashboard'       },
+        { icon:'🏠', label:'マイダッシュボード',    href:'coreto-hub-v2.html',             key:'dashboard',      iconKey:'home' },
       ],
     },
     {
       section: '不動産業務',
       items: [
-        { icon:'📋', label:'担当案件',             href:'coreto-cases-v2.html',           key:'cases',           badge:0 },
-        { icon:'👥', label:'クライアント管理',     href:'coreto-crm-v2.html',             key:'crm'             },
-        { icon:'🏆', label:'成約報告',             href:'coreto-contract-report-v2.html', key:'contract_report' },
+        { icon:'📋', label:'担当案件',             href:'coreto-cases-v2.html',           key:'cases',           badge:0, iconKey:'cases' },
+        { icon:'👥', label:'クライアント管理',     href:'coreto-crm-v2.html',             key:'crm',            iconKey:'crm' },
+        { icon:'🏆', label:'成約報告',             href:'coreto-contract-report-v2.html', key:'contract_report', iconKey:'contract' },
       ],
     },
     {
       section: '報酬・支払い',
       items: [
-        { icon:'💰', label:'報酬・支払い',         href:'coreto-payment-v2.html',         key:'payment'         },
-        { icon:'🔄', label:'PTマッチング',         href:'coreto-matching-v2.html',        key:'matching'        },
+        { icon:'💰', label:'報酬・支払い',         href:'coreto-payment-v2.html',         key:'payment',        iconKey:'payment' },
+        { icon:'🔄', label:'PTマッチング',         href:'coreto-matching-v2.html',        key:'matching',       iconKey:'matching' },
       ],
     },
     {
       section: 'マイアカウント',
       items: [
-        { icon:'⚙️', label:'マイアカウント',       href:'coreto-account-v2.html',         key:'my_account'      },
-        { icon:'📖', label:'FAQ・マニュアル',     href:'coreto-faq-v2.html',             key:'faq'             },
+        { icon:'⚙️', label:'マイアカウント',       href:'coreto-account-v2.html',         key:'my_account',     iconKey:'account' },
+        { icon:'📖', label:'FAQ・マニュアル',     href:'coreto-faq-v2.html',             key:'faq',            iconKey:'faq' },
       ],
     },
   ],
@@ -189,23 +201,23 @@ const NAV = {
     {
       section: 'マイページ',
       items: [
-        { icon:'🏠', label:'マイダッシュボード',    href:'coreto-hub-v2.html',             key:'dashboard'       },
+        { icon:'🏠', label:'マイダッシュボード',    href:'coreto-hub-v2.html',             key:'dashboard',      iconKey:'home' },
       ],
     },
     {
       section: '人材業務',
       items: [
-        { icon:'📋', label:'担当案件',             href:'coreto-hr-matching-v2.html',     key:'hr_cases'        },
-        { icon:'👥', label:'クライアント管理',     href:'coreto-crm-v2.html',             key:'crm'             },
-        { icon:'🏆', label:'成約報告',             href:'coreto-contract-report-v2.html?biz=hr', key:'contract_report' },
+        { icon:'📋', label:'担当案件',             href:'coreto-hr-matching-v2.html',     key:'hr_cases',       iconKey:'crm' },
+        { icon:'👥', label:'クライアント管理',     href:'coreto-crm-v2.html',             key:'crm',            iconKey:'crm' },
+        { icon:'🏆', label:'成約報告',             href:'coreto-contract-report-v2.html?biz=hr', key:'contract_report', iconKey:'contract' },
       ],
     },
     {
       section: '報酬・設定',
       items: [
-        { icon:'💰', label:'報酬・支払い',         href:'coreto-payment-v2.html',         key:'payment'         },
-        { icon:'⚙️', label:'マイアカウント',       href:'coreto-account-v2.html',         key:'my_account'      },
-        { icon:'📖', label:'FAQ・マニュアル',     href:'coreto-faq-v2.html',             key:'faq'             },
+        { icon:'💰', label:'報酬・支払い',         href:'coreto-payment-v2.html',         key:'payment',        iconKey:'payment' },
+        { icon:'⚙️', label:'マイアカウント',       href:'coreto-account-v2.html',         key:'my_account',     iconKey:'account' },
+        { icon:'📖', label:'FAQ・マニュアル',     href:'coreto-faq-v2.html',             key:'faq',            iconKey:'faq' },
       ],
     },
   ],
@@ -216,23 +228,23 @@ const NAV = {
     {
       section: 'マイページ',
       items: [
-        { icon:'🏠', label:'マイダッシュボード',    href:'coreto-hub-v2.html',             key:'dashboard'       },
+        { icon:'🏠', label:'マイダッシュボード',    href:'coreto-hub-v2.html',             key:'dashboard',      iconKey:'home' },
       ],
     },
     {
       section: '光通信業務',
       items: [
-        { icon:'⚡', label:'担当案件',             href:'coreto-utility-v2.html',         key:'utility',         badge:0, badgeColor:'gold' },
-        { icon:'👥', label:'クライアント管理',     href:'coreto-crm-v2.html',             key:'crm'             },
-        { icon:'🏆', label:'成約報告',             href:'coreto-contract-report-v2.html?biz=util', key:'contract_report' },
+        { icon:'⚡', label:'担当案件',             href:'coreto-utility-v2.html',         key:'utility',         badge:0, badgeColor:'gold', iconKey:'cases' },
+        { icon:'👥', label:'クライアント管理',     href:'coreto-crm-v2.html',             key:'crm',            iconKey:'crm' },
+        { icon:'🏆', label:'成約報告',             href:'coreto-contract-report-v2.html?biz=util', key:'contract_report', iconKey:'contract' },
       ],
     },
     {
       section: '報酬・設定',
       items: [
-        { icon:'💰', label:'報酬・支払い',         href:'coreto-payment-v2.html',         key:'payment'         },
-        { icon:'⚙️', label:'マイアカウント',       href:'coreto-account-v2.html',         key:'my_account'      },
-        { icon:'📖', label:'FAQ・マニュアル',     href:'coreto-faq-v2.html',             key:'faq'             },
+        { icon:'💰', label:'報酬・支払い',         href:'coreto-payment-v2.html',         key:'payment',        iconKey:'payment' },
+        { icon:'⚙️', label:'マイアカウント',       href:'coreto-account-v2.html',         key:'my_account',     iconKey:'account' },
+        { icon:'📖', label:'FAQ・マニュアル',     href:'coreto-faq-v2.html',             key:'faq',            iconKey:'faq' },
       ],
     },
   ],
@@ -243,15 +255,15 @@ const NAV = {
     {
       section: 'ポータル',
       items: [
-        { icon:'🏠', label:'PTポータル',           href:'coreto-pt-portal-v2.html',         key:'dashboard'    },
-        { icon:'📊', label:'紹介案件の進捗',       href:'coreto-matching-v2.html',          key:'progress'     },
+        { icon:'🏠', label:'PTポータル',           href:'coreto-pt-portal-v2.html',         key:'dashboard',   iconKey:'portal' },
+        { icon:'📊', label:'紹介案件の進捗',       href:'coreto-matching-v2.html',          key:'progress',    iconKey:'progress' },
       ],
     },
     {
       section: '報酬・設定',
       items: [
-        { icon:'💰', label:'報酬明細',             href:'coreto-payment-v2.html',           key:'payment'      },
-        { icon:'⚙️', label:'マイアカウント',       href:'coreto-account-v2.html',           key:'my_account'   },
+        { icon:'💰', label:'報酬明細',             href:'coreto-payment-v2.html',           key:'payment',     iconKey:'payment' },
+        { icon:'⚙️', label:'マイアカウント',       href:'coreto-account-v2.html',           key:'my_account',  iconKey:'account' },
       ],
     },
   ],
@@ -262,18 +274,18 @@ const NAV = {
     {
       section: '本日の業務',
       items: [
-        { icon:'📊', label:'当日の実績',               href:'coreto-hub-v2.html',              key:'dashboard'    },
-        { icon:'📍', label:'訪問記録・エリアマップ',   href:'coreto-intern-visit-v2.html',     key:'visit'        },
-        { icon:'⚡', label:'光通信リードを投稿する',   href:'coreto-intern-visit-v2.html#lead',key:'lead_submit'  },
+        { icon:'📊', label:'当日の実績',               href:'coreto-hub-v2.html',              key:'dashboard',   iconKey:'home' },
+        { icon:'📍', label:'訪問記録・エリアマップ',   href:'coreto-intern-visit-v2.html',     key:'visit',       iconKey:'cases' },
+        { icon:'⚡', label:'光通信リードを投稿する',   href:'coreto-intern-visit-v2.html#lead',key:'lead_submit', iconKey:'notification' },
       ],
     },
     {
       section: '個人',
       items: [
-        { icon:'💴', label:'報酬確認',             href:'coreto-payment-v2.html',         key:'payment'      },
-        { icon:'🏆', label:'ランキング',           href:'coreto-intern-v2.html',          key:'rank'         },
-        { icon:'📚', label:'マニュアル・FAQ',     href:'coreto-faq-v2.html',             key:'faq'          },
-        { icon:'📲', label:'LINE再連携',           href:'coreto-hub-v2.html#line_relink', key:'line_relink'  },
+        { icon:'💴', label:'報酬確認',             href:'coreto-payment-v2.html',         key:'payment',     iconKey:'payment' },
+        { icon:'🏆', label:'ランキング',           href:'coreto-intern-v2.html',          key:'rank',        iconKey:'progress' },
+        { icon:'📚', label:'マニュアル・FAQ',     href:'coreto-faq-v2.html',             key:'faq',         iconKey:'faq' },
+        { icon:'📲', label:'LINE再連携',           href:'coreto-hub-v2.html#line_relink', key:'line_relink', iconKey:'settings' },
       ],
     },
   ],
@@ -407,21 +419,60 @@ function init(activeKey) {
   if (roleEl) roleEl.textContent = user.role;
   const navEl = document.getElementById('sb-nav');
   if (!navEl) return;
-  navEl.innerHTML = sections.map(sec => `
-    <div class="cnav-section">
-      <div class="cnav-section-label">${sec.section}</div>
-      ${sec.items.map(item => {
-        const isActive = item.key === activeKey;
-        const badgeCls = item.badgeColor === 'amber' ? 'amber'
-                       : item.badgeColor === 'gold'  ? 'gold' : '';
-        return `<a href="${item.href}" class="cnav-item${isActive ? ' active' : ''}" data-key="${item.key || ''}">
-          <div class="cnav-icon">${item.icon}</div>
-          <div class="cnav-label">${item.label}</div>
-          ${item.note  ? `<div class="cnav-note">${item.note}</div>` : ''}
-          <div class="cnav-badge ${badgeCls}"${item.badge ? '' : ' style="display:none"'}>${item.badge || ''}</div>
-        </a>`;
-      }).join('')}
-    </div>`).join('');
+  navEl.innerHTML = sections.map(function(sec, sectionIndex) {
+    return '<div class="cnav-section" onclick="CNAV.toggleSection(\'' + sectionIndex + '\')" data-section="' + sectionIndex + '">' +
+      '<div class="cnav-section-label">' + sec.section + '</div>' +
+    '</div>' +
+    '<div class="cnav-section-items" id="cnav-sec-' + sectionIndex + '">' +
+      sec.items.map(function(item) {
+        var isActive = item.key === activeKey;
+        var badgeCls = item.badgeColor === 'amber' ? 'amber'
+                     : item.badgeColor === 'gold'  ? 'gold' : '';
+        return '<a href="' + item.href + '" class="cnav-item' + (isActive ? ' active' : '') + '" data-key="' + (item.key || '') + '">' +
+          '<span class="cnav-icon">' + (typeof icon === 'function' && item.iconKey ? icon(item.iconKey, 16) : (item.icon || '')) + '</span>' +
+          '<div class="cnav-label">' + item.label + '</div>' +
+          (item.note ? '<div class="cnav-note">' + item.note + '</div>' : '') +
+          '<div class="cnav-badge ' + badgeCls + '"' + (item.badge ? '' : ' style="display:none"') + '>' + (item.badge || '') + '</div>' +
+        '</a>';
+      }).join('') +
+    '</div>';
+  }).join('');
+
+  // Restore collapsed state
+  try {
+    var colRole = sessionStorage.getItem('coreto_role') || '';
+    var colKey = 'CORETO_NAV_COLLAPSED_' + colRole;
+    var colState = JSON.parse(localStorage.getItem(colKey) || '{}');
+    Object.keys(colState).forEach(function(idx) {
+      if (colState[idx]) {
+        var el = document.getElementById('cnav-sec-' + idx);
+        var hdr = document.querySelector('[data-section="' + idx + '"]');
+        if (el) el.classList.add('collapsed');
+        if (hdr) hdr.classList.add('collapsed');
+      }
+    });
+  } catch(e){}
+
+  // Store sections for Command Palette
+  window._cnavSections = sections;
+
+  // Record current page as recent
+  try {
+    var recent = JSON.parse(localStorage.getItem('CORETO_RECENT_PAGES') || '[]');
+    var currentItem = null;
+    sections.forEach(function(sec) {
+      if (sec.items) sec.items.forEach(function(item) {
+        if (item.key === activeKey) currentItem = item;
+      });
+    });
+    if (currentItem) {
+      recent = recent.filter(function(r) { return r.href !== currentItem.href; });
+      recent.unshift({ label: currentItem.label, href: currentItem.href, iconKey: currentItem.iconKey });
+      if (recent.length > 10) recent = recent.slice(0, 10);
+      localStorage.setItem('CORETO_RECENT_PAGES', JSON.stringify(recent));
+    }
+  } catch(e){}
+
   renderFooter();
   // 残-10: ナビ描画後にlocalStorageからバッジを動的更新
   setTimeout(updateNavBadges, 50);
@@ -495,8 +546,147 @@ function session() {
   return { name, type: role, userId, rank };
 }
 
-return { init, openSettings, closeSettings, logout, session, updateBadges: updateNavBadges };
+function toggleSection(idx) {
+  var el = document.getElementById('cnav-sec-' + idx);
+  var hdr = document.querySelector('[data-section="' + idx + '"]');
+  if (!el) return;
+  el.classList.toggle('collapsed');
+  if (hdr) hdr.classList.toggle('collapsed');
+  try {
+    var role = sessionStorage.getItem('coreto_role') || '';
+    var key = 'CORETO_NAV_COLLAPSED_' + role;
+    var state = JSON.parse(localStorage.getItem(key) || '{}');
+    state[idx] = el.classList.contains('collapsed');
+    localStorage.setItem(key, JSON.stringify(state));
+  } catch(e){}
+}
+
+return { init, openSettings, closeSettings, logout, session, updateBadges: updateNavBadges, toggleSection };
 })();
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Command Palette (Cmd+K / Ctrl+K)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+var _cmdOpen = false;
+var _cmdItems = [];
+var _cmdSelected = 0;
+
+function openCommandPalette() {
+  if (_cmdOpen) return;
+  _cmdOpen = true;
+
+  var overlay = document.createElement('div');
+  overlay.className = 'cmd-overlay';
+  overlay.id = 'cmd-overlay';
+  overlay.onclick = function(e) { if (e.target === overlay) closeCommandPalette(); };
+  overlay.innerHTML =
+    '<div class="cmd-palette">' +
+      '<div class="cmd-input-wrap">' +
+        (typeof icon === 'function' ? icon('search', 18) : '🔍') +
+        '<input class="cmd-input" id="cmd-input" placeholder="ページ名を検索..." autofocus>' +
+      '</div>' +
+      '<div class="cmd-results" id="cmd-results"></div>' +
+      '<div class="cmd-footer"><span><span class="cmd-key">↑↓</span> 移動</span><span><span class="cmd-key">Enter</span> 開く</span><span><span class="cmd-key">Esc</span> 閉じる</span></div>' +
+    '</div>';
+  document.body.appendChild(overlay);
+
+  var input = document.getElementById('cmd-input');
+  input.addEventListener('input', function() { filterCommandResults(this.value); });
+  input.addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowDown') { e.preventDefault(); _cmdSelected = Math.min(_cmdSelected + 1, _cmdItems.length - 1); highlightCmd(); }
+    if (e.key === 'ArrowUp') { e.preventDefault(); _cmdSelected = Math.max(_cmdSelected - 1, 0); highlightCmd(); }
+    if (e.key === 'Enter') { e.preventDefault(); execCmd(); }
+    if (e.key === 'Escape') { closeCommandPalette(); }
+  });
+
+  filterCommandResults('');
+  setTimeout(function() { input.focus(); }, 50);
+}
+
+function closeCommandPalette() {
+  _cmdOpen = false;
+  var ov = document.getElementById('cmd-overlay');
+  if (ov) ov.remove();
+}
+
+function filterCommandResults(query) {
+  var results = document.getElementById('cmd-results');
+  if (!results) return;
+
+  var allItems = [];
+  if (window._cnavSections) {
+    window._cnavSections.forEach(function(sec) {
+      if (sec.items) {
+        sec.items.forEach(function(item) {
+          allItems.push({ label: item.label, href: item.href, section: sec.section, iconKey: item.iconKey });
+        });
+      }
+    });
+  }
+
+  var recent = [];
+  try { recent = JSON.parse(localStorage.getItem('CORETO_RECENT_PAGES') || '[]'); } catch(e){}
+
+  var q = query.toLowerCase().trim();
+  var filtered;
+  if (!q) {
+    var recentSet = {};
+    recent.forEach(function(r){ recentSet[r.href] = true; });
+    var recentItems = recent.slice(0, 5).map(function(r) { return { label: r.label, href: r.href, section: '最近のページ', iconKey: r.iconKey }; });
+    filtered = recentItems.concat(allItems.filter(function(i) { return !recentSet[i.href]; }));
+  } else {
+    filtered = allItems.filter(function(i) {
+      return i.label.toLowerCase().indexOf(q) !== -1 || (i.section && i.section.toLowerCase().indexOf(q) !== -1);
+    });
+  }
+
+  _cmdItems = filtered;
+  _cmdSelected = 0;
+
+  if (filtered.length === 0) {
+    results.innerHTML = '<div class="cmd-empty">該当するページがありません</div>';
+    return;
+  }
+
+  results.innerHTML = filtered.map(function(item, idx) {
+    return '<div class="cmd-item' + (idx === 0 ? ' selected' : '') + '" data-idx="' + idx + '" onclick="execCmd(' + idx + ')" onmouseenter="_cmdSelected=' + idx + ';highlightCmd()">' +
+      '<span style="width:18px;height:18px;display:flex;align-items:center;color:#6B7280">' + (typeof icon === 'function' && item.iconKey ? icon(item.iconKey, 16) : '') + '</span>' +
+      '<span class="cmd-item-label">' + item.label + '</span>' +
+      '<span class="cmd-item-section">' + (item.section || '') + '</span>' +
+    '</div>';
+  }).join('');
+}
+
+function highlightCmd() {
+  var items = document.querySelectorAll('.cmd-item');
+  for (var i = 0; i < items.length; i++) {
+    if (i === _cmdSelected) items[i].classList.add('selected');
+    else items[i].classList.remove('selected');
+  }
+}
+
+function execCmd(idx) {
+  if (idx !== undefined) _cmdSelected = idx;
+  var item = _cmdItems[_cmdSelected];
+  if (!item) return;
+  try {
+    var recent = JSON.parse(localStorage.getItem('CORETO_RECENT_PAGES') || '[]');
+    recent = recent.filter(function(r) { return r.href !== item.href; });
+    recent.unshift({ label: item.label, href: item.href, iconKey: item.iconKey });
+    if (recent.length > 10) recent = recent.slice(0, 10);
+    localStorage.setItem('CORETO_RECENT_PAGES', JSON.stringify(recent));
+  } catch(e){}
+  closeCommandPalette();
+  window.location.href = item.href;
+}
+
+document.addEventListener('keydown', function(e) {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+    e.preventDefault();
+    if (_cmdOpen) closeCommandPalette();
+    else openCommandPalette();
+  }
+});
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 残-6: confirm()代替 — ネイティブダイアログの排除
