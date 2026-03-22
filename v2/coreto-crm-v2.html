@@ -519,7 +519,77 @@ function filterTable(){
 
 function sortTable(col){ renderTable([...currentData]); } // simplified
 
-function openDetail(id){ window.location.href=`coreto-crm-detail-v2.html?id=${id}`; }
+function openDetail(id){ openCrmPanel(id); }
+
+function openCrmPanel(clientId) {
+  var overlay = document.getElementById('crm-panel-overlay');
+  var panel = document.getElementById('crm-panel');
+  if (!overlay || !panel) return;
+  overlay.style.display = 'block';
+  panel.style.display = 'block';
+  setTimeout(function() { panel.style.right = '0'; }, 10);
+
+  // Update URL
+  var url = new URL(location.href);
+  url.searchParams.set('clientId', clientId);
+  history.replaceState(null, '', url);
+
+  // Update full link
+  document.getElementById('crm-panel-fulllink').href = 'coreto-crm-detail-v2.html?clientId=' + encodeURIComponent(clientId);
+
+  // Load client data
+  var body = document.getElementById('crm-panel-body');
+  body.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">読み込み中...</div>';
+
+  // Try to find client in CORETO_CLIENTS or generate summary
+  try {
+    var clients = JSON.parse(localStorage.getItem('CORETO_CLIENTS') || '[]');
+    var client = clients.find(function(c) { return c.id === clientId; });
+    if (!client) {
+      // Try from reports
+      var reports = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]');
+      var report = reports.find(function(r) { return r.client && (r.clientId === clientId || r.id === clientId); });
+      if (report) client = { id: clientId, name: report.client, status: 'active' };
+    }
+    if (!client) {
+      // Try from in-memory CLIENTS array
+      var memClient = (typeof CLIENTS !== 'undefined') ? CLIENTS.find(function(c) { return c.id === clientId; }) : null;
+      if (memClient) client = memClient;
+    }
+    if (client) {
+      body.innerHTML =
+        '<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">' +
+          '<div style="width:48px;height:48px;border-radius:50%;background:var(--navy);color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700">' + (client.name||'?').charAt(0) + '</div>' +
+          '<div><div style="font-size:16px;font-weight:700;color:var(--ink)">' + (client.name||'—') + '</div><div style="font-size:11px;color:var(--muted)">' + clientId + '</div></div>' +
+        '</div>' +
+        '<div style="background:var(--bg-sub,#F9FAFB);border-radius:var(--r);padding:14px;margin-bottom:16px">' +
+          '<div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:8px">基本情報</div>' +
+          '<div style="font-size:12px;color:var(--ink);line-height:2">' +
+            'ステータス: <span class="badge badge-em">' + (client.statusLabel||client.status||'active') + '</span><br>' +
+            '登録日: ' + (client.registeredAt || new Date().toLocaleDateString('ja-JP')) +
+          '</div>' +
+        '</div>' +
+        '<div style="margin-bottom:16px"><a href="coreto-crm-detail-v2.html?clientId=' + encodeURIComponent(clientId) + '" class="btn btn-primary" style="display:block;width:100%;text-align:center;text-decoration:none;color:var(--gold)">詳細ページを開く →</a></div>';
+    } else {
+      body.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:12px">クライアントデータが見つかりません<br><a href="coreto-crm-detail-v2.html?clientId=' + encodeURIComponent(clientId) + '" style="color:var(--info)">詳細ページを開く →</a></div>';
+    }
+  } catch(e) {
+    body.innerHTML = '<div style="padding:20px;color:var(--muted)">データの読み込みに失敗しました</div>';
+  }
+}
+
+function closeCrmPanel() {
+  var overlay = document.getElementById('crm-panel-overlay');
+  var panel = document.getElementById('crm-panel');
+  if (panel) panel.style.right = '-480px';
+  setTimeout(function() {
+    if (overlay) overlay.style.display = 'none';
+    if (panel) panel.style.display = 'none';
+  }, 300);
+  var url = new URL(location.href);
+  url.searchParams.delete('clientId');
+  history.replaceState(null, '', url);
+}
 function openModal(prefill) {
   // prefill: CRM詳細や案件登録から呼ばれた時のデータ
   if (prefill) {
@@ -685,5 +755,26 @@ window.addEventListener('DOMContentLoaded', function() {
 })();
 </script>
 <div class="mob-overlay" onclick="toggleSb()"></div>
+
+<div id="crm-panel-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:998" onclick="closeCrmPanel()"></div>
+<div id="crm-panel" style="display:none;position:fixed;top:0;right:-480px;bottom:0;width:480px;background:var(--bg,#fff);z-index:999;box-shadow:-4px 0 20px rgba(0,0,0,.1);transition:right .3s ease;overflow-y:auto">
+  <div style="padding:16px 20px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--bg,#fff);z-index:1">
+    <div style="font-size:14px;font-weight:700;color:var(--navy)">クライアント詳細</div>
+    <div style="display:flex;gap:8px">
+      <a id="crm-panel-fulllink" href="#" style="font-size:11px;color:var(--muted);text-decoration:underline" target="_blank">全画面で開く</a>
+      <button onclick="closeCrmPanel()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--muted);padding:0 4px">✕</button>
+    </div>
+  </div>
+  <div id="crm-panel-body" style="padding:20px"></div>
+</div>
+
+<script>
+// Deep link support
+(function(){
+  var _crmP = new URLSearchParams(location.search);
+  var _crmClientId = _crmP.get('clientId');
+  if (_crmClientId) setTimeout(function() { openCrmPanel(_crmClientId); }, 300);
+})();
+</script>
 </body>
 </html>

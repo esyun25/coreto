@@ -295,6 +295,15 @@ html, body { background:#FFFFFF !important; }
     </div>
   </div>
 
+  <div class="rental-tabs" style="display:flex;gap:0;border-bottom:2px solid var(--bd);margin-bottom:0;overflow-x:auto;padding:0 24px;background:var(--white)">
+    <button class="rtab active" data-tab="info" onclick="switchRentalTab('info',this)" style="padding:10px 16px;background:none;border:none;border-bottom:2px solid var(--navy);margin-bottom:-2px;font-size:12px;font-weight:700;color:var(--navy);cursor:pointer;white-space:nowrap;font-family:inherit">📋 物件・基本情報</button>
+    <button class="rtab" data-tab="showing" onclick="switchRentalTab('showing',this)" style="padding:10px 16px;background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;white-space:nowrap;font-family:inherit">👁️ 内見管理</button>
+    <button class="rtab" data-tab="screening" onclick="switchRentalTab('screening',this)" style="padding:10px 16px;background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;white-space:nowrap;font-family:inherit">📎 書類審査</button>
+    <button class="rtab" data-tab="itsetsu" onclick="switchRentalTab('itsetsu',this)" style="padding:10px 16px;background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;white-space:nowrap;font-family:inherit">🔑 IT重説予約</button>
+    <button class="rtab" data-tab="docs" onclick="switchRentalTab('docs',this)" style="padding:10px 16px;background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;white-space:nowrap;font-family:inherit">📝 同意書・書類</button>
+  </div>
+
+  <div id="tab-info" class="tab-content">
   <div class="detail-wrap">
     <!-- MAIN -->
     <div class="detail-main">
@@ -643,6 +652,13 @@ html, body { background:#FFFFFF !important; }
       </div>
     </div>
   </div>
+  </div><!-- /tab-info -->
+
+  <div id="tab-showing" class="tab-content" style="display:none"></div>
+  <div id="tab-screening" class="tab-content" style="display:none"></div>
+  <div id="tab-itsetsu" class="tab-content" style="display:none"></div>
+  <div id="tab-docs" class="tab-content" style="display:none"></div>
+
 </div>
 </div>
 
@@ -2155,5 +2171,99 @@ function saveNewShowing(cid, clientName) {
   document.body.appendChild(ind);
 })();
 </script>
+
+<script>
+function switchRentalTab(tab, btn) {
+  document.querySelectorAll('.tab-content').forEach(function(el) { el.style.display = 'none'; });
+  var target = document.getElementById('tab-' + tab);
+  if (target) target.style.display = '';
+  document.querySelectorAll('.rtab').forEach(function(el) {
+    el.style.borderBottomColor = 'transparent';
+    el.style.color = 'var(--muted)';
+    el.style.fontWeight = '600';
+  });
+  if (btn) {
+    btn.style.borderBottomColor = 'var(--navy)';
+    btn.style.color = 'var(--navy)';
+    btn.style.fontWeight = '700';
+  }
+  if (tab === 'showing' && !target.innerHTML.trim()) loadShowingTab();
+  if (tab === 'screening' && !target.innerHTML.trim()) loadScreeningTab();
+  if (tab === 'itsetsu' && !target.innerHTML.trim()) loadItsetsuTab();
+  if (tab === 'docs' && !target.innerHTML.trim()) loadDocsTab();
+  var url = new URL(location.href);
+  url.searchParams.set('tab', tab);
+  history.replaceState(null, '', url);
+}
+
+function loadShowingTab() {
+  var p = new URLSearchParams(location.search);
+  var cid = p.get('caseId') || '';
+  document.getElementById('tab-showing').innerHTML =
+    '<div style="padding:20px"><div style="font-size:16px;font-weight:700;color:var(--navy);margin-bottom:16px">内見管理</div>' +
+    '<div id="showing-tab-list" style="margin-bottom:16px"></div>' +
+    '<button class="btn btn-primary" onclick="window.open(\'coreto-showing-v2.html?caseId=' + encodeURIComponent(cid) + '\',\'_blank\')">内見を登録・管理する →</button>' +
+    '<div style="margin-top:12px;font-size:11px;color:var(--muted)">※詳細な内見管理は専用ページで行えます</div></div>';
+  if (typeof loadShowingsInline === 'function') setTimeout(loadShowingsInline, 100);
+}
+
+function loadScreeningTab() {
+  var p = new URLSearchParams(location.search);
+  var cid = p.get('caseId') || '';
+  document.getElementById('tab-screening').innerHTML =
+    '<div style="padding:20px"><div style="font-size:16px;font-weight:700;color:var(--navy);margin-bottom:16px">申込書類管理</div>' +
+    '<div style="background:var(--bg-sub,#F9FAFB);border:1px solid var(--bd);border-radius:var(--r);padding:20px;text-align:center">' +
+    '<div style="font-size:13px;color:var(--ink);margin-bottom:12px">書類の受領・送付状況を管理します</div>' +
+    '<a href="coreto-screening-v2.html?caseId=' + encodeURIComponent(cid) + '" class="btn btn-primary" style="text-decoration:none;color:var(--gold)">📎 書類管理を開く →</a>' +
+    '</div></div>';
+}
+
+function loadItsetsuTab() {
+  var p = new URLSearchParams(location.search);
+  var cid = p.get('caseId') || '';
+  document.getElementById('tab-itsetsu').innerHTML =
+    '<div style="padding:20px"><div style="font-size:16px;font-weight:700;color:var(--navy);margin-bottom:16px">IT重説予約</div>' +
+    '<div style="background:var(--bg-sub,#F9FAFB);border:1px solid var(--bd);border-radius:var(--r);padding:20px;text-align:center">' +
+    '<div style="font-size:13px;color:var(--ink);margin-bottom:12px">IT重説の予約・スケジューリングリンクを発行します</div>' +
+    '<a href="coreto-itsetsu-booking-v2.html?caseId=' + encodeURIComponent(cid) + '" class="btn btn-primary" style="text-decoration:none;color:var(--gold)">🔑 IT重説予約を開く →</a>' +
+    '</div></div>';
+}
+
+function loadDocsTab() {
+  var p = new URLSearchParams(location.search);
+  var cid = p.get('caseId') || '';
+  var agId = sessionStorage.getItem('coreto_user_id') || '';
+  var consents = [];
+  try { consents = JSON.parse(localStorage.getItem('CORETO_CONSENTS') || '[]'); } catch(e){}
+  var hasConsent = consents.some(function(c) { return c.caseId === cid; });
+  var consentUrl = location.origin + '/coreto-consent-v2.html?caseId=' + encodeURIComponent(cid) + '&agId=' + encodeURIComponent(agId);
+
+  document.getElementById('tab-docs').innerHTML =
+    '<div style="padding:20px"><div style="font-size:16px;font-weight:700;color:var(--navy);margin-bottom:16px">同意書・書類</div>' +
+    '<div style="background:var(--bg-card,#fff);border:1px solid var(--bd);border-radius:var(--r);padding:16px;margin-bottom:16px">' +
+      '<div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:8px">個人情報同意書</div>' +
+      (hasConsent
+        ? '<div style="padding:8px 12px;background:var(--success-bg,#ECFDF5);border-radius:6px;font-size:12px;color:var(--success,#059669);font-weight:600">✅ 同意取得済み</div>'
+        : '<div style="margin-bottom:8px"><button class="btn btn-ghost" onclick="(function(){navigator.clipboard.writeText(\'' + consentUrl.replace(/'/g,"\\'") + '\').then(function(){document.getElementById(\'consent-tab-ok\').style.display=\'\'})})()">📋 同意書リンクをコピー</button></div>' +
+          '<div id="consent-tab-ok" style="display:none;font-size:11px;color:var(--success,#059669)">✅ コピーしました</div>' +
+          '<div style="font-size:10px;color:var(--muted);margin-top:4px">LINEでクライアントに送信してください</div>'
+      ) +
+    '</div>' +
+    '<div style="background:var(--bg-card,#fff);border:1px solid var(--bd);border-radius:var(--r);padding:16px">' +
+      '<div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:8px">書類スキャン・郵送管理</div>' +
+      '<a href="coreto-barcode-scan-v2.html?caseId=' + encodeURIComponent(cid) + '" class="btn btn-ghost" style="text-decoration:none">📷 書類スキャンを開く →</a>' +
+    '</div></div>';
+}
+
+window.addEventListener('DOMContentLoaded', function() {
+  var p = new URLSearchParams(location.search);
+  var tab = p.get('tab');
+  if (tab) {
+    var btn = document.querySelector('.rtab[data-tab="' + tab + '"]');
+    if (btn) switchRentalTab(tab, btn);
+  }
+});
+</script>
+
 </body>
 </html>
