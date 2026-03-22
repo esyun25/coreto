@@ -249,7 +249,7 @@ function checkToken() {
     return;
   }
   tokenInfo = VALID_TOKENS[val] || {
-    type: val.includes('HIKARI') ? 'hikari' : val.includes('HR') ? 'hr' : 're',
+    type: val.includes('LIFELINE') ? 'lifeline' : val.includes('HR') ? 'hr' : 're',
     name: ''
   };
   document.getElementById('gate-screen').style.display = 'none';
@@ -325,7 +325,7 @@ function clearDraft() {
 }
 
 let DATA = {
-  type: '',           // 're' | 'hr' | 'hikari'
+  type: '',           // 're' | 'hr' | 'lifeline'
   lastName:'', firstName:'', lastKana:'', firstKana:'',
   dob:'', gender:'',
   postal:'', pref:'', city:'', addr:'', building:'',
@@ -425,7 +425,7 @@ function back()  { renderStep(STEP-1); }
 // ═══════════════════════════════════════════════════════
 function s1() {
   const isRE = DATA.type === 're';
-  const isHikari = DATA.type === 'hikari';
+  const isLifeline = DATA.type === 'lifeline';
   document.getElementById('step-content').innerHTML = `
   <div class="card">
     <div class="card-step">STEP 1 / 8</div>
@@ -433,7 +433,7 @@ function s1() {
     <div class="card-desc">氏名・連絡先・経歴を入力してください</div>
 
     <div class="banner info"><div class="banner-icon">ℹ️</div><div>
-      入会種別：<strong>${isRE ? '🏠 不動産エージェント（RE）' : isHikari ? '📡 光通信エージェント' : '👤 人材エージェント（HR）'}</strong><br>
+      入会種別：<strong>${isRE ? '🏠 不動産エージェント（RE）' : isLifeline ? '📡 ライフラインエージェント' : '👤 人材エージェント（HR）'}</strong><br>
       個人申込のみ対応しています（法人での入会はできません）
     </div></div>
 
@@ -510,15 +510,15 @@ function s1() {
     <hr style="border:none;border-top:1px solid var(--bd);margin:20px 0">
 
     <div class="field">
-      <label>${isRE ? '不動産業界歴' : isHikari ? '光通信販売経験' : '人材業界歴'} <span class="req">*</span></label>
+      <label>${isRE ? '不動産業界歴' : isLifeline ? 'ライフライン販売経験' : '人材業界歴'} <span class="req">*</span></label>
       <select id="f-exp">
         <option value="" ${!DATA.experience?'selected':''}>選択してください</option>
-        ${(isRE || isHikari)
+        ${(isRE || isLifeline)
           ? ['未経験','1年未満','1〜3年','3〜5年','5〜10年','10年以上'].map(v=>`<option value="${v}" ${DATA.experience===v?'selected':''}>${v}</option>`).join('')
           : ['未経験','1年未満（不可）','1〜3年','3〜5年','5〜10年','10年以上'].map(v=>`<option value="${v}" ${DATA.experience===v?'selected':''}>${v}</option>`).join('')
         }
       </select>
-      ${!isRE && !isHikari ? '<div class="field-hint">⚠️ 人材業界経験1年以上が必須です。1年未満・未経験の方はご応募いただけません。</div>' : ''}
+      ${!isRE && !isLifeline ? '<div class="field-hint">⚠️ 人材業界経験1年以上が必須です。1年未満・未経験の方はご応募いただけません。</div>' : ''}
     </div>
     <div class="field">
       <label>得意エリア <span class="req">*</span></label>
@@ -573,7 +573,7 @@ function validateS1() {
   const dob = new Date(get('f-dob'));
   const age = (Date.now() - dob) / (365.25*24*3600*1000);
   if (age < 18) { showToast('⚠️ 18歳未満の方はご応募いただけません','warn'); return; }
-  // HR経験チェック（hikariは経験不問のためスキップ）
+  // HR経験チェック（lifelineは経験不問のためスキップ）
   if (DATA.type === 'hr' && get('f-exp').includes('未経験')) {
     showToast('⚠️ 人材業界経験1年以上が必須です','warn'); return;
   }
@@ -593,11 +593,11 @@ function validateS1() {
 }
 
 // ═══════════════════════════════════════════════════════
-// STEP 2: 宅建士資格確認（RE）/ HR経験確認（HR）/ 光通信経験確認（hikari）
+// STEP 2: 宅建士資格確認（RE）/ HR経験確認（HR）/ ライフライン経験確認（lifeline）
 // ═══════════════════════════════════════════════════════
 function s2() {
   const isRE = DATA.type === 're';
-  const isHikari = DATA.type === 'hikari';
+  const isLifeline = DATA.type === 'lifeline';
 
   let html = '';
   if (isRE) {
@@ -658,32 +658,32 @@ function s2() {
       </div></div>
     </div>
   </div>`;
-  } else if (isHikari) {
+  } else if (isLifeline) {
     html = `
   <div class="card">
     <div class="card-step">STEP 2 / 8</div>
-    <div class="card-title">光通信販売の得意分野</div>
-    <div class="card-desc">光通信エージェントとして活動するにあたり得意分野を確認します</div>
+    <div class="card-title">ライフライン販売の得意分野</div>
+    <div class="card-desc">ライフラインエージェントとして活動するにあたり得意分野を確認します</div>
     <div class="banner info"><div class="banner-icon">ℹ️</div><div>
       入力済みの経験：<strong>${DATA.experience}</strong><br>
-      光通信販売は経験不問です。得意な提案スタイルをご記入ください。
+      ライフライン販売は経験不問です。得意な提案スタイルをご記入ください。
     </div></div>
     <div class="field">
       <label>得意な販売チャネル <span class="req">*</span></label>
       <div class="radio-group" style="flex-wrap:wrap">
         ${['訪問販売','電話営業','店舗・イベント','SNS・Web','紹介営業','その他'].map(v=>`
         <div class="radio-btn">
-          <input type="radio" id="hk-ch-${v}" name="hikariChannel" value="${v}" ${DATA.hikariChannel===v?'checked':''}>
+          <input type="radio" id="hk-ch-${v}" name="lifelineChannel" value="${v}" ${DATA.lifelineChannel===v?'checked':''}>
           <label for="hk-ch-${v}">${v}</label>
         </div>`).join('')}
       </div>
     </div>
     <div class="field">
       <label>得意ターゲット・実績（任意）</label>
-      <textarea id="f-hikariexp" placeholder="例：個人宅への訪問販売、マンション一棟でのまとめ提案など">${DATA.hikariExpDetail||''}</textarea>
+      <textarea id="f-lifelineexp" placeholder="例：個人宅への訪問販売、マンション一棟でのまとめ提案など">${DATA.lifelineExpDetail||''}</textarea>
     </div>
     <div class="banner info"><div class="banner-icon">💡</div><div>
-      <strong>光通信AGの特典</strong><br>
+      <strong>ライフラインAGの特典</strong><br>
       コミッション率 Bronze 80% ～ Platinum 90%・月会費 Gold以上¥0<br>
       不動産顧客紹介も可能（一律25%紹介料）
     </div></div>
@@ -738,11 +738,11 @@ function validateS2() {
       DATA.takkenNo   = get('f-tkno');
       DATA.takkenPref = get('f-tkpref');
     }
-  } else if (DATA.type === 'hikari') {
-    const ch = document.querySelector('input[name="hikariChannel"]:checked')?.value;
+  } else if (DATA.type === 'lifeline') {
+    const ch = document.querySelector('input[name="lifelineChannel"]:checked')?.value;
     if (!ch) { showToast('⚠️ 得意な販売チャネルを選択してください','warn'); return; }
-    DATA.hikariChannel   = ch;
-    DATA.hikariExpDetail = document.getElementById('f-hikariexp')?.value?.trim() || '';
+    DATA.lifelineChannel   = ch;
+    DATA.lifelineExpDetail = document.getElementById('f-lifelineexp')?.value?.trim() || '';
   } else {
     if (!get('f-hrfield')) { showToast('⚠️ 専門分野を入力してください','warn'); return; }
     DATA.hrField     = get('f-hrfield');
@@ -879,7 +879,7 @@ function renderIdUpload() {
   return `
     <div style="display:grid;grid-template-columns:${needBack?'1fr 1fr':'1fr'};gap:12px;margin-bottom:16px">
       <div class="field" style="margin:0">
-        <label>${DATA.idType === 'パスポート' ? '顔写真ページ' : '表面'} <span class="req">*</span></label>
+        <label>${DATA.idType === 'パスポート' ? '顔写真ページ' : '表面'}（お持ちの場合）</label>
         <div class="upload-box ${DATA.idFront?'uploaded':''}" onclick="document.getElementById('id-front').click()">
           <input type="file" id="id-front" accept="image/*" style="display:none"
             onchange="handleIdUpload('front',this)">
@@ -891,7 +891,7 @@ function renderIdUpload() {
       </div>
       ${needBack ? `
       <div class="field" style="margin:0">
-        <label>裏面 <span class="req">*</span></label>
+        <label>裏面（お持ちの場合）</label>
         <div class="upload-box ${DATA.idBack?'uploaded':''}" onclick="document.getElementById('id-back').click()">
           <input type="file" id="id-back" accept="image/*" style="display:none"
             onchange="handleIdUpload('back',this)">
@@ -904,7 +904,7 @@ function renderIdUpload() {
     </div>
 
     <div class="field">
-      <label>自撮り写真 <span class="req">*</span></label>
+      <label>自撮り写真（お持ちの場合）</label>
       <div style="font-size:11px;color:var(--muted);margin-bottom:8px;line-height:1.6">
         顔全体が写るよう正面から撮影してください。眼鏡・マスクは外してください。
       </div>
@@ -944,21 +944,9 @@ function handleIdUpload(side, input) {
 }
 
 function validateS4() {
-  if (!DATA.idType)  { showToast('⚠️ 証明書の種類を選択してください','warn'); return; }
-  if (!DATA.idFront) { showToast('⚠️ 身分証の表面をアップロードしてください','warn'); return; }
-  if (DATA.idType !== 'パスポート' && !DATA.idBack) {
-    showToast('⚠️ 身分証の裏面をアップロードしてください','warn'); return;
-  }
-  if (!DATA.selfie)  { showToast('⚠️ 自撮り写真をアップロードしてください','warn'); return; }
+  // File uploads are now optional — skip file presence checks
   if (DATA.kycStatus === 'analyzing') {
     showToast('⏳ AI確認中です。しばらくお待ちください','warn'); return;
-  }
-  if (DATA.kycStatus === 'failed') {
-    showToast('⚠️ 書類の読み取りに失敗しました。鮮明な画像で再度アップロードしてください','warn'); return;
-  }
-  // AI確認が通過済みでないと次へ進めない
-  if (DATA.kycStatus !== 'passed') {
-    showToast('⚠️ 書類の確認が完了していません。アップロードしてAI確認を通過してください','warn'); return;
   }
   next();
 }
@@ -1206,12 +1194,12 @@ function validateS7(code) {
 function s8() {
   const contractLabel = DATA.type === 're'
     ? '不動産エージェント業務委託契約書'
-    : DATA.type === 'hikari'
-    ? '光通信エージェント業務委託契約書'
+    : DATA.type === 'lifeline'
+    ? 'ライフラインエージェント業務委託契約書'
     : '人材紹介エージェント業務委託契約書';
   const contractDesc = DATA.type === 're'
     ? '全23条＋別紙１ · 報酬率・守秘義務・競業避止・違約金条項を含む'
-    : DATA.type === 'hikari'
+    : DATA.type === 'lifeline'
     ? '全23条＋別紙１ · 報酬率（80〜90%）・守秘義務・競業避止・違約金条項を含む'
     : '全23条＋別紙１ · 報酬率（45〜55%）・守秘義務・競業避止・違約金条項を含む';
 
@@ -1323,17 +1311,17 @@ function checkAllContracts() {
 // ═══════════════════════════════════════════════════════
 function s9() {
   const isRE = DATA.type === 're';
-  const isHikari = DATA.type === 'hikari';
+  const isLifeline = DATA.type === 'lifeline';
   const isSennin = isRE && DATA.takken === 'あり' && DATA.takkenType === '専任';
 
   const typeLabel = isRE ? '🏠 不動産エージェント（RE）'
-    : isHikari ? '📡 光通信エージェント'
+    : isLifeline ? '📡 ライフラインエージェント'
     : '👤 人材エージェント（HR）';
-  const expLabel = isRE ? '不動産業界歴' : isHikari ? '光通信販売経験' : '人材業界歴';
+  const expLabel = isRE ? '不動産業界歴' : isLifeline ? 'ライフライン販売経験' : '人材業界歴';
   const specialtyRow = isRE
     ? ['宅建士', DATA.takken === 'あり' ? `あり（${DATA.takkenType}）/ ${DATA.takkenNo}` : 'なし（一般AG）']
-    : isHikari
-    ? DATA.hikariChannel ? ['得意チャネル', DATA.hikariChannel] : null
+    : isLifeline
+    ? DATA.lifelineChannel ? ['得意チャネル', DATA.lifelineChannel] : null
     : DATA.hrField ? ['専門分野', DATA.hrField] : null;
 
   const rows = [
@@ -1423,7 +1411,7 @@ function submitForm() {
             <div style="font-size:12px;font-weight:700;color:#92610A">クラウドサインで電子署名</div>
             <div style="font-size:10px;color:#5F6368;margin-top:2px">
               本部より署名依頼メールをお送りします<br>
-              メールのリンクから${DATA.type==='hikari' ? '光通信エージェント業務委託契約書' : DATA.type==='hr' ? '人材紹介エージェント業務委託契約書' : '不動産エージェント業務委託契約書'}・個人情報同意書に署名してください
+              メールのリンクから${DATA.type==='lifeline' ? 'ライフラインエージェント業務委託契約書' : DATA.type==='hr' ? '人材紹介エージェント業務委託契約書' : '不動産エージェント業務委託契約書'}・個人情報同意書に署名してください
             </div>
           </div>
         </div>

@@ -128,7 +128,7 @@
   // フィールドマッピング:
   //   userId     ← ユーザーID（文字列型）
   //   pw         ← パスワード（文字列型）※Kintone連携後は認証APIに移行
-  //   role       ← ロール（文字列型: re_ag/hr_ag/hikari_ag/pt/hq/intern）
+  //   role       ← ロール（文字列型: re_ag/hr_ag/lifeline_ag/pt/hq/intern）
   //   name       ← 氏名（文字列型）
   //   nameKana   ← 氏名カナ（文字列型）
   //   rank       ← ランク（文字列型: Bronze/Silver/Gold/Platinum/Founder）
@@ -184,7 +184,7 @@
   //   id         ← 報告ID（文字列型: RPT-XXXXXXXX）
   //   case       ← 案件番号（文字列型: RENT-XXXX）
   //   client     ← クライアント氏名（文字列型）
-  //   type       ← 種別（文字列型: 賃貸/売買/人材/光通信）
+  //   type       ← 種別（文字列型: 賃貸/売買/人材/ライフライン）
   //   fee        ← 仲介料（数値型）
   //   adFee      ← 広告料（数値型）
   //   reward     ← AG報酬（数値型）
@@ -238,7 +238,7 @@
   // フィールドマッピング:
   //   id         ← 案件番号（文字列型: RENT-XXXX）
   //   client     ← クライアント氏名（文字列型）
-  //   type       ← 種別（文字列型: 賃貸/売買/人材/光通信）
+  //   type       ← 種別（文字列型: 賃貸/売買/人材/ライフライン）
   //   agId       ← 担当AG ID（文字列型）
   //   step       ← パイプラインステップ（数値型: 1〜6）
   //   rent       ← 月額賃料（数値型）

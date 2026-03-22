@@ -431,7 +431,7 @@ body, input, select, textarea, button {
 <script>
 (function(){
   var _role = sessionStorage.getItem('coreto_role') || '';
-  var _allowed = ["hq", "re_ag", "hr_ag", "hikari_ag"];
+  var _allowed = ["hq", "re_ag", "hr_ag", "lifeline_ag"];
   if (_allowed.length && !_allowed.includes(_role)) {
     location.replace('coreto-hub-v2.html?unauthorized=1');
   }
@@ -456,13 +456,13 @@ function showTab(t, el){
 const COMMISSION_RATE = {
   re_ag:     { Bronze:65,  Silver:67.5, Gold:70,  Platinum:75  },
   hr_ag:     { Bronze:45,  Silver:47.5, Gold:50,  Platinum:55  },
-  hikari_ag: { Bronze:80,  Silver:83,   Gold:87,  Platinum:90  },
+  lifeline_ag: { Bronze:80,  Silver:83,   Gold:87,  Platinum:90  },
   hq:        { Bronze:75,  Silver:75,   Gold:75,  Platinum:75  },
 };
 
 function getMyRate(bizType) {
   const role = sessionStorage.getItem('coreto_role') || 're_ag';
-  const rateKey = bizType === 'hr' ? 'hr_ag' : bizType === 'util' ? 'hikari_ag' : (role === 'hq' ? 'hq' : role);
+  const rateKey = bizType === 'hr' ? 'hr_ag' : bizType === 'util' ? 'lifeline_ag' : (role === 'hq' ? 'hq' : role);
   const rates = COMMISSION_RATE[rateKey] || COMMISSION_RATE.re_ag;
   // 🔴-4修正: sessionStorageから実際のランクを取得（RANK_MAPの固定IDを廃止）
   const rank = sessionStorage.getItem('coreto_rank') || 'Gold';
@@ -514,7 +514,7 @@ function renderNew(){
             <option value="rental">賃貸仲介</option>
             <option value="sale">売買仲介</option>
             <option value="hr">人材紹介</option>
-            <option value="util">光通信</option>
+            <option value="util">ライフライン</option>
           </select>
         </div>
       </div>
@@ -620,7 +620,7 @@ function renderNew(){
       <div class="form-head"><div class="form-head-icon">📎</div><div class="form-head-title">添付・備考</div></div>
       <div class="form-body">
         <div class="field">
-          <label>申込書（PDF）</label>
+          <label>申込書（PDF）（任意）</label>
           <input type="file" accept=".pdf" style="background:var(--white);padding:7px;font-size:12px">
           <div class="hint">申込書・契約書のPDFをアップロードしてください</div>
         </div>
@@ -751,7 +751,7 @@ function submitReport(){
       id: rptId,
       case: 'RENT-' + String(Date.now()).slice(-4),
       client: document.getElementById('client-name')?.value || '—',
-      type: biz === 'rental' ? '賃貸' : biz === 'sale' ? '売買' : biz === 'hr' ? '人材' : '光通信',
+      type: biz === 'rental' ? '賃貸' : biz === 'sale' ? '売買' : biz === 'hr' ? '人材' : 'ライフライン',
       fee, adFee: adFeeSubmit, reward, date: closedAt || now,
       ag: agName, agId: agUserId, status: '承認待ち',
       feeChukai: fee,
@@ -966,7 +966,7 @@ function renderHistory(){
       <td style="font-family:'DM Mono',monospace;font-size:11px">${r.case}</td>
       <td style="font-size:12px">${r.client}</td>
       <td style="font-size:11px;color:var(--muted)">${isHQ ? r.ag : ''}</td>
-      <td><span class="badge ${r.type==='賃貸'?'b-em':r.type==='光通信'?'b-sk':'b-vt'}">${r.type}</span></td>
+      <td><span class="badge ${r.type==='賃貸'?'b-em':r.type==='ライフライン'?'b-sk':'b-vt'}">${r.type}</span></td>
       <td style="text-align:right;font-size:12px">¥${r.fee.toLocaleString()}</td>
       <td style="text-align:right;font-size:12px;font-weight:700;color:var(--ink)">¥${r.reward.toLocaleString()}</td>
       <td style="font-size:11px;color:var(--muted)">${r.date}</td>
@@ -1165,7 +1165,7 @@ function showReportDetail(id) {
   if (!r) { showToast('⚠️ 詳細データが見つかりません', 'warn'); return; }
 
   var stCls  = r.status === '承認済み' ? 'b-em' : r.status === '承認待ち' ? 'b-am' : 'b-rd';
-  var typCls = r.type === '賃貸' ? 'b-em' : r.type === '光通信' ? 'b-sk' : 'b-vt';
+  var typCls = r.type === '賃貸' ? 'b-em' : r.type === 'ライフライン' ? 'b-sk' : 'b-vt';
 
   var overlay = document.createElement('div');
   overlay.id = 'report-detail-overlay';
@@ -1394,7 +1394,7 @@ function forceEditReport(id) {
   var fields = [
     { key:'client', label:'クライアント名', val: rep.client || '' },
     { key:'case',   label:'案件ID',         val: rep.case   || '' },
-    { key:'type',   label:'種別',           val: rep.type   || '賃貸', type:'select', opts:['賃貸','売買','三為','HR','光通信'] },
+    { key:'type',   label:'種別',           val: rep.type   || '賃貸', type:'select', opts:['賃貸','売買','三為','HR','ライフライン'] },
     { key:'fee',    label:'仲介料（税抜）', val: rep.fee    || 0,  type:'number' },
     { key:'date',   label:'成約日',         val: rep.date   || '', type:'date' },
     { key:'status', label:'ステータス',     val: rep.status || '承認待ち', type:'select', opts:['承認待ち','承認済み','修正依頼','差し戻し'] },
@@ -1655,11 +1655,11 @@ window.addEventListener('DOMContentLoaded', ()=>{
   }
   // URLパラメータから案件情報を自動入力（cases-v2・rental-v2からの遷移対応）
   const p = new URLSearchParams(location.search);
-  // biz種別を自動設定（HR/光通信AGナビからのリンク対応）
+  // biz種別を自動設定（HR/ライフラインAGナビからのリンク対応）
   if (p.get('biz')) {
     const bizSel = document.getElementById('biz-select');
     if (bizSel) {
-      const bizMap = { hr:'hr', util:'util', hikari:'util', rental:'rental', sale:'brokerage', sannai:'sannai' };
+      const bizMap = { hr:'hr', util:'util', lifeline:'util', rental:'rental', sale:'brokerage', sannai:'sannai' };
       bizSel.value = bizMap[p.get('biz')] || p.get('biz');
       if (typeof onBizChange === 'function') onBizChange(bizSel.value);
     }

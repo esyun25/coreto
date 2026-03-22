@@ -310,17 +310,17 @@ body, input, select, textarea, button { font-family:'Outfit','Noto Sans JP',sans
       </div>
       <div class="qs-card c2">
         <div class="qs-label">商談中</div>
-        <div class="qs-val">47</div>
-        <div class="qs-sub">賃貸28 / 売買9 / HR10</div>
+        <div class="qs-val" id="crm-active-count">—</div>
+        <div class="qs-sub" id="crm-active-breakdown">賃貸— / 売買— / HR—</div>
       </div>
       <div class="qs-card c3">
-        <div class="qs-label">光通信クロスセル対象</div>
-        <div class="qs-val">112</div>
-        <div class="qs-sub">未案内が 89名</div>
+        <div class="qs-label">ライフラインクロスセル対象</div>
+        <div class="qs-val" id="crm-crosssell-count">—</div>
+        <div class="qs-sub" id="crm-crosssell-sub">未案内が —名</div>
       </div>
       <div class="qs-card c4">
         <div class="qs-label">休眠（90日以上未接触）</div>
-        <div class="qs-val">31</div>
+        <div class="qs-val" id="crm-dormant-count">—</div>
         <div class="qs-sub">フォロー推奨</div>
       </div>
     </div>
@@ -344,7 +344,7 @@ body, input, select, textarea, button { font-family:'Outfit','Noto Sans JP',sans
         <option value="rental">賃貸</option>
         <option value="sale">売買</option>
         <option value="hr">人材</option>
-        <option value="utility">光通信</option>
+        <option value="utility">ライフライン</option>
       </select>
       <select class="filter-select" id="f-ag" onchange="filterTable()">
         <option value="">すべてのAG</option>
@@ -366,7 +366,7 @@ body, input, select, textarea, button { font-family:'Outfit','Noto Sans JP',sans
               <th>ステータス</th>
               <th>担当AG</th>
               <th>案件種別</th>
-              <th>光通信</th>
+              <th>ライフライン</th>
               <th class="sort" onclick="sortTable(5)">リードスコア <span class="sort-arrow">↕</span></th>
               <th>登録ソース</th>
               <th class="sort" onclick="sortTable(7)">最終接触 <span class="sort-arrow">↕</span></th>
@@ -427,7 +427,7 @@ body, input, select, textarea, button { font-family:'Outfit','Noto Sans JP',sans
 <script>
 (function(){
   var _role = sessionStorage.getItem('coreto_role') || '';
-  var _allowed = ["hq", "re_ag", "hr_ag", "hikari_ag"];
+  var _allowed = ["hq", "re_ag", "hr_ag", "lifeline_ag"];
   if (_allowed.length && !_allowed.includes(_role)) {
     location.replace('coreto-hub-v2.html?unauthorized=1');
   }
@@ -463,7 +463,7 @@ const TYPE_BADGE = {
   rental:  '<span class="badge badge-sk">賃貸</span>',
   sale:    '<span class="badge badge-em">売買</span>',
   hr:      '<span class="badge badge-vt">HR</span>',
-  utility: '<span class="badge badge-am">光通信</span>',
+  utility: '<span class="badge badge-am">ライフライン</span>',
 };
 const UTIL_ICONS = {elec:'⚡',gas:'🔥',net:'📡'};
 
@@ -685,24 +685,86 @@ function showToast(msg, type) {
   setTimeout(()=>{t.style.opacity='0';setTimeout(()=>t.remove(),400);},3000);
 }
 
-window.addEventListener('DOMContentLoaded', function() {
-  CNAV.init('crm');
-  // CRMカウントをlocalStorageの実データから更新
+function updateCRMStats() {
   try {
     var reports = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]');
-    var clients = JSON.parse(localStorage.getItem('CORETO_CRM_CLIENTS') || '[]');
-    var total = reports.length + clients.length;
+    var clients = JSON.parse(localStorage.getItem('CORETO_CLIENTS') || '[]');
+    var crmClients = JSON.parse(localStorage.getItem('CORETO_CRM_CLIENTS') || '[]');
+
+    // Merge all client sources (in-memory CLIENTS + localStorage)
+    var allClients = [].concat(clients, crmClients);
+    // Also include in-memory CLIENTS array if available
+    if (typeof CLIENTS !== 'undefined' && CLIENTS.length) {
+      var existingIds = new Set(allClients.map(function(c){ return c.id; }));
+      CLIENTS.forEach(function(c){ if (!existingIds.has(c.id)) allClients.push(c); });
+    }
+
+    // Total count
+    var total = allClients.length || reports.length;
     var cntEl = document.getElementById('crm-total-count');
     if (cntEl) cntEl.textContent = total || '0';
-    var lbl = document.getElementById('count-label');
-    if (lbl) lbl.textContent = (total || '0') + '件表示中';
-    // 今月登録
+
+    // Monthly new registrations
     var now = new Date();
     var thisYM = now.getFullYear() + '/' + String(now.getMonth()+1).padStart(2,'0');
-    var monthly = reports.filter(function(r){ return (r.date||'').slice(0,7).replace('-','/') === thisYM; }).length;
+    var thisYMDash = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+    var monthly = reports.filter(function(r){
+      var d = (r.date || r.reportedAt || '').slice(0,7);
+      return d.replace('-','/') === thisYM || d === thisYMDash;
+    }).length;
     var newEl = document.getElementById('crm-monthly-new');
     if (newEl) newEl.textContent = '今月 +' + monthly + '名 登録';
-  } catch(e) {}
+
+    // Active (商談中) count by type
+    var activeClients = allClients.filter(function(c){ return c.status === 'active'; });
+    var activeFromReports = reports.filter(function(r){ return !r.closedAt; });
+    var activeCount = activeClients.length || activeFromReports.length;
+    var rentalActive = activeClients.filter(function(c){ return c.type === 'rental' || c.type === '賃貸'; }).length
+      || reports.filter(function(r){ return (r.type === '賃貸' || r.type === 'rental') && !r.closedAt; }).length;
+    var saleActive = activeClients.filter(function(c){ return c.type === 'sale' || c.type === '売買'; }).length
+      || reports.filter(function(r){ return (r.type === '売買' || r.type === 'sale') && !r.closedAt; }).length;
+    var hrActive = activeClients.filter(function(c){ return c.type === 'hr' || c.type === '人材'; }).length
+      || reports.filter(function(r){ return (r.type === '人材' || r.type === 'hr') && !r.closedAt; }).length;
+
+    var activeEl = document.getElementById('crm-active-count');
+    if (activeEl) activeEl.textContent = activeCount || '0';
+    var breakdownEl = document.getElementById('crm-active-breakdown');
+    if (breakdownEl) breakdownEl.textContent = '賃貸' + rentalActive + ' / 売買' + saleActive + ' / HR' + hrActive;
+
+    // Cross-sell (ライフライン) targets
+    var crosssellTargets = allClients.filter(function(c){
+      return c.type !== 'utility' && c.type !== 'ライフライン';
+    });
+    var noUtilYet = crosssellTargets.filter(function(c){
+      return !c.util || c.util.length === 0;
+    });
+    var crosssellEl = document.getElementById('crm-crosssell-count');
+    if (crosssellEl) crosssellEl.textContent = crosssellTargets.length || '0';
+    var crosssellSubEl = document.getElementById('crm-crosssell-sub');
+    if (crosssellSubEl) crosssellSubEl.textContent = '未案内が ' + noUtilYet.length + '名';
+
+    // Dormant (90+ days no contact)
+    var ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+    var dormantCount = allClients.filter(function(c){
+      if (c.status === 'dormant') return true;
+      if (!c.lastContact) return false;
+      var d = new Date(c.lastContact);
+      return !isNaN(d.getTime()) && d < ninetyDaysAgo;
+    }).length;
+    var dormantEl = document.getElementById('crm-dormant-count');
+    if (dormantEl) dormantEl.textContent = dormantCount || '0';
+
+    // Update count label
+    var lbl = document.getElementById('count-label');
+    if (lbl) lbl.textContent = (total || '0') + '件表示中';
+  } catch(e) {
+    console.warn('updateCRMStats error:', e);
+  }
+}
+
+window.addEventListener('DOMContentLoaded', function() {
+  CNAV.init('crm');
+  updateCRMStats();
   document.getElementById('modal').addEventListener('click', e => { if(e.target===document.getElementById('modal')) closeModal(); });
   // ── ロール別クライアントフィルタ ──
   const _s = CNAV.session ? CNAV.session() : null;

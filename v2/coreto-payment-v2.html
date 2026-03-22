@@ -255,7 +255,6 @@ html, body { background:#FFFFFF !important; }
   </div>
   <div class="tab-bar">
     <div class="tab active" onclick="switchTab('summary',this)">月次サマリー</div>
-    <div class="tab" onclick="switchTab('sim',this)">報酬シミュレーター</div>
     <div class="tab" onclick="switchTab('slip',this)">支払明細書</div>
     <div class="tab" onclick="switchTab('history',this)">支払履歴</div>
     <div class="tab" onclick="switchTab('cp',this)">CPポイント</div>
@@ -270,7 +269,7 @@ html, body { background:#FFFFFF !important; }
 <script>
 (function(){
   var _role = sessionStorage.getItem('coreto_role') || '';
-  var _allowed = ["hq", "re_ag", "hr_ag", "hikari_ag", "pt", "intern"];
+  var _allowed = ["hq", "re_ag", "hr_ag", "lifeline_ag", "pt", "intern"];
   if (_allowed.length && !_allowed.includes(_role)) {
     location.replace('coreto-hub-v2.html?unauthorized=1');
   }
@@ -315,13 +314,11 @@ function gotoSlip(){
 function renderTab(t){
   const pg=document.getElementById('pg');
   if(t==='summary') pg.innerHTML=role==='hq'?hqSummary():agSummary();
-  if(t==='sim')     pg.innerHTML=simPage();
   if(t==='slip')    pg.innerHTML=slipPage();
   if(t==='history') pg.innerHTML=histPage();
   if(t==='cp')      pg.innerHTML=cpPage();
   if(t==='tax')     pg.innerHTML=taxPage();
   if(t==='monthly') pg.innerHTML=monthlyPage();
-  if(t==='sim')     calcSim();
 }
 
 function monthlyPage() {
@@ -337,7 +334,7 @@ function hqSummary(){return`
   <div class="kpi-row">
     <div class="kpi gd"><div class="kpi-lb">AG報酬総額（今月）</div><div class="kpi-vl"><span data-kpi="total-reward">—</span></div><div class="kpi-sb">47名分・支払済み</div></div>
     <div class="kpi em"><div class="kpi-lb">PT紹介報酬（今月）</div><div class="kpi-vl">¥428,000</div><div class="kpi-sb">22件成約</div></div>
-    <div class="kpi sk"><div class="kpi-lb">光通信ボーナス計</div><div class="kpi-vl">¥312,000</div><div class="kpi-sb">38件成約</div></div>
+    <div class="kpi sk"><div class="kpi-lb">ライフラインボーナス計</div><div class="kpi-vl">¥312,000</div><div class="kpi-sb">38件成約</div></div>
     <div class="kpi vt"><div class="kpi-lb">未払い残高</div><div class="kpi-vl" style="color:var(--ink)">¥0</div><div class="kpi-sb">全員支払済み</div></div>
   </div>
   <div class="bg2">
@@ -346,7 +343,7 @@ function hqSummary(){return`
       <div class="bc-row"><div class="bc-lb">不動産仲介（賃貸）</div><div class="bc-vl">¥1,248,000</div></div>
       <div class="bc-row"><div class="bc-lb">不動産仲介（売買）</div><div class="bc-vl">¥586,000</div></div>
       <div class="bc-row"><div class="bc-lb">人材紹介</div><div class="bc-vl">¥312,000</div></div>
-      <div class="bc-row"><div class="bc-lb">光通信 AG報酬</div><div class="bc-vl">¥312,000</div></div>
+      <div class="bc-row"><div class="bc-lb">ライフライン AG報酬</div><div class="bc-vl">¥312,000</div></div>
       <div class="bc-row"><div class="bc-lb">PT紹介報酬</div><div class="bc-vl">¥428,000</div></div>
       <div class="bc-total"><div class="bc-total-lb">合計支払額</div><div class="bc-total-vl"><span data-kpi="batch-total">—</span></div></div>
     </div>
@@ -357,13 +354,13 @@ function hqSummary(){return`
       <div class="bc-row" style="opacity:.5"><div class="bc-lb" style="font-size:10px">※人材報酬は2分割払い（入社後50%・保証期間後50%）</div><div class="bc-vl" style="font-size:10px">詳細↓</div></div>
       <div class="bc-row"><div class="bc-lb">Silver（18名）— 不動産</div><div class="bc-vl am">67.5%</div></div>
       <div class="bc-row"><div class="bc-lb">Bronze（7名）— 不動産</div><div class="bc-vl am">65%</div></div>
-      <div class="bc-row"><div class="bc-lb">光通信（全ランク共通）</div><div class="bc-vl">Bronze80%/Silver83%/Gold87%/Platinum90%</div></div>
+      <div class="bc-row"><div class="bc-lb">ライフライン（全ランク共通）</div><div class="bc-vl">Bronze80%/Silver83%/Gold87%/Platinum90%</div></div>
       <div class="bc-row"><div class="bc-lb">PT紹介（全事業）</div><div class="bc-vl">20〜30%</div></div>
     </div>
   </div>
   <div class="card">
     <div class="card-head"><div class="card-title">👤 AG別報酬一覧（今月）</div><button class="btn btn-g btn-sm" onclick="gotoSlip()">明細書一括発行</button></div>
-    <table><thead><tr><th>AG</th><th>ランク</th><th>不動産</th><th>人材</th><th>光通信</th><th>PT報酬</th><th>合計</th><th>状態</th><th></th></tr></thead>
+    <table><thead><tr><th>AG</th><th>ランク</th><th>不動産</th><th>人材</th><th>ライフライン</th><th>PT報酬</th><th>合計</th><th>状態</th><th></th></tr></thead>
     <tbody>${[
       ].map(r=>`<tr onclick="gotoSlip()">
       <td><div class="td-name">${r[1]}</div><div class="td-sub">${r[0]}</div></td>
@@ -384,7 +381,7 @@ function agSummary(){return`
   <div class="kpi-row">
     <div class="kpi gd"><div class="kpi-lb">今月報酬（確定）</div><div class="kpi-vl">—</div><div class="kpi-sb">支払済み ✓</div></div>
     <div class="kpi em"><div class="kpi-lb">不動産仲介</div><div class="kpi-vl">—</div><div class="kpi-sb">Gold 70% × 4件</div></div>
-    <div class="kpi sk"><div class="kpi-lb">光通信ボーナス</div><div class="kpi-vl">—</div><div class="kpi-sb">5件成約</div></div>
+    <div class="kpi sk"><div class="kpi-lb">ライフラインボーナス</div><div class="kpi-vl">—</div><div class="kpi-sb">5件成約</div></div>
     <div class="kpi vt"><div class="kpi-lb">PT紹介報酬</div><div class="kpi-vl">—</div><div class="kpi-sb">PT担当</div></div>
   </div>
 
@@ -393,8 +390,8 @@ function agSummary(){return`
       <div class="bc-title">💴 今月内訳</div>
       <div class="bc-row"><div class="bc-lb">賃貸仲介 ×3件（70%）</div><div class="bc-vl">¥168,000</div></div>
       <div class="bc-row"><div class="bc-lb">売買仲介 ×1件（70%）</div><div class="bc-vl">¥50,400<span style="font-size:10px;color:var(--ink);font-family:'Outfit',sans-serif"> ※分割</span></div></div>
-      <div class="bc-row"><div class="bc-lb">光通信 電力×3件</div><div class="bc-vl">¥22,500</div></div>
-      <div class="bc-row"><div class="bc-lb">光通信 電力+回線×2件</div><div class="bc-vl">¥45,000</div></div>
+      <div class="bc-row"><div class="bc-lb">ライフライン 電力×3件</div><div class="bc-vl">¥22,500</div></div>
+      <div class="bc-row"><div class="bc-lb">ライフライン 電力+回線×2件</div><div class="bc-vl">¥45,000</div></div>
       
       <div class="bc-total"><div class="bc-total-lb">今月合計</div><div class="bc-total-vl">—</div></div>
     </div>
@@ -402,7 +399,7 @@ function agSummary(){return`
       <div class="bc-title">🏅 ランク・報酬率 — 現状</div>
       <div class="bc-row"><div class="bc-lb">現在ランク</div><div class="bc-vl" style="font-size:18px">🥇 Gold</div></div>
       <div class="bc-row"><div class="bc-lb">不動産報酬率</div><div class="bc-vl em">70%</div></div>
-      <div class="bc-row"><div class="bc-lb">光通信報酬率</div><div class="bc-vl em">87%</div></div>
+      <div class="bc-row"><div class="bc-lb">ライフライン報酬率</div><div class="bc-vl em">87%</div></div>
       <div class="bc-row"><div class="bc-lb">今月ポイント</div><div class="bc-vl">—</div></div>
       <div class="bc-row"><div class="bc-lb">Platinumまで</div><div class="bc-vl am">あと8pt（90%へ）</div></div>
       <div class="bc-total"><div class="bc-total-lb">昇格で増収（試算）</div><div class="bc-total-vl em">+¥42,000/月</div></div>
@@ -489,123 +486,6 @@ function agSummary(){return`
     </div>  </div>
 `;}
 
-// ── SIMULATOR ──
-function simPage(){return`
-  <div style="max-width:720px">
-    <div class="sim-card">
-      <div style="font-size:15px;font-weight:700;color:var(--ink);font-family:'Outfit','Noto Sans JP',sans-serif;font-variant-numeric:tabular-nums;margin-bottom:18px">報酬シミュレーター</div>
-      <div class="sim-row">
-        <div class="sim-fld"><label class="sim-lb">事業種別</label>
-          <select class="sim-sel" id="s-biz" onchange="calcSim()">
-            <option value="re">不動産仲介</option>
-            <option value="hr">人材紹介</option>
-            <option value="util">光通信</option>
-          </select></div>
-        <div class="sim-fld"><label class="sim-lb">ランク</label>
-          <select class="sim-sel" id="s-rank" onchange="calcSim()">
-            <option value="0.65">Bronze (65%)</option>
-            <option value="0.675">Silver (67.5%)</option>
-            <option value="0.7" selected>Gold (70%)</option>
-            <option value="0.75">Platinum (75%)</option>
-          </select></div>
-        <div class="sim-fld"><label class="sim-lb">仲介料・基本報酬（円）</label>
-          <input class="sim-inp" type="number" id="s-fee" value="198000" inputmode="numeric" oninput="calcSim()"></div>
-        <div class="sim-fld"><label class="sim-lb">PT紹介あり</label>
-          <select class="sim-sel" id="s-pt" onchange="calcSim()">
-            <option value="0">なし</option>
-            <option value="0.25">あり（PT:25%・固定）</option>
-          </select></div>
-        <div class="sim-fld"><label class="sim-lb">受取人区分</label>
-          <select class="sim-sel" id="s-person" onchange="calcSim()">
-            <option value="ag_indiv">AG（個人）</option>
-            <option value="pt_indiv">PT（個人）</option>
-            <option value="pt_corp">PT（法人）</option>
-          </select></div>
-        <div class="sim-fld"><label class="sim-lb">案件種別</label>
-          <select class="sim-sel" id="s-case" onchange="calcSim()">
-            <option value="rental_self">賃貸・自己持込</option>
-            <option value="rental_pt">賃貸・PT紹介</option>
-            <option value="sale">売買・人材</option>
-          </select></div>
-      </div>
-      <div class="sim-res" style="grid-template-columns:repeat(5,1fr)">
-        <div style="text-align:center"><div class="srl">仲介料</div><div class="srv" id="sr-fee">—</div></div>
-        <div style="text-align:center"><div class="srl">AG報酬</div><div class="srv" id="sr-ag">—</div><div class="srs" id="sr-rate"></div></div>
-        <div style="text-align:center"><div class="srl">システム利用料</div><div class="srv" id="sr-sys" style="color:var(--am)">—</div></div>
-        <div style="text-align:center"><div class="srl">源泉徴収</div><div class="srv" id="sr-wtax" style="color:var(--rd)">—</div><div class="srs" id="sr-wtax-note"></div></div>
-        <div style="text-align:center"><div class="srl" style="font-weight:700">振込額</div><div class="srv" id="sr-payout" style="color:var(--gold)">—</div><div class="srs" id="sr-pt-sub"></div></div>
-      </div>
-    </div>
-    <div class="card" style="padding:20px">
-      <div class="bc-title" style="margin-bottom:14px">💡 参考：光通信報酬目安</div>
-      ${[['電力のみ','¥3,000〜5,000'],['光回線のみ','¥8,000〜15,000'],['電力＋光回線','¥15,000〜22,000'],['電力＋ガス＋光回線','¥20,000〜30,000'],['ガスのみ','¥2,000〜3,500']]
-        .map(r=>`<div class="bc-row"><div class="bc-lb">${r[0]}</div><div class="bc-vl em">${r[1]}</div></div>`).join('')}
-    </div>
-  </div>`;}
-
-// ── 源泉徴収計算 ──────────────────────────────────────
-// 課税対象額に対して10.21%（1,000,000超部分は20.42%）
-function calcWithholding(taxable, isIndiv) {
-  if (!isIndiv) return 0; // 法人は源泉なし
-  if (taxable <= 0) return 0;
-  if (taxable <= 1000000) {
-    return Math.floor(taxable * 0.1021);
-  } else {
-    return Math.floor(1000000 * 0.1021) + Math.floor((taxable - 1000000) * 0.2042);
-  }
-}
-// システム利用料（賃貸仲介のみ）
-function calcSysUsage(fee, caseType) {
-  if (!caseType.startsWith('rental')) return 0;
-  return fee < 100000 ? 10000 : 20000;
-}
-function calcSim(){
-  const fee=parseInt(document.getElementById('s-fee')?.value||0)||0;
-  const rank=parseFloat(document.getElementById('s-rank')?.value||0.8);
-  const hasPT=parseFloat(document.getElementById('s-pt')?.value||0)>0;
-  const personType=document.getElementById('s-person')?.value||'ag_indiv';
-  const caseType=document.getElementById('s-case')?.value||'rental_self';
-  const isIndiv = personType !== 'pt_corp';
-  const fmt=v=>'¥'+Math.round(v).toLocaleString();
-  if(!document.getElementById('sr-fee'))return;
-
-  let agRate, agReward, sysUsage, taxable, wtax, payout, rateNote, ptNote='';
-
-  if (caseType === 'rental_pt') {
-    // PT案件：AG 25%・PT 25%
-    agRate    = 0.25;
-    agReward  = Math.round(fee * agRate);
-    sysUsage  = Math.round(calcSysUsage(fee, caseType) / 2); // AGはシステム利用料折半
-    taxable   = agReward - sysUsage;
-    wtax      = calcWithholding(taxable, true); // AG常に個人
-    payout    = taxable - wtax;
-    rateNote  = 'AG 25%（PT紹介）';
-    const ptReward = Math.round(fee * 0.25);
-    const ptSys    = Math.round(calcSysUsage(fee, caseType) / 2);
-    const ptTaxable = ptReward - ptSys;
-    const ptWtax   = calcWithholding(ptTaxable, isIndiv);
-    ptNote = fmt(ptReward) + '（PT) 振込: ' + fmt(ptTaxable - ptWtax);
-  } else {
-    // 自己持込・売買・人材
-    agRate   = rank;
-    agReward = Math.round(fee * agRate);
-    sysUsage = calcSysUsage(fee, caseType); // AG全額負担
-    taxable  = agReward - sysUsage;
-    wtax     = calcWithholding(taxable, true);
-    payout   = taxable - wtax;
-    rateNote = (rank*100) + '%';
-  }
-
-  document.getElementById('sr-fee').textContent    = fmt(fee);
-  document.getElementById('sr-ag').textContent     = fmt(agReward);
-  document.getElementById('sr-rate').textContent   = rateNote;
-  document.getElementById('sr-sys').textContent    = sysUsage > 0 ? '−'+fmt(sysUsage) : '—';
-  document.getElementById('sr-wtax').textContent   = wtax > 0 ? '−'+fmt(wtax) : '—';
-  document.getElementById('sr-wtax-note').textContent = wtax > 0 ? (isIndiv?'10.21%':'法人→なし') : '';
-  document.getElementById('sr-payout').textContent = fmt(payout);
-  document.getElementById('sr-pt-sub').textContent = ptNote;
-}
-
 // ── SLIP ──
 function slipPage(){return`
   <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;align-items:center">
@@ -632,7 +512,7 @@ function slipPage(){return`
       ※ 報酬は毎月末締め・翌月10日前後に振込みいたします。<br>
       ※ 報酬は毎月25日に<strong>指定銀行口座へ振込</strong>で支払われます（GMOあおぞら推奨）。<br>
       ※ <strong>現金受取</strong>はHQ事前申請のみ対応（手数料 ¥5,000/百万円）。<br>
-      ※ 光通信報酬は回線開通確認後の確定となります。<br>
+      ※ ライフライン報酬は回線開通確認後の確定となります。<br>
       ※ 本明細書に関するお問い合わせは support@coreto.jp までご連絡ください。
     </div>
   </div>`;}
@@ -641,7 +521,7 @@ function slipPage(){return`
 function histPage(){return`
   <div class="card">
     <div class="card-head"><div class="card-title">📅 支払履歴</div><button class="btn btn-g btn-sm" onclick="alert('CSV出力')">📤 CSV出力</button></div>
-    <table><thead><tr><th>対象月</th><th>AG</th><th>不動産</th><th>人材</th><th>光通信</th><th>PT報酬</th><th>合計</th><th>出金方法</th><th>振込日</th><th>状態</th></tr></thead>
+    <table><thead><tr><th>対象月</th><th>AG</th><th>不動産</th><th>人材</th><th>ライフライン</th><th>PT報酬</th><th>合計</th><th>出金方法</th><th>振込日</th><th>状態</th></tr></thead>
     <tbody>${[
                                   ].map(r=>`<tr>
       <td>${r[0]}</td>

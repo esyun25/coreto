@@ -829,7 +829,7 @@ html, body { background:#FFFFFF !important; }
         </div>
         <div class="login-tagline">
           <div class="login-tagline-main">
-            不動産・人材・光通信の<br>
+            不動産・人材・ライフラインの<br>
             全事業を<em>ひとつの画面</em>で。<br>
             <br>
             エージェントとパートナーの<br>
@@ -861,7 +861,7 @@ html, body { background:#FFFFFF !important; }
           <div class="demo-role" onclick="demoLogin('HQ-00500')">HQ 社員</div>
           <div class="demo-role" onclick="demoLogin('AG-0042')">不動産AG</div>
           <div class="demo-role" onclick="demoLogin('AG-0103')">人材AG</div>
-          <div class="demo-role" onclick="demoLogin('AG-0071')">光通信AG</div>
+          <div class="demo-role" onclick="demoLogin('AG-0071')">ライフラインAG</div>
           <div class="demo-role" onclick="demoLogin('PT-0015')">パートナー</div>
           <div class="demo-role" onclick="demoLogin('INT-007')">インターン</div>
         </div>
@@ -924,10 +924,10 @@ let currentPage = 'dashboard';
 // ─────────────────────────────────────────
 const PERMISSIONS = {
   hq:        { re:'ag', hr:'ag', util:'ag' },  // HQは全事業フル
-  re_ag:     { re:'ag', hr:'pt', util:'ag' },  // 不動産AG・光通信AG / 人材はPT扱い
-  hr_ag:     { re:'pt', hr:'ag', util:'ag' },  // 人材AG・光通信AG / 不動産はPT扱い
-  hikari_ag: { re:'pt', hr:'pt', util:'ag' },  // 光通信AG / 不動産・人材はPT扱い
-  pt:        { re:'pt', hr:'pt', util:'pt' },  // 全事業PT扱い（光通信は案件投げのみ可）
+  re_ag:     { re:'ag', hr:'pt', util:'ag' },  // 不動産AG・ライフラインAG / 人材はPT扱い
+  hr_ag:     { re:'pt', hr:'ag', util:'ag' },  // 人材AG・ライフラインAG / 不動産はPT扱い
+  lifeline_ag: { re:'pt', hr:'pt', util:'ag' },  // ライフラインAG / 不動産・人材はPT扱い
+  pt:        { re:'pt', hr:'pt', util:'pt' },  // 全事業PT扱い（ライフラインは案件投げのみ可）
   intern:    { re:null, hr:null, util:null },  // 訪問・リード投げのみ
 };
 
@@ -935,7 +935,7 @@ const ROLES = {
   hq:        { label:'HQ統括',    av:'HQ', nav: hqNav,        page: renderHQDash },
   re_ag:     { label:'RE-AG',     av:'AG', nav: reAgNav,      page: renderREAgDash },
   hr_ag:     { label:'HR-AG',     av:'AG', nav: hrAgNav,      page: renderHRAgDash },
-  hikari_ag: { label:'光通信AG',  av:'AG', nav: hikariAgNav,  page: renderHikariAgDash },
+  lifeline_ag: { label:'ライフラインAG',  av:'AG', nav: lifelineAgNav,  page: renderLifelineAgDash },
   pt:        { label:'PT',        av:'PT', nav: ptNav,        page: renderPTDash },
   intern:    { label:'インターン', av:'IN', nav: internNav,    page: renderInternDash },
 };
@@ -957,8 +957,8 @@ const USER_CREDENTIALS = {
   // HR-AG
   'AG-0103':  { pw: 'agent2026',  role: 'hr_ag',      name: '山田 光太',          userId: 'AG-0103',  rank: 'Bronze' },
   'AG-0112':  { pw: 'agent2026',  role: 'hr_ag',      name: '中村 梓',            userId: 'AG-0112',  rank: 'Bronze' },
-  // 光通信AG
-  'AG-0071':  { pw: 'agent2026',  role: 'hikari_ag',  name: '中村 陽子',          userId: 'AG-0071',  rank: 'Silver' },
+  // ライフラインAG
+  'AG-0071':  { pw: 'agent2026',  role: 'lifeline_ag',  name: '中村 陽子',          userId: 'AG-0071',  rank: 'Silver' },
   // PT
   'PT-0015':  { pw: 'partner26',  role: 'pt',         name: '佐藤 健一',          userId: 'PT-0015',  rank: null },
   'PT-0022':  { pw: 'partner26',  role: 'pt',         name: '高橋 美咲',          userId: 'PT-0022',  rank: null },
@@ -1051,10 +1051,10 @@ function loginAs(role, user) {
 // NAV 定義（ロール別 — 確定権限マトリクス準拠）
 //
 // HQ    : 全事業・全管理機能フルアクセス
-// RE-AG : 不動産・光通信 = AG権限 ／ 人材 = PT扱い（閲覧のみ）
-// HR-AG : 人材・光通信   = AG権限 ／ 不動産 = PT扱い（閲覧のみ）
-// PT    : 不動産・人材 = 紹介投げ＋進捗閲覧 ／ 光通信 = 案件投げ可
-// インターン : 訪問記録・光通信リード投げのみ
+// RE-AG : 不動産・ライフライン = AG権限 ／ 人材 = PT扱い（閲覧のみ）
+// HR-AG : 人材・ライフライン   = AG権限 ／ 不動産 = PT扱い（閲覧のみ）
+// PT    : 不動産・人材 = 紹介投げ＋進捗閲覧 ／ ライフライン = 案件投げ可
+// インターン : 訪問記録・ライフラインリード投げのみ
 // ══════════════════════════════════════════════════════
 
 // ── HQ ────────────────────────────────────────────────
@@ -1079,8 +1079,8 @@ function hqNav() { return [
     { icon:'👤', label:'人材案件（全体）', page:'hr_cases_all', badge:0 },
     { icon:'🔗', label:'PTマッチング', page:'matching', badge:0, badgeColor:'red' },
   ]},
-  { section: '光通信業務', items: [
-    { icon:'⚡', label:'光通信SFA（全体）', page:'utility' },
+  { section: 'ライフライン業務', items: [
+    { icon:'⚡', label:'ライフラインSFA（全体）', page:'utility' },
   ]},
   { section: 'CRM・クライアント', items: [
     { icon:'👥', label:'クライアント管理', page:'crm' },
@@ -1136,8 +1136,8 @@ function reAgNav() { return [
       { icon:'🏆', label:'売買成約報告',               page:'sale_report' },
     { icon:'⚡', label:'即時払い申請',             page:'instant_pay' },
   ]},
-  { section: '光通信（AG権限）', items: [
-    { icon:'⚡', label:'光通信 担当案件',          page:'util_cases',  badge:0, badgeColor:'gold' },
+  { section: 'ライフライン（AG権限）', items: [
+    { icon:'⚡', label:'ライフライン 担当案件',          page:'util_cases',  badge:0, badgeColor:'gold' },
   ]},
   { section: '人材（PT扱い・閲覧のみ）', items: [
     { icon:'🔒', label:'人材紹介 進捗確認',        page:'hr_ref',      note:'PT扱い' },
@@ -1151,7 +1151,7 @@ function reAgNav() { return [
 ];}
 
 // ── HR-AG ─────────────────────────────────────────────
-// 人材・光通信 = AG権限（フル操作）
+// 人材・ライフライン = AG権限（フル操作）
 // 不動産       = PT扱い（紹介した案件の進捗閲覧のみ）
 // IT重説は人材案件には不要のため非表示
 function hrAgNav() { return [
@@ -1166,8 +1166,8 @@ function hrAgNav() { return [
     { icon:'⚠️', label:'早期退職アラート',         page:'early_quit' },
     { icon:'⚡', label:'即時払い申請',             page:'instant_pay' },
   ]},
-  { section: '光通信（AG権限）', items: [
-    { icon:'⚡', label:'光通信 担当案件',          page:'util_cases',  badge:0, badgeColor:'gold' },
+  { section: 'ライフライン（AG権限）', items: [
+    { icon:'⚡', label:'ライフライン 担当案件',          page:'util_cases',  badge:0, badgeColor:'gold' },
   ]},
   { section: '不動産（PT扱い・閲覧のみ）', items: [
     { icon:'🔒', label:'不動産紹介 進捗確認',      page:'re_ref',      note:'PT扱い' },
@@ -1182,7 +1182,7 @@ function hrAgNav() { return [
 
 // ── PT ────────────────────────────────────────────────
 // 不動産・人材 = 紹介を投げる＋進捗閲覧のみ（編集不可）
-// 光通信       = 案件投げ可（新規登録）＋進捗閲覧
+// ライフライン       = 案件投げ可（新規登録）＋進捗閲覧
 // 紹介コードはトップレベルに配置（活用頻度が高い）
 function ptNav() { return [
   { section: 'ポータル', items: [
@@ -1198,8 +1198,8 @@ function ptNav() { return [
     { icon:'👤', label:'人材案件を紹介する',       page:'hr_refer' },
     { icon:'📊', label:'紹介案件の進捗',           page:'hr_progress' },
   ]},
-  { section: '光通信（案件投げ可）', items: [
-    { icon:'⚡', label:'光通信案件を投げる',       page:'util_submit',  badge:'NEW', badgeColor:'gold' },
+  { section: 'ライフライン（案件投げ可）', items: [
+    { icon:'⚡', label:'ライフライン案件を投げる',       page:'util_submit',  badge:'NEW', badgeColor:'gold' },
     { icon:'📊', label:'投げた案件の進捗',         page:'util_progress' },
   ]},
   { section: 'ツール', items: [
@@ -1209,16 +1209,16 @@ function ptNav() { return [
 ];}
 
 // ── インターン ────────────────────────────────────────
-// 訪問記録と光通信リード投げのみ。管理機能は一切なし。
+// 訪問記録とライフラインリード投げのみ。管理機能は一切なし。
 // 報酬確認・ランキング閲覧は動機付けのため許可。
-// ── 光通信AG ─────────────────────────────────────────
-function hikariAgNav() { return [
+// ── ライフラインAG ─────────────────────────────────────────
+function lifelineAgNav() { return [
   { section: 'マイページ', items: [
     { icon:'🏠', label:'マイダッシュボード', page:'dashboard', active: true },
     { icon:'🏅', label:'ランク・報酬明細', page:'rank' },
   ]},
-  { section: '光通信（AG権限）', items: [
-    { icon:'⚡', label:'担当案件（光通信）',       page:'util_cases',  badge:0, badgeColor:'gold' },
+  { section: 'ライフライン（AG権限）', items: [
+    { icon:'⚡', label:'担当案件（ライフライン）',       page:'util_cases',  badge:0, badgeColor:'gold' },
     { icon:'👥', label:'クライアント管理',         page:'crm' },
     { icon:'🏆', label:'成約報告',                 page:'contract_report' },
     { icon:'⚡', label:'即時払い申請',             page:'instant_pay' },
@@ -1245,7 +1245,7 @@ function internNav() { return [
     { icon:'📍', label:'訪問を記録する',           page:'visit' },
     { icon:'🗺️', label:'担当エリアマップ',         page:'map' },
   ]},
-  { section: '光通信リード', items: [
+  { section: 'ライフラインリード', items: [
     { icon:'⚡', label:'リードを投稿する',          page:'lead_submit' },
   ]},
   { section: '個人', items: [
@@ -1413,14 +1413,14 @@ function routePage(page) {
     re_progress:  '不動産 紹介案件の進捗',
     hr_refer:     '人材案件を紹介する',
     hr_progress:  '人材 紹介案件の進捗',
-    util_submit:  '光通信案件を投げる',
-    util_progress:'光通信 投げた案件の進捗',
+    util_submit:  'ライフライン案件を投げる',
+    util_progress:'ライフライン 投げた案件の進捗',
     code:         '紹介コード',
     // インターン向け
     daily:        '当日の実績',
     visit:        '訪問を記録する',
     map:          '担当エリアマップ',
-    lead_submit:  '光通信リードを投げる',
+    lead_submit:  'ライフラインリードを投げる',
   };
 
   document.getElementById('page-title').textContent = titles[page] || page;
@@ -1440,7 +1440,7 @@ function routePage(page) {
   // ── PT紹介投げ（不動産・人材） ────────────────────
   if (['re_refer','hr_refer'].includes(page)) { renderPTReferPage(page, titles[page]); return; }
 
-  // ── 光通信案件投げ（PT・インターン） ─────────────
+  // ── ライフライン案件投げ（PT・インターン） ─────────────
   if (page === 'util_submit' || page === 'lead_submit') { renderUtilSubmit(page); return; }
 
   // ── LINE再連携 ────────────────────────────────────
@@ -2150,7 +2150,7 @@ function renderHQDash() {
               <div class="stat-val">4件</div>
             </div>
             <div class="stat-row">
-              <div class="stat-label">光通信成約</div>
+              <div class="stat-label">ライフライン成約</div>
               <div class="stat-val">38件</div>
             </div>
             <div class="stat-row">
@@ -2442,7 +2442,7 @@ function renderPTMgmt() {
     <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr)">
       <div class="kpi-card gold"><div class="kpi-label">PT在籍数</div><div class="kpi-value">${pts.length}名</div></div>
       <div class="kpi-card emerald"><div class="kpi-label">今月PT紹介（不動産）</div><div class="kpi-value" data-kpi="pt-re">—</div></div>
-      <div class="kpi-card sky"><div class="kpi-label">今月PT紹介（光通信）</div><div class="kpi-value" data-kpi="pt-util">—</div></div>
+      <div class="kpi-card sky"><div class="kpi-label">今月PT紹介（ライフライン）</div><div class="kpi-value" data-kpi="pt-util">—</div></div>
       <div class="kpi-card amber"><div class="kpi-label">LINE未連携</div><div class="kpi-value" style="color:var(--amber)">2名</div></div>
     </div>
 
@@ -2459,7 +2459,7 @@ function renderPTMgmt() {
       <div class="card">
         <table>
           <thead><tr>
-            <th>PT</th><th>登録月</th><th>不動産紹介</th><th>人材紹介</th><th>光通信紹介</th>
+            <th>PT</th><th>登録月</th><th>不動産紹介</th><th>人材紹介</th><th>ライフライン紹介</th>
             <th>累計報酬</th><th>LINE</th><th>状態</th><th></th>
           </tr></thead>
           <tbody>
@@ -2527,8 +2527,8 @@ function renderVisitForm() {
           <label style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:10px">訪問結果 *</label>
           <div style="display:flex;flex-direction:column;gap:8px" id="v-result-group">
             ${[
-              {id:'vr-home-lead', label:'在宅・リード獲得', sub:'光通信に関心あり', reward:'+¥3,500', color:'var(--emerald)'},
-              {id:'vr-home-ok',   label:'在宅・光通信案内済み', sub:'説明完了（関心度：中）', reward:'+¥950', color:'var(--sky)'},
+              {id:'vr-home-lead', label:'在宅・リード獲得', sub:'ライフラインに関心あり', reward:'+¥3,500', color:'var(--emerald)'},
+              {id:'vr-home-ok',   label:'在宅・ライフライン案内済み', sub:'説明完了（関心度：中）', reward:'+¥950', color:'var(--sky)'},
               {id:'vr-home-no',  label:'在宅・興味なし', sub:'説明済み', reward:'+¥950', color:'var(--muted)'},
               {id:'vr-absent',   label:'不在', sub:'記録のみ', reward:'+¥80', color:'var(--faint)'},
             ].map(r=>`
@@ -2604,12 +2604,12 @@ function renderInternDaily() {
       </div>
       <div class="card">
         ${[
-          {t:'10:30',a:'港区三田4丁目12番',r:'在宅・光通信案内済み',c:'emerald',rw:'+¥950'},
+          {t:'10:30',a:'港区三田4丁目12番',r:'在宅・ライフライン案内済み',c:'emerald',rw:'+¥950'},
           {t:'10:45',a:'港区三田4丁目13番',r:'不在',c:'muted',rw:'+¥80'},
           {t:'11:18',a:'港区三田4丁目15番',r:'在宅・リード獲得 ★ → AG連携済み',c:'emerald',rw:'+¥3,500'},
           {t:'11:35',a:'港区三田4丁目16番',r:'在宅・興味なし',c:'muted',rw:'+¥950'},
           {t:'11:52',a:'港区三田4丁目17番',r:'不在',c:'muted',rw:'+¥80'},
-          {t:'13:10',a:'港区三田4丁目18番',r:'在宅・光通信案内済み',c:'emerald',rw:'+¥950'},
+          {t:'13:10',a:'港区三田4丁目18番',r:'在宅・ライフライン案内済み',c:'emerald',rw:'+¥950'},
         ].map(v=>`<div class="task-item">
           <div class="task-prio ${v.c==='emerald'?'high':'low'}"></div>
           <div class="task-main">
@@ -2649,11 +2649,11 @@ function renderAreaMap() {
 }
 
 // ═══════════════════════════════════════════
-// 光通信 案件投げ（PT・インターン共通）
+// ライフライン 案件投げ（PT・インターン共通）
 // ═══════════════════════════════════════════
 function renderUtilSubmit(pageKey) {
   const isIntern = pageKey === 'lead_submit';
-  const bannerTitle = isIntern ? '光通信リードを投げる — インターン' : '光通信 案件を投げる — PTポータル';
+  const bannerTitle = isIntern ? 'ライフラインリードを投げる — インターン' : 'ライフライン 案件を投げる — PTポータル';
   const bannerBody  = isIntern
     ? '訪問中にお客様から電力・ガス・光回線の切り替えに関心を示された方の情報を入力してください。担当AGが対応します。'
     : 'お客様から電力・ガス・光回線の切り替えに興味があると聞いたらここから投げてください。成約時に<strong>紹介報酬</strong>が発生します。';
@@ -2703,7 +2703,7 @@ function renderUtilSubmit(pageKey) {
           <textarea id="uf-memo" rows="3" style="width:100%;padding:9px 12px;background:var(--cream);border:1.5px solid var(--border);border-radius:8px;font-size:13px;color:var(--ink);font-family:'Outfit','Noto Sans JP',sans-serif;outline:none;resize:vertical;transition:.15s;line-height:1.5" placeholder="例：引越し予定で前向き、来月中に切り替えたいとのこと" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border)'"></textarea></div>
 
         <button onclick="submitUtilCase()" style="width:100%;padding:13px;background:var(--navy);color:var(--gold);border:none;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif;letter-spacing:.5px;transition:all .2s" onmouseover="this.style.background='var(--navy-light)'" onmouseout="this.style.background='var(--navy)'">
-          ⚡ 光通信案件を投げる
+          ⚡ ライフライン案件を投げる
         </button>
       </div>
 
@@ -2860,9 +2860,9 @@ function renderREAgDash() {
         <div class="kpi-sub">ランクポイント</div>
       </div>
       <div class="kpi-card amber">
-        <div class="kpi-label">光通信成約</div>
+        <div class="kpi-label">ライフライン成約</div>
         <div class="kpi-value" data-kpi="ag-utility">—</div>
-        <div class="kpi-sub">光通信成約</div>
+        <div class="kpi-sub">ライフライン成約</div>
       </div>
     </div>
 
@@ -2872,7 +2872,7 @@ function renderREAgDash() {
     <!-- 権限区分バッジ -->
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px">
       <div style="padding:6px 14px;background:var(--sky-bg);border:1px solid rgba(2,132,199,.2);border-radius:20px;font-size:11px;font-weight:700;color:var(--sky)">🏘️ 不動産 — AG権限（フル操作）</div>
-      <div style="padding:6px 14px;background:var(--amber-bg);border:1px solid rgba(217,119,6,.2);border-radius:20px;font-size:11px;font-weight:700;color:var(--amber)">⚡ 光通信 — AG権限（フル操作）</div>
+      <div style="padding:6px 14px;background:var(--amber-bg);border:1px solid rgba(217,119,6,.2);border-radius:20px;font-size:11px;font-weight:700;color:var(--amber)">⚡ ライフライン — AG権限（フル操作）</div>
       <div style="padding:6px 14px;background:var(--cream2);border:1px solid var(--border-mid);border-radius:20px;font-size:11px;font-weight:600;color:var(--muted)">👤 人材 — PT扱い（紹介・閲覧のみ）</div>
     </div>
 
@@ -2891,7 +2891,7 @@ function renderREAgDash() {
         </div>
         <div class="section">
           <div class="section-header">
-            <div class="section-title">光通信担当案件</div>
+            <div class="section-title">ライフライン担当案件</div>
           </div>
           <div class="card">
             <div class="task-item">
@@ -2922,7 +2922,7 @@ function renderREAgDash() {
               <div style="font-size:10px;color:var(--faint);margin-top:6px"><span data-kpi="rank-next">次のランクまで—</span></div>
             </div>
             <div class="stat-row"><div class="stat-label">報酬率（不動産）</div><div class="stat-val" id="dash-rate-re">—</div></div>
-            <div class="stat-row"><div class="stat-label">報酬率（光通信）</div><div class="stat-val" id="dash-rate-util">—</div></div>
+            <div class="stat-row"><div class="stat-label">報酬率（ライフライン）</div><div class="stat-val" id="dash-rate-util">—</div></div>
             <div class="stat-row"><div class="stat-label">人材紹介報酬率</div><div class="stat-val" style="color:var(--muted)">PT扱い（25%）</div></div>
           </div>
         </div>
@@ -2967,7 +2967,7 @@ function renderREAgDash() {
 // ═══════════════════════════════════════════
 // HR-AG DASHBOARD
 // ═══════════════════════════════════════════
-function renderHikariAgDash() {
+function renderLifelineAgDash() {
   document.getElementById('page-title').textContent = 'マイダッシュボード';
   document.getElementById('crumb-cur').textContent = 'ダッシュボード';
   document.getElementById('topbar-actions').innerHTML = `
@@ -2986,7 +2986,7 @@ function renderHikariAgDash() {
   </div>
   <div class="section">
     <div class="section-header">
-      <div class="section-title">⚡ 担当リード（光通信）</div>
+      <div class="section-title">⚡ 担当リード（ライフライン）</div>
       <a href="coreto-utility-v2.html" class="section-link">全件表示 →</a>
     </div>
     <table class="data-table">
@@ -3006,7 +3006,7 @@ function renderHikariAgDash() {
           </div>
           <div style="font-size:10px;color:var(--faint);margin-top:6px">— / —,000</div>
         </div>
-        <div class="stat-row"><div class="stat-label">報酬率（光通信）</div><div class="stat-val" id="hikari-rate-util">80%</div></div>
+        <div class="stat-row"><div class="stat-label">報酬率（ライフライン）</div><div class="stat-val" id="lifeline-rate-util">80%</div></div>
         <div class="stat-row"><div class="stat-label">不動産紹介</div><div class="stat-val" style="color:var(--muted)">PT扱い 25%</div></div>
         <div class="stat-row"><div class="stat-label">人材紹介</div><div class="stat-val" style="color:var(--muted)">PT扱い 25%</div></div>
       </div>
@@ -3022,11 +3022,11 @@ function renderHikariAgDash() {
       </div>
     </div>
   </div>`;
-  // 残-9修正: 光通信AGダッシュの報酬率を動的表示
+  // 残-9修正: ライフラインAGダッシュの報酬率を動的表示
   (function() {
     const RATE_UTIL = { Bronze:80, Silver:83, Gold:87, Platinum:90 };
     const rank = sessionStorage.getItem('coreto_rank') || 'Bronze';
-    const el = document.getElementById('hikari-rate-util');
+    const el = document.getElementById('lifeline-rate-util');
     if (el) el.textContent = (RATE_UTIL[rank] || 80) + '%';
   })();
 }
@@ -3056,7 +3056,7 @@ function renderHRAgDash() {
         <div class="kpi-sub">Silver 🥈 ／ Gold まで4pt</div>
       </div>
       <div class="kpi-card amber">
-        <div class="kpi-label">光通信成約</div>
+        <div class="kpi-label">ライフライン成約</div>
         <div class="kpi-value">3件</div>
         <div class="kpi-sub">今月 ¥42,000 追加報酬</div>
       </div>
@@ -3065,7 +3065,7 @@ function renderHRAgDash() {
     <!-- 権限区分バッジ -->
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px">
       <div style="padding:6px 14px;background:var(--violet-bg);border:1px solid rgba(124,58,237,.2);border-radius:20px;font-size:11px;font-weight:700;color:var(--violet)">👤 人材 — AG権限（フル操作）</div>
-      <div style="padding:6px 14px;background:var(--amber-bg);border:1px solid rgba(217,119,6,.2);border-radius:20px;font-size:11px;font-weight:700;color:var(--amber)">⚡ 光通信 — AG権限（フル操作）</div>
+      <div style="padding:6px 14px;background:var(--amber-bg);border:1px solid rgba(217,119,6,.2);border-radius:20px;font-size:11px;font-weight:700;color:var(--amber)">⚡ ライフライン — AG権限（フル操作）</div>
       <div style="padding:6px 14px;background:var(--cream2);border:1px solid var(--border-mid);border-radius:20px;font-size:11px;font-weight:600;color:var(--muted)">🏘️ 不動産 — PT扱い（紹介・閲覧のみ）</div>
     </div>
 
@@ -3101,7 +3101,7 @@ function renderHRAgDash() {
         </div>
         <div class="section">
           <div class="section-header">
-            <div class="section-title">光通信担当案件</div>
+            <div class="section-title">ライフライン担当案件</div>
           </div>
           <div class="card">
             <div class="task-item">
@@ -3133,7 +3133,7 @@ function renderHRAgDash() {
               <div style="font-size:10px;color:var(--faint);margin-top:6px"><span data-kpi="rank-next">次のランクまで—</span></div>
             </div>
             <div class="stat-row"><div class="stat-label">報酬率（人材）</div><div class="stat-val" id="hr-rate-hr">—</div></div>
-            <div class="stat-row"><div class="stat-label">報酬率（光通信）</div><div class="stat-val" id="hr-rate-util">—</div></div>
+            <div class="stat-row"><div class="stat-label">報酬率（ライフライン）</div><div class="stat-val" id="hr-rate-util">—</div></div>
             <div class="stat-row"><div class="stat-label">不動産紹介報酬率</div><div class="stat-val" style="color:var(--muted)">PT扱い</div></div>
           </div>
         </div>
@@ -3173,15 +3173,15 @@ function renderPTDash() {
     <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr)">
       <div class="kpi-card gold"><div class="kpi-label">累計紹介報酬</div><div class="kpi-value" data-kpi="pt-total-reward">—</div></div>
       <div class="kpi-card emerald"><div class="kpi-label">成約件数（全事業）</div><div class="kpi-value" data-kpi="pt-total-cases">—</div></div>
-      <div class="kpi-card amber"><div class="kpi-label">光通信 投げた件数</div><div class="kpi-value">3件</div><div class="kpi-sub">成約 1件 / ¥20,000</div></div>
+      <div class="kpi-card amber"><div class="kpi-label">ライフライン 投げた件数</div><div class="kpi-value">3件</div><div class="kpi-sub">成約 1件 / ¥20,000</div></div>
       <div class="kpi-card sky"><div class="kpi-label">進行中</div><div class="kpi-value">3件</div></div>
     </div>
 
-    <!-- 光通信CTAカード（PT専用の目玉機能） -->
+    <!-- ライフラインCTAカード（PT専用の目玉機能） -->
     <div style="background:linear-gradient(135deg,var(--navy) 0%,var(--navy-light) 100%);border-radius:12px;padding:22px 24px;margin-bottom:22px;display:flex;align-items:center;justify-content:space-between;gap:16px;box-shadow:0 8px 32px rgba(13,26,45,.2)">
       <div>
         <div style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(200,169,81,.6);margin-bottom:6px">PT専用機能</div>
-        <div style="font-size:20px;font-weight:500;color:var(--gold);font-family:'Outfit','Noto Sans JP',sans-serif;font-variant-numeric:tabular-nums;margin-bottom:4px">⚡ 光通信案件を今すぐ投げる</div>
+        <div style="font-size:20px;font-weight:500;color:var(--gold);font-family:'Outfit','Noto Sans JP',sans-serif;font-variant-numeric:tabular-nums;margin-bottom:4px">⚡ ライフライン案件を今すぐ投げる</div>
         <div style="font-size:12px;color:rgba(255,255,255,.55);line-height:1.6">電力・ガス・光回線に興味があるお客様がいたら即投げ。<br>成約で<span style="color:var(--gold);font-weight:700">¥3,000〜30,000</span>の紹介報酬が発生します。</div>
       </div>
       <button onclick="location.href='coreto-pt-portal-v2.html#util'" style="padding:12px 24px;background:var(--gold);color:var(--navy);border:none;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif;white-space:nowrap;flex-shrink:0;transition:all .2s" onmouseover="this.style.background='var(--gold-light)'" onmouseout="this.style.background='var(--gold)'">
@@ -3224,7 +3224,7 @@ function renderPTDash() {
           <div class="card" style="padding:16px 18px">
             <div class="stat-row"><div class="stat-label">不動産紹介</div><div class="stat-val" style="color:var(--ink)">¥77,000</div></div>
             <div class="stat-row"><div class="stat-label">人材紹介</div><div class="stat-val" style="color:var(--ink)">¥50,000</div></div>
-            <div class="stat-row"><div class="stat-label">光通信紹介</div><div class="stat-val" style="color:var(--ink)">¥20,000</div></div>
+            <div class="stat-row"><div class="stat-label">ライフライン紹介</div><div class="stat-val" style="color:var(--ink)">¥20,000</div></div>
             <div class="stat-row" style="border-top:2px solid var(--border);margin-top:4px;padding-top:10px"><div class="stat-label" style="font-weight:700;color:var(--ink)">今月合計</div><div class="stat-val" style="font-size:18px;color:var(--amber)"><span data-kpi="pt-monthly-reward">—</span></div></div>
           </div>
         </div>
@@ -3234,7 +3234,7 @@ function renderPTDash() {
             <div style="display:flex;flex-direction:column;gap:6px">
               <div style="padding:7px 10px;background:var(--cream2);border-radius:7px;font-size:11px;color:var(--muted)">🏘️ 不動産 — <span style="color:var(--ink)">紹介投げ・進捗閲覧のみ</span></div>
               <div style="padding:7px 10px;background:var(--cream2);border-radius:7px;font-size:11px;color:var(--muted)">👤 人材 — <span style="color:var(--ink)">紹介投げ・進捗閲覧のみ</span></div>
-              <div style="padding:7px 10px;background:var(--amber-bg);border:1px solid rgba(217,119,6,.15);border-radius:7px;font-size:11px;color:var(--amber)">⚡ 光通信 — <span style="font-weight:700">案件投げ可（NEW）</span></div>
+              <div style="padding:7px 10px;background:var(--amber-bg);border:1px solid rgba(217,119,6,.15);border-radius:7px;font-size:11px;color:var(--amber)">⚡ ライフライン — <span style="font-weight:700">案件投げ可（NEW）</span></div>
             </div>
           </div>
         </div>
@@ -3253,7 +3253,7 @@ function renderInternDash() {
     </div>
     <div class="section"><div class="section-title" style="margin-bottom:14px">本日の訪問記録</div>
     <div class="card">
-      <div class="task-item"><div class="task-prio mid"></div><div class="task-main"><div class="task-name">港区三田4丁目 ― 10:30</div><div class="task-meta">在宅 / 光通信案内済み ／ リード獲得</div></div><span class="badge gold">+¥950</span></div>
+      <div class="task-item"><div class="task-prio mid"></div><div class="task-main"><div class="task-name">港区三田4丁目 ― 10:30</div><div class="task-meta">在宅 / ライフライン案内済み ／ リード獲得</div></div><span class="badge gold">+¥950</span></div>
       <div class="task-item"><div class="task-prio low"></div><div class="task-main"><div class="task-name">港区三田4丁目 ― 10:45</div><div class="task-meta">不在</div></div><span class="badge muted">+¥80</span></div>
     </div></div>
     <div style="text-align:center;margin-top:24px">
@@ -3342,7 +3342,7 @@ function doLogout() {
 // 不動産AG:    10001〜19999
 // 人材AG:      20001〜29999
 // PT:          30001〜39999
-// 光通信AG:    40001〜49999
+// ライフラインAG:    40001〜49999
 // インターン:  50001〜59999
 // ════════════════════════════════════════════
 function getHQRoleFromId(userId) {

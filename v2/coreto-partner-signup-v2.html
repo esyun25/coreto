@@ -579,7 +579,7 @@ function s3() {
     </div>
     <div id="id-area">${DATA.idType ? renderIdArea() : '<div style="font-size:12px;color:var(--faint);padding:12px;text-align:center">証明書の種類を選択してください</div>'}</div>
     <div class="field" style="margin-top:16px">
-      <label>自撮り写真 <span class="req">*</span></label>
+      <label>自撮り写真（お持ちの場合）</label>
       <div style="font-size:11px;color:var(--muted);margin-bottom:8px;line-height:1.6">
         顔全体が写るよう正面から撮影してください。眼鏡・マスクは外してください。
       </div>
@@ -606,7 +606,7 @@ function s3() {
       国税庁法人番号DBと照合します。
     </div></div>
     <div class="field">
-      <label>登記簿謄本（履歴事項全部証明書） <span class="req">*</span></label>
+      <label>登記簿謄本（履歴事項全部証明書）（お持ちの場合）</label>
       <div class="upload-box ${DATA.corpDoc?'uploaded':''}" onclick="document.getElementById('corp-doc').click()">
         <input type="file" id="corp-doc" accept="image/*,application/pdf" style="display:none" onchange="handleUpload('corpDoc',this)">
         ${DATA.corpDoc
@@ -617,7 +617,7 @@ function s3() {
       </div>
     </div>
     <div class="field">
-      <label>代表者の身分証（表面） <span class="req">*</span></label>
+      <label>代表者の身分証（表面）（お持ちの場合）</label>
       <div class="upload-box ${DATA.repIdFront?'uploaded':''}" onclick="document.getElementById('rep-id-front').click()">
         <input type="file" id="rep-id-front" accept="image/*" style="display:none" onchange="handleUpload('repIdFront',this)">
         ${DATA.repIdFront
@@ -628,7 +628,7 @@ function s3() {
       </div>
     </div>
     <div class="field">
-      <label>代表者の身分証（裏面） <span class="req">*</span></label>
+      <label>代表者の身分証（裏面）（お持ちの場合）</label>
       <div class="upload-box ${DATA.repIdBack?'uploaded':''}" onclick="document.getElementById('rep-id-back').click()">
         <input type="file" id="rep-id-back" accept="image/*" style="display:none" onchange="handleUpload('repIdBack',this)">
         ${DATA.repIdBack
@@ -649,7 +649,7 @@ function renderIdArea() {
   const needBack = DATA.idType !== 'パスポート';
   return `
     <div class="field">
-      <label>${DATA.idType==='パスポート'?'顔写真ページ':'表面'} <span class="req">*</span></label>
+      <label>${DATA.idType==='パスポート'?'顔写真ページ':'表面'}（お持ちの場合）</label>
       <div class="upload-box ${DATA.idFront?'uploaded':''}" onclick="document.getElementById('id-front').click()">
         <input type="file" id="id-front" accept="image/*" style="display:none" onchange="handleUpload('idFront',this)">
         ${DATA.idFront ? `<div style="font-size:12px;color:var(--em);font-weight:600">✅ ${DATA.idFront.name}</div>`
@@ -658,7 +658,7 @@ function renderIdArea() {
     </div>
     ${needBack ? `
     <div class="field">
-      <label>裏面 <span class="req">*</span></label>
+      <label>裏面（お持ちの場合）</label>
       <div class="upload-box ${DATA.idBack?'uploaded':''}" onclick="document.getElementById('id-back').click()">
         <input type="file" id="id-back" accept="image/*" style="display:none" onchange="handleUpload('idBack',this)">
         ${DATA.idBack ? `<div style="font-size:12px;color:var(--em);font-weight:600">✅ ${DATA.idBack.name}</div>`
@@ -681,20 +681,8 @@ function handleUpload(key, input) {
 }
 
 function validateS3() {
-  const isInd = DATA.entity === 'individual';
-  if (isInd) {
-    if (!DATA.idType) { showToast('⚠️ 証明書の種類を選択してください','warn'); return; }
-    if (!DATA.idFront) { showToast('⚠️ 身分証の表面をアップロードしてください','warn'); return; }
-    if (DATA.idType !== 'パスポート' && !DATA.idBack) { showToast('⚠️ 身分証の裏面をアップロードしてください','warn'); return; }
-    if (!DATA.selfie) { showToast('⚠️ 自撮り写真をアップロードしてください','warn'); return; }
-    if (DATA.kycStatus === 'analyzing') { showToast('⏳ AI確認中です。しばらくお待ちください','warn'); return; }
-    if (DATA.kycStatus === 'failed') { showToast('⚠️ 書類の読み取りに失敗しました。再度アップロードしてください','warn'); return; }
-    if (DATA.kycStatus !== 'passed') { showToast('⚠️ 書類の確認が完了していません。アップロードしてAI確認を通過してください','warn'); return; }
-  } else {
-    if (!DATA.corpDoc) { showToast('⚠️ 登記簿謄本をアップロードしてください','warn'); return; }
-    if (!DATA.repIdFront) { showToast('⚠️ 代表者身分証（表面）をアップロードしてください','warn'); return; }
-    if (!DATA.repIdBack) { showToast('⚠️ 代表者身分証（裏面）をアップロードしてください','warn'); return; }
-  }
+  // File uploads are now optional — skip file presence checks
+  if (DATA.kycStatus === 'analyzing') { showToast('⏳ AI確認中です。しばらくお待ちください','warn'); return; }
   next();
 }
 

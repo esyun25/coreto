@@ -4,7 +4,7 @@
  * <script>CNAV.init('PAGE_KEY');</script>
  *
  * ナビゲーション設計方針 (v2.4):
- *   - 業務ドメイン別にセクションを分割（不動産 / 人材 / 光通信）
+ *   - 業務ドメイン別にセクションを分割（不動産 / 人材 / ライフライン）
  *   - 各ドメイン内は業務フロー順（案件 → 書類 → IT重説 → 成約 → 入金）
  *   - 管理・システム系は最下部
  *   - ロール別に「できること」のみ表示（PT扱いは別セクション）
@@ -102,6 +102,8 @@ const INJECT_CSS = `
 .cmd-empty { padding:24px; text-align:center; color:#6B7280; font-size:13px; }
 .cmd-footer { padding:8px 14px; border-top:1px solid #E5E7EB; display:flex; gap:12px; font-size:11px; color:#6B7280; }
 .cmd-key { background:#F3F4F6; border:1px solid #E5E7EB; border-radius:4px; padding:1px 5px; font-family:'DM Mono',monospace; font-size:10px; }
+.cnav-item[data-key="instant_pay_nav"] { background:rgba(200,169,81,.12); border:1px solid rgba(200,169,81,.3); margin:4px 8px !important; }
+.cnav-item[data-key="instant_pay_nav"]:hover { background:rgba(200,169,81,.2) !important; }
 `;
 
 function injectCSS() {
@@ -116,12 +118,12 @@ function injectCSS() {
 //  NAV 定義
 //
 //  【設計原則】
-//  HQ    : 全業務・全管理機能。ドメイン別（不動産/人材/光通信）に分割
-//  RE-AG : 不動産業務フロー順。光通信AG権限。人材はPT扱い（閲覧）
-//  HR-AG : 人材業務フロー順。光通信AG権限。不動産はPT扱い（閲覧）
-//  光通信AG: 光通信業務のみフルAG。不動産・人材はPT扱い（閲覧）
+//  HQ    : 全業務・全管理機能。ドメイン別（不動産/人材/ライフライン）に分割
+//  RE-AG : 不動産業務フロー順。ライフラインAG権限。人材はPT扱い（閲覧）
+//  HR-AG : 人材業務フロー順。ライフラインAG権限。不動産はPT扱い（閲覧）
+//  ライフラインAG: ライフライン業務のみフルAG。不動産・人材はPT扱い（閲覧）
 //  PT    : 各ドメインへの紹介投げ・進捗閲覧のみ
-//  インターン: 訪問記録・光通信リード投げのみ
+//  インターン: 訪問記録・ライフラインリード投げのみ
 // ════════════════════════════════════════════════════════════════
 const NAV = {
 
@@ -183,6 +185,7 @@ const NAV = {
       section: '報酬・支払い',
       items: [
         { icon:'💰', label:'報酬・支払い',         href:'coreto-payment-v2.html',         key:'payment',        iconKey:'payment' },
+        { key: 'instant_pay_nav', label: '⚡ 今すぐ受け取る', href: 'coreto-instant-pay-v2.html', iconKey: 'instant_pay' },
         { icon:'🔄', label:'PTマッチング',         href:'coreto-matching-v2.html',        key:'matching',       iconKey:'matching' },
       ],
     },
@@ -216,15 +219,16 @@ const NAV = {
       section: '報酬・設定',
       items: [
         { icon:'💰', label:'報酬・支払い',         href:'coreto-payment-v2.html',         key:'payment',        iconKey:'payment' },
+        { key: 'instant_pay_nav', label: '⚡ 今すぐ受け取る', href: 'coreto-instant-pay-v2.html', iconKey: 'instant_pay' },
         { icon:'⚙️', label:'マイアカウント',       href:'coreto-account-v2.html',         key:'my_account',     iconKey:'account' },
         { icon:'📖', label:'FAQ・マニュアル',     href:'coreto-faq-v2.html',             key:'faq',            iconKey:'faq' },
       ],
     },
   ],
 
-  // ════════════════ 光通信AG ════════════════
-  // 主業務は光通信のみ（フルAG）。統合ページへ集約（~7項目）。
-  hikari_ag: [
+  // ════════════════ ライフラインAG ════════════════
+  // 主業務はライフラインのみ（フルAG）。統合ページへ集約（~7項目）。
+  lifeline_ag: [
     {
       section: 'マイページ',
       items: [
@@ -232,7 +236,7 @@ const NAV = {
       ],
     },
     {
-      section: '光通信業務',
+      section: 'ライフライン業務',
       items: [
         { icon:'⚡', label:'担当案件',             href:'coreto-utility-v2.html',         key:'utility',         badge:0, badgeColor:'gold', iconKey:'cases' },
         { icon:'👥', label:'クライアント管理',     href:'coreto-crm-v2.html',             key:'crm',            iconKey:'crm' },
@@ -243,6 +247,7 @@ const NAV = {
       section: '報酬・設定',
       items: [
         { icon:'💰', label:'報酬・支払い',         href:'coreto-payment-v2.html',         key:'payment',        iconKey:'payment' },
+        { key: 'instant_pay_nav', label: '⚡ 今すぐ受け取る', href: 'coreto-instant-pay-v2.html', iconKey: 'instant_pay' },
         { icon:'⚙️', label:'マイアカウント',       href:'coreto-account-v2.html',         key:'my_account',     iconKey:'account' },
         { icon:'📖', label:'FAQ・マニュアル',     href:'coreto-faq-v2.html',             key:'faq',            iconKey:'faq' },
       ],
@@ -269,14 +274,14 @@ const NAV = {
   ],
 
   // ════════════════ インターン ════════════════
-  // 訪問活動と光通信リード投げに特化。シンプルに保つ。
+  // 訪問活動とライフラインリード投げに特化。シンプルに保つ。
   intern: [
     {
       section: '本日の業務',
       items: [
         { icon:'📊', label:'当日の実績',               href:'coreto-hub-v2.html',              key:'dashboard',   iconKey:'home' },
         { icon:'📍', label:'訪問記録・エリアマップ',   href:'coreto-intern-visit-v2.html',     key:'visit',       iconKey:'cases' },
-        { icon:'⚡', label:'光通信リードを投稿する',   href:'coreto-intern-visit-v2.html#lead',key:'lead_submit', iconKey:'notification' },
+        { icon:'⚡', label:'ライフラインリードを投稿する',   href:'coreto-intern-visit-v2.html#lead',key:'lead_submit', iconKey:'notification' },
       ],
     },
     {
@@ -296,7 +301,7 @@ function getUser(role) {
   var name   = sessionStorage.getItem('coreto_name')    || '—';
   var userId = sessionStorage.getItem('coreto_user_id') || '—';
   var rank   = sessionStorage.getItem('coreto_rank')    || '';
-  var avMap  = { hq:'HQ', re_ag:'AG', hr_ag:'AG', hikari_ag:'AG', pt:'PT', intern:'IN' };
+  var avMap  = { hq:'HQ', re_ag:'AG', hr_ag:'AG', lifeline_ag:'AG', pt:'PT', intern:'IN' };
   var av     = avMap[role] || 'AG';
   var roleLabel = userId + (rank ? ' / ' + rank.charAt(0).toUpperCase() + rank.slice(1) : '');
   return { name: name, role: roleLabel, av: av };
@@ -305,7 +310,7 @@ const USERS = {
   hq:        { get name(){ return getUser('hq').name; },        get role(){ return getUser('hq').role; },        av:'HQ' },
   re_ag:     { get name(){ return getUser('re_ag').name; },     get role(){ return getUser('re_ag').role; },     av:'AG' },
   hr_ag:     { get name(){ return getUser('hr_ag').name; },     get role(){ return getUser('hr_ag').role; },     av:'AG' },
-  hikari_ag: { get name(){ return getUser('hikari_ag').name; }, get role(){ return getUser('hikari_ag').role; }, av:'AG' },
+  lifeline_ag: { get name(){ return getUser('lifeline_ag').name; }, get role(){ return getUser('lifeline_ag').role; }, av:'AG' },
   pt:        { get name(){ return getUser('pt').name; },        get role(){ return getUser('pt').role; },        av:'PT' },
   intern:    { get name(){ return getUser('intern').name; },    get role(){ return getUser('intern').role; },    av:'IN' },
 };
@@ -794,7 +799,7 @@ function updateNavBadges() {
     var activeCases   = myReports.filter(function(r){ return r.status !== '承認済み'; });
     var reActive      = activeCases.filter(function(r){ return r.type === '賃貸' || r.type === '売買'; });
     var hrActive      = activeCases.filter(function(r){ return r.type === '人材'; });
-    var utilActive    = activeCases.filter(function(r){ return r.type === '光通信'; });
+    var utilActive    = activeCases.filter(function(r){ return r.type === 'ライフライン'; });
 
     // HQ承認待ち
     var pendingApproval = reports.filter(function(r){ return r.status === '承認待ち'; });
@@ -818,9 +823,9 @@ function updateNavBadges() {
     // ── バッジ定義（key → count） ──
     var badges = {
       // HQ
-      'cases':        isHQ ? reports.filter(function(r){return r.type!=='光通信'&&r.type!=='人材';}).length : reActive.length,
+      'cases':        isHQ ? reports.filter(function(r){return r.type!=='ライフライン'&&r.type!=='人材';}).length : reActive.length,
       'hr_cases_all': isHQ ? reports.filter(function(r){return r.type==='人材';}).length : hrActive.length,
-      'utility':      isHQ ? reports.filter(function(r){return r.type==='光通信';}).length : utilActive.length,
+      'utility':      isHQ ? reports.filter(function(r){return r.type==='ライフライン';}).length : utilActive.length,
       'screening':    screeningPending.length,
       'itsetsu':      itsetsuPending.length,
       'itsetsu_booking': itsetsuPending.length,

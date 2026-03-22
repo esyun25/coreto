@@ -128,7 +128,32 @@ for (const fname of files) {
       issues.push({ level: 'WARN', type: 'サイドバー構造', line: '—', detail: '<nav class="sb">がない / CNAV.initは呼んでいる' });
     }
 
-    // ── 6. sb-unameのハードコード ────────────────────────
+    // ── 6a. 数値ハードコード検出 ──────────────────────────
+    for (const [idx, line] of lines.entries()) {
+      if (DUMMY_EXCLUDE.test(line)) continue;
+      if (line.trim().startsWith('//') || line.trim().startsWith('*')) continue;
+      // >XX件< パターン
+      if (/>\d{2,3}件</.test(line) && !/id=|badge|count|kpi/i.test(line)) {
+        issues.push({ level: 'WARN', type: '数値ハードコード', line: idx + 1, detail: line.trim().slice(0, 80) });
+      }
+      // 万円 パターン
+      if (/[\d,]+万円/.test(line) && !/placeholder|comment|hint/.test(line)) {
+        issues.push({ level: 'WARN', type: '万円表記', line: idx + 1, detail: line.trim().slice(0, 80) });
+      }
+      // >XX名< パターン
+      if (/>\d{2,}名</.test(line)) {
+        issues.push({ level: 'WARN', type: '数値ハードコード', line: idx + 1, detail: line.trim().slice(0, 80) });
+      }
+    }
+
+    // ── 6b. input[type="file"][required] 検出 ────────────
+    for (const [idx, line] of lines.entries()) {
+      if (/type\s*=\s*["']file["']/.test(line) && /required/.test(line)) {
+        issues.push({ level: 'WARN', type: 'ファイル必須', line: idx + 1, detail: 'input[type="file"]にrequiredが設定されています' });
+      }
+    }
+
+    // ── 6c. sb-unameのハードコード ────────────────────────
     for (const [idx, line] of lines.entries()) {
       if (/id="sb-(?:uname|name|un)"/.test(line) && />[^<]{2,20}<\//.test(line)) {
         const m = line.match(/>(.*?)<\//);
