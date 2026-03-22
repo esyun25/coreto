@@ -572,6 +572,9 @@ html, body { background:#FFFFFF !important; }
         <div class="side-card-head">クイックアクション</div>
         <div class="action-list">
 
+          <!-- ── 同意書 ── -->
+          <div id="consent-link-area" style="margin-bottom:8px"></div>
+
           <!-- ── ① 基本情報 ── -->
           <div id="action-section-label-1" style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;padding:4px 2px 2px">① 基本情報</div>
           <button class="action-btn secondary" onclick="window.location.href='coreto-crm-detail-v2.html'">👤 クライアント詳細</button>
@@ -1746,6 +1749,21 @@ window.addEventListener('DOMContentLoaded', function() {
       if (b) b.textContent = '🔑 IT重説 🔗 リンク発行済み';
     }
   } catch(e) {}
+  // Consent link UI
+  var consentArea = document.getElementById('consent-link-area');
+  if (consentArea && cid) {
+    var agId = sessionStorage.getItem('coreto_user_id') || '';
+    var consents = [];
+    try { consents = JSON.parse(localStorage.getItem('CORETO_CONSENTS') || '[]'); } catch(e){}
+    var hasConsent = consents.some(function(c) { return c.caseId === cid; });
+    if (hasConsent) {
+      consentArea.innerHTML = '<div style="padding:6px 10px;background:var(--em-bg);border-radius:6px;font-size:11px;color:var(--em);font-weight:600">✅ 個人情報同意取得済み</div>';
+    } else {
+      var consentUrl = location.origin + '/coreto-consent-v2.html?caseId=' + encodeURIComponent(cid) + '&agId=' + encodeURIComponent(agId);
+      consentArea.innerHTML = '<button class="action-btn secondary" onclick="(function(){var u=\'' + consentUrl.replace(/'/g,"\\'") + '\';navigator.clipboard.writeText(u).then(function(){document.getElementById(\'consent-copy-ok\').style.display=\'\'});})()">📋 同意書リンクを発行・コピー</button>' +
+        '<div id="consent-copy-ok" style="display:none;font-size:10px;color:var(--em);padding:4px 8px">✅ コピーしました（LINEで送信してください）</div>';
+    }
+  }
 });
 </script>
 
