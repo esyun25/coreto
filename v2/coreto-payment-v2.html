@@ -211,6 +211,11 @@ html, body { background:#FFFFFF !important; }
 }
 .kpi-value { font-size:32px !important; }
 .kpi-vl    { font-size:28px !important; }
+@media print {
+  .sb, .topbar, .tab-bar, button[onclick*="print"] { display: none !important; }
+  .content { margin: 0 !important; padding: 0 !important; }
+  #tax-print-area { border: none !important; box-shadow: none !important; }
+}
 </style>
 </head>
 <body>
@@ -252,6 +257,8 @@ html, body { background:#FFFFFF !important; }
     <div class="tab" onclick="switchTab('sim',this)">報酬シミュレーター</div>
     <div class="tab" onclick="switchTab('slip',this)">支払明細書</div>
     <div class="tab" onclick="switchTab('history',this)">支払履歴</div>
+    <div class="tab" onclick="switchTab('cp',this)">CPポイント</div>
+    <div class="tab" onclick="switchTab('tax',this)">源泉徴収票</div>
   </div>
   <div class="page" id="pg"></div>
 </div>
@@ -295,6 +302,7 @@ function switchTab(t,el){
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
   if(el)el.classList.add('active');
   tab=t; renderTab(t);
+  if (t === 'tax') setTimeout(updateTaxCert, 50);
 }
 
 function gotoSlip(){
@@ -307,6 +315,8 @@ function renderTab(t){
   if(t==='sim')     pg.innerHTML=simPage();
   if(t==='slip')    pg.innerHTML=slipPage();
   if(t==='history') pg.innerHTML=histPage();
+  if(t==='cp')      pg.innerHTML=cpPage();
+  if(t==='tax')     pg.innerHTML=taxPage();
   if(t==='sim')     calcSim();
 }
 
@@ -634,6 +644,206 @@ function histPage(){return`
       <td><span class="badge b-${r[8]}">${r[9]}</span></td>
     </tr>`).join('')}</tbody></table>
   </div>`;}
+
+function cpPage() {
+  var agId = sessionStorage.getItem('coreto_user_id') || '';
+  var cpKey = 'CORETO_CP_POINTS_' + agId;
+  var cp;
+  try { cp = JSON.parse(localStorage.getItem(cpKey) || 'null'); } catch(e){}
+  if (!cp) cp = { agId: agId, balance: 0, locked: 0, lifetimeEarned: 0, lifetimeRedeemed: 0, history: [] };
+
+  // Expire check
+  var now = new Date();
+  var expiredAmount = 0;
+  for (var i = 0; i < cp.history.length; i++) {
+    var h = cp.history[i];
+    if (h.type === 'earned' && h.expiresAt && new Date(h.expiresAt) < now) {
+      h.type = 'expired';
+      expiredAmount += h.amount;
+    }
+  }
+  if (expiredAmount > 0) {
+    cp.balance = Math.max(0, cp.balance - expiredAmount);
+    localStorage.setItem(cpKey, JSON.stringify(cp));
+  }
+
+  // Calculate expiring soon (within 30 days)
+  var soon = 0;
+  var soonDate = new Date(); soonDate.setDate(soonDate.getDate() + 30);
+  for (var j = 0; j < cp.history.length; j++) {
+    if (cp.history[j].type === 'earned' && cp.history[j].expiresAt && new Date(cp.history[j].expiresAt) < soonDate) {
+      soon += cp.history[j].amount;
+    }
+  }
+
+  var soonWarn = soon > 0 ? '<div style="background:var(--am-bg);border:1px solid rgba(217,119,6,.15);border-radius:var(--r-sm);padding:10px 14px;font-size:11px;color:var(--am);margin-bottom:16px">\u26a0\ufe0f \u00a5' + soon.toLocaleString() + ' \u304c30\u65e5\u4ee5\u5185\u306b\u5931\u52b9\u3057\u307e\u3059</div>' : '';
+
+  // Redeem methods
+  var methods = [];
+  try { methods = JSON.parse(localStorage.getItem('CORETO_CP_REDEEM_METHODS') || 'null'); } catch(e){}
+  if (!methods) {
+    methods = [
+      { id: 'bank', label: '\u9280\u884c\u632f\u8fbc', enabled: true },
+      { id: 'card', label: 'CORETO\u30ab\u30fc\u30c9', enabled: false },
+      { id: 'service', label: '\u4ed6\u4e8b\u696d\u5145\u5f53', enabled: false }
+    ];
+    localStorage.setItem('CORETO_CP_REDEEM_METHODS', JSON.stringify(methods));
+  }
+
+  var methodsHtml = methods.map(function(m) {
+    return '<label style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--bd);border-radius:var(--r-sm);font-size:12px;' + (m.enabled ? 'cursor:pointer' : 'opacity:.4;cursor:not-allowed') + '">' +
+      '<input type="radio" name="cp-method" value="' + m.id + '"' + (m.id === 'bank' ? ' checked' : '') + (m.enabled ? '' : ' disabled') + ' style="accent-color:var(--navy)">' +
+      m.label + (m.enabled ? '' : ' <span style="font-size:9px;color:var(--muted)">\uff08\u6e96\u5099\u4e2d\uff09</span>') +
+    '</label>';
+  }).join('');
+
+  // History
+  var histHtml = cp.history.slice(0, 20).map(function(h) {
+    var typeLabel = h.type === 'earned' ? '<span style="color:var(--em)">+\u00a5' + h.amount.toLocaleString() + '</span>' :
+                    h.type === 'redeemed' ? '<span style="color:var(--rd)">-\u00a5' + h.amount.toLocaleString() + '</span>' :
+                    '<span style="color:var(--muted);text-decoration:line-through">\u00a5' + h.amount.toLocaleString() + ' \u5931\u52b9</span>';
+    var sourceLabel = h.source === '3month_delay' ? '3\u30f6\u6708\u7e70\u5ef6' : h.source === '6month_delay' ? '6\u30f6\u6708\u7e70\u5ef6' : h.source || '\u2014';
+    return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bd);font-size:11px">' +
+      '<div><div style="color:var(--ink)">' + sourceLabel + '</div><div style="color:var(--faint);font-size:10px">' + (h.earnedAt||'').slice(0,10) + '</div></div>' +
+      '<div style="text-align:right">' + typeLabel + (h.expiresAt ? '<div style="font-size:9px;color:var(--faint)">\u671f\u9650: ' + h.expiresAt.slice(0,10) + '</div>' : '') + '</div>' +
+    '</div>';
+  }).join('');
+
+  return '<div style="max-width:600px">' +
+    // KPI
+    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">' +
+      '<div style="background:var(--white);border:1px solid var(--bd);border-radius:var(--r);padding:16px;text-align:center"><div style="font-size:10px;color:var(--muted)">\u73fe\u5728\u6b8b\u9ad8</div><div style="font-size:24px;font-weight:300;color:var(--em);font-family:Outfit,sans-serif;font-variant-numeric:tabular-nums">\u00a5' + cp.balance.toLocaleString() + '</div></div>' +
+      '<div style="background:var(--white);border:1px solid var(--bd);border-radius:var(--r);padding:16px;text-align:center"><div style="font-size:10px;color:var(--muted)">\u7d2f\u8a08\u7372\u5f97</div><div style="font-size:24px;font-weight:300;color:var(--ink);font-family:Outfit,sans-serif;font-variant-numeric:tabular-nums">\u00a5' + cp.lifetimeEarned.toLocaleString() + '</div></div>' +
+      '<div style="background:var(--white);border:1px solid var(--bd);border-radius:var(--r);padding:16px;text-align:center"><div style="font-size:10px;color:var(--muted)">\u7d2f\u8a08\u51fa\u91d1</div><div style="font-size:24px;font-weight:300;color:var(--ink);font-family:Outfit,sans-serif;font-variant-numeric:tabular-nums">\u00a5' + cp.lifetimeRedeemed.toLocaleString() + '</div></div>' +
+    '</div>' +
+    soonWarn +
+    // Redeem
+    '<div style="background:var(--white);border:1px solid var(--bd);border-radius:var(--r);padding:16px 20px;margin-bottom:16px">' +
+      '<div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:12px">\u51fa\u91d1\u7533\u8acb</div>' +
+      '<div style="display:flex;gap:8px;margin-bottom:12px">' + methodsHtml + '</div>' +
+      '<button onclick="redeemCP()" style="padding:10px 20px;background:var(--navy);color:#fff;border:none;border-radius:var(--r-sm);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit"' + (cp.balance <= 0 ? ' disabled style="padding:10px 20px;background:var(--muted);color:#fff;border:none;border-radius:var(--r-sm);font-size:12px;opacity:.5;cursor:not-allowed;font-family:inherit"' : '') + '>\u51fa\u91d1\u7533\u8acb\u3059\u308b\uff08\u7fcc\u670825\u65e5\u306b\u632f\u8fbc\uff09</button>' +
+    '</div>' +
+    // History
+    '<div style="background:var(--white);border:1px solid var(--bd);border-radius:var(--r);padding:16px 20px">' +
+      '<div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:12px">\u30dd\u30a4\u30f3\u30c8\u5c65\u6b74</div>' +
+      (histHtml || '<div style="text-align:center;padding:20px;color:var(--muted);font-size:12px">\u307e\u3060\u30dd\u30a4\u30f3\u30c8\u5c65\u6b74\u304c\u3042\u308a\u307e\u305b\u3093</div>') +
+    '</div>' +
+  '</div>';
+}
+
+function redeemCP() {
+  var agId = sessionStorage.getItem('coreto_user_id') || '';
+  var cpKey = 'CORETO_CP_POINTS_' + agId;
+  try {
+    var cp = JSON.parse(localStorage.getItem(cpKey) || 'null');
+    if (!cp || cp.balance <= 0) return;
+    var amount = cp.balance;
+    cp.history.unshift({
+      id: 'CP-R-' + Date.now(),
+      type: 'redeemed',
+      amount: amount,
+      source: 'redeem',
+      caseId: '',
+      earnedAt: new Date().toISOString(),
+      expiresAt: null,
+      redeemedAt: new Date().toISOString()
+    });
+    cp.locked += amount;
+    cp.balance = 0;
+    cp.lifetimeRedeemed += amount;
+    localStorage.setItem(cpKey, JSON.stringify(cp));
+
+    // Add to redeem requests
+    var reqs = JSON.parse(localStorage.getItem('CORETO_CP_REDEEM_REQUESTS') || '[]');
+    reqs.unshift({ id: 'CPR-' + Date.now(), agId: agId, amount: amount, method: 'bank', requestedAt: new Date().toISOString(), status: '\u51e6\u7406\u5f85\u3061' });
+    localStorage.setItem('CORETO_CP_REDEEM_REQUESTS', JSON.stringify(reqs));
+  } catch(e){}
+  document.getElementById('pg').innerHTML = cpPage();
+  showToast('\u51fa\u91d1\u7533\u8acb\u3092\u53d7\u3051\u4ed8\u3051\u307e\u3057\u305f\uff08\u7fcc\u670825\u65e5\u306b\u632f\u8fbc\uff09');
+}
+
+function showToast(msg) {
+  var t = document.createElement('div');
+  t.textContent = msg;
+  t.style.cssText = 'position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:10px 24px;border-radius:var(--r-sm);font-size:12px;font-family:inherit;z-index:9999;opacity:1;transition:opacity .3s';
+  document.body.appendChild(t);
+  setTimeout(function(){ t.style.opacity = '0'; }, 2800);
+  setTimeout(function(){ t.remove(); }, 3200);
+}
+
+function taxPage() {
+  var currentYear = new Date().getFullYear();
+  var selectedYear = currentYear;
+
+  return '<div style="max-width:600px">' +
+    '<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">' +
+      '<label style="font-size:12px;color:var(--muted)">\u5bfe\u8c61\u5e74\u5ea6</label>' +
+      '<select id="tax-year" onchange="updateTaxCert()" style="padding:6px 12px;border:1px solid var(--bd);border-radius:var(--r-sm);font-size:12px;font-family:inherit">' +
+        '<option value="' + currentYear + '">' + currentYear + '\u5e74</option>' +
+        '<option value="' + (currentYear-1) + '">' + (currentYear-1) + '\u5e74</option>' +
+      '</select>' +
+      '<button onclick="window.print()" style="margin-left:auto;padding:6px 14px;background:var(--navy);color:#fff;border:none;border-radius:var(--r-sm);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">\ud83d\udda8\ufe0f \u5370\u5237 / PDF\u4fdd\u5b58</button>' +
+    '</div>' +
+    '<div id="tax-cert-body"></div>' +
+  '</div>';
+}
+
+function updateTaxCert() {
+  var year = parseInt(document.getElementById('tax-year')?.value || new Date().getFullYear());
+  var agId = sessionStorage.getItem('coreto_user_id') || '';
+  var agName = sessionStorage.getItem('coreto_name') || '\u2014';
+  var reports = [];
+  try { reports = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]'); } catch(e){}
+  var myReports = reports.filter(function(r) {
+    if (r.agId !== agId) return false;
+    var d = r.date || r.closedAt || '';
+    return d.startsWith(String(year));
+  });
+
+  var totalFee = 0, totalReward = 0;
+  for (var i = 0; i < myReports.length; i++) {
+    totalFee += (myReports[i].fee || 0) + (myReports[i].adFee || myReports[i].feeAD || 0);
+    totalReward += myReports[i].reward || 0;
+  }
+
+  // Withholding tax calculation
+  var taxAmount = 0;
+  if (totalReward <= 1000000) {
+    taxAmount = Math.floor(totalReward * 0.1021);
+  } else {
+    taxAmount = Math.floor((totalReward - 1000000) * 0.2042) + 102100;
+  }
+
+  var body = document.getElementById('tax-cert-body');
+  if (!body) return;
+  body.innerHTML =
+    '<div id="tax-print-area" style="background:var(--white);border:1px solid var(--bd);border-radius:var(--r);padding:32px;font-size:12px">' +
+      '<div style="text-align:center;margin-bottom:24px">' +
+        '<div style="font-size:16px;font-weight:700;color:var(--navy);letter-spacing:2px">\u5831\u916c\u3001\u6599\u91d1\u3001\u5951\u7d04\u91d1\u53ca\u3073\u8cde\u91d1\u306e\u652f\u6255\u8abf\u66f8</div>' +
+        '<div style="font-size:11px;color:var(--muted);margin-top:4px">' + year + '\u5e74\u5206</div>' +
+      '</div>' +
+
+      '<table style="width:100%;border-collapse:collapse;margin-bottom:24px">' +
+        '<tr style="border:1px solid var(--bd)"><td style="padding:10px 14px;background:var(--cream);font-weight:700;width:40%;border-right:1px solid var(--bd)">\u652f\u6255\u3092\u53d7\u3051\u308b\u8005</td><td style="padding:10px 14px">' + agName + '\uff08' + agId + '\uff09</td></tr>' +
+        '<tr style="border:1px solid var(--bd)"><td style="padding:10px 14px;background:var(--cream);font-weight:700;border-right:1px solid var(--bd)">\u533a\u5206</td><td style="padding:10px 14px">\u5831\u916c</td></tr>' +
+        '<tr style="border:1px solid var(--bd)"><td style="padding:10px 14px;background:var(--cream);font-weight:700;border-right:1px solid var(--bd)">\u7d30\u76ee</td><td style="padding:10px 14px">\u4e0d\u52d5\u7523\u4ef2\u4ecb\u5831\u916c\u30fb\u4eba\u6750\u7d39\u4ecb\u5831\u916c</td></tr>' +
+        '<tr style="border:1px solid var(--bd)"><td style="padding:10px 14px;background:var(--cream);font-weight:700;border-right:1px solid var(--bd)">\u652f\u6255\u91d1\u984d</td><td style="padding:10px 14px;font-size:16px;font-weight:700;font-family:Outfit,sans-serif;font-variant-numeric:tabular-nums">\u00a5' + totalReward.toLocaleString() + '</td></tr>' +
+        '<tr style="border:1px solid var(--bd)"><td style="padding:10px 14px;background:var(--cream);font-weight:700;border-right:1px solid var(--bd)">\u6e90\u6cc9\u5fb4\u53ce\u7a0e\u984d</td><td style="padding:10px 14px;font-size:16px;font-weight:700;color:var(--rd);font-family:Outfit,sans-serif;font-variant-numeric:tabular-nums">\u00a5' + taxAmount.toLocaleString() + '</td></tr>' +
+        '<tr style="border:1px solid var(--bd)"><td style="padding:10px 14px;background:var(--cream);font-weight:700;border-right:1px solid var(--bd)">\u5dee\u5f15\u652f\u6255\u984d</td><td style="padding:10px 14px;font-size:16px;font-weight:700;color:var(--em);font-family:Outfit,sans-serif;font-variant-numeric:tabular-nums">\u00a5' + (totalReward - taxAmount).toLocaleString() + '</td></tr>' +
+        '<tr style="border:1px solid var(--bd)"><td style="padding:10px 14px;background:var(--cream);font-weight:700;border-right:1px solid var(--bd)">\u6210\u7d04\u4ef6\u6570</td><td style="padding:10px 14px">' + myReports.length + '\u4ef6</td></tr>' +
+      '</table>' +
+
+      '<div style="border-top:2px solid var(--navy);padding-top:16px">' +
+        '<div style="font-size:11px;font-weight:700;color:var(--navy);margin-bottom:8px">\u652f\u6255\u8005</div>' +
+        '<div style="font-size:12px;color:var(--ink)">\u682a\u5f0f\u4f1a\u793eCORETO</div>' +
+        '<div style="font-size:10px;color:var(--muted)">\u6771\u4eac\u90fd\u6e0b\u8c37\u533a / \u6cd5\u4eba\u756a\u53f7: XXXX-XXXX-XXXX</div>' +
+      '</div>' +
+
+      '<div style="margin-top:16px;font-size:10px;color:var(--faint);text-align:center">' +
+        '\u203b\u3053\u306e\u66f8\u985e\u306f\u78ba\u5b9a\u7533\u544a\u306e\u53c2\u8003\u8cc7\u6599\u3068\u3057\u3066\u3054\u5229\u7528\u304f\u3060\u3055\u3044\u3002\u6b63\u5f0f\u306a\u6e90\u6cc9\u5fb4\u53ce\u7968\u306f\u5225\u9014\u90f5\u9001\u3055\u308c\u307e\u3059\u3002' +
+      '</div>' +
+    '</div>';
+}
 
 renderTab('summary');
 </script>

@@ -337,6 +337,18 @@ html,body{background:#FFFFFF !important}
 // 初期化
 // ══════════════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', () => {
+  // URL parameter auto-fill
+  var _urlP = new URLSearchParams(location.search);
+  var _urlCaseId = _urlP.get('caseId') || '';
+  var _urlAmount = parseInt(_urlP.get('amount') || '0');
+  var _urlFeeChukai = parseInt(_urlP.get('feeChukai') || '0');
+  if (_urlCaseId || _urlAmount) {
+    // Store for later use in renderApply
+    sessionStorage.setItem('ip_prefill_case', _urlCaseId);
+    sessionStorage.setItem('ip_prefill_amount', String(_urlAmount));
+    sessionStorage.setItem('ip_prefill_fee', String(_urlFeeChukai));
+  }
+
   CNAV.init('instant_pay');
 // ── 即時払い KPI動的更新 ──────────────────────────────
 (function updateIPKPI() {
@@ -398,11 +410,45 @@ function renderApply() {
   var s   = CNAV.session ? CNAV.session() : null;
   var isHQ = s && s.type === 'hq';
 
+  // Campaign banner
+  var campBanner = '';
+  try {
+    var camps = JSON.parse(localStorage.getItem('CORETO_IP_CAMPAIGNS') || '[]');
+    if (camps.length === 0) {
+      // Initialize default campaign
+      camps = [{
+        id: 'CAMP-001',
+        label: '🎁 初回手数料無料',
+        description: '初めての即時払いは手数料が0円！',
+        feeRate: 0,
+        condition: 'first_time',
+        expiry: '2026-12-31',
+        enabled: true
+      }];
+      localStorage.setItem('CORETO_IP_CAMPAIGNS', JSON.stringify(camps));
+    }
+    var usage = JSON.parse(localStorage.getItem('CORETO_IP_USAGE') || '{}');
+    var myUsage = usage[sessionStorage.getItem('coreto_user_id')] || { count: 0 };
+    for (var ci = 0; ci < camps.length; ci++) {
+      var c = camps[ci];
+      if (c.enabled && new Date(c.expiry) > new Date()) {
+        if (c.condition === 'first_time' && myUsage.count === 0) {
+          campBanner = '<div style="background:linear-gradient(135deg,var(--navy),#1E3252);border-radius:var(--r);padding:16px 20px;margin-bottom:16px;color:#fff">' +
+            '<div style="font-size:16px;font-weight:700;margin-bottom:4px">' + c.label + '</div>' +
+            '<div style="font-size:12px;opacity:.8">' + c.description + '</div>' +
+          '</div>';
+          break;
+        }
+      }
+    }
+  } catch(e){}
+
   var cashCard = isHQ ? '<div style="background:var(--am-bg);border:1px solid rgba(217,119,6,.2);border-radius:var(--r-sm);padding:14px"><div style="font-size:18px;margin-bottom:6px">💴</div><div style="font-size:12px;font-weight:700;color:var(--ink);margin-bottom:4px">現金出金</div><div style="font-size:10px;color:var(--muted);line-height:1.8">HQ操作のみ<br>手数料 ¥5,000/百万円<br>事前予約制</div></div>' : '';
   var methodSel = isHQ ? '<div class="field"><label>出金方法（HQ選択）</label><select id="payout-method" onchange="calcBreakdown()" style="font-family:\'Outfit\',sans-serif"><option value="bank">🏦 銀行振込</option><option value="cash">💴 現金</option></select></div>' : '';
 
   document.getElementById('page-content').innerHTML =
     '<div style="max-width:920px">' +
+    campBanner +
     '<div class="al al-warn">⚠️ <div><strong>即時払いについての注意事項</strong><br>即時払いは申請後に<strong>2段階認証（SMSによる認証コード）</strong>が必須です。3回連続失敗でアカウントがロックされます。</div></div>' +
     (function(){ var cp=getCampaign(); if(!cp) return ''; var ep=Math.max(15-Math.round(cp.discountRate*100),1); return '<div class="al al-info" style="background:var(--em-bg);border-color:rgba(5,150,105,.3)">'+'🎉 <div><strong>'+cp.label+'</strong> 適用中！手数料が <s>15%</s> → <strong style="color:var(--em)">'+ep+'%</strong> になっています。期限：'+cp.until+'</div></div>'; })() +
 
@@ -473,6 +519,23 @@ function renderApply() {
     '</div>' +
     '</div>' +
     '</div>';
+
+  // Auto-fill from URL params
+  setTimeout(function() {
+    var prefillCase = sessionStorage.getItem('ip_prefill_case');
+    var prefillAmount = sessionStorage.getItem('ip_prefill_amount');
+    if (prefillAmount && parseInt(prefillAmount) > 0) {
+      var amtInput = document.getElementById('req-amount');
+      if (amtInput) {
+        amtInput.value = parseInt(prefillAmount).toLocaleString();
+        calcBreakdown();
+      }
+    }
+    // Clear prefill after use
+    sessionStorage.removeItem('ip_prefill_case');
+    sessionStorage.removeItem('ip_prefill_amount');
+    sessionStorage.removeItem('ip_prefill_fee');
+  }, 100);
 }
 
 // ── 出金計算 ─────────────────────────────────────────────────
@@ -1448,6 +1511,92 @@ function clearAllErrors() {
   });
   document.querySelectorAll('.field-error').forEach(function(el) { el.style.display = 'none'; });
 }
+// ══════════════════════════════════════════════════════════════
+// VIEW 2: 申請履歴
+// ══════════════════════════════════════════════════════════════
+function renderHistory() {
+  var agId = sessionStorage.getItem('coreto_user_id') || '';
+  var key = 'CORETO_INSTANT_PAY_HISTORY_' + agId;
+  var hist = [];
+  try { hist = JSON.parse(localStorage.getItem(key) || '[]'); } catch(e) {}
+
+  var rows = '';
+  for (var i = 0; i < hist.length; i++) {
+    var h = hist[i];
+    var statusBadge = '';
+    var cancelBtn = '';
+    if (h.status === '振込済み' || h.status === 'completed') {
+      statusBadge = '<span class="badge b-em">振込済み</span>';
+    } else if (h.status === '申請済み' || h.status === '処理中' || h.status === 'pending_manual') {
+      statusBadge = '<span class="badge b-am">' + (h.status === 'pending_manual' ? '処理中' : h.status) + '</span>';
+      cancelBtn = '<button onclick="cancelInstantPay(\'' + h.id + '\')" style="padding:4px 10px;background:var(--cream);border:1px solid var(--bd);border-radius:4px;font-size:10px;cursor:pointer;font-family:inherit">取消して翌月25日に変更</button>';
+    } else if (h.status === '取消（翌月25日払い）') {
+      statusBadge = '<span class="badge b-sk">取消（翌月25日払い）</span>';
+    } else {
+      statusBadge = '<span class="badge">' + (h.status || '—') + '</span>';
+    }
+    var dateStr = h.date ? new Date(h.date).toLocaleString('ja-JP') : '—';
+    rows += '<tr>' +
+      '<td class="mono" style="font-size:10px">' + (h.id || '—') + '</td>' +
+      '<td class="mono">¥' + (h.amount || 0).toLocaleString() + '</td>' +
+      '<td class="mono" style="color:var(--em)">¥' + (h.payout || 0).toLocaleString() + '</td>' +
+      '<td>' + statusBadge + '</td>' +
+      '<td class="mono" style="font-size:10px">' + dateStr + '</td>' +
+      '<td>' + cancelBtn + '</td>' +
+    '</tr>';
+  }
+
+  var histHtml = '<div style="max-width:1100px">' +
+    '<div class="card"><div class="card-head"><div class="card-title">即時払い申請履歴</div></div>' +
+    '<div style="overflow-x:auto"><table class="tbl"><thead><tr>' +
+    '<th>申請ID</th><th>申請額</th><th>振込額</th><th>ステータス</th><th>申請日時</th><th>操作</th>' +
+    '</tr></thead><tbody>' + (rows || '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">申請履歴はまだありません</td></tr>') + '</tbody></table></div></div>';
+
+  // Show switchable reports
+  var switchableHtml = '';
+  try {
+    var reports = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]');
+    var myId = sessionStorage.getItem('coreto_user_id') || '';
+    var switchable = reports.filter(function(r) { return r.agId === myId && (r.status === '承認待ち' || r.status === '承認済み') && !r.instantPayApplied; });
+    if (switchable.length > 0) {
+      switchableHtml = '<div style="margin-top:20px;background:var(--white);border:1px solid var(--bd);border-radius:var(--r);overflow:hidden">' +
+        '<div style="padding:10px 16px;background:var(--sk-bg);border-bottom:1px solid var(--bd);font-size:11px;font-weight:700;color:var(--sk)">翌月25日待ちの報酬 → 即時払いに変更可能</div>';
+      for (var si = 0; si < switchable.length; si++) {
+        var sr = switchable[si];
+        switchableHtml += '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--bd)">' +
+          '<div><div style="font-size:12px;font-weight:600">' + (sr.client||'—') + '</div><div style="font-size:10px;color:var(--muted)">¥' + (sr.reward||0).toLocaleString() + '</div></div>' +
+          '<button onclick="window.location.href=\'coreto-instant-pay-v2.html?caseId=' + encodeURIComponent(sr.id) + '&amount=' + (sr.reward||0) + '\'" style="padding:5px 12px;background:var(--am-bg);color:var(--am);border:1px solid rgba(217,119,6,.2);border-radius:5px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit">⚡ 即時払いに変更</button>' +
+        '</div>';
+      }
+      switchableHtml += '</div>';
+    }
+  } catch(e){}
+
+  document.getElementById('page-content').innerHTML = histHtml + switchableHtml + '</div>';
+}
+
+function cancelInstantPay(reqId) {
+  try {
+    var agId = sessionStorage.getItem('coreto_user_id') || '';
+    var key = 'CORETO_INSTANT_PAY_HISTORY_' + agId;
+    var hist = JSON.parse(localStorage.getItem(key) || '[]');
+    for (var i = 0; i < hist.length; i++) {
+      if (hist[i].id === reqId && (hist[i].status === '申請済み' || hist[i].status === '処理中')) {
+        hist[i].status = '取消（翌月25日払い）';
+        hist[i].cancelledAt = new Date().toISOString();
+        break;
+      }
+    }
+    localStorage.setItem(key, JSON.stringify(hist));
+    // Also remove from queue
+    var queue = JSON.parse(localStorage.getItem('CORETO_INSTANT_PAY_QUEUE') || '[]');
+    queue = queue.filter(function(q) { return q.id !== reqId; });
+    localStorage.setItem('CORETO_INSTANT_PAY_QUEUE', JSON.stringify(queue));
+    renderHistory();
+    showToast('即時払いを取消し、翌月25日払いに変更しました');
+  } catch(e){}
+}
+
 function showToast(msg) {
   const t = document.getElementById('ip-toast');
   t.textContent = msg; t.style.opacity = '1';
