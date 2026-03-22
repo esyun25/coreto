@@ -5,8 +5,9 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>成約報告 — COREBLDG</title>
 <link rel="stylesheet" href="coreto-design-system.css">
+<link rel="stylesheet" href="design-system.css">
 <style>
-:root{--navy:#0D1A2D;--navy-l:#1E3252;--gold:#C8A951;--gold-dim:rgba(200,169,81,.15);--cream:#FFFFFF;--cream2:#F8F9FA;--white:#FFFFFF;--ink:#202124;--muted:#5F6368;--faint:#80868B;--em:#059669;--em-bg:#ECFDF5;--am:#D97706;--am-bg:#FFFBEB;--rd:#DC2626;--rd-bg:#FEF2F2;--sk:#0284C7;--sk-bg:#F0F9FF;--vt:#7C3AED;--vt-bg:#F5F3FF;--bd:#E8EAED;--bd2:#DADCE0;--sw:240px;--r:10px;--r-sm:7px;--sh:0 1px 2px rgba(60,64,67,.1),0 1px 3px rgba(60,64,67,.06)}
+
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:#FFFFFF}
 .shell{display:flex;height:100vh}
@@ -531,22 +532,29 @@ function renderNew(){
           <div class="field"><label>クライアントID</label><input id="client-id" placeholder="CLI-0001"></div>
         </div>
         <div id="biz-fields">
-          <!-- 賃貸フィールド（デフォルト） -->
-          <div class="field-row">
-            <div class="field"><label class="required">物件住所</label><input id="prop-addr" placeholder="港区三田3丁目XX-XX"></div>
-            <div class="field"><label>物件名</label><input id="prop-name" placeholder="パークタワー三田"></div>
+          <!-- 詳細情報（折りたたみ） -->
+          <div style="margin-top:4px">
+            <button type="button" id="detail-toggle" onclick="toggleDetailFields()" style="background:none;border:none;color:var(--info,#2563EB);font-size:12px;font-weight:600;cursor:pointer;padding:4px 0;font-family:inherit">▶ 詳細を入力する（物件・家賃・管理会社）</button>
           </div>
-          <div class="field-row">
-            <div class="field"><label class="required">月額家賃（円）</label><input id="monthly-rent" data-field="monthly-rent" placeholder="165,000" oninput="calcReward()"></div>
-            <div class="field"><label>管理費（円）</label><input id="mgmt-fee" placeholder="10,000"></div>
-          </div>
-          <div class="field-row">
-            <div class="field"><label>敷金（ヶ月）</label><input id="shikikin" placeholder="1" type="number" min="0" step="0.5"></div>
-            <div class="field"><label>礼金（ヶ月）</label><input id="reikin" placeholder="1" type="number" min="0" step="0.5"></div>
-          </div>
-          <div class="field-row">
-            <div class="field"><label>保証会社</label><input id="hosho-company" placeholder="日本賃貸保証（JID）等"></div>
-            <div class="field"><label>管理会社</label><input id="mgmt-company" placeholder="東京不動産管理"></div>
+          <div id="detail-fields" style="max-height:0;overflow:hidden;transition:max-height 0.3s ease">
+            <div style="padding-top:8px">
+              <div class="field-row">
+                <div class="field"><label>物件住所</label><input id="prop-addr" placeholder="港区三田3丁目XX-XX"></div>
+                <div class="field"><label>物件名</label><input id="prop-name" placeholder="パークタワー三田"></div>
+              </div>
+              <div class="field-row">
+                <div class="field"><label>月額家賃（円）</label><input id="monthly-rent" data-field="monthly-rent" placeholder="165,000" inputmode="numeric" oninput="calcReward()"></div>
+                <div class="field"><label>管理費（円）</label><input id="mgmt-fee" placeholder="10,000" inputmode="numeric"></div>
+              </div>
+              <div class="field-row">
+                <div class="field"><label>敷金（ヶ月）</label><input id="shikikin" placeholder="1" type="number" min="0" step="0.5"></div>
+                <div class="field"><label>礼金（ヶ月）</label><input id="reikin" placeholder="1" type="number" min="0" step="0.5"></div>
+              </div>
+              <div class="field-row">
+                <div class="field"><label>保証会社</label><input id="hosho-company" placeholder="日本賃貸保証（JID）等"></div>
+                <div class="field"><label>管理会社</label><input id="mgmt-company" placeholder="東京不動産管理"></div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -559,7 +567,7 @@ function renderNew(){
         <div class="field-row">
           <div class="field">
             <label class="required">仲介料（税抜）</label>
-            <input id="fee-chukai" data-field="amount" placeholder="495,000" oninput="calcReward()">
+            <input id="fee-chukai" data-field="amount" placeholder="495,000" inputmode="numeric" oninput="calcReward()">
           </div>
           <div class="field">
             <label>PT紹介の有無</label>
@@ -572,11 +580,11 @@ function renderNew(){
         <div class="field-row">
           <div class="field">
             <label class="required">仲介手数料（円）</label>
-            <input id="fee-chukai" data-field="amount" placeholder="165,000" oninput="calcReward()">
+            <input id="fee-chukai" data-field="amount" placeholder="165,000" inputmode="numeric" oninput="calcReward()">
           </div>
           <div class="field">
             <label>AD料（円）</label>
-            <input id="fee-ad" placeholder="0" value="0" oninput="calcReward()">
+            <input id="fee-ad" placeholder="0" value="0" inputmode="numeric" oninput="calcReward()">
           </div>
         </div>
         <div class="field-row">
@@ -634,15 +642,15 @@ function onBizChange(val){
   const fields = {
     rental: `
       <div class="field-row"><div class="field"><label class="required">物件住所</label><input placeholder="港区三田3丁目XX-XX"></div><div class="field"><label>物件名</label><input placeholder="パークタワー三田"></div></div>
-      <div class="field-row"><div class="field"><label class="required">月額家賃</label><input placeholder="165,000" oninput="calcReward()"></div><div class="field"><label>管理会社</label><input placeholder="東京不動産管理"></div></div>`,
+      <div class="field-row"><div class="field"><label class="required">月額家賃</label><input placeholder="165,000" inputmode="numeric" oninput="calcReward()"></div><div class="field"><label>管理会社</label><input placeholder="東京不動産管理"></div></div>`,
     sale: `
       <div class="field-row"><div class="field"><label class="required">物件住所</label><input placeholder="渋谷区代々木XX-XX"></div><div class="field"><label>物件種別</label><select><option>区分マンション</option><option>一戸建て</option><option>土地</option><option>一棟物</option></select></div></div>
-      <div class="field-row"><div class="field"><label class="required">売買金額</label><input placeholder="85,000,000" oninput="calcReward()"></div><div class="field"><label>売主 / 買主</label><input placeholder="売主：〇〇 / 買主：△△"></div></div>`,
+      <div class="field-row"><div class="field"><label class="required">売買金額</label><input placeholder="85,000,000" inputmode="numeric" oninput="calcReward()"></div><div class="field"><label>売主 / 買主</label><input placeholder="売主：〇〇 / 買主：△△"></div></div>`,
     hr: `
       <div class="field-row"><div class="field"><label class="required">入社企業</label><input placeholder="株式会社〇〇"></div><div class="field"><label>職種</label><input placeholder="営業職"></div></div>
-      <div class="field-row"><div class="field"><label class="required">年収（内定）</label><input placeholder="4,200,000" oninput="calcReward()"></div><div class="field"><label>入社予定日</label><input type="date"></div></div>`,
+      <div class="field-row"><div class="field"><label class="required">年収（内定）</label><input placeholder="4,200,000" inputmode="numeric" oninput="calcReward()"></div><div class="field"><label>入社予定日</label><input type="date"></div></div>`,
     util: `
-      <div class="field-row"><div class="field"><label class="required">回線種別</label><select><option>NURO光</option><option>光コラボ</option><option>ドコモ光</option><option>auひかり</option></select></div><div class="field"><label>月額</label><input placeholder="4,500" oninput="calcReward()"></div></div>
+      <div class="field-row"><div class="field"><label class="required">回線種別</label><select><option>NURO光</option><option>光コラボ</option><option>ドコモ光</option><option>auひかり</option></select></div><div class="field"><label>月額</label><input placeholder="4,500" inputmode="numeric" oninput="calcReward()"></div></div>
       <div class="field"><label>設置住所</label><input placeholder="港区三田3丁目XX-XX"></div>`
   };
   document.getElementById('biz-fields').innerHTML = fields[val]||'';
@@ -655,6 +663,16 @@ function onBizChange(val){
       <div class="rp-row"><span class="rp-label">報酬率（${rank}）</span><span class="rp-val" style="color:var(--gold);font-weight:700">${rate}%</span></div>
       <div class="rp-row rp-total"><span class="rp-label">想定報酬額</span><span class="rp-val">—</span></div>`;
   }
+}
+
+var _detailOpen = false;
+function toggleDetailFields() {
+  _detailOpen = !_detailOpen;
+  var el = document.getElementById('detail-fields');
+  var btn = document.getElementById('detail-toggle');
+  if (el) el.style.maxHeight = _detailOpen ? el.scrollHeight + 'px' : '0';
+  if (btn) btn.textContent = _detailOpen ? '▼ 詳細を閉じる' : '▶ 詳細を入力する（物件・家賃・管理会社）';
+  try { var sk = 'AUTOSAVE_' + location.pathname.split('/').pop(); var d = JSON.parse(localStorage.getItem(sk)||'{}'); d._detailOpen = _detailOpen; localStorage.setItem(sk, JSON.stringify(d)); } catch(e){}
 }
 
 function onAdStatusChange() {
@@ -1737,6 +1755,42 @@ window.addEventListener('DOMContentLoaded', ()=>{
   }
   renderNew();
 });
+</script>
+<script>
+// Auto-save
+(function() {
+  var SAVE_KEY = 'AUTOSAVE_' + location.pathname.split('/').pop();
+  var timer;
+  function save() {
+    var data = {};
+    document.querySelectorAll('input,select,textarea').forEach(function(el) {
+      if (el.id && el.type !== 'password' && el.type !== 'file') {
+        data[el.id] = el.type === 'checkbox' ? el.checked : el.value;
+      }
+    });
+    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+    var ind = document.getElementById('autosave-ind');
+    if (ind) { ind.style.opacity='1'; setTimeout(function(){ind.style.opacity='0';},2000); }
+  }
+  function restore() {
+    try {
+      var data = JSON.parse(localStorage.getItem(SAVE_KEY) || '{}');
+      Object.keys(data).forEach(function(id) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        if (el.type === 'checkbox') el.checked = data[id];
+        else el.value = data[id];
+      });
+    } catch(e) {}
+  }
+  document.addEventListener('input', function() { clearTimeout(timer); timer = setTimeout(save, 3000); });
+  window.addEventListener('DOMContentLoaded', function() { setTimeout(restore, 500); });
+  var ind = document.createElement('div');
+  ind.id = 'autosave-ind';
+  ind.style.cssText = 'position:fixed;bottom:16px;right:16px;font-size:11px;color:var(--muted);opacity:0;transition:opacity 0.3s;z-index:9999;font-family:var(--font)';
+  ind.textContent = '✓ 自動保存済み';
+  document.body.appendChild(ind);
+})();
 </script>
 </body>
 </html>

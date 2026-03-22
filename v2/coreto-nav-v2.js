@@ -73,6 +73,23 @@ const INJECT_CSS = `
   font-size:12px; color:rgba(255,255,255,.35);
 }
 .cnav-footer-item:hover { background:rgba(255,255,255,.05); color:rgba(255,255,255,.65); }
+/* Mobile menu */
+.sb-menu-btn { display: none; background: none; border: none; color: rgba(255,255,255,.7); font-size: 22px; cursor: pointer; padding: 4px 8px; margin-left: auto; }
+@media (max-width: 768px) {
+  .sb { position: fixed !important; left: -260px; top: 0; bottom: 0; z-index: 100; width: 240px; transition: left .25s ease; flex-direction: column !important; height: 100vh !important; }
+  .sb.open { left: 0; }
+  .sb-menu-btn { display: block; position: fixed; top: 8px; left: 8px; z-index: 99; background: var(--navy); border-radius: 8px; padding: 6px 10px; }
+  .sb-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 99; }
+  .sb-overlay.show { display: block; }
+  .sb-head { display: flex !important; }
+  .sb-nav { display: block !important; }
+  .content { margin-left: 0 !important; }
+}
+.breadcrumb { display: flex; align-items: center; gap: 4px; padding: 8px 0 8px; font-size: 12px; color: var(--muted, #6B7280); font-family: 'Outfit', 'Noto Sans JP', sans-serif; }
+.bc-item { color: var(--muted, #6B7280); text-decoration: none; }
+.bc-item:hover { color: var(--ink, #111827); }
+.bc-sep { color: var(--faint, #9CA3AF); }
+.bc-current { color: var(--ink, #111827); font-weight: 600; }
 `;
 
 function injectCSS() {
@@ -589,6 +606,60 @@ function init(activeKey) {
     ? navEl.closest('nav').querySelector('[class*="footer"]:not(.cnav-footer)')
     : null;
   if (legacyFooter) legacyFooter.style.display = 'none';
+
+  // Mobile menu button
+  var menuBtn = document.createElement('button');
+  menuBtn.className = 'sb-menu-btn';
+  menuBtn.innerHTML = '☰';
+  menuBtn.onclick = function() {
+    var sb = document.querySelector('.sb');
+    var ov = document.querySelector('.sb-overlay');
+    if (sb) sb.classList.toggle('open');
+    if (ov) ov.classList.toggle('show');
+  };
+  document.body.appendChild(menuBtn);
+
+  var overlay = document.createElement('div');
+  overlay.className = 'sb-overlay';
+  overlay.onclick = function() {
+    document.querySelector('.sb')?.classList.remove('open');
+    this.classList.remove('show');
+  };
+  document.body.appendChild(overlay);
+
+  // Breadcrumb
+  if (activeKey && activeKey !== 'dashboard') {
+    var bcSection = '';
+    var bcPage = '';
+    var navItems = sections;
+    for (var si = 0; si < navItems.length; si++) {
+      var sec = navItems[si];
+      if (sec.items) {
+        for (var ii = 0; ii < sec.items.length; ii++) {
+          if (sec.items[ii].key === activeKey) {
+            bcSection = sec.section;
+            bcPage = sec.items[ii].label;
+            break;
+          }
+        }
+      }
+      if (bcPage) break;
+    }
+    if (bcPage) {
+      var bcEl = document.createElement('nav');
+      bcEl.className = 'breadcrumb';
+      bcEl.setAttribute('aria-label', 'パンくず');
+      bcEl.innerHTML = '<a href="coreto-hub-v2.html" class="bc-item">🏠</a><span class="bc-sep">›</span>' +
+        (bcSection ? '<span class="bc-item">' + bcSection + '</span><span class="bc-sep">›</span>' : '') +
+        '<span class="bc-item bc-current">' + bcPage + '</span>';
+      var content = document.querySelector('.content') || document.querySelector('.shell-content') || document.querySelector('.main');
+      if (content) {
+        var topbar = content.querySelector('.topbar');
+        if (topbar) topbar.parentNode.insertBefore(bcEl, topbar);
+        else content.insertBefore(bcEl, content.firstChild);
+      }
+    }
+  }
 }
 
 function session() {

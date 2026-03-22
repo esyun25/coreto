@@ -5,16 +5,9 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>COREBLDG — IT重説 予約受付</title>
 <link rel="stylesheet" href="coreto-design-system.css">
+<link rel="stylesheet" href="design-system.css">
 <style>
-:root{
-  --navy:#0D1A2D;--navy-m:#152238;--gold:#C8A951;--gold-dim:rgba(200,169,81,.15);
-  --ink:#202124;--muted:#5F6368;--faint:#80868B;
-  --em:#059669;--em-bg:#ECFDF5;--am:#D97706;--am-bg:#FFFBEB;
-  --rd:#DC2626;--rd-bg:#FEF2F2;--sk:#0284C7;--sk-bg:#F0F9FF;
-  --vt:#7C3AED;--vt-bg:#F5F3FF;
-  --cream:#FFFFFF;--cream2:#F8F9FA;--bd:#E8EAED;--bd2:#DADCE0;--sw:240px;
-  --sh:0 1px 2px rgba(60,64,67,.1),0 1px 3px rgba(60,64,67,.06);
-}
+
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;font-family:'Outfit','Noto Sans JP',sans-serif;background:var(--cream2)}
 .shell{display:flex;height:100vh}
@@ -750,5 +743,41 @@ document.addEventListener('DOMContentLoaded',()=>{
 <script src="coreto-kv-client.js"></script>
 <script src="coreto-nav-v2.js"></script>
 <script>window.addEventListener("DOMContentLoaded",function(){CNAV.init('itsetsu_booking');});</script>
+<script>
+// Auto-save
+(function() {
+  var SAVE_KEY = 'AUTOSAVE_' + location.pathname.split('/').pop();
+  var timer;
+  function save() {
+    var data = {};
+    document.querySelectorAll('input,select,textarea').forEach(function(el) {
+      if (el.id && el.type !== 'password' && el.type !== 'file') {
+        data[el.id] = el.type === 'checkbox' ? el.checked : el.value;
+      }
+    });
+    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+    var ind = document.getElementById('autosave-ind');
+    if (ind) { ind.style.opacity='1'; setTimeout(function(){ind.style.opacity='0';},2000); }
+  }
+  function restore() {
+    try {
+      var data = JSON.parse(localStorage.getItem(SAVE_KEY) || '{}');
+      Object.keys(data).forEach(function(id) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        if (el.type === 'checkbox') el.checked = data[id];
+        else el.value = data[id];
+      });
+    } catch(e) {}
+  }
+  document.addEventListener('input', function() { clearTimeout(timer); timer = setTimeout(save, 3000); });
+  window.addEventListener('DOMContentLoaded', function() { setTimeout(restore, 500); });
+  var ind = document.createElement('div');
+  ind.id = 'autosave-ind';
+  ind.style.cssText = 'position:fixed;bottom:16px;right:16px;font-size:11px;color:var(--muted);opacity:0;transition:opacity 0.3s;z-index:9999;font-family:var(--font)';
+  ind.textContent = '✓ 自動保存済み';
+  document.body.appendChild(ind);
+})();
+</script>
 </body>
 </html>
