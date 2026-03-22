@@ -910,6 +910,9 @@ function advancePipelineStep(caseId) {
 // C-22: 鍵渡し完了処理
 function completeKeyHandover() {
   coretoConfirm({title:'鍵渡し完了',message:'鍵渡しが完了しましたか？',detail:'成約報告ページに進んでください',okLabel:'完了した',danger:false,onOk:function(){_doKeyHandover();}});return;
+}
+
+function _doKeyHandover() {
   // UX-1: パイプラインをステップ7（鍵渡し）に更新してlocalStorageに保存
   const p = new URLSearchParams(location.search);
   const caseId = p.get('caseId') || '';
@@ -927,6 +930,35 @@ function completeKeyHandover() {
     timeline.insertBefore(item, timeline.firstChild);
   }
   showToast('✅ 鍵渡し完了を記録しました（ステップ7更新）。成約報告へお進みください。', 'em');
+
+  // Show contract report button based on AD status
+  setTimeout(function() {
+    var p = new URLSearchParams(location.search);
+    var caseId = p.get('caseId') || '';
+    var clientName = p.get('clientName') || '';
+    var reports = [];
+    try { reports = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]'); } catch(e){}
+    var caseReport = reports.find(function(r) { return r.caseId === caseId; });
+    var hasUnpaidAd = caseReport && caseReport.feeAD > 0 && !caseReport.adPaid;
+
+    var afterKeyDiv = document.getElementById('after-key-handover');
+    if (!afterKeyDiv) {
+      afterKeyDiv = document.createElement('div');
+      afterKeyDiv.id = 'after-key-handover';
+      afterKeyDiv.style.cssText = 'margin-top:10px;padding:10px 12px;border-radius:8px';
+      var keyBtn = document.querySelector('[onclick*="completeKeyHandover"]');
+      if (keyBtn) keyBtn.parentElement.insertBefore(afterKeyDiv, keyBtn.nextSibling);
+    }
+
+    if (hasUnpaidAd) {
+      afterKeyDiv.style.background = 'var(--am-bg)';
+      afterKeyDiv.innerHTML = '<div style="font-size:11px;color:var(--am)">⚠️ AD入金確認後に成約報告が可能になります</div>' +
+        '<button disabled style="margin-top:6px;padding:8px 14px;background:var(--muted);color:#fff;border:none;border-radius:6px;font-size:11px;opacity:.5;cursor:not-allowed;font-family:inherit">🏆 成約を報告する</button>';
+    } else {
+      afterKeyDiv.style.background = 'var(--em-bg)';
+      afterKeyDiv.innerHTML = '<a href="coreto-contract-report-v2.html?caseId=' + encodeURIComponent(caseId) + (clientName ? '&clientName=' + encodeURIComponent(clientName) : '') + '" style="display:inline-block;padding:8px 16px;background:var(--em);color:#fff;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;font-family:inherit">🏆 成約報告を作成する →</a>';
+    }
+  }, 300);
 }
 
 function showToast(msg, type) {

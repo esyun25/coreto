@@ -3512,6 +3512,33 @@ JSONのみ（前置き不要）:
   } else {
     CNAV.init("hub");
   }
+
+  // Notification badge
+  (function updateNotifBadge() {
+    try {
+      var notifs = JSON.parse(localStorage.getItem('CORETO_NOTIFICATIONS') || '[]');
+      var myId = sessionStorage.getItem('coreto_user_id') || '';
+      var unread = notifs.filter(function(n) { return !n.read && n.agId === myId; });
+      if (unread.length > 0) {
+        var badge = document.createElement('div');
+        badge.id = 'notif-badge-float';
+        badge.style.cssText = 'position:fixed;top:16px;right:16px;background:#DC2626;color:#fff;font-size:11px;font-weight:700;padding:6px 12px;border-radius:20px;cursor:pointer;z-index:9990;font-family:Outfit,sans-serif;box-shadow:0 2px 8px rgba(220,38,38,.3)';
+        badge.textContent = '🔔 ' + unread.length + '件の通知';
+        badge.onclick = function() {
+          var n = unread[0];
+          if (n && n.actionUrl) {
+            // Mark as read
+            for (var i = 0; i < notifs.length; i++) {
+              if (notifs[i].id === n.id) { notifs[i].read = true; break; }
+            }
+            localStorage.setItem('CORETO_NOTIFICATIONS', JSON.stringify(notifs));
+            window.location.href = n.actionUrl;
+          }
+        };
+        document.body.appendChild(badge);
+      }
+    } catch(e){}
+  })();
 });</script>
 </body>
 </html>

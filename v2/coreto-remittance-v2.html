@@ -294,6 +294,8 @@ window.addEventListener('DOMContentLoaded', function() {
   } catch(e) { console.warn('remitKPI:', e); }
 })();
 
+  renderAdPending();
+
   window.toggleSb = () => { document.querySelector('.sb').classList.toggle('open'); document.getElementById('mob-overlay').classList.toggle('show'); };
   window.closeSb  = () => { document.querySelector('.sb').classList.remove('open');  document.getElementById('mob-overlay').classList.remove('show'); };
 
@@ -330,6 +332,88 @@ window.addEventListener('DOMContentLoaded', function() {
     page.insertBefore(banner, page.firstChild);
   }
 });
+
+function renderAdPending() {
+  var reports = [];
+  try { reports = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]'); } catch(e){}
+  var adPending = reports.filter(function(r) { return r.feeAD > 0 && r.adPaid === false; });
+  var container = document.getElementById('ad-pending-section');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'ad-pending-section';
+    var mainArea = document.querySelector('.page') || document.querySelector('.content');
+    if (mainArea) mainArea.appendChild(container);
+  }
+  if (adPending.length === 0) { container.innerHTML = ''; return; }
+  var rows = adPending.map(function(r) {
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--bd)">' +
+      '<div>' +
+        '<div style="font-size:12px;font-weight:600;color:var(--ink)">' + (r.client||'—') + '</div>' +
+        '<div style="font-size:10px;color:var(--muted)">' + (r.caseId||r.id||'') + ' / AD ¥' + (r.feeAD||0).toLocaleString() + '</div>' +
+        '<div style="font-size:10px;color:var(--am)">予定: ' + (r.adTiming==='same_month'?'同月末':r.adTiming==='next_month'?'翌月末':r.adTiming==='2months'?'2ヶ月後':'未定') + '</div>' +
+      '</div>' +
+      '<button onclick="confirmAdPayment(\'' + (r.id||'') + '\')" style="padding:6px 14px;background:var(--em);color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">AD入金確認</button>' +
+    '</div>';
+  }).join('');
+  container.innerHTML =
+    '<div style="margin-top:20px;background:var(--white);border:1px solid var(--bd);border-radius:var(--r);overflow:hidden">' +
+      '<div style="padding:12px 16px;background:var(--am-bg);border-bottom:1px solid var(--bd);font-size:12px;font-weight:700;color:var(--am)">💰 AD入金待ち（' + adPending.length + '件）</div>' +
+      rows +
+    '</div>';
+}
+
+function confirmAdPayment(reportId) {
+  try {
+    var reports = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]');
+    for (var i = 0; i < reports.length; i++) {
+      if (reports[i].id === reportId) {
+        reports[i].adPaid = true;
+        var notifs = JSON.parse(localStorage.getItem('CORETO_NOTIFICATIONS') || '[]');
+        notifs.unshift({
+          id: 'NOTIF-' + Date.now(),
+          type: 'ad_received',
+          agId: reports[i].agId || '',
+          caseId: reports[i].caseId || reports[i].id,
+          amount: reports[i].feeAD,
+          message: 'AD料 ¥' + (reports[i].feeAD||0).toLocaleString() + ' が入金されました。成約報告が可能になりました。',
+          actionUrl: 'coreto-contract-report-v2.html?caseId=' + (reports[i].caseId || ''),
+          timestamp: new Date().toISOString(),
+          read: false
+        });
+        localStorage.setItem('CORETO_NOTIFICATIONS', JSON.stringify(notifs));
+        break;
+      }
+    }
+    localStorage.setItem('CORETO_REPORTS', JSON.stringify(reports));
+  } catch(e){}
+  renderAdPending();
+  showToast('AD入金を確認しました');
+}
+
+function showToast(msg) {
+  var t = document.createElement('div');
+  t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:10px 20px;border-radius:8px;font-size:12px;font-weight:600;z-index:9999;font-family:inherit';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(function(){ t.style.opacity='0'; t.style.transition='opacity .3s'; }, 2500);
+  setTimeout(function(){ t.remove(); }, 3000);
+}
+
+function showKeyChecklist(caseId) {
+  var overlay = document.createElement('div');
+  overlay.id = 'key-checklist-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:9999;display:flex;align-items:center;justify-content:center';
+  overlay.innerHTML =
+    '<div style="background:var(--white);border-radius:var(--r);padding:24px 28px;max-width:400px;width:90%;box-shadow:0 12px 40px rgba(0,0,0,.2)">' +
+      '<div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:16px">🔑 鍵手配チェックリスト</div>' +
+      '<div style="font-size:11px;color:var(--muted);margin-bottom:12px">案件: ' + caseId + '</div>' +
+      '<label style="display:flex;align-items:flex-start;gap:8px;padding:8px 0;font-size:12px;color:var(--ink);cursor:pointer"><input type="checkbox" class="key-check" style="margin-top:2px;accent-color:var(--navy)"> 管理会社に鍵の受取日を連絡した</label>' +
+      '<label style="display:flex;align-items:flex-start;gap:8px;padding:8px 0;font-size:12px;color:var(--ink);cursor:pointer"><input type="checkbox" class="key-check" style="margin-top:2px;accent-color:var(--navy)"> クライアントに鍵渡し日時を確認した</label>' +
+      '<label style="display:flex;align-items:flex-start;gap:8px;padding:8px 0;font-size:12px;color:var(--ink);cursor:pointer"><input type="checkbox" class="key-check" style="margin-top:2px;accent-color:var(--navy)"> 入居当日の立会い有無を確認した</label>' +
+      '<div style="text-align:right;margin-top:16px"><button onclick="document.getElementById(\'key-checklist-overlay\').remove()" style="padding:8px 20px;background:var(--navy);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">完了</button></div>' +
+    '</div>';
+  document.body.appendChild(overlay);
+}
 </script>
 </body>
 </html>

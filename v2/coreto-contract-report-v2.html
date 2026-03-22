@@ -470,8 +470,8 @@ function getMyRate(bizType) {
 }
 
 function calcReward(){
-  const fee = parseInt(document.getElementById('fee-input')?.value?.replace(/[^0-9]/g,''))||0;
-  const ad  = parseInt(document.getElementById('ad-input')?.value?.replace(/[^0-9]/g,''))||0;
+  const fee = parseInt(document.getElementById('fee-chukai')?.value?.replace(/[^0-9]/g,''))||0;
+  const ad  = parseInt(document.getElementById('fee-ad')?.value?.replace(/[^0-9]/g,''))||0;
   const preview = document.getElementById('reward-preview');
   if(!preview) return;
   const biz = document.getElementById('biz-select')?.value || 'rental';
@@ -559,13 +559,42 @@ function renderNew(){
         <div class="field-row">
           <div class="field">
             <label class="required">仲介料（税抜）</label>
-            <input id="fee-input" data-field="amount" placeholder="495,000" oninput="calcReward()">
+            <input id="fee-chukai" data-field="amount" placeholder="495,000" oninput="calcReward()">
           </div>
           <div class="field">
             <label>PT紹介の有無</label>
             <select>
               <option value="none">なし</option>
               <option value="pt">あり（PT紹介案件）</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label class="required">仲介手数料（円）</label>
+            <input id="fee-chukai" data-field="amount" placeholder="165,000" oninput="calcReward()">
+          </div>
+          <div class="field">
+            <label>AD料（円）</label>
+            <input id="fee-ad" placeholder="0" value="0" oninput="calcReward()">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>AD入金状況</label>
+            <select id="ad-status" onchange="onAdStatusChange()">
+              <option value="none">AD料なし</option>
+              <option value="paid">入金済み</option>
+              <option value="unpaid">未入金</option>
+            </select>
+          </div>
+          <div class="field" id="ad-timing-wrap" style="display:none">
+            <label>AD入金予定</label>
+            <select id="ad-timing">
+              <option value="same_month">同月末</option>
+              <option value="next_month">翌月末</option>
+              <option value="2months">2ヶ月後</option>
+              <option value="undecided">未定</option>
             </select>
           </div>
         </div>
@@ -628,11 +657,57 @@ function onBizChange(val){
   }
 }
 
+function onAdStatusChange() {
+  var sel = document.getElementById('ad-status');
+  var wrap = document.getElementById('ad-timing-wrap');
+  var adInput = document.getElementById('fee-ad');
+  if (!sel) return;
+  if (sel.value === 'none') {
+    if (wrap) wrap.style.display = 'none';
+    if (adInput) { adInput.value = '0'; adInput.disabled = true; }
+  } else {
+    if (adInput) adInput.disabled = false;
+    if (sel.value === 'unpaid') {
+      if (wrap) wrap.style.display = '';
+    } else {
+      if (wrap) wrap.style.display = 'none';
+    }
+  }
+  calcReward();
+  updateSubmitButton();
+}
+
+function updateSubmitButton() {
+  var btn = document.querySelector('button[onclick="submitReport()"]');
+  if (!btn) return;
+  var adVal = parseInt((document.getElementById('fee-ad')?.value || '0').replace(/[^0-9]/g,'')) || 0;
+  var adSt = document.getElementById('ad-status')?.value || 'none';
+  if (adVal > 0 && adSt === 'unpaid') {
+    btn.disabled = true;
+    btn.style.opacity = '0.4';
+    btn.style.cursor = 'not-allowed';
+    var warn = document.getElementById('ad-unpaid-warn');
+    if (!warn) {
+      warn = document.createElement('div');
+      warn.id = 'ad-unpaid-warn';
+      warn.style.cssText = 'font-size:11px;color:var(--am);margin-top:6px;text-align:right';
+      warn.textContent = '⚠️ AD入金確認後に成約報告が可能になります';
+      btn.parentElement.appendChild(warn);
+    }
+  } else {
+    btn.disabled = false;
+    btn.style.opacity = '1';
+    btn.style.cursor = 'pointer';
+    var warn = document.getElementById('ad-unpaid-warn');
+    if (warn) warn.remove();
+  }
+}
+
 function submitReport(){
   // 残-3: フォームから値を取得してlocalStorageに成約報告を保存
-  const feeInput = document.getElementById('fee-input');
+  const feeInput = document.getElementById('fee-chukai');
   const fee = feeInput ? (parseInt(feeInput.value.replace(/[^0-9]/g,''))||495000) : 495000;
-  const adFeeSubmit = parseInt((document.getElementById('ad-input')?.value || '0').replace(/[^0-9]/g,'')) || 0;
+  const adFeeSubmit = parseInt((document.getElementById('fee-ad')?.value || '0').replace(/[^0-9]/g,'')) || 0;
   const biz = document.getElementById('biz-select')?.value || 'rental';
   const closedAt = document.getElementById('closed-at')?.value || new Date().toLocaleDateString('ja-JP');
   const { rate, rank } = getMyRate(biz);
@@ -643,7 +718,7 @@ function submitReport(){
 
   try {
     const reports = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]');
-    const adFee       = parseInt((document.getElementById('ad-input')?.value || '0').replace(/[^0-9]/g,'')) || 0;
+    const adFee       = parseInt((document.getElementById('fee-ad')?.value || '0').replace(/[^0-9]/g,'')) || 0;
     const monthlyRent = parseInt((document.getElementById('monthly-rent')?.value || '0').replace(/[^0-9]/g,'')) || 0;
     const mgmtFee    = parseInt((document.getElementById('mgmt-fee')?.value || '0').replace(/[^0-9]/g,'')) || 0;
     const shikikin   = parseFloat(document.getElementById('shikikin')?.value || '0') || 0;
@@ -660,6 +735,11 @@ function submitReport(){
       type: biz === 'rental' ? '賃貸' : biz === 'sale' ? '売買' : biz === 'hr' ? '人材' : '光通信',
       fee, adFee: adFeeSubmit, reward, date: closedAt || now,
       ag: agName, agId: agUserId, status: '承認待ち',
+      feeChukai: fee,
+      feeAD: adFeeSubmit,
+      adStatus: document.getElementById('ad-status')?.value || 'none',
+      adTiming: document.getElementById('ad-timing')?.value || '',
+      adPaid: (document.getElementById('ad-status')?.value || 'none') !== 'unpaid',
       monthlyRent, mgmtFee, shikikin, reikin, hosho, propAddr, propName, mgmtCo,
     });
     localStorage.setItem('CORETO_REPORTS', JSON.stringify(reports));
@@ -695,29 +775,133 @@ function submitReport(){
     localStorage.setItem('CORETO_HQ_TASKS', JSON.stringify(tasks));
   } catch(e) {}
 
+  // Calculate instant pay amounts
+  var ipFeeRate = 0.15;
+  var ipCampaign = null;
+  try {
+    var camps = JSON.parse(localStorage.getItem('CORETO_IP_CAMPAIGNS') || '[]');
+    var usage = JSON.parse(localStorage.getItem('CORETO_IP_USAGE') || '{}');
+    var myUsage = usage[sessionStorage.getItem('coreto_user_id')] || { count: 0 };
+    for (var ci = 0; ci < camps.length; ci++) {
+      if (camps[ci].enabled && new Date(camps[ci].expiry) > new Date()) {
+        if (camps[ci].condition === 'first_time' && myUsage.count === 0) {
+          ipCampaign = camps[ci];
+          ipFeeRate = camps[ci].feeRate;
+          break;
+        }
+      }
+    }
+  } catch(e){}
+  var ipNet = Math.round(reward * (1 - ipFeeRate));
+  var cp3 = Math.round(reward * 0.015);
+  var cp6 = Math.round(reward * 0.03);
+  var campLabel = ipCampaign ? '<div style="font-size:10px;color:var(--em);margin-top:2px">※' + ipCampaign.label + '</div>' : '';
+  var ipFeeLabel = ipFeeRate === 0 ? '手数料無料' : '手数料' + Math.round(ipFeeRate*100) + '%差引';
+
+  document.getElementById('pg').innerHTML = `
+  <div class="form-wrap">
+    <div style="text-align:center;padding:48px 20px;max-width:480px;margin:0 auto">
+      <div style="font-size:48px;margin-bottom:12px">🎉</div>
+      <div style="font-size:22px;font-weight:300;color:var(--ink);margin-bottom:6px">成約おめでとうございます！</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:24px">報告ID: ${rptId}</div>
+
+      <div style="background:var(--white);border:1px solid var(--bd);border-radius:var(--r);padding:16px 24px;margin-bottom:24px">
+        <div style="font-size:11px;color:var(--faint);margin-bottom:8px">確定報酬</div>
+        <div style="font-size:32px;font-weight:300;color:var(--ink);font-family:'Outfit',sans-serif;font-variant-numeric:tabular-nums">¥${reward.toLocaleString()}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">${rank} ${rate}%</div>
+      </div>
+
+      <div style="font-size:12px;color:var(--muted);margin-bottom:16px">報酬の受取方法を選択してください</div>
+
+      <!-- 即時払い -->
+      <button onclick="(function(){ window.location.href='coreto-instant-pay-v2.html?caseId=${encodeURIComponent(rptId)}&amount=${reward}&feeChukai=${fee}'; })()" style="width:100%;padding:16px 20px;background:var(--navy);color:#fff;border:none;border-radius:var(--r);cursor:pointer;text-align:left;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+          <span style="font-size:16px">⚡</span>
+          <span style="font-size:14px;font-weight:700">今すぐ受け取る</span>
+        </div>
+        <div style="font-size:12px;opacity:.7;padding-left:24px">${ipFeeLabel}後 ¥${ipNet.toLocaleString()} を即日振込</div>
+        ${campLabel ? '<div style="padding-left:24px">' + campLabel + '</div>' : ''}
+      </button>
+
+      <!-- 翌月25日 -->
+      <div style="margin-bottom:16px">
+        <a href="coreto-hub-v2.html" style="font-size:12px;color:var(--muted);text-decoration:underline">翌月25日に全額受け取る（¥${reward.toLocaleString()}）→</a>
+      </div>
+
+      <!-- 繰り延べ -->
+      <div style="background:var(--sk-bg);border:1px solid rgba(2,132,199,.15);border-radius:var(--r);padding:14px 16px;text-align:left">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+          <span style="font-size:14px">🏦</span>
+          <span style="font-size:12px;font-weight:700;color:var(--sk)">受け取りを遅らせてポイントを得る</span>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:6px">
+          <button onclick="selectDefer(3, ${reward}, '${rptId}')" class="btn btn-g" style="flex:1;font-size:11px;padding:8px 6px">3ヶ月後 → +¥${cp3.toLocaleString()} CP</button>
+          <button onclick="selectDefer(6, ${reward}, '${rptId}')" class="btn btn-g" style="flex:1;font-size:11px;padding:8px 6px">6ヶ月後 → +¥${cp6.toLocaleString()} CP</button>
+        </div>
+        <div style="font-size:10px;color:var(--muted)">※CPポイントは現金化できます（12ヶ月有効）</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function selectDefer(months, reward, rptId) {
+  var cpRate = months === 3 ? 0.015 : 0.03;
+  var cpAmount = Math.round(reward * cpRate);
+  var payDate = new Date();
+  payDate.setMonth(payDate.getMonth() + months);
+  var payDateStr = payDate.toISOString().slice(0,10);
+
+  // Update report status
+  try {
+    var reports = JSON.parse(localStorage.getItem('CORETO_REPORTS') || '[]');
+    for (var i = 0; i < reports.length; i++) {
+      if (reports[i].id === rptId) {
+        reports[i].status = '繰り延べ待ち';
+        reports[i].paymentScheduled = payDateStr;
+        reports[i].deferMonths = months;
+        break;
+      }
+    }
+    localStorage.setItem('CORETO_REPORTS', JSON.stringify(reports));
+  } catch(e) {}
+
+  // Award CP points
+  var agId = sessionStorage.getItem('coreto_user_id') || '';
+  try {
+    var cpKey = 'CORETO_CP_POINTS_' + agId;
+    var cp = JSON.parse(localStorage.getItem(cpKey) || 'null') || {
+      agId: agId, balance: 0, locked: 0, lifetimeEarned: 0, lifetimeRedeemed: 0, history: []
+    };
+    var expiresAt = new Date();
+    expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+    cp.history.unshift({
+      id: 'CP-' + Date.now(),
+      type: 'earned',
+      amount: cpAmount,
+      source: months === 3 ? '3month_delay' : '6month_delay',
+      caseId: rptId,
+      earnedAt: new Date().toISOString(),
+      expiresAt: expiresAt.toISOString(),
+      redeemedAt: null
+    });
+    cp.balance += cpAmount;
+    cp.lifetimeEarned += cpAmount;
+    localStorage.setItem(cpKey, JSON.stringify(cp));
+  } catch(e) {}
+
+  // Show confirmation
   document.getElementById('pg').innerHTML = `
   <div class="form-wrap">
     <div style="text-align:center;padding:60px 20px">
-      <div style="font-size:48px;margin-bottom:16px">🎉</div>
-      <div style="font-family:'Outfit','Noto Sans JP',sans-serif;font-variant-numeric:tabular-nums;font-size:28px;font-weight:300;color:var(--ink);margin-bottom:8px">成約報告を提出しました</div>
-      <div style="font-size:13px;color:var(--muted);margin-bottom:28px">HQが確認後、報酬額が確定されます。通常1〜2営業日以内に通知されます。</div>
-      <div style="background:var(--white);border:1px solid var(--bd);border-radius:var(--r);padding:20px 28px;display:inline-block;text-align:left;min-width:320px;margin-bottom:28px">
-        <div style="font-size:11px;color:var(--faint);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">報告サマリー</div>
-        <div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-bottom:1px solid var(--bd)"><span style="color:var(--muted)">報告ID</span><span style="font-family:'DM Mono',monospace">${rptId}</span></div>
-        <div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-bottom:1px solid var(--bd)"><span style="color:var(--muted)">担当AG</span><span>${agName}</span></div>
-        <div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-bottom:1px solid var(--bd)"><span style="color:var(--ink)">仲介料</span><span>¥${fee.toLocaleString()}</span></div>
-        <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;padding:8px 0"><span style="color:var(--ink)">想定報酬（${rank} ${rate}%）</span><span style="color:var(--ink);font-family:'Outfit','Noto Sans JP',sans-serif;font-variant-numeric:tabular-nums;font-size:20px">¥${reward.toLocaleString()}</span></div>
+      <div style="font-size:48px;margin-bottom:12px">🏦</div>
+      <div style="font-size:20px;font-weight:300;color:var(--ink);margin-bottom:8px">繰り延べを設定しました</div>
+      <div style="background:var(--white);border:1px solid var(--bd);border-radius:var(--r);padding:16px 24px;display:inline-block;margin:16px 0 24px">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:6px">支払予定日</div>
+        <div style="font-size:20px;font-weight:600;color:var(--ink)">${payDateStr}</div>
+        <div style="font-size:12px;color:var(--sk);margin-top:8px">+¥${cpAmount.toLocaleString()} CPポイント付与済み</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px">有効期限: ${expiresAt.toISOString().slice(0,10)}</div>
       </div>
-      <!-- 即時払いへの導線 -->
-      <div style="background:var(--am-bg);border:1px solid rgba(217,119,6,.2);border-radius:var(--r);padding:14px 20px;margin-bottom:20px;font-size:12px;color:var(--am)">
-        ⚡ 報酬の確定前に即時払いを申請できます（手数料15%）
-      </div>
-      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
-        <button class="btn btn-g" onclick="renderNew()">続けて報告する</button>
-        <button class="btn btn-p" onclick="window.location.href='coreto-hub-v2.html'">ダッシュボードへ</button>
-        <button class="btn" style="background:var(--am-bg);color:var(--am);border:1px solid rgba(217,119,6,.2)"
-          onclick="window.location.href='coreto-instant-pay-v2.html'">⚡ 即時払いを申請する</button>
-      </div>
+      <div><button class="btn btn-p" onclick="window.location.href='coreto-hub-v2.html'">ダッシュボードへ</button></div>
     </div>
   </div>`;
 }
@@ -1531,9 +1715,9 @@ window.addEventListener('DOMContentLoaded', ()=>{
       }
     } catch(e) {}
 
-    const feeEl = document.getElementById('fee-input');
+    const feeEl = document.getElementById('fee-chukai');
     if (feeEl) feeEl.value = feeFromInvoice || caseDetail.fee || '';
-    const adEl = document.getElementById('ad-input');
+    const adEl = document.getElementById('fee-ad');
     if (adEl) adEl.value = adFromDetail;
     if (typeof calcReward === 'function') calcReward();
 
