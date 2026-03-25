@@ -15847,3 +15847,208 @@ Slackセクションを追加（既存のAPI一覧の下に配置）:
   「接続テスト」ボタン（テストメッセージを送信）
   設定変更はhq_execのみ・audit_logsに記録
 ```
+
+## 第127章: 外部連携 実装方式確定版
+
+### 127-1. 日本郵便 追跡（スクレイピング方式）
+
+```
+方式: 日本郵便の追跡ページをHTMLスクレイピング（公式APIなし）
+参考: Zennの記事（UWSCR方式をDenoに移植）
+
+追跡URL:
+  http://tracking.post.japanpost.jp/service/singleSearch.do
+  ?searchKind=S002&reqCodeNo1={tracking_number}&locale=jp
+
+実装（Supabase Edge Function / Deno）:
+  const res = await fetch(追跡URL);
+  const html = await res.text();
+  // DOMParser or Cheerioでtable[summary="配達状況詳細"]をパース
+  // 「お届け済み」が含まれていれば配達完了と判定
+  → 完了検知 → AGにLINE通知 + Slack #coreto-documents に投稿
+
+ポーリング間隔: 1時間ごと（Supabase Cron Job）
+注意事項:
+  HTML構造の変更で壊れるリスクあり → 定期的な動作確認必須
+  過剰なリクエスト禁止（1ポーリングにつき1追跡番号）
+```
+
+### 127-2. 秒速FAX+（Toones）— メール送信方式
+
+```
+重要な発見:
+  Toones APIはFAX送信APIを持たない（ログ取得・PDF取得のみ）
+  FAX送信はメール経由（メールFAX送信機能）を使う
+
+実装方式:
+  Vercel Edge Function → Nodemailer or Fetch → Zoho Mail SMTP経由
+  → Toones発行のFAX送信用メールアドレス宛に送信
+  → Toonesが指定FAX番号にFAX送信
+
+メールFAX送信の仕様:
+  To: {Toones発行の送信用アドレス}@toones.jp（契約後に発行）
+  Subject: {送信先FAX番号（ハイフンなし）}
+  Body: テキスト or PDF添付
+
+送信確認（Toones API）:
+  FAX送信ログAPI（IP認証・サーバIPをToonesに登録）でポーリング
+  sendStatus: "0" = 送信成功 / "1" = 失敗
+  失敗時: Slack #coreto-alert + AG再送信画面に表示
+
+認証方式: IPアドレス登録（Vercel固定IPまたはNATゲートウェイ必要）
+  ※ VercelはデフォルトでIPが固定されていないため要検討:
+    選択肢A: Vercel ProでWAF（固定IP）
+    選択肢B: ngrok / Cloudflare Tunnelで中継
+    選択肢C: SupabaseのEdge FunctionはIPが変動するため不適
+    → 推奨: CloudflareのワーカーIPを固定IP代わりに使う
+```
+
+### 127-3. LINE WORKS グループ自動作成
+
+```
+認証方式: Service Account認証（JWT + RS256）
+  Developer Console でAppを作成:
+    Client ID / Client Secret / Service Account ID / Private Key（RSA）
+  Scope: bot, group（グループ作成に必要）
+
+トークン取得フロー:
+  1. JWT生成（iss=ClientID, sub=ServiceAccountID, RS256署名）
+  2. POST https://auth.worksmobile.com/oauth2/v2.0/token
+     → access_token（有効期限1時間）
+  3. access_tokenをリフレッシュトークンで更新可能
+
+グループ（トークルーム）作成API:
+  POST https://www.worksapis.com/v1.0/bots/{botId}/channels
+  body: { members: [userId1, userId2, userId3] }
+  → channelIdが返却される
+  → このchannelIdをcases.line_works_channel_idに保存
+
+メンバーのline_works_user_id:
+  user_profiles.line_works_user_id に保存（入会時にAGが設定）
+  HQの分は固定で環境変数に設定
+
+注意:
+  LINE WORKS Free枠: 100名まで無料
+  Rate Limit: API実行後は429に注意・リトライ処理必須
+  Botは「複数人のトークルームに招待可」設定が必要
+```
+
+### 127-4. Zoho Mail アカウント発行
+
+```
+発行方式: Zoho Mail REST API（Organization/User API）
+
+認証:
+  OAuth 2.0 / Zoho Developer Consoleでアプリ登録
+  Scope: ZohoMail.organization.accounts.ALL
+  refresh_tokenをSupabaseに保存（Vercel環境変数は不可・ローテーションなし）
+
+アカウント作成エンドポイント:
+  POST https://mail.zoho.com/api/organization/{org_id}/accounts
+  body: {
+    accountName: "taro.yamada",
+    displayName: "山田 太郎",
+    password: "{自動生成・AG入会時に別途通知}",
+    roleId: "member"
+  }
+  → AGのemailは taro.yamada@coreto.co.jp になる
+
+退会時の無効化:
+  PATCH https://mail.zoho.com/api/organization/{org_id}/accounts/{account_id}
+  body: { status: "inactive" }
+
+メール送信（FAX送信・通知等）:
+  SMTP経由: host=smtp.zoho.com, port=465, SSL
+  Nodemailer で実装: user=system@coreto.co.jp, pass=アプリパスワード
+
+開発中のテスト方法:
+  Zoho Mailは本番ドメインがなくてもZoho Oneの無料プランで開発可能
+  @coreto.co.jpのドメインをZohoに登録（独自ドメイン設定で即日開通）
+```
+
+### 127-5. freee 会計連携
+
+```
+認証方式: OAuth 2.0 Authorization Code Flow
+
+重要特性:
+  ⚠️ リフレッシュトークンは使い切り型（ローテーション）
+  アクセストークン更新時に「新しいrefresh_tokenも同時に発行」される
+  → 古いrefresh_tokenは即無効化
+  → 必ずSupabase（freee_tokensテーブル）にaccess_token + refresh_tokenをセットで保存
+
+トークンエンドポイント:
+  POST https://accounts.secure.freee.co.jp/public_api/token
+
+アクセストークン有効期限: 6時間（expires_in: 21600）
+リフレッシュトークン有効期限: 無期限（ただし使ったら無効）
+
+自動更新フロー（Supabase Edge Function / cron）:
+  1時間ごとにaccess_tokenの残り時間を確認
+  残り1時間を切ったらリフレッシュ
+  新しいaccess_token + refresh_tokenをSupabaseに上書き保存
+
+初回セットアップ（/hq/users「外部連携」タブ）:
+  hq_execがブラウザでfreee OAuth認可画面にアクセス
+  認可コードをコピー → COREBLDGに入力
+  → access_token + refresh_tokenを取得してSupabaseに保存
+
+月次仕訳の実装:
+  POST https://api.freee.co.jp/api/1/deals
+  body: { 売上仕訳データ（勘定科目マッピングは別途確定） }
+  実行タイミング: 月次バッチ（毎月1日）完了後に自動実行
+
+開発中: freee開発者ページでサンドボックス事業所を作成→本番と分離可能
+```
+
+### 127-6. GMOあおぞら銀行 サンドボックス
+
+```
+「sunabar」（スナバー）: GMOあおぞら公式のAPI実験環境
+
+使い方:
+  1. GMOあおぞら銀行の個人口座を開設（最短即日）
+  2. sunabar.gmo-aozora.comでサンドボックス登録（無料・審査なし）
+  3. 仮想口座・振込APIを本番同等のAPI仕様でテスト可能
+  URL: https://gmo-aozora.com/sunabar/
+
+本番環境への移行（法人口座開設後）:
+  法人口座開設 → 銀行API接続申込 → 契約締結（最短1週間）
+  → 開発環境の接続情報を受け取る（10営業日目安）
+  → 接続テスト完了後、本番環境の接続情報を受け取る
+  APIドキュメント: https://api.gmo-aozora.com/ganb/developer/api-docs/
+  （メールアドレス登録のみで閲覧可能・契約不要）
+
+開発中はsunabarを使いコードを先行実装し、
+法人口座開設後に接続情報を差し替えるだけで本番稼働可能。
+```
+
+### 127-7. RISK EYES — 疑似パス実装
+
+```
+本番実装が遅れるため、開発中は疑似的にチェックをパスする実装:
+
+lib/risk-eyes.ts:
+  export async function checkRiskEyes(name: string, birthday: string) {
+    if (process.env.RISK_EYES_ENABLED !== 'true') {
+      // 疑似パス（開発中）
+      return { status: 'clear', checked_at: new Date().toISOString(), mock: true }
+    }
+    // 本番実装（RISK EYES契約後に実装）
+    // const res = await fetch(process.env.RISK_EYES_ENDPOINT, { ... })
+    throw new Error('RISK_EYES not implemented yet')
+  }
+
+環境変数:
+  RISK_EYES_ENABLED=false（開発中）
+  RISK_EYES_ENABLED=true（本番・API導入後）
+
+DBへの記録:
+  risk_eyes_checked: boolean
+  risk_eyes_result: 'clear' | 'flagged' | 'pending' | 'mock'
+  risk_eyes_checked_at: timestamp
+  → mock=trueの場合はKYCタブに「反社チェック（仮）」と表示
+
+本番API導入時の切り替え:
+  RISK_EYES_ENABLEDをtrueに変更するだけで全フローが本番実装に切り替わる
+```
