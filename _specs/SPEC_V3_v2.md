@@ -15674,3 +15674,11 @@ UI確定:
 
   実装: user_profiles.role および takken_flag を参照して条件分岐
 ```
+
+### 125-36. LINE連携画面 ボタン表記修正
+
+```
+修正:
+  「LINE WORKSの参加リンクを再発行」→「LINE WORKS連携を更新する」
+  公式LINEの「LINE連携を更新する」と表記を統一
+```
