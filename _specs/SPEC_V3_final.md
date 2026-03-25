@@ -15731,3 +15731,119 @@ PT即時払い（/pt/instant-pay）:
   /pt/payment に「即時払いを申請する」ボタンを追加
 ```
 
+
+## 第126章: Slack Incoming Webhook 連携（確定）
+
+### 126-1. 概要
+
+```
+方式: Slack Incoming Webhook（チャンネルごとにURLを設定）
+設定画面: /hq/users の「外部連携」タブ（Slackセクションを追加）
+権限: hq_exec のみ設定変更可
+実装: Vercel Edge Function から fetch で POST
+
+仕様書内の「HQのLINEチャンネル（#〇〇）」表記は
+すべてSlack + LINE WORKSの両方に送信する設計に変更
+（LINEは個人AG宛・SlackはHQチーム内共有）
+```
+
+### 126-2. Slackチャンネル構成（7チャンネル）
+
+```
+#coreto-alert（緊急）:
+  チャージバック発生（Square Webhook）
+  APIエラー率20%超（縮退運転モード）
+  宅建士証期限切れ（自動失効）
+  同一エラー10回/5分（Sentry）
+  反社チェック疑惑あり（KYC）
+
+#coreto-finance（財務）:
+  振込失敗（GMO・AG名・金額・理由）
+  誤送金返金実行
+  月会費引き落とし失敗（Stripe）
+  Square入金確認（金額不一致時）
+  月次バッチ完了（毎月1日）
+  ギフト券発行（C2C成約時）
+
+#coreto-approvals（承認）:
+  成約報告 承認待ち（AI要確認フラグあり）
+  即時払い申請（新規）
+  承認期限超過
+  返金申請 起票（HQ承認待ち）
+
+#coreto-agents（AG管理）:
+  新規応募（種別・氏名）
+  KYC提出（確認待ち）
+  早期退職アラート（28日目報告未提出）
+  退会申請
+  ランク昇格・降格（月次）
+  入金未確認アラート（3日超過）
+
+#coreto-documents（書類）:
+  契約書スキャン未完了（IT重説2日前）
+  郵便配達完了（追跡API検知）
+  書類AIアップロード完了（承認待ち）
+  捺印NG → フローD移行
+
+#coreto-system（システム）:
+  APIエラー率5〜20%（黄警告）
+  新規エラー発生（Sentry初回）
+  バッチ実行状況（Unit完了・失敗）
+  整合性チェック差異（月次）
+  APIキーローテーション実施
+
+#coreto-general（情報）:
+  成約完了（案件ID・AG名・仲介料）
+  内見完了（申込意思あり）
+  AD料入金確認
+  新HQメンバー登録
+```
+
+### 126-3. メッセージフォーマット
+
+```
+Slack Block Kit を使用（attachments形式）:
+
+緊急（#coreto-alert）:
+  color: "#E03535"
+  title: [種別]
+  fields: 案件ID / 担当AG / 金額 / 対応先URL
+
+警告（#coreto-approvals / #coreto-finance）:
+  color: "#E07E10"
+  title: [種別]
+  fields: 対象 / 内容 / /hq/〇〇への誘導リンク
+
+情報（#coreto-general）:
+  color: "#1A9E5A"
+  title: [種別]
+  fields: 案件ID / AG名 / 金額
+```
+
+### 126-4. 実装方式
+
+```
+送信関数（Vercel Edge Function）:
+  lib/notify.ts に sendSlack(channel, payload) を実装
+  channel: 'alert' | 'finance' | 'approvals' | 'agents' | 'documents' | 'system' | 'general'
+  Webhook URL は Vercel 環境変数で管理:
+    SLACK_WEBHOOK_ALERT
+    SLACK_WEBHOOK_FINANCE
+    SLACK_WEBHOOK_APPROVALS
+    SLACK_WEBHOOK_AGENTS
+    SLACK_WEBHOOK_DOCUMENTS
+    SLACK_WEBHOOK_SYSTEM
+    SLACK_WEBHOOK_GENERAL
+
+既存の「HQのLINEチャンネル（#〇〇）に通知」処理に
+sendSlack() を追加（LINEと並列送信）
+```
+
+### 126-5. /hq/users 外部連携タブへの追加
+
+```
+Slackセクションを追加（既存のAPI一覧の下に配置）:
+  チャンネルごとにIncoming Webhook URLを入力
+  「接続テスト」ボタン（テストメッセージを送信）
+  設定変更はhq_execのみ・audit_logsに記録
+```
