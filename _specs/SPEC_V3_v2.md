@@ -15657,3 +15657,20 @@ UI確定:
   リクルートリンク（AG・PT紹介リンクの発行）
   契約確認（業務委託契約書 PDF）
 ```
+
+### 125-35. マイアカウント 外部サービスパスワード 表示条件確定
+
+```
+外部サービスパスワード（レインズ / イタンジ / ATBB）の表示条件:
+  表示対象:
+    不動産AG（re_ag）
+    不動産AGプロプラン（re_ag_pro）
+    専任宅建士（takken_flag = true）
+    HQロール（hq_exec / hq_mgr / hq_staff / hq_part）
+  非表示対象:
+    人材AG（hr_ag）
+    パートナー（pt）
+    ライフラインAG（lifeline_ag）
+
+  実装: user_profiles.role および takken_flag を参照して条件分岐
+```
